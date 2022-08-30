@@ -1,0 +1,1 @@
+`preprocessed' is pre-processed version of original SARC data using the script (i.e., `prepare/prepare.sh`) (note: we didn't use their preprocess.sh script) in [elmo4ironoy](https://github.com/epochx/elmo4irony-dev)
