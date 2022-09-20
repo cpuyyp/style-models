@@ -49,6 +49,20 @@ def nested_truncate(tensors, limit):
         return {k: nested_truncate(tensors[k], limit) for k in tensors}
     return tensors[:limit]
 ```
+# Multitask style model (mutual labeled)
+## Problem statement 
+Given **ONE** dataset where each sentence is associated with multiple labels. Some (over 80%) of the labels are missing. How to use this dataset to train a model that has good performance on all tasks?
 
-# Difference to the other multitask training code
+## Dataset
+Pastel is a dataset that are fully annotated with country, gender, education, tod, ethnic, politics, and age. To mimic the situation, I randomly masked out 80% of the labels.
+
+## Proxy labels
+A straight forward way to deal with the missing labels is to use another well-trained classifier to label those unlabeled sentences. This method is called proxy labels. 
+
+## Difference to the other multitask training code
 The model and dataloader in this folder uses huggingface trainer to train, while the other one customize the training loop.
+
+# Experiments
+1. Train 7 single task models on the 20% unmasked data.
+2. Use the trained models to generate labels (and logits) for the masked 80%.
+3. Train a multitask model on combined data (20% unmasked real labels and 80% predicted labels)
