@@ -54,15 +54,23 @@ def nested_truncate(tensors, limit):
 Given **ONE** dataset where each sentence is associated with multiple labels. Some (over 80%) of the labels are missing. How to use this dataset to train a model that has good performance on all tasks?
 
 ## Dataset
-Pastel is a dataset that are fully annotated with country, gender, education, tod, ethnic, politics, and age. To mimic the situation, I randomly masked out 80% of the labels.
+PASTEL is a dataset that are fully annotated with country, gender, education, tod, ethnic, politics, and age. To mimic the situation, I randomly masked out 80% of the labels.
 
-## Proxy labels
+## Proxy labeling method
 A straight forward way to deal with the missing labels is to use another well-trained classifier to label those unlabeled sentences. This method is called proxy labels. 
 
-## Difference to the other multitask training code
-The model and dataloader in this folder uses huggingface trainer to train, while the other one customize the training loop.
+## Difference to other multitask training code
+1. This model takes multiple labels for one sentence, train all classifiers at the same time. While the other code takes only one label at a time and only trains one classifier.
+2. This model and dataloader uses huggingface trainer to train, while the other code customize the training loop.
 
 # Experiments
-1. Train 7 single task models on the 20% unmasked data.
-2. Use the trained models to generate labels (and logits) for the masked 80%.
-3. Train a multitask model on combined data (20% unmasked real labels and 80% predicted labels)
+0. Visualize label distribution  
+(in PASTEL data analysis.ipynb)
+1. Train 7 single task models on the 20% unmasked data.  
+(in PASTEL single task on unmasked set.ipynb)
+2. Use the trained models to generate labels (and logits) for the masked 80%.  
+(in PASTEL single task on unmasked set.ipynb)
+3. Train a multitask model on combined data (20% unmasked real labels and 80% predicted labels)  
+(in PASTEL train on prediction.ipynb)
+4. Train a multitask model on original data (it's possibly the upper bound of the performance)  
+(in PASTEL all together.ipynb)
