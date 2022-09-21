@@ -54,7 +54,9 @@ def nested_truncate(tensors, limit):
 Given **ONE** dataset where each sentence is associated with multiple labels. Some (over 80%) of the labels are missing. How to use this dataset to train a model that has good performance on all tasks?
 
 ## Dataset
-PASTEL is a dataset that are fully annotated with country, gender, education, tod, ethnic, politics, and age. To mimic the situation, I randomly masked out 80% of the labels.
+PASTEL is a dataset that are fully annotated with country, gender, education, tod, ethnic, politics, and age. It's already be divided train, valid, and test. 
+
+To mimic the situation of missing most of the labels, I randomly masked out 80% of the labels in the train set.
 
 ## Proxy labeling method
 A straight forward way to deal with the missing labels is to use another well-trained classifier to label those unlabeled sentences. This method is called proxy labels. 
