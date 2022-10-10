@@ -1,0 +1,83 @@
+You are using GPIO12 (connected to pin 32) rather than GPIO18 (connected to pin 12). says you will refer to GPIO by the pin they are connected to. Either move the LED wire to pin 12 (presumably marked P18) or change to BCM numbering with . See $URL$ or $URL$ 
+
+As long as the GPIO are not being used by the touch screen you can use them to control servos. The question is really how do I connect wires to the GPIO if a touch screen fits over the pins. Perhaps solder to the underside of the Pi expansion header where the pads are exposed? 
+
+Here is some example Python code I wrote for use with pigpio. I have only tested the device at 10 samples per second. It needs the pigpio daemon to be running (sudo pigpiod). 
+
+It depends on how you want to program. If you write "bare-metal", i.e. with no operating system, you can handle gpio interrupts yourself. If you are running under Linux you can't directly receive interrupts as Linux handles all interrupts. However you can request that you are notified of gpio interrupts. That will add a latency of say 50-70 microseconds from the time of the gpio interrupt to the time your process receives notification. A graph plotting interrupt latency in microseconds for 5000 gpio interrupts on the Raspberry Pi (C using the poll I/F). 
+
+EDITED TO ADD Using the pigpio daemon there are two methods of control from the command line. Note, by default, PWM values range from 0 (off) to 255 (fully on). The example is for gpio 4 (pigpio only allows Broadcom gpio numbering). sudo pigpiod # start the daemon 
+
+man pigs # for help EDITED TO ADD The wiringPi gpio pwm command will be using hardware PWM on gpio 18. This uses the Broadcom PWM peripheral so will also conflict with audio usage. 
+
+I can't see anything obviously wrong with your crontab example. I haven't looked at the others. May I suggest you start by getting a minimal example to work. The following example works for me. crontab @reboot (sleep 10; /home/pi/su.py) su.py 
+
+Possibly. The only concern is that all the Pi GPIO are 3V3 whereas Arduino GPIO are typically 5V. You need to power the device with 5V. Typically for a signal to be seen as logic 1 rather than logic 0 its voltage must be at least 70% of the supply voltage. That means you need to supply at least 3V5 from a Pi GPIO which can't be done. You may get lucky with your device and it may accept the lower Pi voltage as logic 1. 
+
+Just use dd or the Window's disk imager to copy the image to the new card. Then boot from the new card. If you are using Raspbian you can then use raspi-config to expand the user partition to use the full card. 
+
+I'm not going to repeat the instructions here. Those given for VNC at Raspberry Pi org seem clear enough. 
+
+Functionally there is no difference. In effect they just wrap up a PCA9685 into a convenient form. You need to decide what is more suitable for your expected usage. Rather less expensive version at $URL$ The Pi can provide pretty much the same PWM without additional hardware, e.g. my pigpio library. 
+
+I'm going to guess you mean to amplify the audio coming out of the audio jack. See the Pi3B schematics. PP25 or PP26 seem a good choice if you can identify them on the board. Personally I'd probably use one of GPIO 12/18 (right channel) 13/19 (left channel) which are all routed out to pins on the expansion header. See $URL$ If you set them to audio mode (GPIO 12/13 mode ALT0, GPIO 18/19 mode ALT5) they will also have the audio PWM signal. 
+
+pigpio can control the UART - but it only does so if you ask it to, by making a C call to serOpen() (or it's equivalent from Python, pigs, etc). So the solution is don't use pigpio to control the UART, that will leave the UART available for GPSD to control, 
+
+This is a known "bug". I put bug in quotes because it seems to only affect some Pi configurations and is something I have not been able to duplicate. I think the kernel has altered the way the clocks are used which has the rather unfortunate side effect of screwing up the PWM clock (and the SPI clock, and the I2C clock). The best I can suggest is try adding to . Also see $URL$ and $URL$ 
+
+It probably will not make any difference which one you use. The voltage at the Pi is determined by the PSU voltage and the voltage drop in the microUSB cable you use. You will need to measure the voltage at the Pi. Claims on labels may not meet reality. The Pi2 will draw as much current as it needs. Both the PSUs say they can supply the 2 amps which is all that the Pi2's polyfuse will pass. 
+
+I don't think you can do this using the Pi's gpios alone (21 available for Rev.2 boards). You need 15 address bits and 8 data bits plus 2 control signals (at least), so a minimum of 25 gpios. I suppose you could use an I2C port expander for the address bits and use the Pi's gpios for the data and control signals. 
+
+That will not work. The Pi's USB ports are not OTG. The Pi does not present itself as a hard drive to other equipment connected via USB. You may be able to do what you want with a Bluetooth dongle. You can view the SD card /boot partition on a Windows PC with a SD card reader (as the /boot partition is FAT). You can't view the /root partition as that is in ext4 format which is not understood by Windows (you might be able to download software which lets Windows understand ext4). 
+
+By the way pigpio and servoblaster will let you generate servo PWM on any of the GPIO. The pigpio method to generate a servo pulse of 0,8 ms on GPIO 23 is 
+
+No others are accessible from the Pi3B expansion header. See the PCM/I2S Audio section (page 119) of the Broadcom peripherals document. 
+
+By the way, and this is a personal view, it is much easier if you cut&paste code for questions. I found it awkward to look at the code and impossible to cut&paste from an image. 
+
+Yes, you can power the B and the B+ through the 5V and ground pins on the expansion header. The difference between the B and B+ in this area is that on the B+ you can no longer backpower the Pi through the USB ports. EDITED TO ADD You can actually backpower the A+/B+/Pi2 via the USB ports, albeit in a pretty useless way. Once the Pi has been booted via power from the microUSB or expansion header it is then possible to backpower from the USB sockets. 
+
+Are you sure it's not because you have a recent kernel? I.e. have you recently updated the firmware. The gpio directory seems to have moved to /sys/class. 
+
+There are dozens of ways of doing what you want. Only you can tell which are acceptable. One possibility is to use my pigpio library. You can write a script on the first Pi to control the GPIO on the second Pi. The script on the first Pi can be conveniently written in Python or C. The second Pi needs to be running the pigpio daemon. 
+
+There should not be a problem connecting multiple USB serial dongles to the Raspberry Pi (you will need a hub if you need more dongles than the Pi has USB sockets). As an aside, note that the Pi has no RS232 ports. It has a UART (pins 8/10) which operates on 3V3 TTL as opposed to RS232 which typically operates at +/- 12V. 
+
+The Raspberry Pi 2 is both faster and has four cores. Both those increase the chance that software timing will be accurate (as there is less chance that something else needs to be run at the same moment as the timer expires). It's all relative though, as the system get busier the timing will get less reliable again. 
+
+GPIO0 to GPIO7 have their internal pull-ups to 3V3 enabled at power-up. Pins 3 and 5 (GPIO2 and GPIO3) additionally have external hard wired 1k8 pull-ups to 3V3. Other GPIO have their internal pull-downs to ground enabled at power-up. See page 102 of BCM2835 ARM Peripherals 
+
+Remember that this question is not specific to the Raspberry Pi. You could find answers on all sorts of general Linux sites. The following bash script should find your router's IP address. 
+
+If you are saying you connected power to pin 1 of the Pi (3V3) and a Pi ground pin then you have likely destroyed the Pi. There is nothing to be done. ONLY power the Pi via a 5V pin (2 or 4) and a Pi ground pin if you want to power via the expansion header. 
+
+I2C is a bus. You can connect multiple devices to a bus. I2C requires that each device on the bus has a unique address (generally a small number between 0 and 127). Manufactures tend to give different types of device different addresses, so normally there is no need to do anything special. As far as wiring is concerned just connect each device to SDA and SCL (and power and ground). The SDA and SCL signals can be shared between devices, just like power and ground can be shared. 
+
+The I2C hardware uses the core 250MHz clock in setting the bit rate. The bit rate is set by a divide down of the core clock. The divider is a 16 bit quantity and therefore the maximum divider is 65536. 250M/65536=3814. Peripherals page 34. You have at least a couple of options. 
+
+All the GPIO may raise interrupts. On Pis with the 40 pin expansion header that is GPIO 2 to GPIO 27 (you can also use GPIO 0 and 1 but their use is discouraged). The following GPIO may be connected to hardware PWM (note, there are only TWO channels). 
+
+For pigpio it may be as simple as building an appropriate version for your Python version, e.g. perhaps try (in the pigpio build directory). Alternatively you could use the command line I/F to wiringPi () or pigpio (). 
+
+Your power supply is on the edge. It is just enough for your normal usage but as soon as you add any additional stress on the CPU (opening a tab) it starts to fail. Plugging in a USB device will probably have the same effect. Put up with it, or buy a power supply which provides more amps (say 1.5 at least) at a stable 5V. 
+
+It has exactly the same programming interface as the HC-SR04. You send a trigger pulse of 10µs or more on the trigger line. Shortly after the trigger line goes low the echo line will go high. The echo line will stay high until the echo has returned (or the echo times out). The echo line high time is the time the sound took to travel to the detected object and back. 
+
+I'm sure there are lots of differences but none which would make you choose wheezy over jessie. jessie is the more up to date and will be better supported. You should be using jessie. 
+
+EDITED TO ADD The following code reads and displays the value of the 16 BSC/SPI slave registers. Use PI_2_PERI on a Pi2. 
+
+You can drive as many servos from the Pi as you can find spare gpios. You have to use hardware timed PWM rather than software timed PWM. People who report jitter have been using software timed PWM. My pigpio library generates independent hardware timed PWM on all the user gpios and is suitable for servos. I think the defaults used mean it has fractionally less resolution (5 µs steps) than the add on boards you can buy, but hobby servos are not that accurate anyhow. pigpio will also let you use the two hardware PWM channels if you do have expensive well engineered servos. That will give you a million resolution steps to play with. The other modules to consider for hardware timed PWM are servoblaster and its forks, and RPIO.GPIO (note, not RPi.GPIO). RPIO.GPIO does not currently work on the Pi2. You may connect the servo control wire direct to a gpio. Some people suggest putting a 1k (or so) resistor in series to protect the gpio. I have never bothered. You should use an external power supply to power the servos. The Pi will only be able to supply power for one standard sized servo or perhaps 2 or 3 9g servos. But the power drain and or spikes can crash the Pi. Make sure the Pi ground is connected to the external power supply ground (so there is a circuit for the control wire). See $URL$ The video predates pigpio and used software timed PWM from a C program. It is intended to show the sort of connections needed. 
+
+As Ghanima points out you have added superfluous white space. Python requires correct spacing to determine the meaning of a script. Remove one space character at the start of the following lines. 
+
+A logic analyser would let you see the signal and should be able to decode the actual serial data. piscope will let you see the signal (the pattern of start, stop, and data bits). 
+
+You should not be manually loading the w1-gpio and w1-therm modules. You should now be using the device tree method of configuration. Add the following to /boot/config.txt and reboot. 
+
+Well the SATA physical link is built on two differential serial links, i.e. you would need 4 GPIOs. So there is no problem there. I do not see any particular problem in emulating the commands and messages. The minimum SATA signalling rate is 1.5 Gbps (1 500 000 000 bits per second). The maximum GPIO signalling rate is circa 30 000 000 bits per seconds. So the GPIOs would appear to be 50 times too slow. So all you need to do is find a way of overcoming this minor problem. 
+
+The only reason I can think of for not being able to save the file is that the file system has been mounted read only as it is corrupt. You need a PC with a SD card reader. That PC must be another Linux machine or booted from a live Linux CD. That would allow you to check and fix the SD card file system.

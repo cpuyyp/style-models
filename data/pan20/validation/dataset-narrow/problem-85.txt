@@ -1,0 +1,37 @@
+Maybe this previous question and it's answers will make thinks clearer: Why do I get "% Warning: use /31 mask on non point-to-point interface cautiously" when I use a /31 subnet mask? 
+
+Well, your assignment alone leaves room for interpretation. As Ethernet (at least up to GBit-Ethernet) is defined by it use of CSMA/CD, it might be enough to capture just Ethernet frames. As YLearn noted you wont see any collisions in a switched network (unless something is terribly broken). Even in an environment using Hubs (good luck finding some) or a shared Media like good old 10Base-T you may not see these packets. These packets are most likely filtered out by your network interface. To capture them you have to used specialized Network interfaces. What you should see is a counter for collision, e.g. with ifconfig on Linux or show interface on Cisco IOS 
+
+I guess the answer is easy: Clasful networking is not quite dead (Yes I know, I'm always writing the opposite). When assigning an IP address many operating systems / tools (Windows, Linux ifconfig) suggest the default mask according to the class of network. As 192.168.x.y is Class-C 255.255.255.0 is suggested. So if I do something like this on a Linux system: 
+
+Whois outpus way more information. The protocol ist specified in RFC3912 Note that whois output of the regional registries differ and not all will provide the origin as. So traceroute -A will not provide AS informations for all addresses. 
+
+Well you could get old school and use 10Base2 if you find the proper networking cards for your computers. You just need some RG58 cables, some T connectors and two terminators. 
+
+You can use any IP address you want. You most probably can't communicate with anyone outside your network. To ensure proper communication on the internet addresses have to be unique. IANA is the organization in charge of address assignments. 
+
+Best way would be to check the DHCP server. If you don't have access sniff your network traffic using tcpdump / wireshark for some time (filter only DHCP traffic, otherwise you'll end up with lots of unnecessary data). From this data you should get a pretty good list of DHCP clients in your network. 
+
+Different people design different protocols. Ethernet can transport more than IP (IPX was quite common 15-20 years ago and also used hex in it's addresses. To be more precise: The local part of an IPX address was the MAC address). IP on the other hand can run without using Ethernet as Layer-2 protocol. Somehow Ethernet (and MAC addressing) became the dominant layer-2 protocol and IPv4 the dominant layer-3 Protocol. With IPv6 we have HEX back in our IP(v6) addresses . 
+
+If both computers have a global IPv6 addresses(from the 2000::/3 prefix), IPv6 routing is correct and nothing blocks traffic (e.g. a firewall or a router access list) this ist true. The same is true for IPv4 networks using only public IPv4 addresses. 
+
+It comes from the times of clasful IP and 127.0.0.0 is an class-A network and therefore a /8 mask is assigned. To answer the second part: Yes I've seen setups where more than 127.0.0.1 was used, e.g. for running multiple SMTP content filters on one host or multiple instances of a database server. Note that for IPv6 you only have one loopback address ::1 
+
+First let's explain the address prefixes: fe80::/10 - Link Local 2000::/3 - global Unicast (2402:f000:5:8401::/64 in your example) fc00::/7 - unique local (RFC4193) (fc00:101:101::/64 and fda0:52f6:20cb::/64 in your example) Link-Local addresses are valid on the link olny (e.g. the VLAN your are currently connected to), global unicast is globally reachable (at least if there is no firewall / acl blocking traffic) and unique-local addresses globally unique (at least in theory) and used for local communications and not routed on the internet An interface has always one link-local address and can have one or more global addresses. You see a route for each of these prefix types (first three lines) An address from 2402:f000:5:8401::/64 is assigned to eht0.2 and fc00:101:101::/64 / fda0:52f6:20cb::/64 to your br-lan interface. Thr rest are the link-local entries for the different interfaces. 
+
+Sounds like you want a site-2-site IPSEC VPN. You'll need some firewall or router (one for each location) some time and patience and / or external help to configure your setup. 
+
+As many system behave this way using the default will less likely break things which limits the support costs for the vendors. Also: People are used to this and would complain that the device is to complicated. 
+
+A DHCP server has a pool of addresses. When your client request an IP address the server will handout one of its free pool. If there are no addresses left, your client will not get an address. The address assignment has a certain lifetime. If the request is not renewed within this time the address will go back too the pool and can be handed out to the next client requesting an IP. 
+
+Ethernet hubs are outdated but still sometimes found here and there. A hub receives a frame and floods it out to all ports. A switch is learning MAC addresses and only floods too all ports when it sees an unknown MAC address in an Ethernet frame. This behavior makes hubs great for sniffing network traffic. HUBs are limited to 10/100 MBit (at least I haven't seen one operating at higher speeds) and can only operate at one speed. Modern switches are operating at much higher data rates (1G, 10G, ... 100G). 
+
+No you can't. It looks like newer versions of GNS3 support IOSvL2 (shipped with Cisco VIRL) and you now can setup many standard switch features (spanning-tree, LACP, port-security, ...). But this will not be like a standard 24 port switch running IOS. And BTW: Cisco SMB Switches do not run IOS, they are quite different. 
+
+Always assign static IPv6 addresses to any network device. If you are using the 3750 for routing Statles Address Autoconfiguration (SLAAC) is not even supposed to work . Cisco may think otherwise: I opened a TAC case for an ASA and got "yes we ignore the RFC" as answer. Using SLAAC the address of the switch is based on a prefix (received from a router on your network) and a the MAC address of the interface (with ff:fe added in the middle and the U/L bit set to locally assigned). If the master of your stack changes the MAC address most likely changes too. 
+
+Smallest switch would be an EX-2200c. I bought one for my home lab. It has 12 ports and most of the important features. You can even use virtual chassis functionality (with up to 2 or 4 devices). Junosphere might also be worth a look. And I guess you already know about the Junos Fasttrack program where you can get the training materials for the "lower" certifications including switching. 
+
+MAC addresses can be change. On Linux use ip or ifconfig for most Windows look at the driver settings of your network interface. You don't convert anything. MAC addresses are on Layer-2, IP on Layer-3 of the OSI model. For IPv4 ARP is used to find out which MAC (Layer-2) address belongs to a certain IP (Layer-3) address. For IPv6 ICMPv6 (Neighbor Discovery) is used.

@@ -1,0 +1,71 @@
+Although you are inserting account_id 561 and 563, under the hood you are insert and into the index. The becomes the bottleneck because the Secondary Index has to wait until the column is auto_generated. RECOMMENDATION You have a table with two candidate keys 
+
+In some instances, certain variables were moved to performance_schema. You could search MySQL Documentation on other variables or just restart mysqld with show_compatibility_56 enabled. 
+
+If you are using external DB Hosting, you should expect some intermittency due to the hosting. There are no native MySQL mechanisms in play. I have seen happen while evaluating XEROUND. When I signed up for the 30-day trial, I was given two public IPs to access the MySQL Database. I loaded a lot of data on it. I was able to access it from one East-coast based public IP and the data was not immediately manifested from the West-coast based public IP till minutes later. You have find out from Mediatemple if you can look into using their Reboot and Repair Utilities. You may also need to make sure data is being coalesced fast enough for snapsots to be reasonably replicated. There is one major concern. Under the FAQ section I just saw something very, very disturbing for Mediatemple's Grid Hosting: 
+
+and checksum everything on every Slave against the Master. You may find more data drift problems than you think. Just run the sync scripts to correct them. CAVEAT You suggested that network latency could be at issue. With binlogs not being flushed by the OS yet, any disconnect and reconnect of MySQL Replication due to latency or dropped packets is worth looking over as well. It could also be a major contributor to data drift. Also to be noted is what network route the new Slave is communicating with back to the Master. If it is not the same route as the older Slaves (perhaps passing through a different switch, over public IP, etc.) needs to be investigated. 
+
+in Linux and see if there are two lingering. If there are, get the paths straightened out. Otherwise, you may have to reinstall MySQL 5.5.30. 
+
+Doing it this way assures that all the MyISAM tables are from the same point-in-time. MASTER The Master can keep on going with all the reads and writes. 
+
+The general idea is this: mysqldump preps multiple rows for a single INSERT statement. This is known as an extended INSERT. My example shows how to create a group of 20 rows to perform such an INSERT. If you want to increase to something greater than 20, you may have to increase max_allowed_packet on the Remote Server. 
+
+The index you have will make the query do an index scan across all the days of after looking for the . SUGGESTION #1 : You will definitely need a different index MyISAM If is MyISAM, this is the index you need 
+
+containing multiple columns ? having a wide VARCHAR ? and a lot of non-Unique indexes ? one or more non-Unique indexes that has a wide key ? 
+
+Give it a Try !!! Caveat Please notice I call the COUNT once and subtract it from 456976 to speed up the count a little. 
+
+OBSERVATION #1 Performance implications should become quickly apparent if the index pages of have to experience two things: 
+
+I took a closer look at the query and you might be able to redesign it. Here is what I mean: The LIMIT 0,50 portion of the query seems to be made busy in the query last. You can improve the layout of the query by doing the following: Step 1) Create an inline query to gather only keys. In this case, the id for blogposts. Step 2) Impose any WHERE, ORDER BY and GROUP BY clauses on the inline query bringing keys. Step 3) Impost the LIMIT clause as the last step of making the inline query. Step 4) Join the inline query with the blogpost table in the event you need additional columns from blogpost as a blostpost temptable Step 5) Join this new blogpost temptable with the articles table. Steps 1-3 is meant to create a temptable with exactly 50 rows and include the blogpost id. Then, perform all JOINs dead last. With these steps applied to your original query, you should have this: 
+
+There is no physical folder for those tables, not even .frm files. You cannot mysqldump it. You cannot drop it. You cannot add tables to it. You cannot drop tables from it. So, where are the tables ??? All tables in the INFORMATION_SCHEMA database are stored directly in memory as MEMORY storage engine tables. They are totally internal to MySQL, so the .frm mechanisms are handled in mysqld. In my answer, I first showed the table layout of INFORMATION_SCHEMA.TABLES. It is a temporary table in memory. It is manipulated using storage engine protocols. Thus, when mysqld is shutdown, all information_schema tables are dropped. When mysqld is started, all information_schema tables are created as TEMPORARY tables and repopulated with metadata for every table in the mysql instance. The INFORMATION_SCHEMA database was first introduced in MySQL 5.0 to give you access to metadata about tables of other storage engines. For example, you could do SHOW DATABASES to get a list of databases. You could also query for them like this: 
+
+With reference to the mysql schema, please don't touch it. Why ??? In MySQL 5.5, all tables in the mysql schema were MyISAM. 
+
+Notice that in the DERIVED2 part of the EXPLAIN plan, the FULLTEXT index was indeed used. MORAL OF THE STORY You will have to get into the habit of deciding how many stopwords your database will have, creating that stopword list, configuring it, and then create/recreate all FULLTEXT indexes. You must also get into the habit of refactoring your FULLTEXT search queries in such a way that the MySQL Query Optimizer does not generate a bad EXPLAIN plan or nullify indexes for the rest of the query participating in the EXPLAIN plan. 
+
+HEADS UP !!! If you are using MySQL 5.7.19 or prior, please read the MySQL Documentation on Query Cache Configuration for more authoritative advice. For all those using MySQL 5.7.20 and beyond, the query cache is deprecated and will go away. 
+
+I don't think I can help you with the formatting, but the query you need is this one: PROPOSED QUERY 
+
+In light of this and of you only having 2GB of RAM (how does DB even survive now?), here are my recommended settings 
+
+I have an incredibly cheesy but effective way to create a backup file with a datetime as a name. SAMPLE DATA I have a table called as a sample 
+
+If you have to do a bulk insert, you need to use along with a larger bulk_insert_buffer_size. Here is why: 
+
+If a Master has relay logs, then the Master must also be a Slave in the midst of some Replication topology (i.e., Master/Master, Daisy-Chained Replication) What could cause relay logs to grow like this? BROKEN REPLICATION MySQL Replication is broken when the IO Thread or SQL thread dies under these SCENARIOS: 
+
+during the startup, just after crash recovery, the Forgive me for such a crude solution since I have very little dealing with MySQL for Windows (that's not sarcasm, I am serious). ANSWER #2 Here is something more serious I just checked my MySQL 5.6.10 no-install ZIP file. It has innochecksum. 
+
+With innodb_file_per_table configured, the table will exist in a physical file under the DB folder. For example, let's say your table has the following attributes: 
+
+It would conveniently keep the index pages of that table from ever leaving the cache. The only table index pages would leave is if INSERTs into increases the contents beyond 2.5MB. You must choose enough headroom to accommodate many INSERTs into . OBSERVATION #2 I also noticed the index you laid out for : 
+
+I had to go to $URL$ and scroll/Ctrl-F dozens of times until my web browser found it. Then, I pasted about 60000 characters into that line. Then, I ran the code using MySQL 5.6.21 on my laptop in Windows 8.1. Have Fun !!! UPDATE 2015-03-14 15:52 EST BTW I just discovered this website : 100,000 Digits of Pi. This displays pi to 100,000 digits instantly. is also there. UPDATE 2015-03-14 15:57 EST I tried the INSTR() function 
+
+then you have in your my.cnf. You should comment it out and restart mysql What you want to see is this: 
+
+The incredible part: The output of mk-query-digest Here is a profile that ran 2011-12-28 11:20:00 for 1190 sec (20 min less 10 sec) The last 22 lines 
+
+InnoDB (innodb_file_per_table disabled) With innodb_file_per_table enabled, table data and its indexes live in the system tablespace file better known . The data pages and index pages are 16KB blocks where rows and TEXT/BLOB overflow are managed. MyISAM For the MyISAM , three files comprise its logical presence 
+
+Another jazzy approach to this would be to place that command without the ampersand into a shell script. Then, execute the script, by name, in the background. For example, call the shell script in the folder. Here is the content of this proposed script 
+
+you should lower innodb_buffer_pool_size below 64M in and restart mysql. SUGGESTION: If it is withn your budget, you should setup Apache and PHP on a separate server. Connection all webserver requests to the DB thereafter. 
+
+Question 4.1 If you enable log-slave-updates on both databases i.e. dB1 & dB2, then that would mean all items from the binary log of dB1, which was successfully replicated by dB2 will be written into dB2's binary log and vice-versa. Would not this result to some sort of infinite circular replication or duplications of entries on both databases, if it's possible at all, considering the possible key-collision issues that would arise? What I'm trying to say is, How would dB1 know once it checks on the binary log of dB2 that, "I should not replicate those entries in there because they all just came from me"? Answer to Question 4.1 You must have log-slave-updates available on both DB servers in order to have an audit trail that the SQL executed on on DB server made it to the other. If you don't, you would have to do your due diligence to compare the data explicitly. Such ways would include: 
+
+Unfortunately, this is the sequence that always happens. I use the sed command to get around this as follows: 
+
+You must then refactor the query just slightly to reduce two things the MySQL Query Optimizer is expected to handle: 
+
+It may have timed out looking for the end of the Document. You should bsondump the file to a json file and check the contents for BUT DO NOT IMPORT THE RESULTING JSON because some fidelity is lost. 
+
+I learned that like 2 years ago from this PalominoDB Blog Post. You can QA the PASSWORD function with OLD_PASSWORD function. Compare the output of WITH . 
+
+These will help S0 shutdown fast with completely flushed data. The following is what you must script in the replicator process When you need to generate a new slave (we will call it S2), here is what you must do STEP 01) On S0, run STEP 02) Install the same version of MySQL that S0 has into S2 STEP 03) On S0, STEP 04) On S2, you need to change the of /etc/my.cnf in S2 to a Unique Value (suggestion : use the 2nd,3rd, and 4th octet [without the dots] of the private IP of S2) STEP 05) On S2, either remove or comment out the from /etc/my.cnf STEP 06) On S0, run (Note: If you have to spin up 5 Slaves, run the 5 rsyncs at this point) STEP 07) On S2, (MySQL Replication start immediately where S0 had left off) STEP 08) On S0, run Once you create the replicator script, you can use it spin up MySQL on new Slaves. Meanwhile, S1 is available for SELECT queries and continues replicating. S0 is used to recreate a new Slave. If you are doing this in conjunction with spinning up Amazon EC2 or some other Cloud DB Servers, check with your System Administrators on any Linux commands/API that allows you to spin up a DB Server. Then, you apply the replicator to the newly generated DB Server. Even better, you can incorporate the Db Server creation API in your Replicator Script. CAVEAT If you have to spin up dozens or hundreds of Slaves, all you need to do is have 10 Replicator Slave Servers (S0 - S9) and have 10 copies of the replicator script operator on different Replicator Slaves.

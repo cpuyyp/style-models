@@ -1,0 +1,71 @@
+Note that we no longer need because the first byte of now corresponds to a properly aligned byte for our type. Before: After: We save quite a bit of space. In fact, with this solution, your class takes no more space than a when aligned to . You have to replace all uses of with an appropriate statement; I recommend replacing all instances of with a call to . This call will almost surely be optimized away. Provide non- versions of your accessor/modifier functions. You want your type to be usable in non- contexts, so provide non- overloads for your operations. For example, define like so: 
+
+Constructor I'm not sure why you initialize inside the constructor body instead of the constructor initializer list. 
+
+Extracting a range of values. Reversing. Indexing. Finding the minimum/maximum values. Concatenating 2 packs. Shifting the values inside a pack with wrap-around. Offsetting an integer pack. 
+
+Your code is not portable because you assume that the number of bits in a are 8. There is no such guarantee in C++. Simply include the header and replace your magic constant 8 by . 
+
+We also know that we must determine the largest digit in a number. So we write the following branchless max of two values function: 
+
+This function is used in only one place. Unless you've got plans of using it elsewhere, I recommend erasing it and simply putting the code at the relevant location. You don't have to index into the first element to get the address. You can use the fact that arrays decay to pointers. 
+
+The class manages the unique lifetime of the instance it points to in generic fashion; type information is only available in the template constructor. 
+
+Use universal references in the definition of . This avoids unnecessary copying of arguments. Replacement: 
+
+User Adriano Repetti notes that the right shift is not fully portable. Please look into this if your requirements require it to be. 
+
+Use one vector instead of two vectors You can improve performance by using one vector instead of two vectors; you can calculate the 2nd dimension using a little math. This is actually how primitive 2D arrays work in C++. Advantages: 
+
+Concatenates the right pack to the left pack. The output set will have the integer type returned by applying to the integer types of the left and right integer packs. 
+
+Performs the set union of two integer packs. The output set is sorted. The output set will have the integer type returned by applying to the integer types of the left and right integer packs. 
+
+Remove redundant specifiers. Defaulted special member functions allow the compiler to deduce whether a function is or not. These: 
+
+This is a good scenario for an alias because it shortens your typing. More importantly, you have defined what clock type you use in one specific place; this allows you to change the clock type at one spot and have it affect your entire class. You could even make it a template parameter if you want to allow users to provide their own clock type. 
+
+Provide a constructor that directly initializes the matrix Currently, you have to call , which simply allocates and default constructs the number of specified elements. This is inefficient unless you want a default-initialized matrix. Provide a constructor that allows you initialize the matrix directly: 
+
+This will simplify the implementation of the destructor as takes care of properly releasing your resource. You can make an alias for ease of use: . This allows you to write your map variable declaration in an easier to read way: 
+
+Option 1 might be preferable because option 2 is not guaranteed to align to your requested boundary if . In such a case, it will depend on the implementation of the standard library you're using; the Microsoft implementation does this. Before: After: Wait, we're not done yet. We shouldn't align to the specified alignment blindly either because we can then specify an alignment of 4 for a , which requires 8. Unaligned data like that becomes very slow to access (two reads instead of one) or can simply not work (crash) in certain systems. The fix: 
+
+Sorts the template argument integer pack by ascending order using a simple counting sort. Reverse sort can be done with : \$reverse(sort(P))\$ I use a counting sort because I expect most integer packs to be created using the make sequence/make range templates, thus there won't (normally anyway) be much of a drawback associated with a counting sort when there is a large difference between the size of the pack and the highest value in the pack. 
+
+This change requires that we also perfect-forward these universal references wherever they may be used: 
+
+Please note that this is a trivial implementation. You should verify that the internal instances all have the same size (or fill in the missing values with a default value such as 0). You can turn this into a "no-overhead" check by simply using and having the macro defined in release mode. 
+
+In the header, you have the function. You can use this instead of your conditions that check if the character is between and . You index into a with an inside the for loop. Use as that is the proper type that can index into a ( might be too small). Mark the function as . Consider passing the parameter by reference if you're planning on using large number strings (~20 character numbers). This prevents unnecessary copying from dynamically allocated strings. Check vs. the size instead of indexing into the string and checking if the current character is . Qualify standard types with . Don't use . There is no need to negate that first condition. Bug: and return . An additional check is required if the first character is or . Naming is important. Your function is called , but I believe that better describes it; the function does not detect floating point numbers. Please also consider this comment by Toby Speight in regards to naming. 
+
+Use when you're finished with rvalue arguments. In , argument is actually used as an (which calls the copy constructor) because you forget to call . The fix is simple: 
+
+This function simply copies the bytes starting at the address up to the bytes into the address. It is the equivalent of copying , and elements starting from . You definitely do not want to copy bytes every single time you call or , so this avoids wasteful copying. You'll want to modify the original copying line into the following: 
+
+Makes an type where is the values in the range \$[ 0, n - 1 )\$ when \$n >= 0\$. The template performs \$log(n)\$ recursions to generate the sequence. 
+
+Implementation The structure contains type information necessary for operations and data in order to store multiple types in generic fashion. 
+
+I will leave the rest of the types to you. 3.2 Mark non-modifying functions as Functions that don't modify the logical object should be marked . For example: 
+
+However, if your compiler is C++11 (or later) compliant, you can safely leave it; accessing the first character of empty strings returns in that case. See here for more information: $URL$ 
+
+Shifts the elements starting from the element at the index to the position of the element at the index; integers wrap around as needed: If \$src < dst\$, integers will be shifted left to right. If \$dst < src\$, integers will be shifted right to left. If \$src == dst\$, the template is a no-op and aliases the specified template argument integer pack. 
+
+What follows is my implementation of : a class that handles all memory management (alignment, storing types in contiguous memory, resizing, etc.). 
+
+Additionally, it might be cleaner if you add some new lines like I did, but in all honesty it's not that hard to read... so this one's up to you. 
+
+Use static memory when the size is known at compile-time. This will be more efficient and exception-free during allocation. Possible replacement: 
+
+Refresher on the simple selection sort This is a simple implementation of a selection sort on which the template-meta-programming version is based: 
+
+Mark non-modifying functions as . functions of yours include , and a few more. Member functions that don't modify any of the class data members should be marked as so that they can be used in the appropriate scenario (accessed through a ). 
+
+However, we know that reduction can fail for certain numbers, so we'll make a helper function that attempts to reduce a number: 
+
+Your other structures work out with their current types, but I'd still suggest modifying them so that they have the explicit width you expect. Add proper copy operations to improve performance Your / functions take a copy of the parameter stack like so: 
+
+This question has the template that sorts the variadic template of a tuple using a comparator (any template taking two types that has a data member of type ). If the following tuple...

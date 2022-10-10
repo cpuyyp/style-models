@@ -1,0 +1,77 @@
+I know this is a small script but I am new-ish to writing Bash scripts and want to learn. The lines seem a little ugly, though they do work. Also I can't pass multiple commands in with a like because the ends the statement in the line, so I am wondering if there's a better way to write that line (or pass them in). 
+
+Note: I don't have much experience with the operator, if or something similar is valid I would prefer that instead of making the variable. DRY is still relevant though! While writing tests like this takes up more space I think it's more important that the test be clear. All that said I don't think DRY is completely useless in unit tests. Suppose you were doing more checks on , like making sure it's not , contains a specified number of elements, etc. I would put all those assertions in a separate method. Basically the assertions that are tangential to what you are testing. For example, you're not specifically testing the list has one element above, the assertion you care most about is that the only element is . You can't really do something like that so you have to assert that the first element is . Anyways, I tend to put these tangential assertions in methods like this: 
+
+First, bear in mind that does not place a terminator at the end of the string if the buffer size limit is reached (but it does in every other case!). Thus, you have to be extremely careful when using . Second, you're copying a large (256-byte) buffer into a smaller (100-byte) buffer, and you're (presumably) passing the length of the larger buffer to . If holds a string that's too long, you'll get a buffer overflow. 
+
+Another bug: you don't emit a NUL terminator, meaning the caller would have no way of knowing how long the string is (unless it zeroed out the buffer before calling your function). Fixing these bugs gives us: 
+
+I would also use rather than , so it doesn't have to transmit a TCP packet for every character (*). Thus, we have: 
+
+Now I get what you were trying to do. Your next steps converted the multiplication to a less expensive shift: 
+
+@JeffMercado also said this function is vulnerable to buffer overflow. In a sense, this is not true, provided the caller knows to allocate a buffer of at least . But the caller might be lazy and just say . Adding an output buffer size parameter will likely guard against such a mistake: 
+
+I recommend this, but it's ugly. I'd like it better if the throwing was at the top, but it's a trivial change you can figure on your own (It makes sense for all preconditions to be at the top). 
+
+My reasoning against returning is this: It is never 100% clear if a method will return or not in Java and maybe someone will think this won't so they won't guard against the null condition with . If you return an , it's an extremely clear signal that the content of the result may or may not be present. They still may handle it wrong but at least you can be more certain they know what's going on. My reasoning against throwing some exception when the book is not present is this: 
+
+It's unlike Java where single quotes are for characters. One exception to this is when using the in Strings, you have to use double quotes for this. 
+
+Method signature This may be an unpopular opinion, but I like not using in method signatures and instead using explicit types. It makes IDE suggestions and readability a lot better. 
+
+Actually, "objects are copied by reference" isn't entirely true. An "object" in PHP is just a handle referring to a shared entity, making it more like a reference in Java or a pointer in C. This is not true for arrays, where modification is confined to the variable upon which it happens. References in PHP are one level above the notion of object handle. When you modify a reference, you are changing what the referent variable names. For example: 
+
+You should only need to and in large chunks. The lets you return an error code if one of these functions fails. 
+
+If I were you, the first step I'd take is to come up with a concise specification of what you're trying to do. Correct me if I'm wrong, but it sounds like you want to do this: 
+
+What can I do to make this escaping function faster? Is it possible to get anywhere near the performance of C here, or is C (or perhaps working with or directly and doing it the C way) the only viable option to make this efficient? Edit: I wrote a much faster implementation and put it on GitHub. However, it uses a lot of ugly buffer manipulation. I'd still like to know if there's a simpler way to escape bytes in Haskell that isn't slow. 
+
+Specifics The below code is a little odd to me, it's saying in the th word in the th character, find each in the th character that is any of the vowels. 
+
+I don't like the use of here. If is null then it's fine (but I still don't like it). It seems better to throw a . In addition, if it actually was null it would throw a "real" at the first if statement. 
+
+This is worse. This is like saying . If you're set on leaving some comments it'd be more beneficial to leave some in the other methods with more logic involved like the method. 
+
+The only reason I even include the manual throwing of is because I assume you do more stuff in the part, if you don't, remove it because it will do that on its own without you writing it in. 
+
+A short suggestion because no one has suggested it yet. Instead of returning or throwing an exception when the book you are searching for isn't found, you should use . 
+
+Scope and `translated are only ever used in your for loop. It's important to limit the scope of variables as much as possible. So it's probably better to declare them in the loop like so 
+
+The syntax is borrowed from sed, and means: if there's a or character at the end of the string, remove it (i.e. replace it with an empty string). Then, observe that this operation can be done with a trivial amount of buffering. When a newline is detected, hang on to the last character in the line, and only emit it when you're not on the first line and you know that more lines follow. Thus, you don't need an intermediate file. I recommend implementing a helper function with this signature: 
+
+Let's see if we can get the program to terminate when either the server or the client closes the connection. Bear in mind that: 
+
+As @JeffMercado pointed out, this removes spaces instead of trimming leading and trailing spaces. Assuming you want to keep the current functionality, let's call it . There's a really subtle bug here: 
+
+I'd expect this to be a few times slower than the C version. Nope, it is 125 times slower than the C version. Then, I tried using blaze-builder: 
+
+We can do better, though. Currently, if the server disconnects, the user does not see that the server disconnected until hitting enter a couple times, which produces an ugly error message: 
+
+Everyone has commented about how to better replace the spaces, I will answer how to better test. I suggest making a proper unit test with Junit. This way you do not need to manually look at your output, you can simply run the test and it will tell you if it failed or passed. Unit testing is extremely crucial in a professional environment and is a very important skill to pick up early. (The below assumes your class is named .) 
+
+The commented out line is basically the same as the but it throws which to me is just more informative in this case than , but it's up to you which you prefer. 
+
+If you throw a checked exception every single call of this method will need to be wrapped with . Checked exceptions are a pain to deal. If you throw an unchecked exception then you have the same problem of , maybe people don't realize it could happen. So they don't wrap it in a try-block. 
+
+Return a String instead of printing Instead of your method being make it return a and remove all the from it. Then from where you call instead do . This limits the side-effects of the method. For tiny programs this is not a big deal but in larger projects knowing exactly what a method will do is very handy -- especially if the method is what is known as a "pure function" which means it literally has no side effects and its output is directly dependent on its output. Consistent formatting In some places you have spaces before braces () and in others you don't (). It's less important whether or not you use them than how important it is to be consistent. Personally I put spaces before them. 
+
+takes the value of an unsigned char or . Passing it a , which is usually signed, will produce undefined behavior. Instead, say: 
+
+This made a difference. It's even slower, 300 times slower than the C version. I thought blaze-builder was supposed to be really fast! Simply summing bytes, by folding over the input in a similar fashion as I do above, is reasonably fast (takes 5 times longer than the C version of the escaping code): 
+
+Now and point to the same object, but they are distinct variables. Now let's do something funky with references: 
+
+However, it looks like you're deleting the trailing newline returned by . I'm not even sure your code works. 
+
+The most obvious problem to me is formatting. Cut down on line width by putting and expressions down: 
+
+When the string has length zero (e.g. the file is empty or did not have a trailing newline), the array access will be out of range. Otherwise, it will blindly delete the last character, even if it wasn't whitespace. The lines that I highlighted will work... if you make a couple assumptions: 
+
+The idea is simple, most people have some one directory containing all their projects as subdirectories. When you are in the top directory and you run this script like so it will run the command in each of the folders. I have another script called that fetches all remotes and fast forward updates them which I usually run each morning with this script. 
+
+I actually just looked this up writing the answer. You can use a method called on arrays in place of a closure. Documentation 
+
+I am only going to talk about the sports method, from there you should be able to get the info you need for the others as they are all basically the same. DRY isn't a big priority As I said in my earlier comment, DRY (don't repeat yourself) principle applies to production code more than unit test code. I think even in general it's easy to take this too far, readability is important, but that's off-topic. Your code however is tough to grasp. To me, something like the below is more clear. I like to specify "given/when/then" in comments (although usually I do nothing more than , etc.) but it's not necessary.

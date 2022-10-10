@@ -1,0 +1,77 @@
+I am suggesting the usage of a here since the kind of concatenation in a loop is usually structured, hence it can be better done relying on that rather than . Usually, I will prefer the enhanced -loop over using an explicit , but its usage here is required in order to avoid adding the last . 
+
+Don't have any comments on the math, but I can offer some suggestions regarding the code... Names and comments 
+
+Trim line. If length matches, count the line and print to . At the end, print the summary for valid/invalid lines. 
+
+These are the edge cases that should go in your tests. :) On a related note, there are two approaches for adding aliases. One, convert into a and do a normal within the method. Two, derive a from the arguments and you can use . While the second approach may seem more complex, it's more 'portable' in the sense that one can also choose to apply a search on the resulting too (albeit not using ). Intended functionality 
+
+Iterating through an If what you really want is to put all the JSON objects into a map, rather than overwriting each of them with every iteration, there's a way to stream it: 
+
+It then becomes the duty of to validate its argument, and you can also eliminate the check on the caller's side in this context. I propose tweaking it slightly further (if you have no wish or intention to accidentally reassign later): 
+
+(thanks @Marco13!) Putting entries and final-izing the key You do a call inside your iteration over your objects when you have identified the entry to update. I think you can simply call your to do so. On a related note, since you are not expecting to change the after creating an object, you can make the variable : 
+
+Have you tried ? This method is available since Java 1.4. BTW, a is recommended over a if you do not require the synchronization offered by the latter. This class is available since Java 1.5. edit: also exists, this should be preferred for literal replacements and is available since Java 1.5. 
+
+You should choose whether you want to 'describe' such comparisons as 'not either the following', or 'not this and not that'. When you stick to one description, you don't have to context-switch between the various logical operators... just one common understanding will do. :) For illustration, here is the same comparison with the latter: 
+
+If both conditions satisfy, then a sample wrapper implementation can be as such (using poorly named class names and variables, please excuse that): 
+
+Is it possible to use more specific s to throw from ? They may influence how callers of this method can recover from such errors, e.g. just log, do a timeout-and-retry, or to hit the big-red "Panic!!!" button. You can also consider re-working the -statements a little bit to reduce the nesting, and also to cut back on the variable declarations again... 
+
+Code de-duplication You are doing a lot of printing and -ing, and you should consider creating a method to simplify these steps. Also, I'm not too sure why you think you need to use , as most of your strings do not really have a pattern to it. 
+
+Maybe this is just a quick prototyping, but if you do decide to make this a full-fledged library class, you should not be having the method, the initialization block, or your fields. The fields should become class fields where needs to be instantiated. Testing should go into its own class. On another related note, you don't necessarily need to create temporary files for testing. There is a method that will work with a , which can be used in turn to wrap your test s/lines. I don't think there's a benefit to instantiating a object immediately after you have -ed the file. Things may happen between the loading and storing of properties, so regardless of whether you have this object or not, the storing process may still fail afterwards. Also, it seems like you do not need to explicitly after calling as that is already done according to the Javadoc: 
+
+I'm not sure why this is labelled as a minor point, as changing public APIs (which I presume from your 'provided skeleton') should not be done liberally. Sticking with , you do need to check for: 
+
+Last but not least, you should have better unit testing too... Your current case looks OK already, so it's just a matter of comparing the output when you to something you can compare with, such as a . Remember to test for edge cases, such as getting from an empty instance, or adding elements (which should be allowed given your implementation). 
+
+Spelling is (surprisingly consistently) misspelled as , it's highly recommended to fix this mistake. :) Stream-based processing You can take advantage of the semantics in Java 8 to express the steps in another way: 
+
+Still, this can be defeated if there are multiple spaces and they happen to also be at the start and/or the end. Perhaps a regex solution may be better here... this shall be left as an exercise for the reader. Boolean flags Going back to your method, you wouldn't require if you have separated the logic that validates the user input and the actual work. 
+
+I'll just review the smaller parts of the code first, will dive into the logic if I have the time later... 
+
+It may not be applicable for since it does not have fields that needs to be set upon object instantiation, but flipping the constructor-chaining lets you centralize all the fields to set in one single constructor, eliminating compiler errors that tell you about fields not being set. 
+
+Ensure both arrays are of the same length, and the values lined up, Interpret and validate the values ( plus ), Deal with values that you need to loop through, and finally Require an intermediary loop that stores... 1440 minutes in a day to record clashes. 
+
+I don't think it is necessary for it to implement your interface, since that interface appears to only contain fields, and not method declarations (actually, ditto this for the class too). The field seem to be unnecessary, as it is only used within this method (so far). In this case, you just need a simple counter field within this method to do the same task. 
+
+You need to remove directories, so do you intend to impose this check as well when directories are specified? 
+
+As you can see, its method signature is very similar to your method, because you need the desired inputs. The extra parameter, , lets you assert that the calculation is correct. The body of the method can be something like: 
+
+For starters, comment pairs such as are redundant and actually makes the code a little harder to read. Your debugging statements can be better served using a standard logging library that lets you log statements categorized by severity, e.g. . Instead of creating your inner class , you can consider in-lining the implementation in the following way: 
+
+A is just a straightforward implementation of the interface, so declaring the return type of as a will work equally well. In fact, it is better in the sense that callers do not need to know they are interacting with a specific implementation, and that gives you some leeway to change implementations in the future (not a strong point, but nevertheless a valid one). Of course, by changing the method return type, you will likely encounter breaks around your codebase as a can't be casted into a reference, but I think this is a clean break to have. 
+
+A hard is usually not recommended, especially when it does not sit inside the method (it's at least easier to follow there). If you really do encounter a serious error, propagate the exception to the callers until you can handle it safely, e.g. by prompting the user to re-enter. Variables naming 
+
+These aren't just any , these represent months with 31 days in them. :) Probably call this as ? I also understand you want to make it clear that these months are obviously unique in the collection (in layman terms), but considering this is only used internally within the method, I don't think there's much harm leaving it as just a . Day validation logic Personally, I will start from the most constrained case and work my way down. The slight advantage is that your 'wider' cases will not need to check that is it not any of the constrained cases (e.g. look at how you do a for the first branch). In conclusion, this means you can validate for the month of February first, then the 31-day validation, and finally for all remaining months. You can also immediately from each of the branch, instead of one statement at the end. Putting it altogether for 
+
+More importantly, I will suggest decoupling the lines that handle the creation of your domain objects and those that handle the Hibernate persistence. That can greatly reduce/eliminate the nested error handling you have to do in your code currently. More importantly, it makes your code easier to recover from errors. For example, if it's only the Hibernate persistence failing, you could potentially cache your non-persisted domain objects first before feeding to Hibernate again. 
+
+Another thing to note about is that its Javadoc only mentions the return value of a positive integer, , or a negative integer. I hope you have not hard-coded comparisons of the return value to . IpFromUrl.java 
+
+What if you need to multiply two negative integers? :p Hold that thought for awhile... Validation logic Even if we suppose you have made a case for your existing validation logic, it should belong to , possibly throwing an exception containing a message to let the caller know what went wrong. You may want to go one step further to give a brief documentation about this on the method's Javadoc. Handling Your code transforms the sign based on a preceding digit, which is a slightly odd twist in logic. Instead, I think you should be checking whether a sign is preceded by any other mathematical operators ignoring whitespaces, which will yield the following change: 
+
+works with s too, by calling their . So, you can simply write . Finally, are you allowed to use Java Collections classes in your homework assignment, or is that something reserved for the future? If I can use those classes, what I may want to do is to use a (and this is where over-riding the method is relied upon) to store the representations of the iterated through, with their s as the key of the map. If the map already contains an existing value, I know that there has been a duplicate. How that is handled is up to your assignment... 
+
+(choosing to provide this as an answer since this may be construed as a 'significant change'). I just noticed I can replace the of my with : 
+
+The check for is not required, as the method for any class should return for . Hence, in a similar manner, enabling can be done as such: 
+
+The logic for / can also probably be put into a method as well, since the only variable is the number of sequential non-zero counts. 
+
+Implementing the wrapper class's will be quite similar, other than the slight difference that it should also return its own type: 
+
+If the string is either or empty, we either return or an empty one. Afterwards, if the string is , we return , i.e. no concatenation done, or actually perform the concatenation with . 
+
+The other more glaring problem lies in your method, I will be quite concerned when it actually modifies the state of my compared object by calling its method. To better resolve this bug, perhaps you need to ask yourself: 
+
+As mentioned in my comment, you have the use of here, so I'll suggest implementing that for your such that you can leverage on the standard JDK feature set (showing only the over-ridden method below). 
+
+computation usually does not simply add the hash codes from multiple fields, especially in your case where a with the name and surname will have the same hashcode as . If you are on Java 7, you can consider ) instead. In fact, if you look at its implementation, the code goes something like this:

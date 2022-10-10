@@ -1,0 +1,73 @@
+regarding your concerns. 1) I do not believe this initialization is a problem but if later on it will be a problem, you can always change it to lazy initialization. 2,3) I just paste a similar code that I find more readable and improves your loop when you want to find the parent area. 
+
+I totally agree with @RobH answer but I would like to mention some extra things. You have 2 unused fields that I guess are there for testing reasons but they are good to illustrate the concept of readonly fields/properties as you only set them in the constructor. Your class could look like this. 
+
+Don't take it personal but your approach is not good and will be very difficult to mantain. Reflection is the way to go but take a look to validation attributes, component model and data annotations. Here is a link that may point you to a better direction: $URL$ You can create your own validation attributes or use existing and have a class that takes by reflection those attributes and evalute them. Edit Some reasons why the approach is not good 1) A field can't have multiple validations (mail + required + maxlength,...) 2) Your validation can't compare values with other values (bigger than x, required if,...) 3) class will become soon fat class, as it handles all the validation rules. 4) You will have to duplicate this code every time you want to validate, what could be in multiple places and in multiple applications, if new rules are comming you will have to update all those places. 
+
+That's a bit nicer, right? Using The builtin has a second argument: . You can use it to signal counting should start at instead: 
+
+I did the hard work at looking over the rest of the code (the and ), and I feel confident that those parts won't throw a . So let's factor those out. 
+
+(Also note: if the user inputs something different from or on the first go, you get a : is referenced before it is assigned because you never enter the loop). 
+
+Global variables are not that nice. But this is a simple file, so maybe we can leave it like this for now? Let's. 
+
+The reason for this re-arrangement is the following: checking is a simple boolean check: really fast. Also, computing is a function call. Not that expensive, but not cheap either. Better to do that just once. On the other hand, looking up is also expensive. There are tricks to make that cheaper as well. I'll get back to that. 
+
+Looking at your code, it's clear that it is going to take long to execute. First of all, allocations need to change quite often, and for instance will be calculated often. Far from ideal. As a list: 
+
+Either zero or one row will be returned, and this is easy to check in the Java code, as well as being more efficient. (less data to transfer from your database to the application) 
+
+Things you are doing right Immutable objects Immutable objects have a number of advantages: thread-safety, ease of understanding, etc. You've made immutable. Aim to do this wherever possible. Parameters for SQL statements The importance of this can't be overstated. SQL injection is one of the biggest causes of security vulnerabilites. It is number 1 on the OWASP Top Ten. Use et al. (or the equivalent, if you are using a framework) everywhere unless you really know what you are doing (there are specific use-cases for embedding literals in SQL statements) Salted hash for passwords You are using as your password hashing algorithm. Salted hash algorithms are currently considered to be the best choice for password hashing algorithms as they defend effectively against rainbow table attacks. Read here for an excellent, in-depth analysis of password hashing in the modern day. Validating data (at all) Really. Laziness is the source of many a vulnerability. Always go to the effort of validating data from external sources. 
+
+First of all, let us do some short-circuiting. You're doing a lot of logic to see if it is a nice geometric progression, and after all the hard work, you check some very easy conditions. Turn that around! 
+
+Which also saves us pre-compiling a regex. More readable, I think. Any are fine, but I think the is the easiest to look at. Using that: 
+
+So, ideally, you'd want to make sure that contains as much as possible. One way to do that would be to add the following before the first loop above: 
+
+And be done with it. There's probably a lot that can be cleaned up further in the rest of the code, but I just wanted to give a short overview of how to fix the . 
+
+One aspect I'd like to mention is sorting: The contain does a , which is on the filenames. In particular, out of "somefile(9).txt" and "somefile(10).txt", the max will be "somefile(9).txt". It will then choose "somefile(10).txt" as the new filename, overwriting its original content. This is because 9 is larger than 1. 
+
+I left the last part (regarding the cleanup intact), as that's probably numpy specific, and I don't know enough numpy yet. 
+
+Don't check the existence of a database row if you aren't going to lock it In you check to see whether an item exists prior to updating it. However, you haven't locked the row in the database. This means that the row might be deleted in the database by the time you try to update it. You've printed a statement to say the row exists, which might not be true. This might not seem significant for your simple example, but could have greater ramifications for a more complex application. If you want to know the number of rows affected by an statement, use . 
+
+Split these into two separate classes. Don't require a separate call to retrieve error messages In , the caller is required to first check the return value to see whether there were any validation errors, and then make a separate call to to get the errors if the value indicates there were any. This is bad for two reasons: 
+
+This problem is also prevalent in . In several methods, you the user from the database to check whether they exist, and then do a subsequent with the column you are interested in, under the assumption that the row will exist. Don't do this; simply all the columns you need a single time. Separate concerns Your class appears to have two separate concerns: 
+
+Unnecessary looping Here I got a bit lost, due to the double loop in and ... For this, I first need to understand the contents of . Let's look a few lines up: 
+
+Wow, we saved a few lines of code. If we're lucky, it's also going to gain us some performance. Next, you have . This can be replaced by (as that's how dict containment checking works). Furthermore, can be replaced by . Furthermore, you write followed by . You can simplify this to . 
+
+Not going into the question as to whether or not this is a good idea, I can see very little wrong with the solution. One thing I would very much like to suggest is the following. Instead of 
+
+(without the comment). The code is just as clear. Excessive commenting in general Another comment I'd just like to point out. Somewhere in the code I see 
+
+First of all, you're only referring to once, and never use any further. The quick solution would be to iterato over instead: 
+
+Inside that are 1 or more conditionals using booleans. Ouch. Unfair distribution? Looking at the following piece of code: 
+
+Especially if the file is large, and needs to be transfered over the network, it's good to know what the file is working on. Now, I assume the is now a bug, as the file no longer gets truncated. Assuming we can replace it with instead, we could write: 
+
+You can probably still improve the loop but I guess you will lost readability, so I would leave it like this unless you face a real performance issue. Regards 
+
+DALEmployee What is the concept behind this class? Do you really need it? If yes, my recommendation would be to inject IService1. You can google dependency injection to get more details. Controller If you don't need DALEmployee, you can simply inject IService1 directly in the controller. getEmployees Generally is weird to me how you achieve the pagination. Generally i would use as parameters CurrentPage and PageSize and for me it seems you that you are using the employee id. How would you extend this if you have to sort by other criteria rather than employee id? Additionaly, you are using a different where on the get count and on the procedure itself, what will lead to wrong pages. Finally, depending on your sql server version, you may use this operators to paginate. SELECT * FROM TableName ORDER BY whatever OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY; 
+
+I would remove the try catch and do not return any boolean. As a general rule, you should only catch exceptions you can handle. For example, if you use this piece of code in a user interface, the boolean cuts any possibility to give feedback to the user. Instead, if the method will simply throw, you can probably handle it in a more convenient way and display a message to the user (for example, can't connect to...) Additionaly, if you catch and return booleans everywhere, your cyclomatic complexity just grows as your code will look to something like this 
+
+Your program uses both. If your program throws an Exception, it's possible for the resource to be left open. For instance, in StockRepository.java, what happens when throws an Exception? is not closed, wasting a resource. Your RDBMS likely has a limit on the number of open connections, and since you haven't closed your connection, you have leaked this resource. If this happens repeatedly, it will result in your RDBMS refusing new connections. Every time you have an resource, use "try-with-resources". The language guarantees that every resource will be closed when the block exits. For instance, to implement : 
+
+Firstly, I'm not familiar with the JavaFX nor PostgreSQL technologies, so my comments will be aimed more at Java-specific code practices. See also the answers by Vogel612 and Antot. Use "try-with-resources" Java makes memory management simpler, because it is a garbage-collected language. However, main memory is not the only resource your program will use. Other resources are, for example: 
+
+Don't retrieve more from the database than you have to In , all you are interested in is whether a row exists in the table. Instead of selecting every column and then counting the rows, you can run the query: 
+
+Note that the cases are quite simple: If I'm not at the bottom, I can move down. If I'm not at the left, I can move to the left. 
+
+I'm not that big a fan of this deep nesting, and would prefer to also write a generator which yields the files. But I hope you can continue from here. Also, maybe you should use , that way the file gets closed when the iteration is done. Further remarks. There are certain style guidelines. Keep your imports at the top of the file. 
+
+And we can probably shave some extra lines off it even more, but I don't think that's necessary because now it is a bit more understandable. As for the points @GarethRees mentioned: those should also be taken care of, as it does not make much sense like this. Probably best to ask for a new code-review after you made these changes. 
+
+Now, let's start analysing the large method . First of all, we could apply the same trick as we did for to speed up the lookup for . That's going to make your code a bit more efficient. It's a tad large, so let's first talk about the branch.

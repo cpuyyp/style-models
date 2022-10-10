@@ -1,0 +1,59 @@
+I don't know whether there's a specific use-case this is good for, or whether it's library-vendor paranoia, or whether it's completely unnecessary. (Leave a comment if you know!) 
+
+If you want arbitrarily large lists of primes, then yes, at some point it becomes silly to hard-code them all. In that case you're going to need a reference implementation anyway. So, why bother with hard-coding the shorter list? Just use your reference implementation for both cases. This way you don't need two implementations. 
+
+In this case the former is better because it's less typing (and thus fewer chances to screw something up). 
+
+You misspelled "ContinuationSignature" here; but it doesn't matter, because the type is unused. Remove it. 
+
+SPOILER ALERT: you don't want a class at all; you want a function. But first, the style nitpicks! :) 
+
+and it would Just Work. (The "so dumb" part is because C++ is stupid.) So, IMO you should stop calling them and and start calling them and . In fact, I would strongly suggest that you should just use the standard exception type instead of making up your own... at least, if you're in an environment where the standard one can be assumed (or detected) to exist. 
+
+Stylistically, the code is a bit dense, especially with all those confusingly-named public member functions. I didn't spend any time trying to puzzle out what was meant to do, for example. I would recommend putting a single blank line between member function definitions; and making sure member functions are when appropriate; and making sure that member functions' names match the STL conventions whenever possible. 
+
+Update to my previous answer! The original questioner (@Zacariaz) reported that "I'm currently looking into so-called delta swaps." I don't know how Zacariaz got turned onto them, but they are indeed amazingly efficient at doing bit-permutations. (So I can at least feel good that I identified the root problem here as "bit-permutation," even if I didn't know the best solution.) 
+
+to pick up the correct through ADL. (But this opens the whole customization-point can of worms, which is still a mess even in C++17.) No, the real reason is a red flag is because invokes undefined behavior (source). You should never call on untrusted input. The usual hack in this domain is to say 
+
+And algorithmically, notice that if you start at the top of the tree and work downward, you don't need to store O(Rows²) numbers; you just need to store the previous row's sums, for a total space cost of O(Rows). (And then at the end you have Rows possible answers, and you pick the of all of them.) 
+
+I don't understand why you write but then proceed to use the fully qualified names of , , and so on. I would think that you'd either use the fully qualified names of everything from (my preferred choice), or else go all out and a ton of things. Anyway, doesn't save you any typing — it actually costs you two lines and about 10 characters — so you'd do well to get rid of it. 
+
+Looks to me as if you've already got the most elegant solution in mind. In C++14 you'd remove the dependency on and simply return a naked lambda, like this: 
+
+I would argue that the lines marked are an improvement in the logic; they allow for the possibility that the longest string in the program might be in the second column, in which case (I claim) you'd want to extend the all the way out to the end of that column. Anyway, if the maintainer disagreed, at least there'd be a single obvious place to change the table-printing logic now. Then your main would be just something like 
+
+Jerry's definitely always runs (much!) faster at the "bleeding edge", but by the time you've altered it to compute the 20-millionth prime correctly, that same program is now running slower to compute the 1-millionth prime. (If you knew, up front, which prime you were going to be stopping at, you could choose a safe bound for the array in advance. But you can't do that if we're just piping the infinite stream of primes to .) 
+
+Unfortunately, this doesn't work out of the box because requires that its arguments all be lvalues. So you'll have to make up some storage for the objects somewhere: either use parameter-pack expansion to turn your parameter-pack full of TransactionEnforcers into a tuple full of LockViews suitable for passing (via ?) to , or else make return an lvalue reference to , which is a self-referential LockView subobject of . Fun times. But you can make it work. No comment on the basic functionality of ; I'm not sure it's doing what you really want done, but maybe it is. 
+
+which in my opinion is just too much stuff on a single line. It's not a question of columns-per-source-line; it's a question of ideas-per-source-line. One idea per source line is about right, IMHO. "Here comes a template... here's its signature... oh, and it has a surprising/SFINAE'd return type... okay, here comes the function body." 
+
+The fact that takes three template parameters (one defaulting to ) makes me vaguely uneasy. When the standard library does type traits, it always makes sure that the standard entry points take exactly the right number of parameters, with no defaults: 
+
+Any bugs in ? Any way to shorten it up? Any way to reuse the standard or would be greatly appreciated. 
+
+You'll have to be more specific. What you asked for literally isn't possible; but sometimes people use "big-O" notation loosely, either out of laziness or because they haven't yet been exposed to the notation expressing their intended precise gradations of meaning. Notice that if I give you the input 
+
+This function call makes a copy of , which might be expensive since contains an arbitrarily long . You could fix this in either of two ways: either by changing the function signature to 
+
+The function parameters and are unused, so you should get rid of them. is perfectly fine in both C and C++. 
+
+Don't do this. For one thing, your code won't do the right thing on Clang with libc++ (or MSVC, or basically any non-libstdc++ distribution). What you meant was 
+
+Then just keep refactoring and turning branches into arithmetic expressions until you're happy. It might end up looking something like 
+
+However, then it gets kind of confusing... which might indicate that you have too many template parameters here. I ran your code through Wandbox and observed the s that you construct for and . The former has length 6 and the latter has length 2. This certainly seems wrong for a binary search tree... and in the one place you use , you use it with a second argument of instead of simply , possibly indicating that you know there's an off-by-one-or-maybe-off-by-two error in there somewhere. You should use 0-based indexing consistently. The above examples make it seem to me as if you're using 1-based or maybe 2-based indexing for your , which is odd. 
+
+Alternatively, you could use tag dispatch, as follows. (But I don't recommend it in this case because it turns out to be surprisingly subtle. Replace the second instance of with and watch that overload silently drop out. I'm not actually sure why.) 
+
+The idiomatic C++11 way to write would be to have it make a copy of the passed-in Container, so that you could just pass in an anonymous (rvalue) Container and not have to worry about lifetimes. The itself would own and manage the lifetime of its Container. 
+
+Also, to clear up one of your misconceptions from the comments: has nothing, zip, zilch, to do with "not being able to edit" the pointed-to object. What does is give you a weak reference that will automagically "expire" itself when the last strong reference is dropped — in your analogy, it would be like you're giving the Student a ticket redeemable for the real book, but with the possibility that the LibraryManagementSystem could burn the book in the meantime (in which case the ticket would become worthless). If the Student actually did redeem the ticket, by calling , then the Student would receive a strong reference to the book, and could most certainly call any public member functions on the book that he wanted to. Non-modifiability is basically the domain of ; strong and weak references are an advanced concept (unrelated to ) that you should probably be steering clear of for the time being. But heck, see these slides on smart pointers if you really want to learn about them right now. If you use value semantics (i.e., passing s around by value as in my outline above), you do still have to worry about modification: i.e., Students scribbling in Books and then returning them to the Library. This is solved basically by making the Book out of teflon: simply make sure all its public member functions are . Right now the only public method implemented is , so we're all good there. Does that make a certain amount of sense? 
+
+Anyway, it won't do what you want (whatever that might be). For an open set of types, the type-safe way to do what you're trying to do is to use type erasure, as seen in library containers such as . (Shameless plug for my CppCon 2014 talk — type erasure is covered starting at 23m00s.) This kind of type-erasure is easy to implement yourself from scratch in about 20 lines of code. For a closed set of types, you might see whether your compiler of choice supports C++17 and/or Boost ; you can use the function to perform an operation on a variant in a type-safe way, and of course you wouldn't even need at that point because you wouldn't be using pointers, just plain old value semantics. If you can't use Boost, then I don't recommend trying to implement yourself. 
+
+It seems like you're mixing two (maybe three) concerns here. First, you're writing a memory resource (a.k.a. allocator) that manages handing out chunks of memory from a buffer. Second, you've decided that the same buffer should also hold basically a as its first block. Third, your initial example (but not your complete final example) suggests that maybe you want the memory resource to take ownership of its buffer and free it when it's done with it? 
+
+Looks reasonable to me. The efficiency of this code really depends on your expected workload. For example, if you're expecting to use this code with a lot of strings of length 50 to 60, and you don't mind wasting a bit of memory in the case that the strings are shorter, then you could probably avoid a in the common case by writing

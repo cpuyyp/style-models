@@ -1,0 +1,55 @@
+Use a dynamic module loader such as requireJS. You can use it to load modules dynamically using AJAX, and it features an optimization tool to combine your scripts into a single file to reduce the number of HTTP requests on production server. 
+
+simple to declare JavaScript modules with dependencies simple to implement your own version of the library to customize its behavior 
+
+Edit: I updated the JavaScript modules in $URL$ to use scope(). You can see the result in the source of the page, and get an idea of the process by looking at the commit history on GitHub. As a JavaScript developer, I want to write modules in a format that is well supported today and that will still work in five years. I designed an open-source library to this end, scope or not, with two goals in mind. It should be: 
+
+Stick to shared conventions for the naming of variables. Do not use all-uppercase for regular variables, only when you wish to indicate a constant value. Use a name specific to your appliation/website, organization or company instead of GLOBAL for the global variable referencing the root of your library, if any: it is no longer needed using Asynchronous Module Definition with requireJS. 
+
+Please review the usability of this API from the point of view of a developer who uses the API and from the point of view of a developer who implements the API. 
+
+I like this interface, but the only variation, except from the text, are the buttons. Why not abstract the usage instead of copying the actual interface? Like: 
+
+The interface I don't mind the IDisposable. If one implementation is designed that way and you retrieve it from the same factory as the other implementations, you really don't have a choice: 
+
+I suggest you create a method for each of them and then add the parts to the total. Six separate methods are much easier to understand than a deeply nested switch. 
+
+Decouple UoW and repositories Adding a new repository should be as simple as adding one new class and we're done: 
+
+Could be renamed to or . You are returning something that doesn't exist in the target code, so ,in my opinion, it shouldn't be a . 
+
+EF does that for you, and I guess NH does that as well. In the end you are abstracting away the call to . But if you need something on top of these, I would suggest a few changes. Simpler usage 
+
+Do not reuse variables or change their meaning. The variable is used in at least three different contexts, which will probably mess up the do-loop. Use different variables for different things and name them accordingly. The variable could be replaced with , and . The price is built up of six components: 
+
+-property is ugly. A return value from is better, an exception is best. The code should not be allowed to continue running when something fails. The dependency on is not good, but allowing a custom type isn't any better for the same reasons. I think a should be defined in the same package and namespace as the interface. Then the return type. Looks like someone declared a defeat right there. Why bother with the interface at all when you decide to go typeless? The implementation The destructor calls , which means is , which then causes the method to return immediately. You can delete the destructor, it's a nop. Or a bug. Someone obviously tried to follow best practice and failed. The reflection code used to create the repository looks like a poor man's DI container. Nothing wrong in that, if this is the only place you need this kind of functionality. But if there is a 'real' DI container in there somewhere, I suggest a refactoring. The caching is probably introduced because reflection is 'slow'. But slow according to what? My guess is it's negligible compared to the actual repository usage. I would remove the cache unless someone actually profiled the code and can prove a significant improvement. If all repositories have the same shape, then may be replaced by a generic interface. But if they don't, I can't see any way to unify them. If that's the case, I suggest replacing the generic with typed versions, like: 
+
+I also created extra variables to hold options objects, to enhance readability, and I added comments to describe the intent and parameters of functions declared. Note that trainingDiary is now declared in the private scope as well. If you need to access it in the global scope, you will need to export it to the global object by assigning it to global this or window: 
+
+I checked the code with latest JSLint; it is a useful tool once you know what to expect from it, e.g. by reading "JavaScript: The Good Parts" from its author Douglas Crockford. It would definitely help you to spot the missing semicolons, which can cause unexpected issues when you minify your code. 
+
+Like the method in AMD API, which is very similar, the function mixes separate concerns in a single call : 
+
+A separate function/library could be defined to declare dependencies, another for synchronous/asynchronous loading, and yet another to import and export symbols in a shared context. These separate functions may communicate and interact through a common event system (pub/sub). 
+
+You should think about the way you wish to handle the communication between modules. The latest trend is to abstract and decouple the communication using publish/subscribe pattern. You can find more details in The Scalable JavaScript Application Architecture presentation by Nicholas C. Zakas, and you may be interested in the open-source framework that I developed based on this approach, which I presented recently in Paris JavaScript user group. 
+
+Then there's no longer need for the reflection stuff, as each method knows which one to create. A suggestion: Change abstraction level It looks like the entity type used by DbContext is the domain class. That gives the following dependency: 
+
+I would not complain if you choose to keep the code as it is. It's readable and focused, except for the helper methods which you have already identified. But we know that code is never finished, and there are always opportunities for improvements. So here are my nitpicks: In You have a parameter selection, yet you pass that to . Do you have a selection or not? If you have one, why do you need to find it? If you need to find it, then it isn't really a selection, is it? I don't want all these questions when I read code. My mind gets overloaded pretty quickly. And it shouldn't be necessary to look into all the members just to verify if they do what they say. returns a . I think would be a better name. In is called before , yet I have to scroll pretty far down to find while is the very first I see. I would like to see listed first. 
+
+Depending on your needs, can be the , or use the , or be completely isolated from it. The change here is that instead of persisting the domain object, the domain object will store its state to a new object, which is then persisted. This decouples the database schema from the domain object. Two different data sources This suggests you have two bounded contexts where the domain objects may have the same name but address different aspects. I would accept the difference and let each boundary have their own set of classes pretending the other context does not exist: A in the -module is very different from the in the -module. And by that, I think I have given my opinion on your last question: If some data lives in the database and some other in a web service, then you have two bounded context and you need two units of work. How to coordinate those two, I choose to be out of scope of this question... 
+
+For each dependency in the array of needs, a property of the same name is set on the context object which is provided as argument to the function: 
+
+The last two parameters and are optional. The name of a module is a string which identifies the module and allows to reference it in the list of needs of other modules: 
+
+You should use the JavaScript Module Pattern to create a private scope for your function declarations: 
+
+and last but not least, the i18n API part of the Scalable JavaScript Application framework, which I designed for Legal-Box :) 
+
+When you implement the API yourself, you may either create a building block on top of the scope bootstrap and other building blocks, or rewrite the function from scratch, replacing the bootstrap and all building blocks altogether. In a browser, you can load building blocks with script tags, then load your own modules: 
+
+I may be able to provide more practical suggestions if you show more of your code, especially at the "top", part of the main program. 
+
+To use the function, you can write your own or build it from building blocks available in the scope or not project. The building blocks are sorted in levels. The level 1 provides the bootstrap, it must be loaded first. One building block may be picked from each level. Building blocks from lower levels are expected to be loaded first, but they are all optional. Building blocks in higher levels use the function of the bootstrap to define a replacement function "scope", declared as a module. For example:

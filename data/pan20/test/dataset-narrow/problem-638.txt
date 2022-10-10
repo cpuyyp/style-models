@@ -1,0 +1,81 @@
+In Scala normally one does never create a collection with , instead the companion objects should be used. These provide factories in order to hide the information which collection is created. Appending to mutable collections can normally be avoided with (of the for-comprehension) or with a . 
+
+In fact, all of your register*/deregister* functions look the same. Try to move out the part which differ (which seems to be only the code in the try-block) 
+
+And naming a variable in a similar way as a function, like in is completely unnecessary, when it is only used once, it also doesn't increase readability. In such cases just inline the function call: . 
+
+Extract it to a method and give it a useful name. Some for other code blocks. You can split up at least to 4 further methods. 
+
+Now you may ask how to get the contents of a monad? That is a good question and the answer is: you won't. When you use a monad you say something like: Hey, I'm not interested if my code threw an error or if all worked fine. I want that my code works up to end and then I will look what's happened. Pattern matching on the content of a monad (means: accessing their content explicitly) is the last thing which should be done and only if there is no other way any more to go further with control flow. There a lot of monads available in Scala and you have the possibility to easily create your own. allows only to get a notification if something happened wrong. If you wanna have the exact error message you can use (for exceptions) or (for all other things). Because is not really a monad (it has a Left- and a RightProjection which are the monads) it is unhandy to use. Thus, if you want to effectively work with error messages or even stack them you should take a look at scalaz.Validation. EDIT To address your edit, it seems that you never know the type you can get. This will complicate things a lot since you have to check the type of each element explicitly. I don't think it is possible to do this in a clean way without the use of a library which can do the typechecks for you. I suggest to take a look at some Scalaz or Shapeless code. Nevertheless is is far easier to do such type checks in the parser and not in the AST traverser. Thus, I suggest using a JSON parser which can handle a type format given by the user and returns an error if it finds some unexpected content. I don't know if Play! can parse things like the following (which can be done in lift-json): 
+
+A list is just a wrapper for an element that also contains a pointer to another list, thus its definition is straightforward: 
+
+This list is completely immutable. Because of the polymorphic type it can take any type of element and because it is covariant , it can also take the subtypes of an element: 
+
+Instead of accessing values in a by its index or in a tuple by its corresponding methods, just use pattern matching: 
+
+Use , to test if a given key-value-pair is already part of a . Your solution is extremely inefficient, because you iterate through the entire (with ) just to find one value. returns an which can be checked for the containing value. 
+
+I don't see how the functional code looks clumsy or difficult to read. If you have problems reading functional code, than don't write it - the imperative code is entirely fine, as long as the side effects remain local to a single function. A lot of readability can be gained by giving your intermediate values useful names and to apply a different formatting: 
+
+I'm not familiar with Lift and therefore don't know their preferred coding style but when I see and an actor I can only think about callback hell. When I have actors then I prefer having only actors that send each other messages. Maybe a callback free and actor only solution makes sense for you too, think about it. 
+
+Oh dear, your code looks horrible. Note, that there are not so many people willing to review such a code. It is a must to follow the code conventions and format your code correctly. The latter can easily be done with an IDE. CodeReview is a site to review your code and not to find errors in it. Print the values you expect to the console or use the debugger to recognize what your code is doing. Therefore only some hints to make your code more clean: Class names should be written in 
+
+Don't prefix before a method name unless you try to interoperate with Java code - in functional languages everything returns a value, thus there is no need to mark this as a property of a method. 
+
+I would never pass a mutable HashSet: . Do you know that it is not changed in this function, or is it intended to be changed by this function? In any case always prefer immutability to the outside, it makes it a lot easier to reason about control flow. 
+
+There are some things that can improved here. First, try to find the most appropriate data structure that does what you want. Why a with x and y coordinates instead of a or even better a ? 
+
+What we see here is a which is the same as which is the same as . Applying this fact to your code snippet results in: 
+
+Operating on a deeper level of the monad (what you did with your condition) means that you can either nest the monad and unpack it later at the end or that you can unpack it immediately after the nesting happened (that is what a for comprehension does). 
+
+Thus, there should never be a reason to nest monads deeply. Scala also has the for-comprehension which automatically decomposes monads: 
+
+The return types in subclasses need to be specified most of the time too (what you did). Scala allows covariant return types in override definitions which can be a problem because type inference makes use of this feature and therefore can result in compilation errors in some special cases where one only works with concrete subclasses and not the interfaces. 
+
+Furthermore, in Scala, type parameter are enumerated starting with an , but this is more a style issue. 
+
+which looks very similar to the imperative solution but is exactly the same as the code before. Write code that belongs to your skill level. If you don't feel fine with shorter and more functional code, then let it longer and more imperative. Improve your skills during the next months and refactor the code once you come back and see the need for it. 
+
+And you probably want to introduce another type parameter to the signature of to allow values of a different type than the one of the key. 
+
+Please write always the type of a function for outer functions - it makes it far more readable to understand the source code (often it is useful to add the types to inner functions/declarations as well). Beside from that you can also write or to express that you return the matched type. Your way of is hard to understand, because one needs to know what's . Furthermore, you don't need braces around a match block, you can simply write 
+
+Extract complicated code or code duplicates to methods. In method you should extract the code of each case-statement to a method to clear to switch-case up: 
+
+Having a is completely ok - it models the fact that there may be exceptions on a side effecting operation in a type. That your code looks ugly is not because your monad is wrong but because you used it wrong. You already started in modeling your application with monads, why just stopping in the middle? You can easily restructure your monad a little bit: 
+
+Use classes to avoid unnecessary parameters to methods. Methods that operate on the same values can be methods on class 
+
+Nevertheless, should only used when you have to work with exceptions. When there is no special reason, exceptions should be avoided - they are not here to control the control flow but to tell us that an error occurred which normally can not be handled. They are some runtime thing - and why to use runtime things in a statically typed language? When you use monads the compiler always enforces you to write correct code: 
+
+A can easily be sorted with when you provide an implicit (preferable in the companion object of because of automatic import) 
+
+Never initialize an instance field with a default value, always use the underscore: → . They have a different semantic meaning! The latter one leaves the initialization to the JVM, which does the thing one expects. The former one will initialize the field with in the constructor, the JVM initialization is done before the constructor is even called. For subclass relationships this can make a huge difference: 
+
+Some months ago I have written the game Othello in Scala - here is the result. Maybe it offers some concepts to you. 
+
+The only flaw is that after each line an empty string is read. I couldn't find out why - thus, I discarded it manually. 
+
+Your whole design looks very mutable, but because I don't know your domain or the libraries you use I can't say to what extend it makes sense to functionalize it. Some thoughts while looking through the code: Always specify return types for public members (even consider ), especially in an interface definition: → . This makes it easier to understand someone else code (sometimes the inferred types are nontrivial). 
+
+No need to squash everything into a single line or to use tuples ugly accessors. Another way to write your code is: 
+
+It is completely possible to write your Python code in the same style in Scala, just because you have an immutable collection doesn't mean you can't add elements to it - the syntax just looks differently. One example to rewrite your function: 
+
+There isn't much that can be reviewed. If you use Scala 2.10 then you should use an implicit class instead of an implicit conversion. Even better: use an implicit value class: 
+
+Having monads in your data structures is not messy, they allow you always to flatten their content during nested calculation steps. A simple definition of them can be: 
+
+The covariant nature of type also allows the definition of , which would not be possible otherwise because it is parameterized with type , Scalas bottom type. This single linked list definition is also the actual implementation of type in the stdlib of Scala, although this implementation contains some more details and is called . If you also want to access the members and when you only have type instead of the more concrete type then you have to declare them directly in the supertype: 
+
+You iterate through the whole , which is and therefore slow as hell. Worse, you even recreate every element and put it into another element, which is even slower. Why not just do: 
+
+In method in the code in the if statements are identical. Don't do such a code duplicate. Extract the code lines which are identical to methods (nearly all in this case) or extract the things which differs. In this case the if-header: 
+
+To get rid of ugly side effects monads can be used. But for I/O there is no I/O-monad in Scala. Instead we have to use some method chaining on : 
+
+With you ensure that you don't throw an exception during matching the contents. After that with one can operate on the String and doesn't care anymore if an empty or a full list is passed to . Now, look at the documentation of Option, there are more useful methods which allow safe error handling. The only thing to keep in mind is not to use method or a pattern match on the monad during calculation:

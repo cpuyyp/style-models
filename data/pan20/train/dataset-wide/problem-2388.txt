@@ -1,0 +1,93 @@
+The problem has a lot to do with the result set and the first bulletpoint () Since TEXT field cannot occupy an in-memory temp table, it goes straight to disk. That's just the tip of the iceberg. When you ran 
+
+If is 0, then is a count of Primary Keys that do not have a Foreign Key To be 100% homogenous, should never show up as zero() (In a Perfect World). Count of Foreign Keys Used By Primary Keys 
+
+Remember you added two FLOATs ? This makes each row 8 bytes bigger. Each row will expand in the 16KB of the Data Page, leaving less room for BTREE information. What must InnoDB do to maintain the ? Create additional Data pages to accommodate wider rows along with the associated BTREE information. Since the PRIMARY KEY is a BTREE, you should expect O(n log n) growth in BTREE nodes, along with an overflow of InnoDB Data pages. Without doing any further math, I will show you how this is the case. MyISAM has data and indexes stored separately. Run the following 
+
+According to your question, there are about 80,000,000 rows. As a rule of thumb, the MySQL Query Optimizer will not use an index if the cardinality of the selected columns is greater that 5% of the table row count. In this case, that would be 4,000,000. 
+
+I can say that mysqldump is not really the problem. The problem is the OS and/or hardware. Evidently, the computer you are using for Windows is not performant for screen I/O. Since MacOS runs like Linux, I would tend to blame Windows OS. My guess is that even with a far better computer (faster CPU, more RAM), mysqldump may still not perform better if Windows cannot buffer screen I/O effectively. Your fix for this would be to tune Windows. Godspeed, Spiderman !!! 
+
+Of course, you need to make sure you have FILE permission on gs@localhost. There are two ways to have this permission given METHOD #1 
+
+You can immediately logout and come back later. You could then poll the run log file to see when the mysqldump transfer finished. It will be finished when there are two lines: start datetime and end datetime. 
+
+This will show you what global () and database () privileges look like. Please read MySQL Documentation on all the grants you can give out to users. 
+
+UPDATE 2013-01-02 16:47 EDT I am sorry, I overlooked the port number. Here is the problem: you cannot use root@localhost against a non-3306 port unless you use the TCP/IP protocol. Please try this: 
+
+Way #3 : Check the Process List If you want to catch the queries in the act of running long, do the following (if you have MySQL 5.1) : 
+
+Here is what the Stored Function Does: It first creates a period separated list of Unique UserIDs from the Refactored Query called UserID_CSV using the GROUP_CONCAT function. An extra period is prepended and appended to UserID_CSV. It then creates another variable called UserID_Tag which has a string contains the GivenUserID surrounded by periods. I then use the LOCATE function to get the index position of the UserID_Tag as located in UserID_CSV. If LOCATE returns 0, function returns 0. Otherwise, it returns 1. Give it a Try !!! (@DTest, +1 for suggesting the Stored Function) UPDATE 2011-05-28 18:00 I find your error unusual since I create the storted procedure in MySQL Query Browser with no compiler errors. I changed the code to put the UNION queries in another subquery. Try it again, please !!! UPDATE 2011-05-28 17:52 I have an alternate solution via the stored procedure. I eliminated the use of UNION and piled up unique ids in a temp table: 
+
+As along as the DBMS (like MySQL, Oracle, PostgreSQL) supports transactions via MVCC, read and write order should not matter. What should really matter is the content of reads coupled with the selected transaction isolation level. 
+
+Then, I put it there because the mysql service in /etc/init.d calls mysqld_safe to call mysqld. In addition, /etc/init.d/mysql can pass paramaters to mysqld_safe as shown above. Just to be safe, run this also 
+
+You could play some games with , the physical home of all Stored Procedures and Stored Functions. First, here are the databases on my PC 
+
+Before I give my answer, I'd like to say this: If you have a table with 35 columns, you should think about normalizing the table. That way, you would not have to worry about addin more columns. With regard to our original question, you would like to add 5 columns. Since you mentioned that not 5 columns would be filled, you have to decide what kind of queries you are willing to run. If you use a second table, you would have to make it have the same primary key as the original table. If you ever need columns from both the first and second tables, you either do two queries or an INNER JOIN of the tow tables. Why introduce the additional queries? Will any of the 5 new columns be indexed? If yes, you are better off adding the 5 new columns to the table. Then, any indexing of columns from the old and new set of columns would be more simplified. Therefore, I say again: Think of normalizing the table from 35 or 40 columns. If you cannot do that, just add the 5 news columns to the table. It will make for cleaner queries in the long run. 
+
+OK, TABLE is 99.99%, not 100%. How can you aggressively check all the items of a table for matches and mismatches? You can actually run a great tool from Percona Tools called pt-table-sync. It will check for differences in tables between Master and Slave, as long as the table structure is identical. For example, to sync the table on a Slave in relation to its Master, run as follows: 
+
+I would scrap the data on the slave. In fact, I would just use brute force by getting a logical dump (mysqldump) of the data: 
+
+Both indexes start with , you can increase secondary index processing by at least 7.6 % getting rid one index out of 13. You need to eventually run 
+
+OK that takes care of a faster startup. The tradeoff is longer shutdown. Is there anything you can do speed up a shutdown ? Yes !!! Get dirty pages from the InnoDB Buffer Pool written to disk more frequently. How ? You need to set innodb_max_dirty_pages_pct = 0. By doing this, the shutdown process takes less time to flush dirty pages to the files. Is there anything else to help startup ? Yes, there is one more. When you startup mysql, usually the InnoDB Buffer Pool is empty after its allocation. You could make mysql save the block numbers of all 16KB pages that were in the the buffer pool. Just add innodb_buffer_pool_load_at_startup and innodb_buffer_pool_dump_at_shutdown. This will not time a long time since it writes block numbers to a binary files, not the blocks themselves. LARGER NUMBER OF FILES InnoDB's default for open files (innodb_open_files) is 300 for MySQL 5.5. For MySQL 5.6, the ideal number is set for you. You may need to increase this value as well. InnoDB may cache the open files once you reach this limit. You may have to compensate by raising the value to 100000 or 200000. You could also increase the ULIMIT in the OS to allow MySQL to have more file handles and set open_files_limit to that max value. I would further suggest increasing RAM in the DB Server. SUMMARY Here are the options you need to add 
+
+You would have look for the two rows in the display that has as the user. Once you find the IDs... You can run the or command against the Process IDs. CAVEAT This is a possibility that evn the KILL command can hang if the query must come to a completion (such as a transaction that must fully commit or fully rollback). Master is oblivious to all this. Why does work just fine ??? Running simply checks for binary logs on the DB Server. There are no DB threads to read, parse, examine, and coalesce. Running has to reconcile three(3) aspects: 
+
+Based on the bounty message , the only thing I could do is just mention that mysqldump is already buffering as little as possible. Why can I say that ??? By default, the option --opt is enabled. The MySQL Documentation says this about --opt: 
+
+CAVEAT Your original proposal is actually just as good. Most of my answer looks like your anyway. The only difference is that I introduce an outage to guarantee no new inserts starting at . An outage comes a little earlier in your plan (). I added concurrent_insert to speed up inserts into the MyISAM table duing the mysqldump. You can either go with your plan or mine. Just add to the mix. Give it a Try !!! 
+
+SUGGESTION #1 If you are just looking to take an EXPLAIN plan and instantly present it, here is a SQL-Fiddle like site called . Just copy-and-paste the explain and hit Submit. SUGGESTION #2 You could try pgAdminIII which comes with Graphical Explains See the following links to how to use pgAdmin and other methods 
+
+The reason I recommend this is the same, but you do not need to include . Why? All index pages include an index point back to the clustered index so retrieval of an index will intrinsically access the row anyway, thus accessing id. Adding to the index would simply be redundant. SUGGESTION #2 : Change the Date Comparison From the expression 
+
+USER() reports how you attempted to authenticate in mysqld CURRENT_USER() reports how you were allowed to authenticate by mysqld This means you should run this query 
+
+In some instances, certain variables were moved to performance_schema. You could search MySQL Documentation on other variables or just restart mysqld with show_compatibility_56 enabled. 
+
+Observation If binlogs are not flushed to Disk in a timely, predictable manner, any binlog events the Slave needs could easily be bypassed. This could cause data simply not exist on the Slave. Depending on the data recorded or not recorded, Replication's SQL Thread could break because of missing data or data that should be missing. EPILOGUE Not every Slave can be affected this way. Masters keep a list of all Slave I/O Threads and transmits binlog events to the Slave in order by ProcessID on the Master. I can see later slaves being victimized first. If sync_binlog is indeed an issue, perhaps all Slaves have data drift and we just don't know of it yet. The only way to tell is to download one of the following 
+
+What are the benefits ? Deadlocks can never occur with MyISAM. The MySQL server can thus manage all contention, explicit (LOCK TABLEs) or implcit (Any DML). As long as a MyISAM table has no deleted or updated records, concurrent inserts can freely occur with impunity. That would, indeed, include INSERTs on a table that has an explicit read lock. For any table with gaps, running OPTIMIZE TABLE would remove those gaps and allow concurrent inserts once again. For more information, please read "MySQL 5.0 Certification Study Guide" pages 408-412 Section 29.2. 
+
+to another machine running mysql. On that other machine run Go to the datadir in that other mysql server Change directory to junk Copy the three files for the user table into it. If the other machine is a Linux box, remember to run Login to MySQL on that other machine and run 
+
+Previously existing rows get deleted from and then inserted from into . New rows are simply inserted. 
+
+You may want to think about running on the table before copying it over. I cannot make any promises on an ARCHIVE table be copied to another server. Everybody trusts MyISAM tables to be that portable. IMHO you are probably better off, definitely safer, doing a mysqldump of the ARCHIVE table and reloading. That way, you could trust mysqld to get the table into a readable, trustworthy format on disk in the new server. 
+
+If your data has large variable-length columns, the result of reloading could be the storage of data and index info outside of your BTree Indexes and extra splitting of pages. See DYNAMIC and COMPRESSED Row Formats for more details on this. Many of the new InnoDB file format features are deprecated in MySQL 5.7 and will eventually disappear in future releases. SUGGESTION #1 Even though deprecated, you could set innodb_file_format to Antelope on the MySQL 5.7 server, restart MySQL, and reload the mysqldump. SUGGESTION #2 Use MySQL 5.5/5.6 as the Master instead of MySQL 5.7. Restart MySQL on the Master, and reload mysqldump into the Master. SUGGESTION #3 Run on all the MySQL 5.7 InnoDB tables. GIVE IT A TRY !!! 
+
+In contrast, MySQL Cluster has the technology to allow multiple management nodes. You will have to look for multiple-instance usage of MySQL Fabric in future releases. That would have to be on Oracle's roadmap. VERY WILD SUGGESTION If you use VMWare or Amazon EC2, you need to make an OS instance with the following: 
+
+It looks like you are creating a New Server Instance Profile, not a New Server Instance. If you installed MySQL already, then go to the DOS Prompt and run 
+
+This will produce the date () and time () METHOD #2 : InnoDB Buffer Pool If you have innodb_buffer_pool_dump_at_shutdown configured, look for the timestamp of the file that was written. The default filename is . Mentioned this back on (Control InnoDB buffer pool allocation in MySQL (5.7+) is usually written in folder set by , you can run the following after shutdown: 
+
+What this does is prevent the Master from recording the in its binary logs. Since the Slave only replicates from the binary logs of the Master, just don't record the commands that you do not want replicated. If you have multiple tables to convert and not replicate, then you can do this: 
+
+According to your question, you use to get the last record. There is caveat you need to be aware of with regard to the index. If a particular business_key has 1000 records, the query will do a index range scan through all 1000 key entries. Since you know that indicates the last record, it would plausible for you to change the query to take advantage of that. Why? The index you would automatically have the ids sorted for any given business_key,parent combination. With that in mind, please change two things CHANGE #1 : Refactor the Query to the following: 
+
+STEP 02 Find the folder where mysqld.exe is located on the Windows. Usually, it would be something like Start mysqld and login (no password needed) 
+
+For your on-demand bulk load, setup a table that tracks who has been loaded Change the style of your script to do the following Step01 : on all tables Step02 : Populate the tables Step03 : Collect list of tables to process by doing the following: 
+
+How many rows do the Query Optimizer See? 175862 When the Query Optimizer sees too many rows to have to process, it decide to "throw indexes under the bus". MySQL will then do a full table scan, as indicated by the expression in the EXPLAIN plan. The occurs because you had . SUGGESTION Usually, it is recommended to retrieve rows by cursors. Personally, I hate using cursors. I have an alternative that is a little unorthodox. I would create a temp table with all the email addresses, treating it like an array but accessing it like a table. Here is that paradigm 
+
+You may want to consider one of three(3) things SUGGESTION #1 : mysqldump the database with table structure 
+
+You could do this every night. It will not attempt to do any defragmenting or shrinkage of data. You could probably do that once a week by running . This will also do the for you after the shrinkage of the table's physical file ( for InnoDB or for MyISAM) or. 
+
+When I see messages of that nature, I usually blame the redo logs. This is where is LSN is written. The problem may stem from not preparing the incremental backup. What seems to be missing is the use of the --prepare option. What this essentially does is create the backup rolled forward to a specific point in time. This is particularly true if there were transactions occurring during the backup. It's kind of like the opposite of a , which makes a logical dump based on the start time of the backup. Doing a --prepare with xtrabackup will make the redo logs roll forward to match the end time of the backup. Note what the opening paragraph of Preparing the backup from the XtraBackup Docs says: 
+
+For more information, please read the MySQL Documentation on Access Control for Stored Programs and Views To see the for the procedure or function named , run this: 
+
+Back in the day, people have been clamoring for FTS for InnoDB and feverishly looking for workarounds. Sometime around January 2005, InnoDB found a sponsor to look for a developer. I am sure one of the biggest gotchas that developers worried about was making FULLTEXT Searching (FTS) work in harmony with Transactions. This is especially needed since the tokenization for inserted strings is performed only at commit time, so a full-text search does not see the uncommitted data. Please keep in mind that although there are tutorials on FTS with InnoDB, MySQL 5.6 still has a bug or two out there for InnoDB/FTS. 
+
+DISCLAIMER : Never Learned Relational Algebra but it looks interesting From the schema given and your question, this is what the SQL should be: 
+
+Please be careful not to assign SUPER to just anyone. Once a DB Server reaches the max_connections limit, only one DB Connection is allowed to login and that user must have the SUPER privilege. Otherwise, a DBA cannot login to perform major operations mentioned by @DTest. As to the question, here is mysql.db from MySQL 5.0.45

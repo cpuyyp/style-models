@@ -1,0 +1,67 @@
+You are doing nothing to validate that the parameters passed to your public function are valid for working with. This leads to fragile code that is hard to debug. Before you do things like make (relatively) expensive database or service calls, you should at least make sure you have viable data passed to work with. Fail early and fail loudly. 
+
+As mentioned previously, this should have been validated in the constructor and failed long before the point where a client would ever call this method. 
+
+You could easily take this object and iterate it to attach event handlers programmatically. That might look something like: 
+
+Consider adding type hint for the parameter passed to constructor. This is obviously a concrete object being passed, so having typeint here and make this class less fragile and prevent the needs to validate the passed parameter (something you are not currently doing). 
+
+Don't use for debugging (it looks like you did this at one point due to your commented-out line). Use . This allows you to dump debug information without actually impacting the way the UI works. 
+
+You should actively try to design away constructs. When you get in the habit of doing this, you will find that in most cases these are not really necessary. Why should you do this? Because the more code paths you have, the more fragile and harder to maintain/debug your code will tend to be (the term cyclomatic complexity is used to describe this). So when you see yourself with a conditional like this: 
+
+By the fact that you are using field instead of or similar, I am wondering if you are not properly hashing your passwords. This should be considered mandatory for storage of password data. 
+
+You are not ever returning the intermediate function for possible use elsewhere, so I don't follow the need for this approach. I agree with the comment from @GregBurghardt around not unneccesarily wrapping native array functions. I don't like the function being called . Perhaps something more descriptive to what is actually happening here like . You are not ing here at all. To me this whole thing would be clearer/simpler like this: 
+
+My primary feedback is that this is very hard-coded and inflexible. I don't think you are going to want to have to change class code every time you want to make a change the end user messaging or HTML messaging format. You have several concerns you are trying to address all within this single class: 
+
+I would consider building and storing reference to choice options related to a specific question as part of the . That way in this method you don't need to do any jQuery selection to determine the universe of options related to this particular question. I also think that you might want to consider the fact that you could have multiple items selected if you ever move beyond just using radio buttons, which should probably be a property of the question (i.e. allow multiple answers), not something hard-coded into the template. So you might end up with something like: 
+
+I would recommend moving away from use of queries. They make your code harder to read without having to go look at database schema (what fields do I have access to?). They can make your code fragile to table schema changes (you mean I broke something by adding a new column?). They can also make your application consume more bandwidth sending fields that are not being used back and forth (a great example of this are cases where you have timestamp/audit fields that are not meaningful to application). 
+
+I would consider building the board as a separate concern from displaying the board. I say this as it is more practical from a learning standpoint to understand how you might build the data structure that represents a chessboard (for example a two-dimensional array) not, just how to display it by building a string. During your programming journey, you will likely learn to embrace the separation of logic/data storage concerns from display concerns. I would also encourage you to more heavily leverage functions. This might yield something like: 
+
+To me, this is much easier to read and a pretty good approach short of going to more of a template approach. 
+
+Of course this doesn't take piece into consideration. Not sure why this is store on the rule object (this is unclear to me). At any rate, the interaction between these three classes triggered from this method seems odd. AdminRule thoughts: 
+
+In class A, while I appreciate that you are trying to work with PDO in exception mode (a good thing) and using try-catch here around the instantiation. Think about what impact this has on your code. Here if PDO instantiation fails with exception, you basically just swallow it up with only some output to standard out to indicate there was a problem. Subsequent code could call this class, expecting an instance without knowing that the class was instantiated in a bad state. You should be failing loudly here and letting the caller to the class make the decision on how to handle the situation. I don't think that there is really a case here to even use try-catch, as I would think it reasonable that a bubble up from a PDO singleton class. Maybe the only reason to use try-catch here is in case you wanted to log some information about the internal state of the class before re-throwing or wrapping the exception. Either way, an exception should be thrown externally when you can't instantiate in an expected state. 
+
+This would allow to more easily unit test those individual methods that represent some subset of logic on dealing with "favorites". 
+
+I would consider moving your routing definition logic out of .htaccess and into your PHP code. I think you will find it much easier over the long haul to maintain your logic solely in PHP vs. being split between PHP and Apache. This could leave you with a simple front controller redirect in Apache to index.php, with PHP then inspecting the request for routing. 
+
+Make up your mind on whether you are trying to work with functions in an object-oriented manner or not. You start to provide an object wrapper around it in your connection class. But then just work with it in a procedural fashion. I might actually suggest you dump these procedural methods and just work with PDO with PDO_SQLSRV extension. You would then be working in a much more modern paradigm. 
+
+I would recommend getting into the habit of using exact comparisons (, ) instead of loose comparisons (, ) as your default means of comparison. This can help prevent against unexpected comparison behavior. I would go so far as to say that loose comparisons should ONLY be used in cases which truly warrant it and should ideally be accompanied by a comment explaining why the loose comparison is appropriate for that case. 
+
+I think more than even a code review, what you are really needing to think about is your architecture. In the modern age of event-based workflows and parallel computing should you really be managing and executing a complex set of scripts in this manner (i.e. via shell automation)? My advice is to look for better tooling that will allow you to orchestrate your pieces of logic via an automated workflow of some sort. Even consider things like map reduce tools (Hadoop, Elastic Map Reduce, etc.) which are ideal for parallel workload execution with aggregation of results. 
+
+Do you need a class? A can't heal himself can he? Alternatively, you could consider a method that could take a or or any other item that can performing according to some interface) 
+
+That way if the caller wants to get the error message later they can (via your getter), but it is really easy for them to differentiate a good result from a bad result on the method call. 
+
+This also gives the advantage of having the function to delay then add the class specifically "scoped" to only be relevant to the element as well as the opportunity to set up a specific queue ( in this example), which deals only with this specific functionality. Note that you don't need to use a custom queue like . You could simplify this down by using the default queue, which would look like: 
+
+Should your method actually be broken up into and methods? I would think that a programmer should be explicit about what they are expecting to happen here. And you should not ever let the class get set up to where id would be empty if the record has been persisted to the database. 
+
+But I think my main concern with it is that it uses sessions vs. cookie indiscriminately. I will start with the assumption that you are propagating sessions via cookie, as is considered best practice. If that is the case, why do you need to persist information about the user's authentication state outside of session data in their own cookies? 
+
+If you take the approach noted above and store element refences on object as well as question information on object, all of your public class methods could change signature to not require parameters to be passed. For example: 
+
+Since nobody else has chimed in here, I figured I would elaborate on my comments above. If your stated goal is to: 
+
+Your method names seem odd and could potentially cause confusion. are really getting/setting objects which is not clear from the method names. Your has an additional problem in that it does not enforce that a object be passed via type hinting, so some confused developer could pass a string or some other value to this method and put your object in a bad state. 
+
+Since you are new to development, let me point you to a great resource for learning PHP - $URL$ .From what you are showing it looks like you are using very old, very poor examples of how to work with PHP. 
+
+Why log every request? Oftentimes code to perform debug-level logging might be triggered in a conditional controlled by an application-wide configuration setting. It seems odd to take on a logger dependency, just for informational logging anyways. Your server logs should be able to to give you the header and status information (if properly formatted). Logging each and every response seems like a little much and also a good way to potentially leak secure information into your application logs. 
+
+See link above in comments for some more elegant solutions. So I am not going to focus on algorithm, which I think can certainly be improved. Some thoughts on your code itself: 
+
+I don't understand the need for and escaping you are doing here. If you go with an inheritance model where inheriting class specify the tables/columns they related to, you can get away from all this unnecessary escaping of database object names. 
+
+Beyond that, I would suggest being cognizant of your styling. Right now: - your indentations are inconsistent - your variable naming style in inconsistent between using snake_case, camelCase (like in keys), and no way to differentiate words in your variable name at all (i.e., ). You should pick either snake_case or camelCase to make your code more readable and stick with whichever style you choose. I would actually recommend camelCase as PHP, as a language, is moving more in that direction with regard to industry styling standards. 
+
+There are any number of things to get into here since, as you say you are a beginner. This code looks a lot like what you may have seen in PHP code examples on the web 10+ years ago, when PHP was used mostly as a web scripting language to add dynamic functionality to otherwise static web pages. So let me first introduce you to what I feel is the best source out there in how to get started working with PHP - PHP: The Right Way. There is a lot of information here, but it is worthwhile to digest it over time, as this is a better source of information than probably 99% of PHP code examples out there.

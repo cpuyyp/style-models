@@ -1,0 +1,97 @@
+The only way to be totally safe in the case of servers, is the same way you ensure that a hacked box is clean: reinstall. Thanks to puppet (or some other configuration management system) reinstalling servers and getting them to a specific state can be quite quick and automated. 
+
+I run OpenWRT at home and really like it. But I do get the occasional hangup. Maybe once in a week. Haven't had one in a while now though. 
+
+ErikA is giving you sound advice. Instead of guessing what you have running, you should specify what you want running. But maybe blueprint can help you get from your current state to the one you should be in. 
+
+Unix filesystems don't like being full. Try growing the slow filesystem. If that's not possible, try defragging it using xfs_fsr 
+
+I agree that you should probably just bind to the addresses you want to listen. But in case this isn't a solution, you could try iptables: 
+
+Make sure to follow a step-by-step tutorial in setting up OpenLDAP that is written for your skill level and operating system. As SvenW noted, you don't set the password anywhere. If you don't set the password, you cannot authenticate. Then your possibilities are to either a) allow unauthenticated write access or b) use when isn't running. 
+
+sudo is really the better alternative here. If you are afraid that they can pass arguments to other than /, maybe create two small binaries (not scripts!) that do nothing other than call / (and not using but ) and only enable calling those two specific binaries for the user. 
+
+If you are willing to let go of your script-based backup system, take a look at BackupPC. It can easily restore files. Databases have to be restored some other way though. 
+
+Reinstall the purged package (sysv-rc). If that isn't enough, try to recreate the links using or something similar. 
+
+Not required, but you should partition. The partition table eats up very little space, but it is universally recognizable. Windows will know that there's a filesystem there if you put it in a Windows box. If you have no partitions, other operating systems will just treat it as an empty drive. 
+
+Seems to me like you want script(1). It allows you to record and replay terminal sessions. On the other hand, if you are trying to automate setups, consider configuration management, like puppet. 
+
+It really depends on your usage, though. Big files that are written once, and then only read? Doesn't fragment, can fill up closer to capacity. Traditional UNIX home directories with lots of small files, some rewriting, lots of snapshots. Maybe even snapshot retention that keeps lots of recent snapshots, but removes some of them while keeping some older ones. Terrible fragmentation, pool really needs free space to perform. The only way to know for sure is to test and monitor the performance. 
+
+StrictHostKeyChecking=no is of course a bad idea, since it will automatically accept all hosts keys UserKnownHostsFile=/dev/null will not save anything to your normal known_hosts file. 
+
+in /etc/ldap/ldap.conf. This will prevent checking of the certificate. Note that it makes the connection even less secure. /etc/ldap.conf should not affect ldapsearch(1) Also try dropping the second -Z on the command line. That might be what's forcing the fail even though you have TLS_REQCERT allow. 
+
+I tend to just dump stuff to one place on the filesystem (typically /var/backups) and then backup the filesystem using something like for example duplicity that happens to support S3. 
+
+mod_rewrite using the P flags puts the request through mod_proxy. The advantage in using mod_rewrite is that you get more control for mapping requests, just like rewrite let's you rewrite URLs. But the proxying is exactly the same. The disadvantage is that mod_rewrite syntax is more complex. So my recommendation is to use mod_proxy -style configuration directives unless you need something more complicated. Others will probably recommend mod_rewrite -style, because then you only have to learn one style. 
+
+The negative number is because of an integer overflow for the signed 32 bit integer used to report the number of blocks. I've had the same problem on a Linux-based NAS. I was able to fake a larger block size in Linux, which prevented the integer overflow and the product of block size * number of blocks resulted in the correct amount of storage. The bug is reported for Net-SNMP and there's a patch available. I'm unsure if you're able to tweak a Windows system in the same way. 
+
+That is not up to SSH. You will typically have your CWD set to HOME on login. May I suggest reading the man-page of your shell and putting a cd command in the initial login file? 
+
+VZFS is a virtual file system. It is used by OpenVZ (and Virtuozzo) to export a directory as the filesystem to a virtual machine. Therefore maximum file size is likely determined by the filesystem whose directory it actually is. 
+
+Virtualbox used to have better Windows drivers available than KVM, so that's what I would try first. 
+
+Yes! Linux (and Debian) software RAID is arguably more reliable than hardware RAID. You can back up /etc/mdadm/mdadm.conf Read mdadm(8) documentation. I can't remember if squeeze will automatically install grub on both disks, but you can verify and do it easily enough your self afterwards. Just 
+
+HDD failure, memory failure, a failure in the I/O components on the mainboard. Better run a bunch of system diagnostics. What are you running git on? Linux, windows? NFS? Local disk? 
+
+If you are using cn=config, then you shouldn't be editing files to change the configuration. Try reading some documentation, for example LDAP for Rocket Scientists. 
+
+I don't really get what you're asking. Files served from a server should go under according to FHS. But why would several users need to have access to those? I suggest you start using version control and give developers access to that. Then automate deployment using a script or func or capistrano. Give those who need the right to trigger a deployment. Maybe using continuous integration so that it is only possible after all tests pass. 
+
+Check out the config variable in . Setting it to group might do the trick. Another option might be to use something like gitosis to manage the repository. 
+
+Linux + ZFS isn't quite production quality yet. Only Solaris really is. But you can check out illumos and FreeBSD. 
+
+Are some of the services bound to localhost on the guest? If you do an ssh forward from (host) localhost:8080 to (guest) 10.x.y.z:80 and the service is listening on (guest) 127.0.0.1:80 , it will give you connection refused. Try making a tunnel from 127.0.0.1:port to 127.0.0.1:port , where the first is host and the second is guest. 
+
+OpenVZ is lightest, followed by Xen and KVM/VMware are the heaviest. On the other hand, I've had problems with OpenVZ (very flaky during NFS, not really isolated etc.) and Xen, while KVM is very simple and adequately performant. 
+
+rsync, or just clone, as git clones are complete copies of (the reachable parts of) the source repository. 
+
+An empty base is a special case for retrieving information about the OpenLDAP server that can host several databases (or "namingContexts" or "bases"). E.g.: 
+
+Sounds like a WINS problem. Ping uses DNS, while CIFS uses WINS. Are both the NAS and the server in the same workgroup/domain? 
+
+What file system are you running? Are journaling data or just metadata? It might be that the log file size (metadata) is extended and the change is journaled, but the log contents (data) isn't written yet. If the server then crashes or reboots the metadata is replayed from journal, but there is no data to recover so empty (zero) contents are shown. Do you use TRIM on your SSD? that would increase the likelihood of zero bytes (^@) 
+
+How many machines? Puppet resource usage on the client is pretty irrelevant if you are only going to run it every now and then. The amount of clients and frequency of contacting the server are much more important, because the server can use quite a few resources. I have tens of machines contacting the puppet server every hour, and I've gotten around fine using just the trivial and poorly performing built-in server without any special setup. 
+
+You need at least 711 permissions on . A user has to have execute rights (+x or 1) on a directory to access anything under it. 
+
+I'm having similar problems with KVM. The trouble is, I've got two identical host machines and only one is having problems. 
+
+Instead of the table identifier 42 you can pick any number (or symbolic name, if you map them via ), but some are reserved. Your configuration is probably a bit different, I don't know your gateway for example and guessed the netmask. 
+
+Directory / refers to the root directory of the server. Try Location / to refer to the URL specific to the virtualhost. 
+
+APT can't install RPM packages (there used to be an apt-rpm fork, used in Linox, but I doubt it is maintained). You can however install the program using or use to convert rpm packages to deb packages. RPM packages which have been built relocatable can be installed in a different prefix, including the home directory of a user. In this case it can be done without root access. 
+
+Try using instead of . It's much better at finding readable strings than just replacing NULs with newlines. 
+
+I see two non-obvious solutions. Backup using BackupPC, which lets you easily check out previous versions and restore them. Can be done remotely or locally. Configuration management using puppet. I don't version control all the files on the server. I version control puppet modules and manifests which describe what changes should be applied to the server. I avoid touching the servers by hand at all, and if I do, I duplicate the changes in puppet. I use both. Configuration comes from puppet, versioned with git and versioning of "user data" (served webpages, home directories etc.) is handled by backuppc. 
+
+According to $URL$ it is important to align the virtual hard drives of virtual machines for performance. I'm running virtual machines in an environment built on Debian, KVM and LVM. What steps should be taken to get alignment right when installing a host node? How can the alignment be checked on an already installed node? Can the alignment be altered without re-installation? How? 
+
+in case of centos6, you could just try to just chmod -x httpd or anything else used to start apache: 
+
+A new solution may have appeared: BitTorrent Sync Later edit: Actually these days I would probably recommend git-annex assistant or syncthing but there are many alternatives 
+
+You need something on port 80 that can forward requests to Tomcat (and maybe even to whatever you use to serve PHP). For example Apache can work as a reverse proxy. And nginx. And varnish was made for the exact purpose. 
+
+We've been using KVM on Debian Lenny for almost a year now. Stable, except for live migration. Apparently that would work without paravirtualized network. But we can live with short breaks until a patched version becomes available. We use DRBD to provide shared blockstorage. Nothing at the time provided a nice way to administer our specific combination so I reinvented the wheel: $URL$ 
+
+I'm guessing one of two things. Either you haven't got an ssh-agent running on the server. TO verify that you have an ssh-agent running on the server, see if the SSH_AUTH_SOCK environment variable is set: 
+
+You probably want the sleepenh program, which allows for "accurate sleeping". There's also a blog post about how it was used to solve a problem which required no oversleeping 
+
+As others have said, under /usr/local/ , not /opt/. I usually also have these sorts of scripts in /root/ , but that can be considered bad practice. One possibility is also /etc/cron.daily/ . But you really should be asking yourself why you are doing this. Homegrown backup scripts are easier to get wrong than some off-the-shelf backup solution. And remember, you don't want backups, you want working restores. 
+
+In Debian (and probably Debian-derivatives like Ubuntu) the options are documented on the man-page initramfs-tools(8).

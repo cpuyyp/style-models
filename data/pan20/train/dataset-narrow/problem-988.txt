@@ -1,0 +1,79 @@
+You could add an early return if the parameters collection is empty as there's no work to actually do. I'd also use the UriBuilder class like this: 
+
+Nitpick - is a ternary operator (also called conditional operator or inline if) not the teritary operator. edit: I am assuming that both and are rather than . As Mug has commented, there's not enough context to go too deep here but let's look at one line: 
+
+Well done for spotting the duplication and wanting to fix it! You are correct that you can use generics to solve this problem. Here's some approximate code to start you off in the right direction: 
+
+Well is an instance property - you need an instance of the object to get the value of the property. The value belongs to an instance, not to the type. You either need to use static properties and lose the generics or introduce a configuration source that maps type to a configuration object. I'd sugges that the object has no need to know what its stored procedures are called so the latter suggestion seems to be the way to go. Create a configuration class: 
+
+You need to check this arguments for this method as there is a lot of scope to pass in the weird values. e.g. what if is a negative number? That doesn't make sense! You also need to check for null. 
+
+If you're waiting for the other thread to finish before you start there's no point in starting two threads - you've got sequential processing there and don't need (and can't) parallelize it. You could use a with a coninuation (). You could start the second piece of work immediately after the first bit has finished. You could throw away all of the threading (preferred). 
+
+In a project I'm working on, I need a component that is able to make a best guess about file's type based on its contents (a ). It doesn't need to do a particularly great job - basically just need to guess a file extension (which will later be mapped to a mime type). I can't trust any metadata - I can only act based on the content. I opened up Bing and Googled around a bit and found this gem on magic numbers. I figured it would probably do the job well enough so decided to roll a limited implementation in C#. Most of the time it's a straightforward "starts with" check. However, some formats (I'm looking at you JPEG and PDF) make life slightly more difficult. E.g. JPEG starts with where xx can be anything (I think). EDIT The second byte in a jpeg is actually 0xD8 - I obviously had a copy paste error here PDFs can have their header anywhere within the first 1024 bytes which is why it's not always a "starts with" operation. FileType.cs 
+
+My question is simple, is there a better way of doing this? Note that I can rely on the inputs always having a unique Id as this is an ASP.Net application. 
+
+As you're using Single, I assumed that the dictionary will definitely contain the entry. I don't know how you're creating your Lists but there is the method which could be useful: 
+
+If you have a case sensitive collation on your SQL column you'll need to use a case insensitive comparison but I would guess you don't. Similarly, you can simplify this: 
+
+As you said that you will always have the right number of elements in the array, I would suggest the following: 
+
+But you'll soon see that the unit test above will never complete. I'm hoping that you can also see that the above code is really odd. Why should a labyrinth know if it's solved or not? I'd expect the test to look more like: 
+
+Edit As RufusL notes in the comments, it would be a good idea to add a null check for the data array: 
+
+I can't see how to prove that they're equivalent... If anyone can, I'd be interested to see it! They are obviously equivalent... If you add the and together and then subtract the smaller of the two you are obviously left with just the bigger value i.e. the max of and . 
+
+Sql Injection What you've shown isn't actually vulnerable to Sql injection because you're only using ints but the way you are writing your queries is a terrible habit to get into. 
+
+I'd strongly advise against mixing mechanics in the meaning of your code. It took me several reads to understand that your is simply to achieve batching. You could make life easier by adding an extension method like this: 
+
+But, we can go further. You should prefer returning interfaces rather than concrete representations. Do you need indexed access to the EndpointAddresses? I doubt it, return instead: 
+
+I'm reluctant to give you too many pieces of the puzzle because it's clearly an assignment (well done for disclosing that btw). I think I can start you off in the right direction though. Firstly, as you guessed, you need to encapsulate what you think a card is. It has a rank: 
+
+Although you already have some excellent answers I thought I'd focus on your key question - performance. Let's take a look at your current implementation. In particular, this bit: 
+
+Which is a regex literal but being treated like a string. However, this only works because it's on the default controller and so doesn't have any slashes. If it had been on it's own controller e.g. 'News/BlogsFeed' it wouldn't have worked. 
+
+There are a whole bunch of variations on the above - feel free to make any changes... The has always bothered me a bit but I like the terseness of it. With that extension method in place you can simplify your code to: 
+
+I use Math.Floor on the TotalSeconds to add the 1-second tolerance. You can be 0.9999 of a second over and still evaluate as true. You could have done a strictly less than with instead. 
+
+You need to work on your naming. You have lots of incorrect casing e.g. local variables in PascalCase but the content of the names isn't as good as it could be either: 
+
+I'll come back to your other point later if I have time :) Update As your second bit of replication: Create another method: 
+
+I'd suggest that you aim for consistency with your generic type names too. Why vs ? I'd suggest for both. You could do it just with a foreach: 
+
+The default case doesn't need to check either as an exception would have been thrown when you enter the switch if the keycode was null or an empty string. The fact that has a string parameter passed by reference is less than ideal... in a method name normally screams idempotent to me - mutating my parameter is pretty unexpected. I think you have a concept that needs wrapping up in a class here. You're returning something called a and stripping characters out of the parameter - I'm sure it makes sense but it's not obvious what that sense is to me. Your property on would be better backed by a field. Don't forget that classes default to referential equality and so if you return a new instance each time. 
+
+As Dagg said in his comment, try to cache things as much as possible - I haven't tested this code but you could do something like this: 
+
+Judging by similar code I've seen written by people, I would think that your Solution Architect comes from a VB6 and before background and hasn't quite made the transition to C#. I'd also be worried by the lack of consistency with parameter names (both camel and Pascal case used), not using built in methods (e.g. using instead of ), using a foreach loop when Linq offers a much shorter and clearer way of achieving the goal (although internally doing roughly the same thing) and a clear obsession with ref parameters. Just to add, one particular dev who coded like this created a method which required over 20 arrays passed by reference... It still makes me shudder. 
+
+Having said all of that, why do you need this at all?! If you're returning the filename anyway, there is no reason I can think of to add a hook into the filename called at the time of the method. Why not just do: 
+
+If you need to come back to something, use a comment so that it appears in your task list in visual studio 
+
+Note that I've removed the uneccessary check for on the object. Your naming could do with a bit of work doesn't really mean anything. You could also store the Regex as a field on the class to declutter this method. You can leverage a in your method too: 
+
+I haven't set the so the class can't work. Add a constructor so the class can be instantiated correctly and obviously. 
+
+This will just return the filename. This overload could be used by your MainWindowViewModel (bad name btw): 
+
+I'm not really concerned with performance... I know about the various sieve options (Eratosthenes, Atkins) and decided that trial division for a single prime was adequate. 
+
+Although, I think it might be better to throw if is - that seems like it would be a programming error. Adding doc comments is great but you could add a bit more detail. For example: 
+
+The important thing here is that you use ReadLines and not ReadAllLines as the latter will load the whole file into memory. I'd love to suggest improvements to the part where you compute the 'strongest path' but I don't know what a 'strong path' is and I haven't been able to find a definition with Google either. One other thing I would suggest is that you don't ... use a specific exception type or don't catch and wrap them at all. 
+
+Edit: I realised that I've only given you an opportunity to create a single parallel line but I think it's straightforward to call the method more times with different offsets! You didn't show your class/struct but it's worth noting that should be at least PascalCase () but preferably renamed to something more like: and renamed to be or similar. As and are also public, you should PascalCase them too: and . 
+
+I hate to break it to you but your code doesn't work. For the input you've given, your code returns: 
+
+The best thing you could do is let EF do what it's good at... You don't need to save every single time you add an entity - let EF track the changes in its DbSets repositories and then save the changes in the DbContext unit of work. As a more general point - why aren't you saving the whole DomainModel at once? I'd expect to just be able to do: 
+
+Your documentation comments are really not good. There are numerous typos and not a single one of them tells me more than what the method name does (which isn't much).

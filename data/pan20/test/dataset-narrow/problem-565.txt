@@ -1,0 +1,53 @@
+The other answers have provide some good suggestions about the code formatting and styling, so here's mine on the logic. The way I see it, you only need to call when the test data is generated and is (I'm not quite sure why the title containing a certain value is 'current page', but that's beyond my point). Otherwise, you 'handle the error' by saying that 'Page synchronize failed' if the test data is generated but is , or say 'Test data is not generated' if that is indeed the case. Given some slight, and in my humble opinion reasonable, assumptions based on the cases I have described above, I have an implementation for the handle error part: 
+
+Since this is done regardless of , you can perform it outside of the -block (illustrating only for ): 
+
+I feel a bit more background to your question is needed here. Edit: Of course, going by OOP practices, you really should be creating instances to check for its existence in the etc., but I'll defer such bigger changes until there is more information given to support your use cases. 
+
+Put in a block to safely close the input stream upon termination. Consider declaring outside of the loop, and use that for the end condition of the loop: 
+
+Since may give us values for invalid integers, we need to exclude them first. Collecting as is just for illustration. If you want to sum the results together immediately, for example, you can change that to . 
+
+You can also choose to place this as method for instead, but from an OOP approach, this depends if an is supposed to 'know' an (and ) or not. Your approach is still fine. Adding and updating effects Since you are on Java 8, you can consider -ing from to expire the type and remove the entry in one go: 
+
+These are going to be nearly impossible to conform, since a is fundamentally a array, and even a simple uses an underlying for the concatenation. If one can partially 'hand-wave' the implicit away when using the operator, I suppose one can also do a smaller 'hand-wave' of the implicit array modification with : 
+
+Ideally, the object should be passed to this method so that the method callers know what exact file is being opened here. edit: If you claim that the processing still tends to infinity, consider reworking your process: 
+
+For starters, we deal with input safely via , before we stream on its characters via . Then, the first gives us our preliminary result, each character's presence. Next, we need to then group by their occurrence, so the second is used in conjunction with a so that we can get our highest repeated character(s) as the . The character(s) are checked against each other using to find out which is the 'smallest', using as an initial value as it is an arbitrary large character compared to the standard English alphabet. Finally, since can potentially give us a for an empty , we wrap it up in a just so we can filter away, before finally converting the representation into a via . This will return an empty at the very least. Plain-old iteration Of course, if the above approach looks too... advanced, the plain-old iteration approach is even simpler and easier to comprehend (with only a tiny bit of Java 8/9 magic): 
+
+After sitting on this for... 8 hours, I realized can, and probably should, use the method, to encourage code re-use at a very small expense of efficiency (which isn't the goal here anyways): 
+
+Defaulting to properties inside the You should perform validation inside the , and to either warn callers of invalid values, if not to throw an . Even if you don't and prefer to silently use the default values, this is what you can do: 
+
+First, there's inconsistent usage of braces for your block statements. Second, if you are already keeping track of what is the next element to be returned by your de-dup iterator, wouldn't it be enough to just check against that? 
+
+There is an alternative implementation if you are on Java 8. Instead of keying on your , you can use a to key by the scores after the values. Getting your result is then just one more call to : 
+
+Instead of duplicating the code, you can introduce a method that accepts the relevant , the and the to standardize the lookup code. Again, instead of using a temporary variable in , it will be shorter to simply return the result of performing the operation. Also, as you should know, Java 7 supports type inference for generic instance creation aka diamond operator, so you should use consistently, where applicable. 
+
+Using just one example, seems to be used a lot here. You should consider putting your magic numbers into an easily identifiable constant so that they can be reused in a consistent and readable manner. 
+
+Code duplication From your self-identification, the non-duplicate parts of both classes largely center around the URLs that needs to be fetched. This means, if you have just one class: 
+
+Inconsistent use of braces here, I'll suggest using it throughout. Using to do logging is a poor choice here, as the logging feature should be abstracted away to a logging framework. With that, you can optionally turn on/off messages on a per-level basis (e.g. for development, but for production), or even change the formatting. 
+
+Some improvements... Variable re-assignment and -check You are re-assigning twice, and unfortunately I think you don't even need it at all. First, it's generally not a nice idea to re-assign the method argument because careless mistakes may result in you inadvertently changing the instance referenced by it somewhere inside the method, when you're expecting the original input. Even if you don't explicitly method parameters, it's simpler to always treat method arguments as an invariant so that you know what the method is processing on/with. Therefore, you should simply assign the output of to a new variable, and you can inline the new variable in the subsequent calls: 
+
+Have you thought of doing the arithmetic comparison on every other array element, so that you can shave the number of iterations by half? 
+
+To sidestep that and the trailing , you can use a , or if you're on Java 8, assuming you have converted your results array into values. Java 8 and random value generation Generating a stream of random integers in Java 8 is decidedly easy: 
+
+Of course, this assumes that the type of is handling comparison safely (by returning ), instead of throwing a . If you happen to be on Java 8, the class provides a wrapper interface to handle -checks in an arguably more fluent way. Putting it altogether 
+
+Let's get the basics right first... After attempting to understand your implementation, these are the gotchas I can spot (some repeated from @Robby Cornelissen's observations too) 
+
+What does it mean to set to the input? Wouldn't you need to do something like too to indicate the course is 'no longer free'? This is why I am suggesting that you re-evaluate the logic you require for adding a course to a period and marking that period/course as occupied. You may want to do something like the following: 
+
+Why start from 4 anyways? You say 'it will crash with amounts larger than 4 die', and that's due to , but what if the user only wanted to roll one dice, and that roll has a value smaller than four? Parsing input 
+
+Strip away any BOM from . If this is a MIME message, extract only the part and pass that recursively into this method again. Else just do a to get our desired array. 
+
+Even though this is a very short method, I personally don't favor reassigning method arguments as it may get confusing as to what is being modified/assigned in the future, or for other longer methods. Ditto for . An alternative for writing the loop above may be: 
+
+Just like your original code, we strip out whitespaces, then transform a 'minus negative' operation into an addition, and finally replace only the signs that do not follow other mathematical operators: , and . These are the only cases when we need to treat it as a subtraction rather than to signify a negative value. More can be added here to support and/or . However, this change does introduce a slight quirk, which changes expressions starting with a negative integer to . To mitigate that, we can do a simple short-circuiting in :

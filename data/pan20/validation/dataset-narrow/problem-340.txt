@@ -1,0 +1,69 @@
+You have some good answers I had to look it up and turns out you can shrink tempdb Yes the the space is used by other queries When you restart the server it will start at the initial size. I don't know if under the covers it shrinks of just allocates fresh. Growing the tempdb is somewhat expensive so unless you really need the space back then leave it. But you might have a massive operation that grows tempdb and you are not likely to do anything that massive for a while. You can shrink with the temp active. Or if you can restart the DB then tempdb is reset. As warned by other shrinking a regular DB has down sides so unless it is space you really need back the leave it with free space. Since you are new to tempdb take a look at this Optimizing tempdb Performance. 
+
+I don't think the is producing the sort The is producing the sort See the order by in the query plan This might be faster It breaks if the purpose is multiple accounts with same name 
+
+the join on DDate is doing nothing and the group by csi.ItemIDNumber makes that left into a regular join 
+
+And why a iden PK in events_tags? Drop that. Just have a composite PK of tag_ID, event_id in that order. This might be faster but I doubt it 
+
+It is typically better to perform the write operation locally Here you are both reading from and writing to the linked server My recommendation is if you are going to create #localTempTable then do so on LinkedServer. Have a session on the LinkedServer and link to local to populate #localTempTable but #localTempTable is now on LinkedServer. Flop the link. 
+
+So are so many factors because there are so many different types of loads. When it get loaded the only defense mechanism is to deny connections. I you are looking for max connection you are looking for the wrong thing. Design your application to be scalable - acquire the connection as late as possible and release the connection as soon as possible. A well designed application could have 100 active users and never have more than 10 active connections. 
+
+Indexes are going to slow down insert, update, and delete As the indexes get fragmented it gets even slower Few thing you can do 
+
+A leading % kills use of an index Most users want autocomplete based on first characters anyway Most users don't care about more than 1000 Have an index on city 
+
+There are many cases where doing the join first is more efficient. If name is indexed and 'e' is somewhat unique then do that first is more efficient. This is different 
+
+The where is killing the left joins in the exists so you can drop that This may give you better performance 
+
+You are not sacrificing performance as in database performance using varbinary(MAX). You are not searching on the varbinary(MAX). You are not indexing the column. What is nice about in the table is single consistent backup. The down side is a bigger backup. Delivering the file to the client varbinary(MAX) is going to be less efficient than FILESTEAM or file system. 1 - 2 mb is relatively small. If it was 200+ mb then you typically would want to avoid storing in varbinary(MAX). If table size alone is problem then FILESTREAM is probably your best solution. This will not hurt database performance and files are not stored in a table. 
+
+You are totally trashing the index on NewTable.C2 Just drop / disable the index and then build / rebuild it after the insert is complete And you need to break this up as you are putting a massive load on the transaction log If you want to optimize the select then just run the select alone 
+
+I would not worry about the 100% The big number are the big number A lot repeats so start optimizing just one This is just a subset of your query 
+
+I think you have answer on why This may be a way to address it I know it looks messy but the execution plan said distinct top 2 was 84% of the cost 
+
+Let's just look at TableOne, TableTwo, and TableFour Most of the condition in the "in where" in are already covered in the join And suggest you use join on for all 
+
+Good that you went with the view row_number() solution If you were stuck on hard coding I know this works in MSSQL but have not tested with postgresql 
+
+The type will be the .NET type. If there is a direct map then no problem. If there is not a direct map I think it will try an implicit conversion. 
+
+This is not 3rd normal form. If two or more users share a computer then you would have duplicate entries for the computer. If there is no sharing then you can just use the computername alone. Should have separate tables for user and computer. Then a 3rd junction table. 
+
+As far as theoretical why do a look ahead for EACH row? Just read the rows and hold the 0 in a buffer If you get to a 1 then update buffer with 1 information and write out the buffer If you get to a new item then discard the buffer This is an easy single pass operation This would be all of 12 lines of C# with CLR 
+
+You have PK clustered index as a uniqueidentifier? That index has massive fragmentation. You want a PK that is inserted in the order of the PK Why not just use an identity? Why are are you updating a value rather than just insert the correct value? Are you inserting just one row at a time? One row one round trip is not efficient. Fast inserts with parameters 
+
+no one has bothered with an answer an index on [HomePages] [Key] an index on [HomePageTranslations] [CultureName], [HomePageId] and make it a unique constraint if appropriate the query itself looks fine to me you could probably just use a view and an index on [HomePageTranslations] [HomePageId] and have fine response 10s of thousands is not that much 
+
+One possible scenario is let's say you have affiliates that have unique ID and you know they will not duplicate across affiliates as they have unique starting character. The affiliates load data to a master table. There records are processed and then assigned a master ID. Users need access to the records as soon as they are loaded even if they are not yet processed. You want the master ID to be based on the order processed and you will not always process in the order the records were loaded. I know a bit fabricated. 
+
+Like '%' + [Bad_Phrase].[PHRASE] is killing you That cannot use an index The data design is not optimal for speed Can you break the [Bad_Phrase].[PHRASE] up into single phrase(s) / word? If the same phrase / word appears more than one you can enter it more than once if you want it to have a higher count So the number of rows in bad pharase would go up If you can then this will be much much faster 
+
+You contradict yourself. First you state you would like to treat humans and organization as one group and then you state using one table would cause queries to require more code. Three tables with one master: With two tables rather than funnel to, the constituentID is the master the [human].[id_number] and [organization].[id_number] would just be FK. So you would insert into constituent first to get the master ID. With this it would be a pain to enforce the same ID not in both [human] and [organization]. If you are going to put a type in constituent to enforce the two other tables then you might as well combine in the first place. Two tables: You could have two independent [human] [organization] tables and combine them with with a view with a union but that would not be my preference. One table: Not having a last name is not a big difference. They both have address, phone number, and EIN/SSN. I would share name / last name and let first name be null. A person is still valid without a first name so do you really need to enforce it. ID is the PK and is an identity. Type - person or organization is not part of the PK. Maybe SSN/EIN as PK but then that would not allow for one constituent to have more than one account. Then you can have views for person and organization. In summary I don't think a null (enforced or not) is that big of a deal. Compared to separate tables. 
+
+because your new index does not have the sort try without the sort on Vit_DataAberturaReal the index on the sort does not include all the fields in the select 
+
+The limit is only going to help with exactly 100 so it is probably not worth the overhead. If you put an index on the hash then it should know to stop (and where to start). 
+
+Perform some more analysis on the bottle neck Cannot imagine 4000 simple inserts is the problem As you stated you don't see any high CPU or high DTU usage From local to Azure is a much longer network round trip Create a sp where you insert 4000 rows one at a time in loop One network call with 4000 inserts That should be like in the one minute range (67 / second) Test that sp both local and Azure 
+
+You could do a lot of stuff but integer and text do not sort the same. Text would break a search on week > 6. In text 10, 11, 12 are not > 6. I would use 0 for no date Not that size is the big of a deal but you would use tinyint for week and smallint for year one varchar is the size of a smallint 
+
+8 minutes is not that bad. Is this a query you need to run often? If so a view might be more effective. 
+
+Your research is wrong. Index on GUID will fragment if it clustered or non-clustered. It just takes a little longer to defragment a clustered index. If you have a PK GUID then what purpose does an int ID serve? 
+
+I only now SQL Server With 5 or more joins I have observed the query optimize will tend to go with loop joins more often. And a loop join can perform poorly. But you just need to deal with it. You can get good performance with 5 or joins - some times it takes a bit more work. 
+
+With no to be sure you are not feeding in a hard query Start and only drop it when you need clean data 
+
+Requirements are not clear on insert. If the ID are not correct then how would you know a non-matching usercode is not already present? Update: What this does is if t2 is null then it will not replace a value in t1 
+
+Why do you need a PK? Why not just go with company_id as a non-clustered index? You said most searched are on all entries or by company_id Rarely update Rarely delete org_path, this is the only table in which it exists The answer from Martin Smith may get you what you need I am not familiar with automatically add a 4 byte integer uniqueifier Maybe I am missing something but if you don't have other columns indexed then I see no purpose to it in this use case If you are concerned about DRI the tables should use the Company table as the FK for company_id 
+
+I don't know if there is a best design but I have been under the covers on a few and they went with separate tables for each datatype. And even separate tables for single-value versus multi-value. I would certainly go with multiple tables. You have to select a column name or table name / join so not really much more complex. Can even use a view. An update takes a more specific lock. Consider multi-value. What if you want to support email to both joe and sue. A specific table is overhead but it is hard to do a lot of stuff with a simple data model. There is spec out there you should consider supporting CMIS. Clearly you don't have to support the spec but if you want interoperability that is the way to go. But also have some players that don't support CMIS and have a document (no SQL) type back end. There is some great free open source CMS out there.

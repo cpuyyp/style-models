@@ -1,0 +1,55 @@
+Your query accesses 10 partitions and you are searching a 10 month range so my guess would be that it is partitioned on month of . I can reproduce your plan with the sort with the below. 
+
+That was actually my question at AskSSC. I should have just tested it myself as I accepted an incorrect answer. With the following test table 
+
+Even under the call to ends up blocking however, whilst the straight forward is no longer blocked the same query references the function in the clause. This appears to start a system transaction () at a higher isolation level and ends up getting blocked waiting for a shared key lock on again. 
+
+One way of doing it would be to use to create a table expression with the ids to check and to find the missing ones. 
+
+A comparison of the values in the inserted and deleted tables is your only option, because UPDATE() and COLUMNS_UPDATED will be true even if the value hasn't actually changed (i.e. has simply been overwritten with the previous value). To (largely) future-proof your trigger you could dump inserted and deleted into temp tables, and generate dynamic SQL for the comparison based on the temp table structures (in conjunction with Update()) which you can obtain with this: 
+
+If your customers use the new login, they will have full control of all pre-existing databases (including being able to drop them!), as well as any new ones created with that login (since creator login gets mapped to dbo). And they will not be able to drop any dbo user. 
+
+Since the Itzik Ben Gan article was written the hardcoded cache size of 10 for seems to have been changed. From the comments on this connect item 
+
+For larger batch sizes the version seems generally faster. The TSQL Querying book also explains why can have a performance advantage over sequence. The is table specific and isn't. If disaster was to strike mid insert before the log buffer was flushed it doesn't matter if the recovered identity is an earlier one as the recovery process will also undo the insert, so SQL Server doesn't force flushing the log buffer on every identity cache related disc write. However for Sequence this is enforced as the value might be used for any purpose - including outside the database. So in the example above with a million inserts and cache size of 1,000 this is an additional thousand log flushes. Script to reproduce 
+
+You can't use a SP in a default, but you can use a function. But presumably your SP code has to increment the value in the NextNumber table, so that won't work for you. Your best bet for doing this within SQL is probably to have an INSERT trigger on MyTable which calls the SP and sets MyColumn. However you'll have to carefully consider the behaviour of your SP code when multiple concurrent inserts are involved. For example, you'll probably need to select the current value from the NextNumber table using an UPDLOCK hint to prevent another user reading and using the same value. (Note that the UPDLOCK hint will only prevent reads in this way if it's within a transaction [which triggers run within in by default], and if other selects on the NextNumber table use UPDLOCK as well.) 
+
+BTW: If you are looking at other datatypes as well you may encounter some additional bytes between the version number and the column value as follows. 
+
+The grammar for accepts a which allows the module name to be in a variable. This does accepts three part names so the below does the trick. 
+
+Also sometimes previous changes that were implemented as metadata only are deferred and will be written to the row now it is being updated anyway. An example of such a change would be this is generally a metadata only change at time of execution and the physical row won't be updated to reflect the additional 12 bytes for this column until next time it needs to be written to. 
+
+The errors suggest SecurityDescription is no longer a valid column to reference. Perhaps VS2008 ignores such errors, or the column was lost in the upgrade. 
+
+It's not the fanciest or even best way, but is the easiest to start learning with. By the way, your code won't work if @UDF_1 is null, you need to assign '' to @ALL_UDF before working with it, or add other checks. 
+
+This is caused by using Select * in the TVF. It also happens to views that use select * when columns are inserted to the underlying table between existing columns, or when columns are deleted. This to me is the number one reason (among a few more big ones) not to use Select * anywhere except perhaps in an outer query that wraps a fully explicit subquery for example. 
+
+The reason SSMS does this is because there is no TSQL syntax to reorder the columns in a table. It is only possible by creating a new table. I agree that this would be a useful addition. Sometimes it would make sense for the new column to be shown next to an existing column when viewing the table definition (e.g. to have a column next to a column or grouped with address and email columns). But a related Connect Item ALTER TABLE syntax for changing column order is closed as "won't fix". The only workaround apart from rebuilding the table would be to create a view with your desired column order. 
+
+Notice that the result set has 3 rows and CountOverResult is 3. This is not a coincidence. The reason for this is because it logically operates on the result set after the . is a windowed aggregate. The absence of any or clause means that the window it operates on is the whole result set. In the case of the query in your question the value of is the same as the the number of distinct values that exist in the base table because there is one row for each of these in the grouped result. 
+
+From your comment update, it sounds like Merge replication could work well for you, mostly due to the minimal updates. It's a lot simpler to set up and manage than two-way transactional (which is what the scary link I mentioned deals with--I should have left that for later). In a nutshell: $URL$ 
+
+You have to consider whether or not you actually want your trigger doing all that though, and I can't speak to the stability. For the comparisons, any particular reason why CHECKSUM instead of say i.colname=d.colname OR (i.colname IS NULL AND d.colname IS NULL) ? 
+
+If I understand correctly that you only want to Archive the files produced in case you need the occasional one for referring to later, then cloud file storage would be cheaper and simpler than storing them in a DB. 
+
+will work fine (though on some RDBMSs you might need to have a non integer numerator or divisor to avoid integer division). For nullable columns you might want to use something like 
+
+The use of here could provide benefit if you were removing an included column though - as in the second example (as the original index would both have the desired order and cover all columns). The plan for this shows that the original index was read to create the replacement. 
+
+You are deleting 7.2% of the table. 16,000,000 rows in 3,556 batches of 4,500 Assuming that the rows that qualify are evently distributed throughout the index then this means it will delete approx 1 row every 13.8 rows. So iteration 1 will read 62,156 rows and perform that many index seeks before it finds 4,500 to delete. iteration 2 will read 57,656 (62,156 - 4,500) rows that definitely won't qualify ignoring any concurrent updates (as they have already been processed) and then another 62,156 rows to get 4,500 to delete. iteration 3 will read (2 * 57,656) + 62,156 rows and so on until finally iteration 3,556 will read (3,555 * 57,656) + 62,156 rows and perform that many seeks. So the number of index seeks performed across all batches is Which is - or I would suggest that you materialise the rows to delete into a temp table first 
+
+$URL$ shows SQL 2016 Dev as supported on Win10 Home, and I don't know of any explicit feature limitations--though you are right in general that you're limited to what the OS supports. Have you tried to set up replication using the built-in service logins? I believe the instructions around adding Windows logins are for security best practice, which may not be an issue for a dev environment. 
+
+Having a column named "EmiAmount" that also indicates finance availability (a interrelated but separate concept from EMI if I understand your post correctly) is bound to cause confusion. Even your post seems to confuse the terms. And there's probably no compact name that can alleviate this. If you choose to use a single column, I would at least suggest a non-nullable column, and using -1 instead of null to indicate "no finance". The reason is that it's generally best not to assign an actual meaning to null, as the standard interpretation is "data optional and not available/applicable". Also, when you can avoid nulls it's best to do so due to the complications they cause. (Note I'm not suggesting to avoid nulls when "not applicable/available" is fully valid from a data modelling standpoint, which is very frequently the case.) 
+
+You may well get a more efficient plan though if you simply fill in the gaps in your table so you can do a straight forward join on . At least that should allow the optimiser to consider something other than nested loops. 
+
+This is set by the client. It is passed in via the "Workstation ID" property in the connection string. So I presume that you will need to make some configuration updates on your client machines. 
+
+No. Rebuilding the table is the only way. See this Connect Item for confirmation. You could use SSMS to script this for you if you trust the somewhat buggy table designer. Apart from that you could declare a view with the desired column order as a way of grouping logically related columns together.

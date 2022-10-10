@@ -1,0 +1,81 @@
+But, like this, we have another case of thread unsafe code: If thread 1 and thread 2 resume application via at the same time, they will both reach ! So let's fix that. It's pretty easy to fix - just add . What does is say "only 1 thread can be in any method that is per instance at the same time". For now, this is good enough, but later you may want to use locking objects to prevent other possible coding errors. 
+
+I don't see much wrong, but then again, I don't have much C# knowledge. One thing I do spot however, is the following: might be replacable with . See this code snippet in MSDN documentation for usage: 
+
+In this case, what you ought to do is write tests that attempt to pack various items into a box. Perhaps you could iterate over a set of boxes each 1 to 3 large in each of the 3 dimensions, (makes for 27 different boxes), that you then try to put into a larger box. Maybe try putting 4 (531441 combinations) (or maybe 5, but that's gonna take a while, 14348907 different combinations) of those boxes into a 4x4x4 cube, and the algorithm that packs the most wins? (if you're gonna pack 5 boxes, try 5x5x5 cube or 4x5x5 cube). Maybe start small with 1-2 in all dimensions, 3 cubes in a 3x3x3 cube. (2*2*2 means 8 different boxes, 3 of those boxes means 8*8*8 possible box combinations [that's 512], meaning that even if your code takes a full second to test both algorithms like that, it'll be done in 10 minutes. Compare that to the other case which could take weeks at 1 second per combination and a day at 0.1 seconds per combination, which is too long for you to make sense out of.) For performance of such a test, you could skip cases where the volume of the boxes to put in the cube is greater than the volume of the cube, as the algorithm should fail to put in all the boxes. You'd need to record any differences in results between the two algorithms and print out those cases and see which algorithm is better like that. Then you can inspect the differences to see if there's any weird behaviour. Like that, you can objectively test the correctness of each algorithm. Be sure to check if each item is actually in the box and doesn't clip with other items, or you'll find that the buggiest algorithm wins. 
+
+You've got a flag variable in there. But from what I see, you don't need it. I've labeled all the usages with . The only line that sets to true is inside the if statement . is triggered by or some other condition earlier. is set to at the top of your do-while loop. So every iteration, it's set to false. Because of this, the flag variable cannot be changed from false until the stepback if-statement. So we can do this: 
+
+By using the method, you prevent counting ALL the elements. This should increase performance, which is an improvement of the code. I don't know whether use of for such a thing is common in C#, though. If it isn't, you might want to add a comment. Additionally, in , you name the return variable . Shouldn't it be ? If not, shouldn't the method name be changed? 
+
+You've just cleared both your lists. I'm not sure that was the intended goal, but it could happen. Maybe it can't happen right now due to certain circumstances. But you'll make a future change and all of a sudden it will happen and you will have bugs and these bugs will be near impossible to reproduce... you'll get a gradually building list of tickets of customers who report that sometimes, it doesn't work. Make a special that you create once and never mess with again. Then on that. Do the same for . 
+
+Except that, looking at the conditional, there is no need to compare to 0, you can just compare to other values. 
+
+You create a set, give it a name, but don't do anything with it after the function returns. Do you need to keep a reference to it? 
+
+You have some serious bugs in there. This should work fine, of course, but try iterating it backwards; you won't get the correct elements back. Here's another way your list blows up: 
+
+I can't find anything wrong with this. Just ... nitpicks. You name your variables in for each loops . 
+
+Don't put multiple statements on the same line. It turns your code into a wall of code. You think understanding a wall of text is hard? Try a wall of code... Naming Use for methods and variables. Use for types. Use for constants. This means that... 
+
+There is no need to set everything to null; When you return the tree the other variables are no longer in scope and will be deleted. 
+
+Beyond that, this program seems trivial and there's not much else to say about it. There are, of course, various minor improvements we could make, such as... 
+
+This is hard to read. On one occasion you've opted for no braces, same line, on another occasion you opted for no braces, multi-line, and later again you go for braces, multi-line. Be consistent with the placement of your braces. It makes it easier to read the code. 
+
+I think I know why I have troubles decoding your code. It's because it's at the wrong abstraction level. We're gonna retrieve a child , or create one if we don't have the one yet. But then the function ends up actually 
+
+The real reason it's hard to read is because is a pretty bad description... in this case, you're looking for something like ... but that doesn't really fit the description either. 
+
+You can just set a boolean and once you spot a single difference. The break will end the for loop directly. Then, if after that for loop, the boolean is not set and still , you can just return false. Like so: 
+
+As far as I know, there's nothing substantial to improve. It's clear, and the program is of trivial size. So any ideas about future extensibility are irrelevant. Nitpicks: 100 is a magic number explained only by a comment, use or whatever the case convention for fortran is. The write function looks weird (Disclaimer: I am not a fortran programmer), maybe wrap it in a helper function (do you even have those in fortran?) so your code reads cleaner. 
+
+There is still duplication in the handling of A and B when it comes to . I think they're "groups", so I'll name the function : 
+
+Then the rest of your code can be indented one level less. Heck, you might even be able to move this guard clause up, thus saving a bit on performance for that case. Performance isn't the main reason to do this though; Identifying guard clauses allows you to move them away from the code doing the actual work. 
+
+That said, you might wanna put a comment there. It's not a trivial line of code. Looking up a bit... 
+
+Your controller could store a "padToLightUp" value. Then use (where 1 is the pad number, so it could be 1, or 2, 3, 4...). This gets rid of the need to find a pad in the dom to light up. Similarily, you could store the audio references all in an array, so that you can hook a function to the pad's , in which you play the audio file. Lastly, instead of wrapping everything in , make them actual functions that stand separately. Then you can use , which means that the use of timeout affects your code structure far less. 
+
+You could say this can be improved; Dog can have 0 to many objects to play with. Maybe it's carrying up to one object at a time. You could either use (but that's secretly ), or, perhaps better, . I call it PlayObject but basically anything that you could give to the dog to carry around would work. We're not using a very strict object hierarchy here. Then, of course, if we're gonna play fetch, we'd have to retrieve the ball. 
+
+A minor bug: You get an for an empty list in . You don't have a comment stating you need to input a list containing at least something. Consider returning and adding a comment. 
+
+You could use some blank lines in your code. reads as a wall of text, and without semantic breaks ("paragraphs"), it's hard to see at a glance what's going on. Additionally, you'll find that blank lines show how a function would be split up into other functions. Let's take a look at your code: 
+
+Next, you can combine your for loops to make the code faster. First, here's the three for loops we want to combine. 
+
+Binary search is blazingly fast. 10000 elements can be searched through in 13-14 array accesses. 100000 elements - 17 array accesses. Consider stopping binary search when your scope size is less than 128 (your code should go blazingly fast at that point anyway). Your code 
+
+But you shouldn't be declaring a variable with the same name as an argument anyway, because it does magical things in javascript (primarily, redefining variables sets them to undefined, even if the code is never executed). So just use like this: 
+
+Next, once again identify that there is duplication in handling of string appending - you handle in multiple places. Create a separate function. I gave it a bit of a poor name, since I haven't actually checked your business logic yet - I'm just optimizing this based on patterns! 
+
+There's a full queue already of 15000 mails (remember, threads are allowed to be suspended indefinitely, so I can add 15k mails before the VM starts your thread). First thread is created and run. It increments to 1. We put the limit at 2. It sees there's mail, and currently 1 thread. It adds a new thread and sends a message. The message sending is done, but the other thread hasn't started yet. So we create a new thread. Repeat until we have ~14975 threads. That was a single thread breaking your code - so synchronization is not gonna help. Though whatever you do, you'll want to have synchronization as well. 
+
+Only the case (a and not b) results in a false case. So if we invert it to "if not A or b", it simplifies the condition. This way you only have 1 case where you need to copy a value, rather than 3. 
+
+Well, if I were designing this... I'd abuse a physical object. Blackjack comes with a table. And the dealer and the player join this table. That's when they're greeted. And then they can play hands. At some point, people leave and the hands end. So perhaps a class like can be responsible for a lot of things. At the very least it could take the responsibility of passing messages around and handling the game's progression. To play Blackjack at a casino, you need to place a bet. When you're done playing, you can collect your chips and you just walk away. Sadly, you don't have a betting system, so there's no easy way of simply betting 0 and making that a way to leave the table. (Then again, card counters might favor just waiting a couple hands to get the better cards... and they do so by simply not betting.) So yeah, you'll have to make something ask the user. I'd make that the table's responsibility. Leave the round of hands out of it. 
+
+Let's say we had projects later - will there also be ? What methods will it contain? The same? Mostly the same? This leads to code duplication, which is really bad! In your HTML page you use a table, and for that, will do. But for non table situations, like a stackexchange profile, you have graphs for reputation, lists of answers and questions, it's partially sortable, some are numbers, others are text, some of the numbers are rounded (reputation is shown as ##.#k, rather than a 5 digit amount)... All of that is either HARD or NOT POSSIBLE just because you're following the dogma of "You should never have Getters/Setters near your code.". Such an idea is DANGEROUS in this case! But you link to more than just 1 article of this guy, so maybe you really like what he says and I won't get through to you by just pointing at your code. Let's point at his: 
+
+Broken Code Your code is broken right now. If I make a 2 by 2 by 2 cube. And I put in it a 3 by 1 by 1 stick. Then you say "sure, okay!" 
+
+This slab of code has only 1 output variable, . You could move it to a separate function to try and keep understandable. 
+
+This can be deleted. The only constructor throws an exception, so barring weird reflection (in which case, you're doing it wrong), any methods which rely on instances cannot be called. The other option I can think of is if you have a subclass that uses this method. Then this method would see some use - but it's existence remains questionable. Without the exception, however, you can make use of it as normal. 
+
+Aren't conditionals fun. Of course, I say it never gets executed; be sure to check what the semantics of that case were, perhaps you've got a bug! 
+
+That said, perhaps assigning to a separate variable would help with keeping the line a bit shorter. On the other hand, those function names need work; sounds like a variable name. Actually, so do the other function calls here. Try prefixing with for anything you're pulling from memory and for anything you're going to be asking the user. (Or .) Then you'd get which clearly shows what the function's gonna do. (Recipes also do this; they'll tell you to cook or bake or braise or stir or fry or ... rather than just and voila.) So this is what I mean - it's pretty readable, you can see what's going on, but there's a few things here and there that could be better. 
+
+Indentation I hope your code is properly indented in your IDE. Right now it looks unreadable. So unreadable, in fact, that I can't review your code properly. But let's see what we can find. Unneeded parentheses 
+
+If you were to ignore this one rule for a moment, what you could do is make a . And then put the names of people in the list. Then, when you're done, as per this stackoverflow answer... $URL$ You can use a stream and . But you can't, because you're not allowed any other lists or arrays or whatnot. I'd personally consider the problem unsolvable because the strings could get very long and become a larger part of the problem than the actual pairs would. What I'd change about your code is this bit: 
+
+In the code tells me that program 2 is for splitting up a bill. In that sense, the code is self documenting. We don't need the problem description. We can see what the code does, because we can execute it. What comments are for, then, are not for explaining what the code does. That understanding can already be achieved by, well, reading and executing the code. Comments have 2 main uses, in my opinion: First, to explain the why of the code (why does the code do what it does). Second, to help speed along the understanding the code. Basically, rather than making me read and execute the entire program, spending lots of time, you simply put the purpose of a part of code in a comment, and I can read what the code does via condensed comments. Like reading a recipe instead of watching someone actually cook something. The act of making code self-documenting, then, is to put these comments into active code. Putting the why into code is hard; the only places you can possibly do this is in error messages - "number of people must be greater than 0, cannot split bill between 0 or negative people" - stuff like that explains why there is a check. I don't recommend going out of your way to do that; comments are for the programmer and output is for the user. Putting the how comments into code is a lot easier. You can use function names for this. Compare:

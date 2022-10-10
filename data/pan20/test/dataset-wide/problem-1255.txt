@@ -1,0 +1,43 @@
+The other answers go over a variety of good optimizations and code improvements but I wanted to look specifically at how each one impacts the performance of the loading code (Note: please take the times below with a grain of salt...do your own benchmarks if performance really matters): 
+
+Update on : I missed that your were also looking at the performance of the function. Unfortunately, if you keep the original allocation scheme there isn't very much you can do. Memory allocation/deallocation can be slow and with not always consistent (it can take longer or shorter depending on the state of the allocator). For example, in my sample test of 150k words has to check 10.5 million pointers and deallocate 388k of them taking 7 seconds to do so (would be faster if not running under VS). If you change the allocator to a single bucket as in my example then your deallocation is simply: 
+
+Always check return codes when reading data from files. I suspect this may be the issue with your code "crashing" as even with loading 150k words your code only takes 1.5 seconds with the fix. Another issue is the mixing of with depending on if your word file contains or line terminations. Using mode with will probably result in incorrect parsing when seeking...at least it did with me using VS2010 on Windows7 causing considerable head scratching. Changing the mode to fixed the seek issue but eliminating the seek altogether is a better fix and then the file mode doesn't matter. 
+
+You don't check for EOF in your inner for loop meaning your code will run forever unless the file ends exactly with a . 
+
+Your original code (with the two fixes mentioned above) takes 1500ms to load/parse 150k english words. Not necessarily bad. It results in 388k allocations of new nodes. Removing the call reduces this to 1060ms. Loading the file all at once (only 1.5MB) and parsing the string using has a very small performance increase to 1000 ms. Replacing the with manual parsing logic has no visible effect. At this point the only obvious thing left is to optimize the individual allocations with one block allocation (see code at the end). This has a huge effect on performance reducing the loading time to only 15 ms. Hopefully that is fast enough for you.... At this point there isn't anything obvious left to optimize. You could try saving and loading the completely parsed trie but the I'm not sure if you'd gain much with the larger read size involved. Profiling would be your best bet to see what, if anything, could be optimized. 
+
+A collection should be plural, and names should be in English. Here we see and example of what I said 
+
+Not only did we eliminate the need of a comment but also we increased the readiblity. In my head it goes like "if m_firstMove" (...what was that?) "// first move" (ah if this is the first move) you are making the reader stop and think what was the variable with the weird name used for. but if we read "if isThisTheFirstMove, then play the first move". Easier for the reader an cleaner code, showing intent and maningfull name. You should take a look a the book "Clean code" by Robert Martin. You could improve method names, Take a look at your method and variable names. Another piece of advice that I could give you is this. Consider, 
+
+Which is a LOT clearer and you don't need the comment because the method speaks for itself! The next else, 
+
+When the reader sees the first one, he needs to remember what "m_firstMove" meant. On the other hand, if you read "isThisTheFirstMove" you are given the whole information and you don't need to go to the declaration of the variable to see what that means. 
+
+Regarding the code style I have some observations. This is based on the book "Clean Code" by Uncle bob and my experiences as a software engineer. 
+
+you can sort of guess what is . Is it the position of the text area? why just don't just put and , not perfect (I mean, for sure there should be a better name) but at least it improves a little the readability. In the book "clean code" you can find "A name that makes you go into the code to see that it tries to identify, is a bad name" That's all I would recommend based on the book and experiences I've got as a developer. Happy coding! 
+
+The names 'txtX' and 'txtY' don't say anything about the domain as 'line', or 'length' do. Someone would need to see how are you using that variable to figure out what it is. If you want to make the code more readable, make explanatory variables and helper descriptive methods for example 
+
+If a name needs a comment to explain it, it's a bad name! What does m_move mean? "cpu's move" isn't a good comment. By the way, there should be as little explanatory comments as possible and "cpu's move" does not explain what is the variable meaning. Does it say if it is the CPU turn? or does it say how many moves has the CPU done? No one can tell. 
+
+Encapsulate individual queues There's a lot of identical code shared between your queues, which is an indication to encapsulate them. Since they're stateful, a class is appropriate. 
+
+Below is a simple C++ abstraction over linux sockets, and a layer of abstraction over a synchronous call. The goal was to exploit move semantics to allow the Sockets to be used as value types. socket.h 
+
+Note that the fixed size recv call is sufficient for my use case since I intend to use these classes with binary encoded data (however in makes my example code look a bit wonky). I'm most interested in a review of the socketset abstraction since I'm not convinced I have the correct design. The shared pointers are quite heavy weight and are forced onto the user of the API. I tried to do something with unique pointers and raw pointers but it becomes very easy to accidentally invalidate them. Use value types makes it hard to have polymorphic sockets due to slicing. 
+
+Quicksort Algorithm A common optimization to remove average case comparisons is to more intelligently select your pivot. One approach which strengthens the asymptotic runtime of the algorithm is the 'median of fives' approach. In this approach you select your pivot to be the median of 'the median of each of the n/5 sublists of length 5'. In practise, however, this could increase the number of comparisons. It's hard to recommend a strategy without knowing the size and characteristics of your input. 
+
+The below is a C++ parser for a reasonably simple INI grammar (although my understanding is that there isn't an official spec as such). My grammar is roughly: 
+
+Note that we've rewritten printQueues to take a bool rather than a bool disguised as an int. If the specific queues are not that interesting, and merely the indexing we can simplify our methods further: 
+
+After completing this it occurred to me that a regex approach might have been superior (or at least, terser), but perhaps the error reporting is better here. 
+
+I recently asked for some feedback on my design for a syncronous wrapper around linux sockets and poll Based on the feedback, I created a new (hopefully more idiomatic) design. socket.h 
+
+Don't use namespace std Common advice which will help guard against namespace collisions. In your case I think you could get away with just:

@@ -1,0 +1,47 @@
+Traceroute relies on TTL to find each hop. The first traceroute packet has a TTL of 1, then the value is incremented by 1 for each following node. Regular traffic will (almost) always have the default TTL value from the operating system, usually 64 or 128, this value being of course decreased for each router traversed between the originating host and your packet sniffer. So, unless you are performing a traceroute for a destination that is more than 30 hops away (which is larger than Internet diameter), a filtering on the TTL field should give you a good match. 
+
+First, the linked article contains several poor approximation and is not IMHO a good source. Back to the question, insufficient bandwidth leads to link congestion, that means that the equipment buffers will be full and so some packets will be delayed, waiting for their turn to be sent from those buffers, thus increasing latency. 
+
+Since you didn't save the configuration, simply rebooting the unit will get you back to the previous configuration. I.E. the last one that was saved, and you will recover access. If there's other configuration change that were not saved, they will be lost altogether. It has already happened that a Cisco device worked for years with configuration update never saved, and then rebooted and.... troubles. About seeing the configuration prior to reboot, there's no way I'm aware of. Edit if the config was saved then 
+
+So it seems that the K9 indicate that the image loaded on your ISR is IPSEC capable, but you need to activate a license to use it. Issuing the command should show you which license is active. On the same page you will find: 
+
+This is due to path MTU discovery. As you can see the MTU for you first hop is 1300, while you computer expect 1500 by default. So tracepath will send several packets to determine the correct MTU, and in this case it took 4 try to get it right. Then it continue the trace to the destination. 
+
+It compare (in binary) its subnet mask with the destination IP address and find that the destination is not on the local subnet, so it will send the packet to its default gateway, 192.168.0.1 It lookup in its ARP table and if needed perform an ARP request to find the mac address of the host which hold the 192.168.0.1 IP address. It finds Then it builds a frame with the following characteristics: 
+
+you need to connect with "mypassword". If you want to connect with the user "mysuser" you need to enter the command 
+
+I never test a destination rule that translate to another IP in the same network but it should work. I wonder what lead you to such a need, that seems a curious design. 
+
+It depends on your main gatway and on your hosts. Normally in this situation the main gateway will issue an message to the host, with the IP address of the VPN gateway, informing the host that a better route is available. The host should afterward send traffic directly to the VPN gateway. So if your router correctly send the ICMP redirect and if the host operating system handles it correctly, the host should communicate directly with the VPN gateway and thus be able to use the full 10Gbs bandwidth. If the host ignores the the ICMP redirect message (or if the main gateway doesn't send it, or if it is blocked by a firewall, either on the gateway or on the host) all traffic will go through the main gateway and will be limited by the main gateway interface bandwidth (which is likely also used by other flows). Notes: 
+
+According to the Cisco Feature Navigator performing a research by software, the IPBase has the Policy Based Routing (PBR) feature: 
+
+Link aggregation / port-channel / lacp will not allow you to have a single stream to use several interfaces. Four different streams can use different physical interfaces, and each one could use 1Gbs (reaching 4Gbs total) but none of them will be able to achieve more than 1Gbs. Those protocols works with an algorithm that will choose a specific interface for a specific stream (usually based on source / destination mac addresses; IP addresses etc...), so a stream is "bound" to a physical interface. 
+
+There's many IP protocols, including TCP and UDP among others. See this list for reference: List of IP protocol numbers Some are rarely (or never) used, why others are widely used. Their usage depend on their usefulness. UDP provide a fast, but unreliable, mean to transfer data. A typical use is for audio and video streaming, where re-sending a missed packet is not useful, since, if you missed an image in a movie there's no point to displaying it anymore TCP provide a reliable connection, and handle error and retransmission of lost packet. This is vital to exchange of data the must reach the destination intact. So there's more use case of TCP than UDP, but the latter is still widely used. 
+
+Yes you can setup ACL on any Cisco IOS device, this is a base feature. Regarding the VPN, to my surprise, for the IRS4321, according to this datasheet it seems you need the Security (SEC) feature bundle to use IPsec VPN. 
+
+Entries in the ARP table have a limited lifetime. When they are outdated, the APR process remove them from the table and the next time it needs to communicate with the associated IP address, it will perform an ARP request to find out the MAC address for this IP address -being it the same or a new one. So if any MAC address change, communication with the corresponding host will fail until the ARP entry expires and the APR table is updated. 
+
+Traceroute doesn't give inexact information, it performs tests in a specific way and give some results based on the response it receives (or do not receive). You have to know how to interpret the response, and for example that a given packet may take a path different than the path shown by a traceroute. Additionally when you use traceroute in a network you control you know what the result should be, and can compare the actual result vs the expected one to find the culprit. 
+
+You're understanding is correct. Note that this would require that the ISP change the subnet mask on its side. However there's other alternatives : You can ask you ISP to provide an interconnection network (likely a /31, possibly a /30). If the ISP is not willing to spend additional public IP, the link between the ISP router and your firewall can be configured as unnumbered. Once again, it depends of what your ISP is willing to do... Since on a point to point link, there's only one possible destination (the other equipment on the link), IP addresses are not necessary. 
+
+Then when host B respond, the switch will record B MAC address and send the frame of the port it knows A is connected to. 
+
+Note that this is more a question about performance than connectivity. There's many thing to check to troubleshoot such issues You could check : Regarding the machines involved : 
+
+The forwarding table is built by selecting routes within all those tables. For each network that exists in at least one routing table, the router select the best one and put it in its forwarding table. When the router receive a packet, it looks only in its forwarding table to decide where to send it. Where the route comes from has no importance at this point. 
+
+is a false assumption. A channel can be 20, 40, 80 or even 160Mhz wide. So the actual number of non-overlapping channels is dependent of the width used. 
+
+From a router perspective, what matters are interface. It doesn't change the router behavior if an interface is physical or virtual. You can have either two cables between the router and the switch, each one in its own VLAN, or a single cable configured as a trunk that carry both VLAN Both scenario will works, but they are not strictly equivalent. 
+
+There's something like 22 models of Huawei S6720, so it would be better to check with the specific model, but this answer should apply to all. According to this page from Huawei documentation 
+
+I would create a virtualized router in each environment that provide the local environment gateway and has the "external" IP address within the 192.168.93.0/24 network. It is this router that would NAT traffic coming from the test environment with its 192.168.93.X IP. 
+
+Most transit provider will refuse to announce tough BGP a prefix longer than /24. (I.E. /25 for example) It's related to the size of the routing tables in the routers. You have to understand that the prefix you announce will be propagated to almost all routers on the Internet, and that's a lot. Each prefix announced take some memory in each router, and computational resources when the router has to pick up a route to forward a packet. Allowing people to announce long prefixes would dramatically increase the numbers of routes in each router all over the world, which is not desirable. There's actually many many prefix longer than /24 announced on the Internet, even many /32, because each ISP doesn't enforce this rule and there's no practical way to force them to do so, and partially because of historical reason (from time when this good practice didn't exist). At the beginning of the Internet, there was very few routes and no central authority, no rules. Then the Internet grow bigger and bigger and it started to be an issue when some routers were no more able to handle the routing table in memory. The fact that the Internet routing table grow so big lead to this consensus that we shouldn't anymore allow it.

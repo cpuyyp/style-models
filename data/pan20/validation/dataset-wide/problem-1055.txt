@@ -1,0 +1,99 @@
+These constitute queries as well. Perhaps you could configure MONYog to retrieve status information less often. 
+
+Although not visible to the naked eye, the 4 rows that had 16 characters are now bit(1) and all other rows are bit(0). From here you can get rid of the old table and keep the new like this 
+
+If you are moving the users to another DB Server running the same major version of MySQL, copying is not sufficient. If the users have access to specific databases, copying brings the user and the password. Then, you would have to copy the following 
+
+DISCLAIMER : Not a SQL Server DBA If possible, you may want to check monthly for indexes that are not being used by any queries. This you would definitely want to do for 
+
+From the given error message, one of the views in your database has a column that no longer exists. This can easily happen if you drop a table or a column from a table that is referenced in the view. Please look over all your views and make sure you can SELECT from all of them. CORRECTIVE ACTION You may have to recreate the mysqldump after you fix the VIEW in the source database. If you cannot recreate the mysqldump due to the size, you may have edit the mysqldump to ignore the VIEW definition altogether. 
+
+By all means, remove them. Those are just temporary tables mysqld had written to disk. In all likelihood, mysqld probably crashed when those temp tables were made. Look at the timestamps: 
+
+According to the MySQL Docs, when innodb_stats_on_metadata is set (by default), InnoDB updates statistics during metadata statements such as SHOW TABLE STATUS or SHOW INDEX, or when accessing the INFORMATION_SCHEMA tables TABLES or STATISTICS. (These updates are similar to what happens for ANALYZE TABLE.) When disabled, InnoDB does not update statistics during these operations. Disabling this variable can improve access speed for schemas that have a large number of tables or indexes. It can also improve the stability of execution plans for queries that involve InnoDB tables. Once disabled, you would have to run on the InnoDB tables of your choice. Make sure you have SELECT and INSERT privileges. 
+
+CONSIDERATION #3 Make sure is enabled on Master and Slaves. Otherwise, all the deletes will pile up in the undo logs inside ibdata1 before either doing all the deletes at once as a single transaction or a huge rollback. Give it a Try !!! 
+
+That way, you get either 0 or 1 as the answer as to whether the 17-value combination you are seeking exists. The reason all 17 columns are manifested is to allow for the individual querying of those specific columns, should you need it. If you do not need it then change the table to this: 
+
+That's it. The table should be immediate registered in the information_schema without a restart. To verify that the rsync worked, login to mysql on ServerB and run this: 
+
+ASPECT #3 : Writing Updates to Disk (OPTIONAL) Most forget to increase the innodb_write_io_threads to write dirty pages out of the buffer pool faster. 
+
+OK, all well and good. But, why doesn't get to receive anything? Because is not enabled, does not save the and the original server_id posting the into its own binary logs. If was enabled on , now follow along your example and let's see what should happen: 
+
+STEP07 : Setup the point-in-time Master Log and Position Back in STEP02, I mentioned viewing the point-in-time position using 
+
+CAVEAT If you do , you will see that one of the privilege columns is . This evidently would permit a user who connects to mysqladmin to issue a shutdown. Users with this privilege cannot issue a shutdown from the mysql client. Users with shutdown_priv='Y' can only be done from mysqladmin. 
+
+To clarify, when a Slave is initialized with all 6 options for the first time, then you can give it a command with just and . Using --master-data does not supply host, port, username and password. Even with MySQL 5.7, supplies and . Still, username and password are not. 
+
+You cannot make that kind of approximation work if the InnoDB table experiences DELETE and UPDATEs. With innodb_file_per_table enabled and a table called , this is what you get 
+
+Run the CHANGE MASTER TO command using leopd@'xxx.xx.xx.xxxx' as the user (xxx.xx.xx.xxxx is the IP address of RDS) 
+
+EPILOGUE While running , new rows of data have been added to your table. When you run , it gets those extra rows, adds them, and swaps them. Your downtime should be like 5-10 seconds. When done, your new table will be live. The old table will be called . When your app is writing data cleanly to the new devicelog table for a couple of days, you can run GIVE IT A TRY !!! NOTE: You will need an event to auto rotate old partitions every day 
+
+or just use my original submitted answer up above. UPDATE 2011-12-19 11:40 EDT I just re-read the question. You said single table. Then it hit me !!! You need to ramp up your bulk_insert_buffer_size. The default is 8M. To see what your current setting is, run this: 
+
+see what character set phpmyadmin operates in see what character set mysqld operates in see what character set remote database servers operates in 
+
+MySQL 5.1 will soon reach its EOL (End of Life) in terms of Active support and go to Extended support (EOL : TBD). Naturally, that support is commerical. It would not hold my breath for that kind of support for the Community versions. MySQL 5.5.20 was just released 2012-01-11 and 5.5.19 was just a month ago. As with any upgraded product, always read release notes to see what changes and improvements have come about since the previous stable release. 
+
+Of course, don't stay out in that shell longer than the number of seconds listed in wait_timeout or interactive_timeout. 
+
+See my post Possible to make MySQL use more than one core? and About single threaded versus multithreaded databases performance for more info 
+
+This will give the Recommended Setting for MyISAM Key Cache (key_buffer_size) given your current data set (the query will cap the recommendation at 4G (4096M). For 32-bit OS, 4GB is the limit. For 64-bit, 8GB. InnoDB The main mechanism used is the InnoDB Buffer Pool. It caches data and index pages from InnoDB tables accessed. To size your InnoDB Buffer Pool, run the following query: 
+
+These are among the things that are being churned inside and outside of InnoDB. Yet, this is not everything. Check the MySQL Documentation on the Status Variables. My guess is that MySQL Workbench is just monitoring Innodb_data_writes. If the data writes are high, given this 
+
+If you only see the .frm files, then there is a strong likelihood that the storage engine in use was InnoDB and innodb_file_per_table must have been off by default. If you transferred everything from datadir on the crashed server onto another disk on another machine, you may be able to startup mysql with that folder as is. For example, suppose ServerA is your crashed server and ServerB is where you want it placed. 
+
+@DTest definitely answered this one correctly. If you want to record the table structure with the Foreign Keys in the definition, here are two ways to do it: (For this example I create the actor table in database ) TECHNIQUE #1 : using mysqldump 
+
+All you need do is assign and Please keep in mind that this will generate the count for null columns using a single query and perform only one full table scan. GIVE IT A TRY !!! 
+
+By default, mysqld sets this values based on the OS and how many maximum open file handles mysqld believes the OS will give to it. You can take a risk and raise that number in /etc/my.cnf and restart mysql. As mentioned in the MySQL Documentation, a warning will be posted. Talk to your sysadmin to see if your OS can have its file handle limit raised. Once you can get it raised, restart mysql and see if the open_files_limit was raised as well. 
+
+There are two suggestions I have for you SUGGESTION #1 Your binary logs are being written to , your datadir. If you have a folder on a separate disk, perhaps you should map your binary logs there. That will keep data and logging on separate disks. 
+
+That way going forward, you can maintain the name_country table in such a way that name and country do not have to be 1 id apart in the original table. You could freely enter names in bulk. Then later on, attach the country values. Once you can create a name_country table, you could then do joins like this: 
+
+If you are running MySQL 5.6 already on the Windows machine and you are trying to run an additional MySQL 5.6 instance, make sure you change the following under the group header in your 
+
+I found PalominoDB's How to recreate an InnoDB table after the tablespace has been removed. Based on the paradigm in that post, I would suggest doing a manual truncation by running the following: 
+
+So, if you are truly a risk taker... GIVE IT A TRY !!! WARNING !!! Administer databases responsibly. Do risky things in Staging or Dev VMs first. If you are 100% successful, then GIVE IT A TRY !!! 
+
+If the prompt has not come back, I would assume the worst and just say the is not done. Even if a certain table stops increasing in size, you can still check for write activity directly in the OS. For example, if you imported into a database called and datadir is , do this: 
+
+You could be suffering from what is known as data drift. QUERIES This can happen if there are queries that are unsafe for replication. One of the more common types is running or using . Using on DML can work just fine on a Master. On a Slave, the rows selected (and perhaps certain choices) may not be the same set being updated or deleted as the set on the Master. See the MySQL Documentation for a Comprehensive Description of Unsafe Statements that can affect MySQL Replication. Baron Schwartz once dealt with this and had to refactor his query to get around this The following hypothetical scenario illustrates one way to introduce data drift: BINLOGS Master 
+
+You can change the grep option in the header of the for loop to locate a specific user or specific string in the query. If you have MySQL 5.1 where the processlist is in the INFORMATION_SCHEMA, you can do this to generate the KILL QUERY commands in bulk from within the mysql client: 
+
+This should work even faster because the first three(3) lines will empty out the table immediately. Then, whatever rows have lastactivity >= 1342709401 from the old table is brought over. The old table is then dropped. 
+
+In the phrase [things omitted], if you do not need anything from blogposts other than the keys, then your query should look like this: 
+
+So, to answer your question, your drawback would be implementing these suggestions since it may require some code rewrite when you catch deadlocks, some autocommit tuning, and writing to one Master node (which could introduce write bottlenecks on top of the fact that Galera Clusters do not write scale well past 3 nodes). The options are probably not enabled by default because of the possibility of having a write-heavy cluster that must have the logs examined often (even if a conflict never occurs). Thus, enabling wsrep_log_conflicts and cert.log_conflicts become your tuning responsibility. 
+
+STEP 07 : Locate the timestamp inside and find the position Let's say the position is 87654321 STEP 08 : Connect SlaveC to SlaveB On SlaveC, run this 
+
+In order to load the routines into your new system, you can filter it using grep EXAMPLE Suppose the script with the ALTER DATABASE is . Just do this 
+
+As was stated in the comments by @yercube, you have a case sensitivity issue. SOLUTION #1 Create the first table with the name 
+
+I can see a messy operation in this. The tmpTbl is InnoDB. Loading new data into it will produce some MVCC activity. This will pile changes in the redo logs (housed in ib_logfile0 and ib_logfile1, perhaps some will be in ibdata1 as well). Once you kill the INSERT, all the changes (for each row, a new record in place of no record) to the InnoDB table must be rolled back. You could probably kill mysqld and start mysqld again only to encounter some of this during the crash recovery phase of mysql startup. 
+
+This would be great as long as you create the empid outside this table. This would not present a Replication Slave with a problem even if the auto_increment sequence on a Master is completely different from that of the Slave. 
+
+In terms of the number of columns, InnoDB cannot support more than 1000 columns, while MyISAM can support more. For further comparison, please read the MySQL Documentation on MyISAM and InnoDB for their limits and options to change any configurable limits. 
+
+CONCLUSION Now, I am not saying to keep both methods. Doing this over time reveals which method is faster in terms of overall operability. You must decide which benchmarks for querying live data, querying deleted data, and mass deletes work best for you. 
+
+Whichever method you choose, you can visibly see the query making up the view. You can sculpt the CREATE OR REPLACE VIEW using whatever is shown. Hope this helps, and Welcome to the DBA MinionExchange !!! 
+
+Given this layout, the cars table uses the storage engine MyISAM. Answer to your second question: Yes, provided the following circumstances 
+
+You may to have adjust some VARCHAR length in some table based on the Character Set you are using. That exact error message is actually posted as a bug report from Nov 2004, when in fact, it is not really a bug. That should direct you on how to adjust key lengths, especially your PRIMARY KEYs. If you know which table is causing the , you have to do the following: Step 01) mysqldump only database schema

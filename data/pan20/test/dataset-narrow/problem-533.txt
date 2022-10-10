@@ -1,0 +1,53 @@
+(Incidentally, you probably meant , not .) Next, use structured programming to get rid of the -style jumps in your code. Yes, and count as jumps. 
+
+If you mean "65535", say "65535". Don't try to confuse the reader by making him look up what represents. Just write . 
+
+The existence of implies that cannot be used with non-copyable s, and is inefficient even for copyable s. It would make more sense to provide a method along the same lines as : 
+
+As mentioned in the comments on the question, the name of a function template can deduce what kind of function pointer to decay to: 
+
+is 0, and is 10, and there's no synchronization to worry about here (no locks, no s), so we can definitely say that is invariably false. Thus reduces to 
+
+From 36 lines down to 27 — and with no pollution of the global namespace, no templates, and — mainly as a result of flattening and inlining things with complicated dependencies on each other — it's just a little bit harder to break accidentally. 
+
+Anyway, if you don't want people touching your type at all, a common convention is to name it (by analogy with ). And if you do foresee people wanting to use both types, the best names are probably and , or just and . (That's right — I would avoid baking C's into your exported typedef! I would create a new for export. This allows you to change the implementation details of , such as whether it uses C or C++ or non-standard atomics, or whether it uses a mutex, without bothering the user too much.) 
+
+If the underlying of fails and returns , then the buffer pointed to by will be leaked! To deal with the freeing of resources in case of early return, C programmers usually use a pattern like — see for example this SO question or Apple's famous "goto fail" bug. 
+
+You'll find that a significant fraction of C++ programmers today "collapse" their namespaces like this: 
+
+— runs under the mutex lock. If the item's move-constructor does something sketchy, this could be dangerous. If you generalize your far enough that the user-programmer is allowed to customize the underlying container (e.g. change to ), then be aware that the user-defined memory allocator will also be running under the mutex lock. This probably isn't a problem at your current level of caring-about-metaprogrammy-bits, but it's something to consider. 
+
+Basically, though, this looks like good STL-ish code. The biggest complaint I've got is that that usage comment should be expressed as one or more s; the rest is nits that don't really matter, or won't matter once you constrain the container to hold only trivially copyable, trivially constructible objects. 
+
+and we get a compiler error. In some cases the appropriate fix would be to constrain the template with ; but in this case the appropriate fix is just to Be Less Clever. 
+
+I was initially skeptical that this would provide a unique address for , on the grounds that is an empty object of a very distinctive type; so I wondered whether it would be rolled into the same memory address as the following object, a la the Empty Base Optimization. It was not rolled into the following object. This makes sense in retrospect; the Empty Base Optimization applies only to bases, and that's because the base object and the derived object are literally the same object; there's no "following object" going on in that case. However, this code is still broken. Reason #1: Clang refuses to compile a variable with no initializer. You need a pair of empty braces after the word . Reason #2: This variable declaration is not , and therefore you get a separate copy of in each translation unit. (Try it out!) In C++17 (and later), you can just mark the variable (or just ; the here is unnecessary). In C++11, you'll have to use an function. 
+
+Here provides the method, whereas provides both and . However, as I said before, all this CRTP stuff is unlikely to be useful if your code operates in terms of "one kind of Data, one kind of View". 
+
+As usual, no comment on the correctness of the algorithm. However, I find it hard to believe that any sort algorithm with so many s on large ranges could outperform an algorithm that uses only and . 
+
+I'm suspicious of this code. Why is it okay for the step number to be a (which is what is)? At the very least, you should replace the word with here for clarity. But also, maintaining this code is going to be a nightmare without a very thorough test suite. For example, you'll have to be very careful never to use or with a step number, because those don't work with . Why not just let the step number be and be done with it? 
+
+Ah, here's that method again. And a , which is also problematic. It turns out that this one line is responsible for at least three different problems with : 
+
+Your code has no chance of working, because the only non-static data member of your is a single pointer of type . There's no room to store any other kind of functor. In other words, you've implemented the concept of "function pointer wrapped in a struct", but you haven't implemented anything like yet. 
+
+Calling such expensive I/O routines under a mutex is a bad habit anyway. You could at least improve the code slightly by rephrasing it as 
+
+@LokiAstari hit pretty much all the points I'd have made, but I'd like to expand on one point and then make one philosophical point: 
+
+The next step is to eliminate the overhead of . Replacing with reduces both of our running times by about 3 seconds: 
+
+Observe the cuddling of braces, the blank line between function definitions, the CamelCase template parameter names (and much shorter — becomes ), and the modernized in place of . Observe that instead of declaring as an alias for a function-pointer type, I declared it as a function type and moved the down into the place it was used, in , which makes the two invocations nicely symmetrical. Observe that I never put two side-effects on the same source line of code. Instead of , I write and then on the next line (the new value of) . This really matters when you start getting into atomic/lock-free stuff, but it never hurts. 
+
+Also, you may not have noticed, but you're taking the parameters and by value instead of by const reference, so depending on how you're calling this function, you might be spending most of your time making copies of objects, not hexifying them per se. My guess is that this is actually a bigger time sink than the stringstream stuff, even though that's what caught my eye first. 
+
+As @JanKorous said, it's very uncommon to see function-try-blocks in C++, except possibly in constructors (because the function-try-block also catches exceptions thrown from expressions in the member-initializer-list). From context I would guess that you're doing it so that your function body can have a single , making static analysis easier. But yeah, I'd avoid function-try-blocks in production codebases, just because it's going to confuse everyone who comes after you (possibly including yourself in six months). 
+
+and possibly throw in the since it's pretty easy to express; but bearing in mind that when you provide an explicit return type you enable SFINAE on that return type, which could theoretically turn some wrong code from a compiler error ("call to is ambiguous...") into code that happily does the wrong thing (since one of the candidates is now SFINAE'd away). That's highly theoretical, though. Now, how do you make this function a of ? That's easy; just define it inline! 
+
+— then his operand will be shifted by 1. If this behavior is desirable, it should be provided as a separate function: 
+
+Performance nitpick: I've heard that it is useful to put one cache-line's worth of padding in between your two atomic variables, to eliminate false sharing. Of course if you do that then your class gets much bigger. But if you don't do that, then all this fiddling with memory orders is useless, because your few accesses to the shared cache line in and will effectively all your accesses in those functions. As usual, I advise staying away from memory orders unless you're sure that you know what you're doing. That said, I think you're using them correctly here.

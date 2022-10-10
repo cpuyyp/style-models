@@ -1,0 +1,105 @@
+The database registers into a listener running on the default port without any configuration. If you want the database to be registered dynamically in other listeners listening on other ports as well, you need to set the parameter. For example, if you have 2 listener on ports and , you need to set the below in the database instance, with your actual hostname or IP after : 
+
+Since the format is not specified exactly, I will just assume the usernames follow the above pattern without any special cases. Find the number: 
+
+ORA-39043 Or ORA-39340 May Be Raised During Full Transportable Export of the Database (Doc ID 2365679.1) 
+
+This is such a common problem when the database was installed with user separation (grid + oracle user) and DBAs tend to overlook this. When you use RAC or even just Oracle Restart (with or without ASM), you need to install Grid Infrastructure. Grid Infrastructure can be installed as a different user (typically grid). When you have Grid Infrastructure, the proper way to handle listeners is through Grid Infrastructure. If Grid Infrastructure was installed with grid user, then the listener runs as grid user. In Oracle architecture, by design, remote connections log in through the listener, and the database server process is forked by the listener. On Linux/UNIX platforms, the binary is owned by oracle user, and it has the setuid bit enabled. grid and oracle users share a common group, and the binary can be executed by the members of this group. Given the above information, remote connections coming through the listener running as grid user can spawn processes whose UID and EUID is the same as the UID of oracle. So far this is what usually everyone knows. The difference is however the RUID and the inherited privileges because of it. On a machine with users as (this is the default configuration taken from an Exadata X5-2 compute node, so this is how Oracle officially deploys its configuration): 
+
+operations are not logged in the redo as traditional operations, the amount of information logged is greatly reduced to an extent, where data recovery is not possible. Because of this, if you did not make a backup of the affected datafiles after these operations had finished, those modifications can not be recovered with archivelogs, and you will receive the above error. should be handled with care, and because of the above, you should perform a backup after performing a operation. If your backup was created earlier, you will not be able to fully recover data using this backup, even if you have the archivelogs. So, perform the backup after the operations was finished. Another way is to control the attribute of your objects. You can set this at table, index, LOB segment, tablespace level. You can set it to , so operations on the object will be logged (or this will be the default inherited value in case of tablespace). Finally, you can enable at the tablespace or database level, so operations will be logged regardless of the object level setting. 
+
+It bypassed JF on all possible places (note the different decision at query block SET$1), and that is it. It did not consider using JF at all. As to why the 2nd one is slower, well, the optimizer works with statistics, those statistics may be inaccurate, but even if they are a 100% accurate, it can still just estimate the cost based on them, and sometimes it makes mistakes. 
+
+is not that effective, because you need to access the table 4 times. With you can do it with 1 table access. 
+
+Application Continuity WebLogic Server 12.1.1 and 10.3.6 Support for Oracle 12c Database (Doc ID 1564509.1) Most importantly, you need to modify your data source to use the Driver Class. 
+
+You do not need to enumerate each object you want to export/import, you can pass a query that returns the list: 
+
+This is what we expect. Full table scan and HASH UNIQUE for DISTINCT, HASH GROUP BY for GROUP BY. Now add a NOT NULL constraint and an index. 
+
+RMAN jobs show up in V$SESSION_LONGOPS with , there you can query the value of . Beware, this is just an estimate. 
+
+View other columns as well, for example and as suggested. Also, join to to find which entries are current. 
+
+TNS-12541: TNS:no listener Error message is self-explanatory, the listener is not running, so start the listener with "lsnrctl start". Since you are on Windows, it runs as a service, so you can start the service itself. 
+
+If you really want to have that specific space and line break, you should not rely on enviroment settings, but explicitly specify it: 
+
+If you query , with some additional columns, you can see it is a parallel query, and the sessions it's spawned, and also find the session that originally started it (QCSID): 
+
+Yes and No. With improper configuration, too much RAM can cause performance degradation. For example on Linux platform, if HugePages is not configured, with large SGA and many database sessions, the pagetable will hold a significant amount of memory. Once at one our clients, the database server had 512 GB memory installed. They had about 4000-5000 database sessions with a 150 GB SGA, and this resulted in a 360GB pagetable size - so the server ran out of memory, and this caused hangs and reboots. After enabling HugePages, the size of the pagetable decreased to 1,5 GB (from 360 GB!!), saving and allowing to use more than 350 GB extra memory. Another case, where the customer used Solaris x86-64 11.1, is the reverse of the above case. The database used 1 GB pages with 300 GB SGA, but because of a Solaris bug, 99.8% of the time spent handling large pages at OS level was overhead, caused the CPU to run in kernel mode, causing huge load on the server (300+ with 32 cores). The database was running fine with 24 GB SGA, but could not handle the load with 300 GB SGA. Disabling large pages in Solaris resolved this issue (there is a Solaris patch for it, but the local admins did not install it...). These are however not Oracle limitations, but configuration issues. Oracle can handle large amount of memory. One of our customers has been using 500 GB+ SGA for a long time without any problems, and they are planning to increase it further. 
+
+is not the problem. You may have a special character somewhere in the table definition. Above code works in general. But below is an exception, to reproduce your error: 
+
+Why do you use this view at all for this query? The view collects violations and other stuff, but your query does not care about those at all, just the number of items. The view lists all items regardless of these because of the outer joins, so you basically perform a lot of unnecessary extra work to collect violations and other stuff (the NO_MERGE hint makes this even worse), then you throw it away and count the items based on a totally different criteria. The query should be something like this: 
+
+Shared server architecture: SQL trace files belong to server processes, but when you use shared server architecture, your session does not have a single dedicated server process, your session can exist in several different server processes over time. Parallel processing: when your statements run in parallel, each slave thread is a different process and as SQL trace files belong to processes, you have multiple processes running the same statement, hence the multiple trace files. 
+
+The above needs to be run on the server of course. This is the best-case scenario, with proper installations. Worst-case scenario is, homes use separate inventories, or use no inventory at all, and you have to search all filesystems on the server for possible Oracle installations. 
+
+Yes. It is a collection of the files (datafile, controlfile, redo log, tempfile, block change tracking file, etc.) on the disk. 
+
+That is a TNS entry that should be in . Listener can't do anything with that. If you want to do static registration, this is what you should put in : 
+
+A database can exist without an instance, but to use that database, you need to start an instance, then mount and open the database in it. You can "create" a database by simply copying the files of an existing database. You do not need an instance for that. But to use that database, you need an instance. If you want to create a database from scratch, you need a running instance first. 
+
+If they still remain there, just simply delete them at OS level. And no, there is no such command thats deletes datafiles from the database that the database does not know of. Reference: Drop Tablespace Including Contents And Datafiles The Datafiles Are Not Automatically Deleted (Doc ID 389467.1) 
+
+But this above will affect only sorts and not the comparisons. You can set comparions to use the sort settings: NLS_COMP 
+
+Thats not correct. If eth0 is the interface for the public network, then the VIPs and SCAN VIPs must be on the same subnet, that is exactly what you are asking for. Also its not you, but Oracle Grid Infrastructure that creates and manages these virtual IPs, you just specify the name and address for them. Furthermore, the private virtual IPs (called HAIP) on the private network (lets say eth1) will be created in the 169.254.0.0/16 subnet, no matter what. So here is a sample configuration for a 3 node cluster: Public addresses: 
+
+If the database homes were installed properly, the central inventory has a list about them. The central inventory on Windows is located at . On Linux/UNIX platforms, the location of the central inventory can be found in . In the inventory, in , there is a list of installed homes in XML format, e.g: 
+
+The error message is self-explanatory. You can not store multiple values in a single primitive variable. Also this is not MS SQL where you can just simply put a SELECT in a procedure then call it to display the result. PL/SQL code runs on the server side. It does not display results on the client. You can use PL/SQL to collect and return the results to the client. Then you can somehow display that on the client. Below is an example: 
+
+Not with row-oriented storage, where the column values are stored together per rows, which is not ideal for starting with projection. Lets say Table1 has 30 columns, but you need data only from 2 (username, usertype). If username and usertype columns are not indexed, the DBMS has to read the full table with all rows (thus read all columns). In this case the only order to do this, is selection, then projection. If username and usertype are part of a composite index, the DBMS will decide to get the data from this index instead of reading the whole table itself. The index will have most likely less columns than the table, but it is still not the projection you are looking for. Indexes are still organized for row-oriented storage, first selection happens based on usertype='Manager', then the projection. However, there are some other DBMSs, that use column-oriented storage. Column-oriented DBMS. In these systems, whole columns are stored after each other, which makes it really easy to start with the projection. If you need only 2 columns from 30, the database can just simply read that 2 columns, and do the selection.This kind of system performs better, when running low selectivity queries, that want to access most, or all the rows from a table. Overall performance depends on the kind of workload. 
+
+Then increase if needed or upgrade to a newer version where it is fixed. Another possible cause: Bug 16317020 - Records missing from dba_tablespace_usage_metrics (Doc ID 16317020.8) Also fixed in newer version, and one-off patch is also available. 
+
+This does wonders on paper and in presentations, but in the real world, there is still room for improvement. Shortly: the problem with ACS is that it does not work immediately for new values. It uses the already existing execution plan optimal for other values, and after that, on a repeated attempt, it may choose a different plan. We may not have time to wait for the first sub-optimal attempt for the new bind value to finish, as it may take orders of magnitude longer depending on the actual statement and data quantity/distribution. $URL$ 
+
+Plugins are deployed on the OMS and the agents as well. First you should upgrade the plugin on the OMS, then on the agents. You don't need to upgrade between versions sequentially, you can upgrade to the highest available. Yes, there are. Currently 12.1.0.5 is the latest version, and there are quarterly PSUs as well. Check the below MOS note: 
+
+12.1.0.1 is still available for download on edelivery. Go to $URL$ sign in. Choose the product (or SE), choose your platform. By default it will offer 12.1.0.2 for download, but you can use , there you can choose 12.1.0.1. 
+
+If you create a table after this, without specifying the schema, that table will be created in the USER2 schema regardless of what user you logged on with. 
+
+Index can not be used, hint does not help, and the estimated cardinality is just simply . This time with the proper index: 
+
+Here is false, so the second argument of the is not executed, luckily for us, because it would be a division by zero. With the second part is executed and we receive the expected error: 
+
+You should not put SET and SELECT in the same line, they are seperate commands. For example this works: 
+
+You will have more than 1 instance serving the same service. The below may connect to any of the instances, but the listener decides which instance it forwards to your request, not you: 
+
+So this single redo log file has 51 extents in diskgroup number 1, disk number 0, each extent the size of 1 allocation unit (and the allocation unit I used is 1 MB, and I created a redo log with the size of 50 MB, but that is not relevant here). And that single disk, in my case, is: 
+
+And by create, I really mean create, from scratch. A DBCA custom database, or running and dictionary scripts manually. If this happened, these will be your database level NLS properties: 
+
+This simply means, you provided an incorrect SID. is the default in SQL Developer. Check the correct from the output of , and use that for connecting. Or even better, let's just finally forget the , and use . Another possibility is that your database instance was not started, or you do not even have a database created yet. 
+
+You can just export and drop these tables, then import them when you need to access audit records. Then you set the last archive timestamp, e.g: 
+
+Well, see below. This is something I would definitely never write down in a real environment (I would question the original problem rather). 
+
+No, it does not. Without specifying LGWR or ARCH, LGWR is the default. You can check it on the primary database by: 
+
+You own a certificate and you will be authenticated by that, without specifying a username or password. Connection string: . 
+
+The unique names of the databases in a Data Guard configuration are listed in the log_archive_config parameter in the following form: 
+
+This excludes for all tables and partitions whose name match the result of the query provided in the part. And that is why this may not be appropriate for you. If you have a table called both in and , the data of will be excluded, because the above query returns from , and Data Pump will ignore of all table called . If you have a partitioned table in , with a partition called , the data of the table will be excluded. The above may work if your table and partition names are distinct accross all referenced schemas. Or you could dynamically generate the expdp command or use DBMS_DATAPUMP to filter out all the table data from . But I would rather just run 2 seperate exports for with and a default export () for . 
+
+What you can not do with RMAN effectively/easily (but still possible combined with Data Pump), and where Data Pump shines: 
+
+Short version: install the 12c software, create an empty database, and transfer the data with Data Pump. This way you can skip 11.2.0.1+ versions. Long version: OTN Developer License Terms In this, there is the following: 
+
+You most likely have with an unresolvable name, or with and invalid network address. You can try fixing it with: 
+
+For the above 2 points, see the below demos (first one is for RAC, second one for Data Guard): $URL$ $URL$ 
+
+First we maker, so we inspect each maker on its own. In the part, means the maker produces exactly 1 type of product. Finally, means the maker produces more than one model. With , we have only 1 distinct type value, so we got lucky in this case and we can use a simple aggregate function on type, we will get the expected value: 
+
+OMem - Estimated amount of memory needed to perform the operation in memory only. This is also called the optimal execution. 1Mem - Estimated amount of memory needed to perform the operation in one pass (write to and read from disk (temp) only once). This is called a one-pass execution. A multi-pass execution is where the same data is written to and read from disk more than once. Think about sorting, where the database has to sort large amount data in a small PGA/sort area. Since you query plan statistics with ALLSTATS LAST, some extra columns: Used-Mem - The amount of memory actually used for this operation. Also there is a number in brackets in this column. If the number is 0, then it was an optimal execution, used only memory and no temporary space. If the number is 1, then it was a one-pass execution. If the number is greater than 1, it was a multi-pass execution, and that number is the number of passes. Used-Tmp - The amount of temporary space used for this operation. Here is a presentation about the execution passes starting at page 28: $URL$

@@ -1,0 +1,69 @@
+Your code is fine and readable from a C/Java perspective. I don't think it's particularly Ruby-ic to use statements. Just put at the end on its own. Why your case is slow You have this extra here: 
+
+Naming Conventions Hungarian notation is awful. Do you really need the to know that is an ? No, that's what the is for. Similarly the tells you that is an unsigned char, you don't need the . The extra characters give you no benefit, take longer to type, and lead to problems down the road if you ever decide to change types. So the above really becomes: 
+
+That way you don't need error-checking, since there's no way to do it wrong. One thing you don't error check is the unit name. Should make sure I can't even construct something like: 
+
+No need to worry about incrementing . Let do it for you. Don't Repeat Yourself The code for adding, subtracting, and multiplying is the same. The only difference is what operation you do and what operation you print. You mostly already have that refactored. You do use to perform the operation. So let's just go one step further: 
+
+Global variables in the best of cases are questionable, but in this case especially you have as a global variable. is only used in so should be a local variable there. You can also take advantage of the fact that has another overload that takes a predicate to replace: 
+
+That will compute your index from an array of coordinates on the fly. It's still constant time and is guaranteed faster than your solution anyway (which still has to walk the whole array at least twice - once to do the hash and again to do equality comparison). And will use zero extra space, so everything else will perform better too. Drop the extra members. When you're writing containers, lean is king. This class should have exactly one member: . 
+
+Or we can do this programmaticly. Rock, Paper, Scissors is a wheel. Rock > Paper > Scissors > Rock. We win if the opponent's choice is the next one along in the wheel. That is: 
+
+Those comments really achieve nothing for you. Besides, what you need for is , so besides providing no value they're actually misleading. Similarly, you have this huge block comment explaining about using thread-local storage - but you have no threads, so I don't see how that comment is remotely relevant. Just print the error. Setting Permissions returns 0 on success, -1 on failure, so checking for >= 0 is weird. Also you're taking the filename by value, which triggers an unnecssary copy. Instead you could do: 
+
+However, this is pretty inefficient - we have to make another copy of just to check if it's reversible? We can do that directly in one go. Just compare the th element to the th element and make sure they all line up: 
+
+There isn't too much to say here, since this code isn't the interest part of the project. Way to set me up with the call and then not have a code review for that part. I feel empty inside. Anyway, mostly minor comments. Is there a reason for to be pure virtual instead of simply defaulted? I'm wary of the class. It's just there to be able to stick a global variable somewhere to call the function, but the initialization rules are based on odr-use of the variable. You never odr-use , so I'm not sure that you have the guarantee that it will have actually been registered. Startup issues like that are weird. 
+
+And lastly, is a bad name for the max size of your array. Something like or or anything to that effect would be better. 
+
+YMMV on whether or not you want to allow this, but just throwing this out as an option in case you do. 
+
+Comparing hand rankings At a high level, this code is incorrect. yields you some enum, and then you compare those values - but hand ranking alone is insufficient to do a comparison. For instance, AAKKQ beats 7755A, but you would only get that correct if the aces up hand went first. You need more info than simply the rankings. Repetitions Several of the hand ranking formulas are based on determining how many of what card you have. Your logic for is incorrect - that would be the logic for five of a kind. But rather than having lots of independent functions for this, should just figure that all out internally. Using for that is good - but just do it once, in one spot. Card representation Having is not very helpful. Especially when you reference those things by index. Instead, add names to those tuples with : 
+
+Even jumping up to 10-digits, we still see good performance (we'd expect over an hour with the previous algorithm, so we're talking 1000x improvement), and we see better growth to. Sometimes, you just need a better algorithm. 
+
+It makes the interaction the same with your class as it is with any other class. That said, your doesn't actually input anything. It seems more like a constructor: 
+
+For minor comments, avoid and keep your indentation consistent. You do not need variables for the string length, since you can always call . Avoid comparing against and . That part can be 
+
+Your program doesn't actually do anything, since has an empty body, but there are two major things worth pointing out here. Exceptions are thrown In C++, the way you use exceptions is to them. You have an out of range access? 
+
+So from the Euler example, we start with and . That doesn't divide, neither does 3 or 4. We get to 5, set to , and reduce to 2639. That is no longer divisible by 5. Then we get to 7, is now and is reduced to 377. Then we get to 13, and is reduced to 29. At this point we're done, since . We know that the remainder must be prime (otherwise we would've found a smaller factor already), so we return 29. Note that the square root of 13195 is 114, but we didn't even go as high as 14. Your original solution would've have gone up to 114, then gone up to 6597. I just saved you something like 6700 mod operations. And mod operations are not cheap! Optimization Potential Once we check for 2, we don't have to check any more even numbers. Once we check for 3, we don't have to check any more multiples of 3. So a simple optimization would be to loop over the factors 5, 7, 11, 13, 17, 19, ... by alternating adding 2 and 4. This is going to be a relatively minor improvement compared to the algorithm improvement I just suggested. 
+
+So to answer your specific question, yes you can greatly simplify your algorithm in a couple places: 
+
+Iterator Interface Even though it won't be fully utilized in the simple example of , you should prefer to provide a complete interface for . You're missing and postfix-increment. Prefix-increment (and postfix-increment) should return references to this. Additionally, you should inherit from just in case somebody wants to use as a normal container somewhere else. For example, it'd be nice to support the following: 
+
+You'll have to rename your class template to get this to work. Even better would be to make the function a of the class, and make the constructors private. Keep and simple Once we rewrite to be a function template that returns an object, you can move all of the logical checking into it: 
+
+Make a list of size 1,000,000 Until done: a. Make a new list of size 1,000,000 b. Make another new list of size 1,000,000 c. Make another new list of size 1,000,000 d. Iterate over it twice e. And then another time 
+
+This will additionally fix your bug where for subtraction you're really adding. List Comprehensions It's more direct to simply initialize your numbers directly: 
+
+Generator Expressions You could also write the above with the help of a generator expression by factoring out a length: 
+
+This is precisely what we want. The library additionally gives us all the mathematical operators, so we don't have to write them ourselves. So the various operations are: 
+
+This also obviates the need for , since now you can do . Using the standard container avoids the whole memory leak issue completely - and now you don't need to write a destructor or copy constructor. It also makes all your operations way easier. For example: 
+
+const-ness The member function doesn't (and shouldn't) modify any of its members. So it'd be better to mark it const: 
+
+but SFINAE is basically intended to remove candidates from an overload set. That's not really an issue here, so this seems unnecessarily verbose. What you want in this case is just the simple static asserts: 
+
+C++ is not C Your code is very C - and very excessively brief and hard to follow. Let's C++ify it up. should be a with member functions: 
+
+Difference in default constructor 's default constructor is trivial - yours isn't. If your goal is to simply add copy semantics, I would maintain this same behavior: 
+
+Format Your Code It's extremely difficult to follow your logic with inconsistent indenting. 4-spaces after each brace please. Stop When You Know The Answer Here is your function to find out if a number is prime. Which you don't actually need for this problem (more on that in a bit), but I wanted to talk about it anyway: 
+
+Know what's in the standard Your function's job is to pick some character (either or ) and return a string with that character times, followed by a period. You do not need a loop for this. There is a constructor for that takes a count and a character and constructs a with that character that many times. Thus: 
+
+Add Default Start You could also provide a default beginning by having your aliases take a pack of ints. Something like: 
+
+It's like you never want anybody to read your code. So you're basically trying to do a sort of quicksort based on partitioning the head. Let's just write that in more than one line of code (and rename it to to mimic python and make it sound less like you're sorting in place): 
+
+Save yourself the lambda. Second, you are using . That is the wrong checker for this problem. That function returns true if the two objects are the exact same object in memory. It could be true for primitives like ints, but it's not necessarily true. What you want to use is which will guaranteed work for numbers.

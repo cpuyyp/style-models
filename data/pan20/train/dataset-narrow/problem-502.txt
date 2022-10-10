@@ -1,0 +1,121 @@
+Then, create the other two tables. It should work. SOLUTION #2 (based on @ypercube's suggestion) Keep the table , but create the other two like this: 
+
+Setting this option to 0 disables the Double Write Buffer. Here is Pictorial Representation of ibdata1: 
+
+UPDATE 2012-03-09 17:14 EST I have a stored procedure that will accomplish this. Run the following only once: 
+
+Depending on the key distribution of , triggering a full table scan just happens to be better than a range scan on an index if the values make up a significant percentage of the index. This is even more true using InnoDB because a full table scan passes through the clustered index (where and row data coexist), while a secondary index on would cause a lookup of the secondary index in addition to the clustered index. If such a secondary index had a lopsided key distribution, such an index would be ignored in favor of a full table scan anyway. This conjuecture is only indicative of your current dataset. Someone else's dataset may have a better (evenly distributed, more balanced) key distribution, resulting in working better than . To see such differences, run the on both queries. The results may be different. 
+
+That mechanism is entirely different from the OS syslog. Setting log-output can be set either to TABLE, FILE (default), or NONE if you use this 
+
+So, never use . You could run instead. Changing datatypes of columns ? If and only if there is the possibility of value truncation, you could run during off-hours. Dropping Indexes ? No need to since dropping an index remove all index stats for that index, leaving other indexes alone. 
+
+It is complaining about not allocating 252K. That's just a side affect of the error because it could allocate needed memory for an operation that cannot read from a table. EPILOGUE Please look into removing the pidgeon hole in the data dictionary. Also, look for other memory consuming components in the DB Server. 
+
+The new mytb would thus have a different internal metadata id. When you copied the .ibd file to some other place, the .ibd contains within it the original internal metadata id. Simply putting the .ibd file back does not cause a reconciliation of the internal metadata id with that of the one in ibdata1. What you should have done is this: Copy the .ibd file of the InnoDB table. Then, run this 
+
+Then, go check the logs to see if the same errors came back or not. UPDATE 2017-08-23 11:04 EDT METHOD #4 
+
+The , , and values are supposed to be enclosed in single quotes. You are also better off executing it as Dynamic SQL 
+
+This is the number of pages in the Buffer Pool that have to be written back to the database. They are also referred to as dirty pages. To see the Space Taken Up by Dirty Pages, run this: 
+
+and restart mysql ASAP. EPILOGUE Cause #2 is a bit of a stretch since authentication should not trigger an entry into the slow query log. Cause #1 is a lot more likely because if the global status is being loaded into a table, it is an SQL query with discernible passage of time.Thus, if the query's running time (in seconds) exceeds long_query_time, it will get recorded into the slow query log. 
+
+Failed Connection Attempts will still increment the Process ID next to be assigned Here is an example: I will restart mysql on my PC (MySQL 5.5.12) and connect for the first time 
+
+on all Apache Servers on the Master on the Master on the Slave on all Apache Servers on the Slave to make sure there are incoming DB Connections 
+
+Using that new refactored query and making that additional index, it is as fast as possible since refactoring forces WHERE to happen before JOINs. With reference to your first question, the refactored query should retrieve just what it needs whether it is partitioned on not. Partitioning would just be an exercise of storage engine selection. MySQL support two paradigms for partitioning 
+
+This will traverse the index one one key per query SUGGESTION #2 You should shrink the table after mass deletes. 
+
+Even though the statements are executed in sequence, if they exist inside the same transaction, you must issue some kind of checkpoint between queries or tweek the transaction isolation level before starting the transaction. There are four values for tx_isolation: 
+
+Asking InnoDB for a table count requires navigation through these ominous things. In fact, one never really knows if counts repeatable reads only or includes reads that have been committed and those that are uncommitted. You could try to stabilize things a little by enabling innodb_stats_on_metadata. According to the MySQL Documentation on innodb_stats_on_meta_data 
+
+In this example, Relay_Master_Log_File is mysql-bin.009590. All binary logs before this one can be removed from Master. You could run this on the Master: 
+
+you just created the database. The INFORMATION_SCHEMA database will dynamically register in the INFORMATION_SCHEMA.SCHEMATA table as a database. Since you want to create a volume for it, you can do this 
+
+At this point, you have most likely reached Stage 4, which would go on to terminate currently active connections. CONCLUSION Maybe a Bug Report or Trouble Ticket would be in order. Just make sure you have done your due diligence in terms of finding out if the Service Manager died or that human error or lack of memory on the Windows box was ruled out. 
+
+OK this seems like a lot of overhead either way you look at it. Now, do you want to see all the deleted data? Here are two different ways: 
+
+When you run , you will see (all memory database of MySQL instance metadata), (user grant tables), and tenants created via . If you want a database in /var/lib/mysql to exist on a different disk, you will have to perform the database creation in the OS. Suppose you ran the df -h command on you gave this output 
+
+upon every crash and restart of mysqld, you need to clean that entry out of ibdata1. I would not be fooled by 
+
+or you may keep this old index if other queries can benefit from it. I would start with this before deep diving into InnoDB or SSD. 
+
+Since you ran the change and MySQL did not keel over in agony, you must have gotten it right. CAVEAT #1 I noticed the table characteristics you posted 
+
+an see if the CPU will level off. CPU is not the only issue. I also noticed your innodb_buffer_pool_size is only 4G (4096M) and you have 128G of RAM. From the looks of the processlist, you seem to have a full stack running on the machine. I would suspect that the innodb_buffer_pool_size is too small and MySQL (MariaDB) is spinning its wheels removing old pages and importing new pages in the InnoDB Buffer Pool. You have the room to increase it, because you have 109G (144515380k) of RAM free. RECOMMENDATIONS 
+
+This tells you what was the SQL statement downloaded to the Slave that was last executed. Knowing this, you could try the following 
+
+Finally, go start mysql with and InnoDB should start very quickly because there will be no need to perform crash recovery since everything was purged out of the InnoDB plumbing beforehand. 
+
+myisam_recover_options is not a dynamic variable. It is among the startup options for MyISAM. If you have set this option in , mysqld must be restarted Please restart mysqld with 
+
+A prompt will not return to you. You can now open another Command Line session and login using the mysql client. UPDATE 2014-07-28 17:51 EDT You need to run the following: 
+
+The MyISAM table would probably have some contention issues if you have fields because of the lack of length control or possible overflow of data to handle no matter what the table's is set to. 
+
+You can exit from the mysql command line client at any time using the command. However, if you just wanted to do something quick from the command line, you can open up another system shell and then return to the MySQL client by exiting from the shell. This can save time rather than exiting MySQL because you don't need to log in again when you start the MySQL client up again. Otherwise, you would be terminating a DB Connection and closing any table you created using . You also have the luxury of executing a whole bash shell and staying in the shell until you decide to type and hit enter. 
+
+The bulletpoint that says might be the problem. The could present possible rows with a in one of the columns in spite of all the data being non-null. To me, such a check is unnecessary. The same document says the following in the evaluation process: 
+
+If you get 1, that's probably the MySQL 5.1 InnoDB Plugin interfering. Try moving it over like this: 
+
+Binary Logging If has binary logging enabled, get the timestamp of the last binary log after shutdown. Error Log You are probably saying, "I DON'T WANT TO LOOK INSIDE THE ERROR LOG !!!" You don't have to. Just get the timestamp of the error log after the shutdown is complete. 
+
+You do not want to do one monolithic transaction because if the transaction fails for any reason, mysqld will spend a long time rolling back everything from the undo logs. There are 1023 undo logs in the system tablespace file (a.k.a. ibdata1). Here is what InnoDB looks like: 
+
+MySQL did not complain. UPDATE Bad News !!! I used SHOW INDEXES FROM. It says the index is BTREE. The CREATE INDEX syntax MySQL Page states that only MEMORY and NDB storage engines can accommodate the HASH INDEX. 
+
+Just reading the header you put in the question shows something interesting. In fact, the question shows three things: 
+
+Indexing both columns will not help. Why ? Because of the required date subtraction, which does not need indexes. This being the case, the internal conversion to one date type or another is the least of your worries. SUGGESTION Store the time difference and index it 
+
+User can only access the if and only if is authenticating from . If you want to access other another user's stored procedures, thenyou need to run this: 
+
+What you need is a query that generates the first day of every quarter and left join it to a summary. QUARTER NAME QUERY For this example, let's start from 2011. Here is that query 
+
+Your 1st mysqldump makes table structures and INSERTs and puts it in dump.sql. Your 2nd dump is a remote dump that is piped straight into mysql in localhost. If you are trying to catch any output based on errors, try this: 
+
+If the dirty pages rapidly start decreasing after hitting Ctrl-C, you will have to reimport without using This is as far as I can tell you without knowing the contents of the script. 
+
+Instead of checking to see if the data already exists and then doing an , try doing an and seeing if the came back with the same value or not on two calls. 
+
+Some people suggested following the idea in Pages 102-105 of the book "High Performance MySQL : Optimizations, Backups, Replication and More" to emulate the hash algorithm. Page 105 features this quick-and-dirty algorithm that I like: 
+
+The way mysql works is this ... Performing INSERTs, UPDATEs, DELETEs explicitly names tables SQL Commands that do not explicitly name tables have Such commands that echo include 
+
+Your first works well. I am sure it is benefiting from the unique index as I said earlier, but IMHO I think the UNION is simpler. With than unique index, it would appear to be six of one and half dozen of the other in terms of execution and output. You would have to benchmark your first query against my suggestion UNION and see. This was a good question you asked today. +1 for your question. 
+
+MONyog In MySQL 5.6, 341 different status values are being recorded. If all values are retrieved with: 
+
+Then CHANGE MASTER TO can work Since the Master is MySQL 5.0.67 and you loaded the same data into the Slave, here is the CHANGE MASTER TO command you need: 
+
+At least you will have a localhost user named with enough privileges to login. You should then run this query: 
+
+This will allow INSERTs into MyISAM without cross checking for free blocks within the table. This may make the table grow a little faster. As far as maintenance goes, you must use as not rely so much on on such bloated table. Perhaps you should think of moving to SSD. 
+
+When you do , that will slip through the cracks. Why? The problem stems from you using . This looks for to the the default database. Still, you explicitly use in front of the table name . Please note how this happens as explained in the MySQL Documentation: 
+
+The table collects only those tables in that are not in at present. This can give you a chance to look over the new Names. Afterwards, you can INSERT everything in into Matrix. 
+
+DISCLAIMER : I am not a PostgreSQL DBA, though I dabble a lot with it. You probably need to check your timezone in the OS and in psql. In the OS run this: 
+
+As a quick and dirty answer, you may want to use the source code and create a UDF to make replication monitor the lag in microseconds. However, I thought of an interesting method for figuring out a more granular approach to replication. Create a database (replagdb) whose sole purpose is to record this granular timestamp. Within the replagdb database, create a table that only holds a floating point number representing the timestamp. 
+
+Keep in mind that these are living, breathing entities. Do no bother run a . By the time you do, queries have disappeared and other queries have materialized. Here is a sample: 
+
+If you see , all the tables are fine. Otherwise, the mysqldump should halt at or before the corrupt table. CAUTION: Doing mysqldump on a corrupt MyISAM table will halt the . Doing mysqldump on a corrupt InnoDB table could crash mysqld. In all honesty, the database needs to have done periodically (at least once a month) 
+
+and see what locations are echoed. UPDATE 2013-03-17 22:35 EDT The reason you cannot see the option is not visible is simple: Since one or more of the default files are present, does not show it on the command line. Please note the following: 
+
+What this does is prevent the Master from recording the in its binary logs. Since the Slave only replicates from the binary logs of the Master, just don't record the commands that you do not want replicated. If you have multiple tables to convert and not replicate, then you can do this: 
+
+Prevent mysql from looking through fragments in a table in an attempt to load data into the right sized fragments. Eliminating these fragments will reduce this operation. Having the index statistics recomputed helps the MySQL Query Optimizer construct better EXPLAIN plans. Otherwise, queries may deteriorate in execution time because the MySQL Query Optimizer decided to take bad guesses at the EXPLAIN plan. This would be a definite symptom of a table that has had a high volume of UPDATEs and DELETEs.

@@ -1,0 +1,93 @@
+Humans need help in reading code. Don't make it hard for them. Declare one variable per line. This also helps when refactoring code later. You will only move the variables you need and source control tools will find it easier to do a diff on the change. Pass by const reference. If you do not plan on modifying the input pass by const reference to prevent a copy. 
+
+Note the must be there for it to be a valid C++ program. You are using a static member function as your callback. 
+
+This way when you are waiting on the conditional variable and are signaled you do not have multiple attempts to re-acquire the lock before you do the work. As soon as you are signaled and have acquired the lock you can do a bit of work. 
+
+Just use . Use of is discouraged as it means you are trying to force the compiler to resolve a particular variable that is shadowed which means you are using a bad naming scheme that is suitable to shadowing. Shadowing causes all sorts of problems. One way to get around it is to force the use of on all members (which is fine until you accidentally miss one). The better option is turn up your compiler warnings so it warns you about shadowing. Then treat all warnings as errors (your code should compile warning free on the highest warning level). 
+
+Its not very portable and only really part of the MS project. This header files are part of the C language. Don't use it. 
+
+All the above are useless and give you no more information than reading the code. The trouble with useless comments is that they fall out of sync with the code and become a maintenance nightmare. This does not make the code easier to read: 
+
+That's really old school C. Macros have no concept of scope or type. As such they can potentially clash with other people's macros. Prefer to use const values. 
+
+I would solve it like finding the smallest elements in a container. This is usually done with a heap (a heap with two values is just as affective as keeping two values and comparing them with each new value). The next thing I would note is that you are passed an array. But if I was writing a generic algorithm I would use iterators as the interface (you can then use your vector interface as a wrapper to the generic algorithm). I see you use long to try and avoid overflow: 
+
+This can be replaced by a std::map (see sfpiano) for details. Declare as close to the use point as possible. 
+
+You implemented a "ForwardIterator" this means you need to fulfill the requirements of "Iterator"/"Input Iterator"/"Forward Iterator". The things you missed Iterator $URL$ One of the requirements of an iterator is that it is . You don't seem to have done this part: Input Iterator $URL$ 
+
+Note we need to change the from a into an to make sure that EOF is not truncated out of the value. Not an error: But you are implementing an O(1) operation is O(n). 
+
+Without reading too far. You have committed the biggest C++ sin possible. You have an owned pointer in your class and don't follow the rule of three (or five). 
+
+Biggest Bug You don't implement the rule of three/Five. You class manages resources (hence the destructor). But you have not defined the copy/move semantics of the class. As a result the compiler has provided default implementations of each (which don't work when you are managing resources). Hence the rule. 
+
+I don't see the point in writing a functor to hold a functor (a lambda) then wrap that in a functor (std::function) to hold in a vector. The whole CConditionalAction class is not necessary. 
+
+I don't see anything wrong with your visitor pattern. But I would not expect it to return an (it can just a bit unexpected). This is because usually when you visit an object it means that object will have sub-objects that need to be visited. Rather than returning state via the calls to you mutate the state of the visitor object. When you are finished visting all the object just query the visitor about its state. 
+
+This seems a bit redundant. When you could use the function to print directly into the destination string. 
+
+If you are returning an internal member variable. Prefer to return a const reference to the object. This will prevent a copy being created. Mark it const so that the person using it can not modify the object but then they can decide if they need a copy or just need to use it as a reference (ie to get the length). No need to make a copy of all the headers just to work out the length. 
+
+In this case you are using the wrong type and you are just asking the compiler to stop complaining. But this makes code harder to maintain. What happens if a maintainer change types of some variable will the cast still hold true? The compiler will still keep quite about any errors as you have indicated with a cast that you know what you are doing and have told it to shut up. Use the correct type (or one the compiler will not complain about). Also prefer pre-increment. It does not make any difference for POD types. But it can and usually does make a difference for class types (potentially container iterators). By using pre-increment your code will still work optimally when the types are changed (and it required no other code changes to keep the code working optimally). Why are you marking work to be done in one location: 
+
+Yes every crappy book on C++ has this line. Once you get past 5 lines programs it becomes a nuisance (technical term ). So get in to the habbit of not using it. There are a couple alternatives (read other C++ posts on this forum) personally I prefix anything in standard with std:: (i.e. std::cout) Global Variables are not a good idea. 
+
+You are trying to validate that the input has an even number of floats as input. Why are you trying to make that fact cryptic. If you must do this then make a comment on you intent. Code is going to be in maintenance a lot longer than it takes to develop. Make sure you make it easy to understand. 5) You are doing too much work here: 
+
+This is code smell. If you must cast (and usually you should not) then use one of the C++ cast operators (there should never be a need to use a C cast operator (as above)). But in this case it looks like it is not needed. If you don't cast the same conversion will happen anyway. In this case 
+
+In moneyTransferCTX: You are using pointers. As you never expect these to be NULL (and they can't be changed) you should be using references. The constructor is casting objects to things that are not necessarily valid. 
+
+Refactor common code into a function. This way if there is a bug in your code then you only need to fix the bug in a single location (this prevents cut/paste errors). Here is the point where the constructor will help: 
+
+As you have no range specific functions applied in the clause I don't understand why you need the clause. The expression is way to simple to be optimized (its hard to see how you can go wrong). For any optimization advice you will need to provide the table definitions and an explanation of the the data has been decomposed to. Optimization of SQL queries usually lies in the table structure and not decomposing the data to full actualized third . 
+
+You are missing a destructor and the copy semantics (Copy constructor copy assignment operator (look up the copy and swap idiom)). If there is an 
+
+Subtracting two iterators requires that they are at least iterators. But the standard comes to your help here: 
+
+This way there is not chance of accidentally putting a macro that expands and is not all executed. Your code for moving to the next square is in multiple places in the code: 
+
+Now that you have failed to reverse it. You then overwrite it again with 0 (presumably to cover up the failure to reverse it). 
+
+Every time you call you create a new shared pointer using a RAW pointer. None of these shared pointers know about each other. When creating shared pointers you need (must) create them using another shared pointer (otherwise they each individually own the pointer). i.e. Once you put a RAW pointer into a shared_pointer you should never use that pointer again (it is owned by the shared pointer) you should only use it via the owning shared pointer (or another shared pointer created from the original shared pointer (as they all share ownership)). If you want to use shared pointers you need to do it more like this: 
+
+What happens if I call release multiple times? I should not be able to break the code from the outside of the interface. Once you have released the handle you should make sure that a subsequent release does nothing and getting a should return . Note I: Calling once will break the code. As the object will subsequently be destroyed and call release again. Note II: Because your object is copyable. Passing it as a parameter will also break the code. As a copy is made and both the original and the new version will eventually be destroyed. Looks like this should be a movable but not copyable object. 
+
+Pre-Size Containers Note: can cause a resize in the vector. A resize is very inefficient as all the data needs to be copied during this. If you know the final size of the vector you should set this so that no resizing happens. 
+
+This one shows that and are not really part of the state of the object. They should be removed from the object. As soon as you have a socket them they are no longer relevant. 
+
+Seems like you are sorting then sorting again. You only need to sort once; to help with this also define a comparison operator so the code looks neat: 
+
+Implementation Comments: But then again why do you store what is actually a single value in two different variables (feet and inches). Why not just store the total distance in inches (and then do conversion on the way in/out). Look at the unix time. It just counts the seconds since the epoch. All other values are calculated from this. 
+
+Comment on testing If you are not going to bother with delete then you may as well write a much simpler version. 
+
+The visitor pattern and open closed principle. There is a mild conflict here. The visitor pattern is very good when you have a static class hierarchy and just want different ways to traverse the nodes in some collection. In these situations the visitor pattern behaves very well. BUT If the class hierarchy is not stable and you are adding new types of nodes then it does not behave very well. This is because every new class that you add to the hierarchy will require a new method in the visitor object (unless you want to default them using some template method to handle the new nodes). Design Not sure I agree with your design at all. This is what a standard visitor pattern looks like. 
+
+Higher Level Functionality You should also note that C++ now supports much higher level constructs than threads. If you use it will effectively add to a background system threadpool for you. Things to read about , , Review This is a C header 
+
+Well overall impression is the code is very condensed. Some white space may help. I am going to have to disagree with @vnp about the type names. Its pretty common to use short template type names. Common conventions generic type container key, functor. If you have a lot then fine you may give more description but the type should be generic. I don't want to impose my thoughts on the user of the type (let the compiler impose its rules on the user). I would not want to limit the use of this to maps if it can generically be applied to other container types. As long as the parameter and variable names are descriptive then the type names don't need to be. The type is unnecessary. This information can be extracted from the container. Don't assume the internal value is use the container to tell you its internal value type (yes its a for but don't lock yourself to this type if you don't need to). But since you are using you should not be passing the internal object (that's relay for ). You can just pass the parameters used to construct the internal type. Don't like the emplace and return of a part of the result in a single line. 
+
+If is large then you are forcing an unneccasery copy of an expensive to copy object. Pass by const reference or r-value reference. 
+
+Then you should also have a virtual destructor. As it currently stands your code will call the destructor of but because the destructor is not virtual it will not call the destructor of . Overiding virtual functions When you override a virtual function its a good idea to mark it as overridden. That way if things in the future change your compiler will catch any changes and prevent compilation until you fix the update. 
+
+All the extra vertical space. Having is bad practice (see every other review about C++) Lack of around blocks of code in statement. You don't check to see if the read worked. Note if the read fails then introduces undefined behavior as will never have been initialized. 
+
+Simplify The move operators are usually just implemented as swap operations. This delays destruction until the moved object is destroyed which is a potentiall optimization if it is not destroyed but re-used. 
+
+I would change this to make sure that that you validate the user input (are negative numbers allowed). What happens if they type ? I would then encapsulate that in a function. 
+
+Algorithmic optimizations. As you read the values in work out what quadrant the point belongs to and keep a running total for each quadrant (not adjustment needed on X/Y query). Then you do not need to re-calculate everything every time there is a 'C' request. As it stands complexity for each C request of O(n). If you keep a running total then it is merely o(1). Think of the situation where you have a 1,000,000 points and you do a 1,000,000 C requests. The code would basically do 1,000,000 * 1,000,000 operations rather than just 1,000,000. Style Please stop using this: 
+
+I would expect getPlayers() to get the player information and do any error handling. Thus in the main loop this should just be a single call: 
+
+Creating two objects and checking for equivalence seems to be overkill. There seems like there could be a much simpler test for empty. 
+
+Note: the returns a a reference to the stream, so this is functionally the same as the line above. But it imparts more information. What you are saying here is: we succeeded. Looking at your dispatch. You have a structure that is the same every time you call.

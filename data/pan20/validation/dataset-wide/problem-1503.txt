@@ -1,0 +1,71 @@
+You have the tightest coupling of interfaces I have seen in my life. You are also restricting them in abnormal manners. For example, should not need to know about the . Instead, it should be worried about , which can worry about. This way, the coupling is reduced and things are coupled with appropriate interfaces/classes. You want to reduce your coupling to only couple around what needs to depend on what else. Things that are generic like shouldn't have to worry about more specific things. They should be, well, for the buzzword: generic. Think about it as "what happens if I need something else to draw?" If you have another class/interface that has to draw something, and you need to modify to count that in, then something is fishy. 
+
+So now we should see that the majority of your code can be rewritten as a tail-call recursive function. We see the relationship between state and tail-call recursion, it's easy enough to write for such. I've blogged about this topic before, so I'm not going to go into too much detail, but the idea is to identify the following: 
+
+This should be self-explanatory. It does the same thing as , used in conjunction with that attribute: 
+
+This actually posed a larger challenge than I originally anticipated, but in the end it was resolved pretty swiftly. Obviously I want comments on all facets, but especially the idea of the performance of the method, and anything related to the nature of it. I want it to be as lazy as possible, after all that's what good framework developers do, but I also want it to be robust. The code is actually surprisingly long, but I think that's my fault for not abstracting it to a class, and I really do not want to abstract this to a class. The method is as follows: 
+
+I'm not going to put all the events or event args here, as I thing I would exceed the character limit (even if it is 65k), but they all share the same basics. We'll use the as an example, as this is one of the more popular/regular events. Here we have the . On GitHub: . 
+
+If you have access to C#6.0 (Visual Studio 2015+) then some methods which are a single, simple can become an expression-bodied member, example: 
+
+Same thing, so that gives us an estimate that we should be seeing ~35x improvement on execution time just from these optimizations. In reality it'll be less, a good conservative estimate is ~20x, just because of overhead and I'm not certain this is the course the JVM is taking. (It could have optimized something.) If the JVM did a good optimization, and not one for the special case of , then you're likely looking at 2-10x improvement, but that's still a lot of improvement. 
+
+Should there be a operator? If so, should it be ? Should there be an operator? If so, should it be ? Should the API include a constructor that allows one to pass a tuple of ? A proper definition might be: 
+
+Since I've been playing with F#, I decided to try my hand at implementing some of the Project Euler problems, and I've been having a blast doing it. (f#-is-fun) So, I'm going to list all the Project Euler problems I solved to make things pretty clear: 
+
+You're doing all wrong. I know you don't believe me, but you are. I've been working on a (very) long-term project (3+ years) with a 'settings' type system, and my solution was very bulky, but creates a lot less work later. I can't even tell where you plan on using in the class, what does it act as a seed for? Everything? You need to group things into categories so that you can create a separation of responsibilities (SRP), and keep things that are related together. The first thing I did is create a class that has the common settings systems in it: 
+
+And clean it up a bit. First, remove the curly braces around the first two statements, you have no code specific to them so we can omit those braces. These statements will then go to the same indentation level. 
+
+I have this as part of a project to normalize values to more readable strings, localized to the relative time in the past that they happened. It allows you to make several customizations. If you don't want a time to show up, specify for the , etc. You can change the reference so that you can measure values between any two points. The idea is to put them in forms like: 
+
+Again, reduce vertical space a little. Other than this, I have nothing else to say about the code except maybe to shorten some of the names. It's awful verbose. It's good F# already, my modifications are merely recommendations. Good work. :) 
+
+These are all the things it has to mutate, so we're going to start rewriting it for tail-call recursion with the mutation first. 
+
+You don't have enough line breaks. Throw an empty line in-between logical sections to help disseminate the code. 
+
+This isn't really a bad workaround. In fact, I wouldn't even consider it a workaround. It is now part of the business logic of the application. The only reason it feels like a workaround is because of your and comments. Remove those and this is no longer a workaround. I see the following method: 
+
+The enumeration value tells the C# compiler to try to inline the method as much as possible. That is, if you come form a C/C++ environment, it is very similar to macro's. The C++ macro: 
+
+This also throws a little C#6.0 in there: the string interpolation, the expression. We can also do the following for 
+
+In my opinion, these are very reasonable requirements: there's no requirement of symbols/digits/mixed case, just a somewhat long length requirement, and it cannot have obvious insecure strings in it. There are two sections to this class: the C# class, and the F# module. The class is straightforward: 
+
+We're entirely reliant upon the for input handling, which may (is) not a good thing. Instead, let's develop that method to take two strings: one is the , and the next is the line. 
+
+Now, to demonstrate how this works I defined a very ugly method, so do not review it please, that goes through all the possible features of this struct: 
+
+This keeps the LoC down, and increases maintainability. It uses short-circuiting, so if the left-hand side evaluates , the right-hand side will not even be hit. 
+
+Then any object/method that needs a can just take an , which means you can supply different noise-types if you need to. (I do this very frequently with logging.) 
+
+You'll notice that I inverted all the booleans on the value, to make sure that requiring a default of instead of now would not create issues. As far as speed goes, the difference seems to be performing in 63.3% of the time of your original method. (For a limit of 100,000,000 the modified version I have here is about 2486ms, yours is about 3917ms.) Other than that, there is really not much you can do about performance overall. 
+
+You should be the instead of opening and closing it manually. This is because implements , which is almost always an indicator that it uses unmanaged resources, and should be properly freed. (In this case, will do this, but it's still a best practice to use the .) You also do not need the work in this method. It's automatically created when is opened. 
+
+Although this feels very "examplish", here are my thoughts: Personally, I would rethink how you handle paths currently. As it stands, the directory structure must be very specific: you are provided with some "root" folder, and in that folder you have subfolders, each named after the of the library within it, then a folder, then a folder, so an example would be: 
+
+I don't know what means, but you use it a lot and now to me it's very magic. Try to get it in a that reflects the meaning of it. 
+
+You have a surprise bug: what happens when I do ? Well is not empty but your sure isn't set. That said, you should be doing something like the following: 
+
+Next, it looks like the colons should line up vertically and be past the last horizontal character on any line. This doesn't apply to you, unless we include your comments: 
+
+All the answers focus on using in the method, which isn't necessary. We can speed this up by eliminating the random from that method entire. What's the one, absolute truth about our desired task? The order will never change. We can build the order of our numbers in the constructor, and create an index field instead of all the code being in the method. We can also make this run in \$O(n)\$ time (right now you have no big-O run-time, your method could be running infinitely). Code: 
+
+Now that we've done that, we can pretty easily read your code. It's still cluttered with comments, you don't really need the massive amount of comments there. Your code should describe what is happening, you don't need to comment on that. Your comments should say why something is happening, if it's for a non-standard reason. (You don't need to say 'check for the special case of username == token, I can tell that's happening, and if I have any basic knowledge of the application I know why you did that.) If we remove just the self-explanatory comments, we'll find we have the following: 
+
+The nicety of this is that you can now put your DLL's anywhere. You can use relative, absolute and virtual paths, and you can make them much more dynamic. 
+
+Then becomes an which means you can use in place of . This also means you can extrapolate further and define an abstract class for this, and add a method: 
+
+The method should only be responsible for saving (and maybe clearing) the buffer. If you move the check outside to the method, you remove a (minor) bit of overhead. A better style would be to create a method which does the -check, then calls which actually saves the buffer. You have a: 
+
+Pretty simple, and now we have full accountability across the entire domain of this operation: we can tell what happened and why. We can also easily tell the user "You tried to buy this but failed because ...", which is far better than just doing nothing. (No system should ever do 'nothing' on a request, you should always show the user something.) Of course now we want to add braces to our / in : 
+
+There's really nothing complex here except maybe the that uses the converter, so it seems fitting to post the next:

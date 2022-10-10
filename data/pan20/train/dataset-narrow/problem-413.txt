@@ -1,0 +1,75 @@
+There are no SQLDmprNNNN.mdmp files which seem to be created. There is no other error logging that we are aware of. How can we find out what's wrong? Is there a way we can tell if any third party services or processes are cycling the SSAS service? We have also posted this question on SQL Server Central. 
+
+Result: "aӒa" I suspected it might have to do with how it's interpreting the characters, so I tried specifying a binary collation... and that "fixed" the issue: 
+
+You can also use a UDF to enforce a custom CHECK constraint on a column, which could go and check the other. But there are some scenarios where that falls apart. 
+
+(That will break down if you have more complex or custom nesting requirements.) Regardless of this particular example, I don't think there's an effective way to get (dynamic) XML into an indexed view. First, a "indexed view" is really a view with a unique clustered index. You can't create "normal" indexes on an XML column. Let's say you try: 
+
+Set it to 1024MB. If it is still happening too often, then 4096MB. Until you measure your actual growth needs, it guesswork. Or, manually grow it to 950GB, or an even 1TB and let Autogrow not be a factor, which is what you should be doing anyway. Is Instant File Initialization turned on? You didn't mention the version of SQL Server. And change the Log file from % to MB. And just for bonus - please get them onto separate drives. Kevin3NF 
+
+Sounds like you are using maintenance plans for your Full backup. If so, make a new plan with a Backup task in it and change the backup type in the GUI to Differential, then set the schedule. As RDFozz says, consider also using t-log backups every 15-60 minutes throughout the day. If not, and your databases are in FULL recovery model, you will likely get crazy file growth in your .ldf files :) 
+
+Change the threshold to 23 hours 15 minutes...I assume the restore job is the one alerting, correct? I believe there is an alert on all three. possibly just backup and restore, but I don't have a LS setup in front of me. 
+
+(2 additional events removed and some information obfuscated) Yet there was still nothing in the "Test Login Audit" event session we created on event . So the extended events system and ring buffer are working. And logins are occurring. So why aren't we getting any events? Do we misunderstand what a "login" is? Is this not yet a complete feature? We get this back from @@VERSION: 
+
+We then connected to the server several times, using Windows and SQL authentication, including a purposely incorrect password for the SQL user. We then queried the extended event data as follows: 
+
+The error doesn't occur for some time, which is usually the result of the client being unable to reach the destination server (e.g. an incorrect database server name). The error occurs in the web application and when testing an ODBC connection using the Windows Server 2003 Web Edition OS tools. In order to try to determine what is causing the issue, we want to see whether the connection attempt is reaching the database server. We thought we could use extended events to monitor the login attempt. is a new event in SQL Server 2016 which "is generated when server is done processing a login (success or failure)". We created an event session with this code: 
+
+Having connection issues out of nowhere in my lab (Azure VMs): SQL 2016, sp1, cu4 all the way around, Windows 2016 Datacenter Windows Failover cluster for SQL AG testing. SQLServer-0: Default instance (port 1431) Inst1 (port 1499) SQLServer-1: Default instance (port 1431) Inst1 (port 1499) From SQLServer-0, I can only connect to the remote instance(s) using tcp:SQLServer-1, 1431 (or tcp:SQlServer-1.kevinsdomain.com,1431) Same thing for the named instance. Same thing from SQLServer-1 to SQLServer-0 Ping of just the NetBIOS name works just fine, ping -a resolves the FQDN None of these are running on port 1433, both server are running SQL Browser under 'NT Authority\Local Service' This is my test domain, along with a domain controller, DNS, etc. Windows firewall on each has all of the ports open that are needed, including UDP 1434. I’m sure there’s something simple I’ve forgotten to check, flush, whatever. Just can’t think of it. Kevin 
+
+This is exactly what replication is designed for. Sounds like Transactional replication with updateable subscriptions will work although MS is saying this will be removed down the road (no specifics) Merge replication is also a choice, but is more complex to maintain. 
+
+How many actions are allowed? Does it vary by event? The answer, based on experimentation, appears to be 27 for . But I haven't found that number on any Microsoft documentation. And it seems to vary by event, as I was able to get 30 for . Example code which fails: 
+
+is set before , yet it sometimes has a later value. (I've tried this on SQL Server 2008 R2 and SQL Server 2016. You have to run it a few times to catch the suspect occurrences.) This does not appear to be simply a matter of rounding or lack of precision. (In fact, I think the rounding is what "fixes" the issue occasionally.) The values for a sample run are as follows: 
+
+Also, if you Include Client Statistics (under Query menu), you can get a history of when you ran the query, along with various statistics such as run time and number of rows. 
+
+You might think you could cheat by creating an outer view which didn't have a subquery, calling the original view. But if you try: 
+
+The sp_addlinkedserver statement requires the ALTER ANY LINKED SERVER permission. New Linked Server GUI requires sysadmin...the sp does not. Just verified with a new SQL login that has pretty much nothing but ALTER ANY LINKED SERVER. $URL$ 
+
+Log Shipping for DR. Not so much HA as no automatic failover, but still better than nothing. Use Windows cluster for HA, and Log ship them to somewhere else. transactional replication IS allowed in standard: $URL$ But is not really an HADR solution 
+
+Note that the task in this image says full, because that is the default. When I click OK, it will change. 
+
+For Merge replication: $URL$ Static row filters, which are available with all types of replication: $URL$ I have not done any time based filtering :) I don't know that either of these is really going to meet your "running 7 days" criteria, which sounds to me like "last 7 days"... 
+
+Just use WITH REPLACE in your restore command and it will overwrite the existing databases on the destination. Simple, and done. You can DROP first, but its not necessary. WITH REPLACE is the T-SQL keyword that corresponds to "overwrite the existing database" in the restore database GUI (added for future readers of this thread) Oh...and are you running an RC version of 2017? RTM isn't until next Monday 10/2...just an afterthought. 
+
+Microsoft's NEWID() documentation does not explain, but I agree that the likely reason is related @Payload's comment on another answer: 
+
+CREATE XML INDEX (Transact-SQL) So in order to have the XML materialized using a view, it can't be the only column. You need a "normal" column to create the unique clustered index on. One way to get a normal column would be to have the XML be created with a subquery. But as you point out, if you try this: 
+
+Update 2017-07-07: For those curious, we have solved the original connection issue. By default, named instances of SQL Server listen using dynamic ports. Our firewall only allowed port 1433. From Microsoft's documentation on configuring ports: 
+
+I presume this is because they come from different underlying system information. Can anyone confirm and provide details? Microsoft's SYSDATETIMEOFFSET documentation says "SQL Server obtains the date and time values by using the GetSystemTimeAsFileTime() Windows API" (thanks srutzky), but their GETUTCDATE documentation is much less specific, saying only that the "value is derived from the operating system of the computer on which the instance of SQL Server is running". (This isn't entirely academic. I ran into a minor issue caused by this. I was upgrading some procedures to use SYSDATETIMEOFFSET instead of GETUTCDATE, in hopes for greater precision in the future, but I started to get odd ordering because other procedures were still using GETUTCDATE and occasionally "jumping ahead" of my converted procedures in the logs.) 
+
+Most likely, you have multiple Differential backups in your DB_NAME_DIFF.bak file, and the restore is picking one that occurred before the most recent FULL. As I hinted in my comment, and Scott stated in his. Edit the following to check for multiple files in a backup device: 
+
+As far as starting it...add a schedule that runs the job every minute. If the job is running, no issues. If not, it will start. can't help on question 1 with no additional info. 
+
+"For the REPAIR_FAST option to work, the DB needs to be in single user mode. SQLMaint does not put the database in single user mode before running the CHECKDB. Nor does SQLMaint return an error when the DBCC command fails to execute." $URL$ Not sure how valid this post is...as I cannot test it. 
+
+Most likely it is a 3rd party backup solution such as NetBackup that your sysadmins have pointed to your instance. Try reading the default trace to see if the application name column gives you the specifics: 
+
+While you could create complex, multi-level XML within the function, the function cannot reference any tables (or it wouldn't be deterministic). For example, this: 
+
+So datetime precision allows the .880 as a valid value. Even Microsoft's GETUTCDATE examples show the SYS* values being later than the older methods, despite being SELECTed earlier: 
+
+Short answer: You can't. Long answer: There's a few things going on here. First, you might be underestimating the power of . It will provide a certain amount of nesting "automatically". Your provided example, in fact, could be handled without the nested XML generation. Let's make some test tables and data: 
+
+(I tried a couple of different actions and it doesn't seem to relate to which actions are included-- but maybe it's based on a total character count of action names?) Full list of actions I was working with: 
+
+Is QuestionNumber a unique identifier somehow for table Questions? Or is the QuestionBank designed to have, say, 5 different sets of questions with numbers 1 through 25? If Questions.QuestionNumber is a mere non-unique ordering value for a given BankId, then there's no way to know, when saving a QuizQuestionStudent record, what QuestionBank a particular question belongs to without presuming that the answer is for a question in the proper bank. When QuestionNumber = 5, you'd have no idea how to check its BankId if multiple banks had a fifth question. You could presume it belongs to the same BankId as the Quiz, but then what is left for the database to check? Now, if QuestionNumber is unique, you have a different problem. You want the Question's BankId to be required to be the same as the Quiz's BankId. Repeating the BankId in the QuizQuestionStudent table wouldn't help, because that value is coming from the app and it's what you're trying to check. You want to make sure data in two other tables conforms not just to QuizQuestionStudent values, but also to each other's values. You can't do that with a foreign key. (A significantly different design for all of the tables might eliminate the issue, but I wasn't able to come up with one.) However, it can still be strongly enforced at the database layer. You can create an "indexed view" or "materialized view" and then constrain its values. The view can reference multiple tables. It would pull the BankId from two different paths and make sure they are the same. 
+
+Everything needs to be on one line...not multiple so we humans can read it....same as if you were typing it into SQLCMD. The second you hit return it starts executing from there. 
+
+My Google-Fu is failing me... Is there now, or possibly in the works a way to tell SQL Server to stay inside one NUMA node, either server wide or at the query level? Basically the same functionality as MAXDOP, but MAXNUMA? Right now, unless I am totally missing it, when a query goes parallel it can use all of the processors it can see. Just wondering if there is a way to restrict it to one or two or 'x' NUMA nodes. I may not really want my queries spread out over 80 logical processors :) This is mostly a curiosity rather than a "help me break my broken thing" question. Thanks, Kevin3NF 
+
+Set Simple and shrink the .ldf without having to re-create...I've done it many times over the years, although its been awhile 
+
+The environment that this question was directed at has long since been torn down and re-purposed several times. The problem popped up again on the current UAT iteration...and we found that someone had pointed part of the application to the 32-bit version of dtexec.exe in Program Files(x86), instead of the 64 bit correct one. oops. Lots of research and this DBA.SE post got me there. Messages in my logs that I didn't have the first time around:

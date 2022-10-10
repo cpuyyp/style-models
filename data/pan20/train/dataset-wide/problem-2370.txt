@@ -1,0 +1,37 @@
+I have a MySQL 5.6 on Amazon RDS that I'm using for testing some data archiving scripts. I'm removing oldest data based on a "updated_date" column and index. Curiously, after removing a few million rows, my script gets stuck on the initial query it does for determining data bounds. I run a query like this: 
+
+We have a large MySQL database on AWS RDS, with a huge table around ~1.8TB with massive write workload. We recently hit a write throughput bottleneck, which caps our provisioned IOPS way below the nominal value. We can't upgrade our instance further, so now we have to shard or optimize our write operations. Sharding is not an option now. 
+
+Whoops my bad! I was sure I had set the sort key on the advanced editor on ole db source but I hadn't! 
+
+seeing as no one has helped me with this i'll answer myself to help anyone who is looking at the same thing. It looks as if to enable CDC on an existing warehouse you need to do this on a table by table basis, recommending capturing all the ETL in package per table. Also, it is recommended to enable CDC state per table to avoid conflicts. Recommended approach would be --> enable CDC on source DB. Transfer incremental loads to staging DB or schema inside DWH. Incrementally load records to Dimensions and Facts. Every example i can find on net is for one table, which is fairly useless... be much appreciated if someone can find a CDC example for multiple tables... 
+
+So, it's supposed to hit the index and run almost instantly, and it did when the testing started, but now, after millions of rows were removed, it gets stuck in the 'optimizing' state for several minutes. The script is the only thing running on the database. Any ideas on what's wrong with it? Am I supposed to do something when removing lots of rows like that? Do I have to run , even though I'm not using ? Update #1 The result from : 
+
+It's well known how the performance of random UUIDs as PKs in an InnoDB table degrades terribly as it increases in size. Would an UNIQUE index for a non-PK UUID column have the same impact? UUIDs are Version 4, random, stored as binary(16). 
+
+Simple question, not so simple answer! I have a bunch of dates... how do I remove the middle numbers (which are incorrect) so I just have Week 3, 2011/2012 etc? Thanks! 
+
+There's a simple answer to this. If the relationship between the tables does not exist to give you the results you want, you need to CREATE your own relationship. I used ROW_NUMBER OVER (ORDER BY PALLETID) to give me unique ID's for both datasets. THen simply join (make sure you check different joins to make sure you don't exclude rows from one side or the other) ACODEID = BCODEID. Simple! 
+
+I've searched questions but can't seem to apply to my scenario. Please see attached code below. I am trying to join two subsets of this data but am getting duplicates/too many rows please see subsets below main query and main results (i'm hoping you can understand by providing data/examples without table defs as tables are enormous) (please excuse formatting i don't know how to line everything up in this) : 
+
+And everything seems to be working fine. However, when I add the option to use LOAD DATA, everything seems fine and I can see queries running on the database, but no data is changed. It's like the tool is not committing a transaction or something like that. I'm using MySQL 5.6 on Amazon RDS and Percona Toolkit 2.2.12. 
+
+We already optimized the aplication and the table schema and indexes as much as we could to reduce writes, but it's not enough. Are there any other practices I can adopt to further optimize this database write throughput? 
+
+The result from is 618376777 rows. Unfortunately, I can't post the whole schema here, but where it bears on the issue, the result from is: 
+
+we have a DWH load job that sometimes hangs. We have not been able to determine why this is happening it seems to be random and network/hardware related (which we have no control over). We are ordering new hardware which will isolate our processes but this is weeks away. Therefore when our job hangs, we would like to specify a timeout option if any of the steps reaches a certain amount of time and have it automatically restarted. How can this be done? Thanks! 
+
+except the bottom 6 rows attached to the right of the query... Basically the 'B' items make up the 'A' item. Which is the purpose of this report, but all the data exists in the same tables which is what i'm really struggling with... thanks! 
+
+Update #2 By separating the min() and max() calls in two queries, I noticed only the min() query is affected. The max() returns almost immediately, so it looks like the min() is traversing the index for all index entries that existed but are now empty. Is there any way to prevent that from happening other than rebuilding the index? Update #3 RickJames nailed the problem with the hint about change buffering, but disabling it entirely compromises performance for all inserts, deletes and updates. Eventually, I figured out the time it took to flush the changing buffer was reasonable with the production server, so problem solved for me, but if you run into the same issue with a low-end server with magnetic storage, good luck with it. 
+
+Hi all please see attached data below. I'm trying to get a row based on various conditions. scenario 1 - get highest row if no hours exist against it that has (setup + processtime > 0). scenario 2 - if there's hours (like in this example) show next operation. (which would be 60). 
+
+but this gave me 6 * 6 36 rows... I want to just bolt the right query on to the end of the left query. exactly like a union 
+
+Hi all i'm building a data warehouse and noticed that my tran log is massive (in simple recovery). MDF file is 2.6 GB. LDF file is 7.8 GB!!! Why is this??? i don't want a stupid tran log that's why i've put in simple recovery! (i know the system needs tran log). so i tried to shrink the DB and get this error message. 
+
+I have an InnoDB table with just two columns, a VARCHAR(20) and a DATETIME, and around 4M rows. This table serves as a blacklist for other tables, and is truncated and recreated from a csv file from time to time. There are no writes involved besides that, it's only used for a SELECT checking if a key exists, which always hits the index for the VARCHAR column. The problem is, this table has to be consulted for every single operation in all my systems, all the time, because if there's a match, which is very rare, the operation must be aborted immediately. From my application profiling we spend around 10% of the database time reading from it. I'm considering using the Memory engine for this table. The idea is to create a base table with the CSV engine that just loads the csv file instead of the whole data importing operation, and a init script to populate the Memory table. I'm assuming the HASH index on the VARCHAR column would be faster for simple lookups, but I'm not sure if it performs well with the almost 100% miss ratio I have. Is this a good idea to improve my lookup speed?

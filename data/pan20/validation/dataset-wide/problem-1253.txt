@@ -1,0 +1,65 @@
+With many more activities than time slots, most of our time is spent checking for conflicts. We can ease that out by using a bit set to represent used times: 
+
+The giant list of Y.setX(Z.getX()) always annoyed me in applications I've maintained. Would it be feasible to use Bean reflection to sort this out? It seems so easy to miss a field. 
+
+After all, what is the point of going through the trouble of having 4 different coin types if this difference is not meaningful? (Think about how you will use this class: would you set up prices for items in a shop in platinum, gold, silver, copper coins? Or would you set a base 'worth'?) 
+
+As for callbacks: the only method you're using on your output list is , which we can pull out as a method handle. 
+
+If you expect repeated lookups for codes—and that is probably why you have codes—consider a lookup map: 
+
+To verify this, I tried my hand on some quick-and-dirty number parsing (worthy of ThereIFixedIt.com), and wow, the speed difference: 
+
+ITreatment Avoid using concrete classes in your method signatures (especially public ones, and doubly for interfaces) when an interface will suffice: 
+
+Remove the packing by '#'; let the database worry about compressing results if it really has to. Split out the IP addresses so that you have a clean Id x PrimaryIP M:N relation. This will make querying on PrimaryIP easier. The CIDR will be a bit harder to fit into this. See if you can make an extra table that stores IP ranges per minimum and maximum possible IP address. For instance, 10.0.0.0/8 would be 10.0.0.0 -> 10.255.255.255 . This way, you won't have to store every possible address. Now that you have a more direct schema, you can make the database do some of the heavy lifting: 
+
+The other code in your method takes care to take only a single step and check power levels each time. This part, however, does not seem to do so. There's a different level of abstraction here, and that's a good place to start looking for implicit assumptions and/or incompatibilities. Log those exceptions. You never know what is hidden there! 
+
+Do replace this with a thread pool or, preferrably, an ExecutorService. Executors take care of much of the hassle and bookkeeping involved in using multiple threads, shielding the rest of your code from (some of) its complexity. Exit strategy Multiple and nested uses of makes it hard to really, really stop your program. Consider looping on a volatile boolean instead, and adding a close method to your actors: 
+
+Let's start by taking a look at where you buy items from a store. It's a pretty long if-else chain, with each block similar to this: 
+
+Depending on your style and preferences, you could also make an abstract class and move the delta-limiting method there: 
+
+That's really all we need to store. (Do version your data format, even if you plan on only ever supporting one.) Worth it? If we're going to be user-friendly and fail-safe and all these beautiful things, this is a lot of effort, and possibly even overkill. This feels like a basic enough issue that there must be some projects with some support for it (I'm looking sideways at Spring and Apache, here). If you're just going for a fixed list of things that you want available, manually maintaining a list in code is pretty much your simplest, if sometimes tedious, solution. It's not shiny or pretty but it's quick and it may meet your needs. 
+
+Here is a more bare-bones version of your code. (A slightly more cleaned up version is further below.) 
+
+It could be argued that an ArrayList would perform better than a LinkedList despite this really being the LinkedList's turf. This is because we're talking about small amounts of data and a predictable amount of it (4); -ing has good cache locality in this case, and won't take extra allocations. (*) Code duplication? You branch on the size of priceQueue in , but the code is very similar. Fewer than 4 elements: It is still possible to calculate an average and have an oldest pricing when the window is not full. The window can not be empty, because the relevant methods are called with a new price as parameter. Whether this is desirable depends on the expectations of who will be evaluating the solution, but I find it helpful to limit the number of -pointers in circulation. It also allows for some code merging. Putting it together: Squeaking these changes into place cut wall time to about 25% in my local measurements. 
+
+Here's a quick rundown of the ways to synchronize, how to choose, and when to use them: synchronized is the basic, easiest, least surprising way. It guarantees that any threads entering the block will see all changes threads made before leaving the block. Use it as your first recourse, when you have blocks of code that can not tolerate interference from other threads, such as when doing coordinated or non-atomic reads and writes. JVMs tend to be pretty smart with synchronized, causing little overhead under light contention. Locks are more specialist tools, allowing finer control than synchronized does. Use locks when you need features that synchronized doesn't provide (like shared/exclusive locking), when your critical sections are not neatly confined to code blocks, or when you have heavy contention. volatile marks a field as uncacheable, meaning all threads must access main memory to read or write. When a field is volatile, all reads from and writes to (and through) it count as memory barriers, just like an enter-and-leave of a synchronized block does. However, volatile is non-blocking, and threads can interfere with each other. Use volatile when reads and writes are uncoordinated and independent. 
+
+You don't need the second in your select or grouping. Other than that, the query itself looks fine. I'm a bit more worried about how your table is built, though. 
+
+After we've done all this, we pretty much have what we need to allow our users to build whatever they want. But GUI builders usually don't forget coordinates to custom components after reloading, so how do we save our users the trouble not to have to input them over and over again? Maintain a registry (optional) We should save two things about found implementations: (1) their class name, so we can find them, and (2) how to instantiate them. How you want to save this is up to preference; I'd lean towards an XML file because that allows enterprising users to tweak, change, or add others if we somehow fail to find them. 
+
+The code returns the first product, not the maximum product. For example, it returns 6240 instead of 7500 on input 60: 
+
+Yes. It's commonly thought that thread safety relates only to read-write cycles, but the only assumption you can reliably make without synchronisation is that a thread can at least see its own changes; everything else is maybe-sorta-possibly at best and a politician's promise at worst. Processor cores may--and often do--take copies of data from main memory to work on. Even if a thread does decide to write through to main memory, the other threads need to catch on that something has changed, and reload it when needed. Otherwise, the other cores will happily chug on with their local copy. So access should still be controlled, though it doesn't need to be via the keyword. A field that is either written independently of its previous value, or written only by the same thread, can be safely guarded by . I'd say there are three main ways to accomplish what you want, in varying degrees of features and safety: 
+
+As you noticed, searching for your entries is adding to your time complexity, because you have to run down your queue. Priority queues are very good at polling the top element, but not optimized for searching for specific entries. You can optimize for searching by using a for counting frequency, and then use a for maintaining order (1). Adding an entry will look like this: 
+
+Looks completely acceptable to me. If there is no reason to hold on to the lambdas in some other way, e.g. to flush or remove them, and they're not too big or complicated to distract from the current context, then I see this as much the preferred way to do it. Short answer but, yeah, good question. 
+
+Ask your platform for an index. For WindowBuilder, this is Eclipse, which has information on loaded and available classes. For stand-alone Java applications like GUIs, this will involve scanning your class path. Also available for your needs is . If you or your users can be bothered to make an index file in provided JARs, ServiceLoader will do some lifting for you. Ask your user for a JAR and scan it. Open it up, check each class whether it extends , and add/flag it if it does. This covers archives that aren't on the class path. Ask your user for a class name and let the ClassLoader fetch it. This covers classes that are not in a JAR or on the class path. 
+
+You have the right instinct / deduction that this takes longer than it needs to. This is because each check for duplicates does a 'full scan' over your data. To improve this, you need a way to store / sort your data so that you can quickly ask: "Does this entry already exist?" Enter the HashSet. A hash set is a data structure that allows for very fast lookups. It does this by mapping entries to an integer (the hash) and then using that to quickly get the right index in an array. Using a hash set, your program will perform better and have fewer lines of code. The following example code uses the function that returns on success (element was added) and on failure (element was not added, because it already exists). 
+
+(*) Because the set of possible combinations is enumerable, you can assign a unique number to a combination, given an alphabet and a pattern length. Meaning you can have a mapping function, i → combination(alphabet, k), as the base of an (spl)iterator or even a java.util.List implementation with a very efficient operation. But that may be beyond the scope of this answer. 
+
+I don't really see an issue with having a generic name for a generic class. If your calculator class would've been called Utils, or your utility class Calculator, that would be an issue, but basically a namespace for utility methods? Utils is fine. That said, about that Utils: 
+
+Try to indent with the code blocks (braces) only. Indentation is meaningless in Java, but it's a strong guideline for humans reading your code. It doesn't matter whether you use 3 or 4 or 2 spaces, as long as you're consistent. 
+
+There is a possible performance issue in connecting and disconnecting from a database with each request. Setting up a connection can be expensive, so if these connections are not pooled/cached/reused on the driver level, you may want to look into libraries or techniques for JDBC connection pooling. (Also be sure to close connections you get from your driver. Database connections are external resources that can not be reliably handled by the garbage collectors, and need to be explicitly cleaned up.) As far as I can tell, you already have the driver you want; why work through DriverManager? Ask your driver for the connection: 
+
+While personally I cringe at the sight of using a decimal type to represent length, it seems the least-effort approach here. The alternative is checking in whether length has overflown, and then set a flag to raise ArithmeticExceptions as required by the specs. 
+
+More general comments Self-typing through generics only works for subclasses one level in. I've tried serious wizardry with generics, and never found a good, reliable way to assure the compiler it would get an instance of the current type without having to override those methods manually. instead of ? These methods have different names, but they appear to do the same thing: append something. Is there a reason you chose different names for them? is too liberal in what it accepts. It feels a bit odd that I could write: 
+
+That's for the abstract part; let's get to concrete suggestions. Pull singletons up to the factory level The concern of the DAO implementations is data storage and retrieval. The concern of the factory is how to supply instances. Lifting the singletons from the individual implementations leaves the factory in control of instantiation and life cycle. Here's a straightforward example of such an approach: 
+
+Now that the logic is more separated out, maybe it would be a better idea to move the parsing itself to PatientType. It's independent from Quarantine: 
+
+... however, if it is incorrect, you will only find out when you try to use the value later and (hopefully) encounter a NullPointerException. Let the exception bubble up. Try separating the constructor into a method that parses a string and returns a map, and the constructor that creates the object:

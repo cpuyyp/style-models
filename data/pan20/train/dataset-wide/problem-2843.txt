@@ -1,0 +1,53 @@
+When I started learning Repository Pattern with Unity few days ago I was under impression that the main benefit of this pattern is the separation of data layer from the business layer. In other words, if there is a need to change the way, how application stores the data, it's very easy as only one main model takes care of the communication. This means, that if application currently saves data into a serialized XML files, it would not be very difficult to change this logic to connect to database instead. I have found few nice demos that are also using layer, which seemed very handy. Let me show you a bit of the code I have. 
+
+Every has a list of his own "Holidays" (days, when he is not working either because of holidays, or sickness, or any other reason). Then we have another model for , which is used under our calendar control. It's quite complex, but here is just a glimpse of it: 
+
+I am now developing a product, which will use & Repositories when it comes to data management. I will demonstrate on a simple example. What we want to do, is to create an app with calendar control, where user (e.g. manager) will be able to store holidays for his employees. First define our models: We have a class which looks like following: 
+
+Using generators is, in my opinion, more flexible and makes for easier to read code. Not all cases are cases for generator usage (like mpj suggests in the video) but in this specific case, I believe it to be the best option. Conclusion Solution 1: good classical approach to the problem, but has issues inherent to promise chaining. You can overcome some of them by nesting promises, but that is an anti pattern and defeats their purpose. Solution 2: more versatile, but requires a library and knowledge on how generators work. Furthermore, different libraries will have different behaviors, so you should be aware of that. 
+
+The generator function will only be executed once passed into the library , which then returns a Promise, stating if the execution was successful or not. This solution achieves: 
+
+I have now come up with two radically distinct solutions, which I now post here, for future reference. Solution 1: Generic error handler with Errors Object This solution is based on the solution from @Marc Rohloff, however, instead of having an array of functions and looping through each one, I have an object with all the errors. This approach is better because it is faster, and removes the need for the validation, meaning you actually do less logic: 
+
+Here comes the tricky part I am not quite sure about. Remember, that we are using a Calendar control, which expects class. Due to it's complexity (Calendar control is taken from Telerik) I have decided to create a small class that is present under each employee only with the necessary information (I don't need most of those things that are already implemented under that class). Due to that, when I load & close my ViewModel, what I need to do is to convert my values to a corresponding model before I can actually save them. I would like to know the following: 
+
+} And finally we have a model which loads & saves our data from Repository to Database. Here is how would look like: 
+
+Here is the question: As far as my understanding goes, we are directly declaring, that under our expects in it's constructor , which is afterwards used under all functions under that particular class. Currently this model is communicating with the database, but if I wanted (for whatever reason) to change this model to save data in the XML file, I would have to completely rewrite all my classes? Or am I missing something here? If I am wrong and it is easily doable, could anyone show me how to change the code so that we are serializing values into the XML files, please? I am trying to better understand this Repository Pattern, yet for now it's one big chaos for me. Any help / suggestions regarding this matter would be highly appreciated. 
+
+I suggest that you call your class , and your methods , since you actually wrap a (not ), and (not which does something completely different in ). Also, if performance is not an issue, you can use , and implement the whole thing in a single method: 
+
+Since your list is not "all permutation", but is painstakingly built by hand, I would not suggest using array's API or something like that, but keep the curated mode you are using. I would suggest building it in a more readable way. In your way of it is very hard to follow which permutation exists, and which doesn't. The first list you show is more readable, and if you name your atoms correctly ( instead of ), it makes it trivial to understand what you are trying to do. I would suggest building your permutation table as a string like this: 
+
+Use of properties When using properties, you imply state of the object you are writing the property on (in this case - class). From looking at your code, it does not look like its the class's state, but rather a calculation made. A better choice would be to write it as a utility method, which makes it clear that you are calculating something in it: 
+
+I have an application using c# and MVC5, with RazorEngine. My application manages requests (orders from clients) and I need to show them in tables. To achieve this I have a Controller (HistoryController), a View (Index) and a Model (MaterialRequestModel) which takes several parameters in the constructor: 
+
+This solution only has partial error differentiation. The reason for this is because you can only differentiate errors that you specifically build, via the mechanism. In this example, you would be able to know if the document already exists, but if there is an error saving the said document (lets say, a validation one) then it would be treated as "Generic" error and thrown as a 500. To achieve full error differentiation with this, you would have to use the nested Promise anti pattern like the following: 
+
+It would work... But I see it as a best practice to avoid anti-patterns. Solution 2: Using ECMA6 Generators via . This solution uses Generators via the library . Meant to replace Promises in near future with a syntax similar to this new feature allows you to write asynchronous code that reads like synchronous (well, almost). To use it, you first need to install , or something similar like ogen. I pretty much prefer co, so that is what i will be using here instead. 
+
+You could also use an automatic mapping library, but before you choose to do that, you might want to look at some O/R mapping library, like NHibernate for c#, which should replace the mapping in your code altogether. 
+
+The above comments should be placed after setting , since they describe ... They are more confusing, since the code does not do what the comment say - it sets the at either or , then totally ignores the given information, and tries to get even if the last statement returned false. BTW - don't use - does exactly the same, and is more readable. 
+
+So, what would I suggest? Say I set the choices to , where each choice beats the one prior to it, now I can ask: 
+
+Looking at your code, I believe that your problem is not only that the logging lines are ugly but they are a risk in costing you more than helping you: 
+
+I think your code is very nice, succinct, and ruby-like. Two minor issues - Your code is a bit over-sophisticated, which makes it not very readable, and quite brittle. Although it won't fit in one line - a solution will be more suitable here: 
+
+(perhaps you are asking about and not ?) A better way would be to simply iterate once over the collection, keeping the current position, returning upon reaching the correct type: 
+
+The generator function will all Promises to the library, which will resolve them and either return or throw accordingly. Using this strategy, you effectively code like you were coding synchronous code (except for the use of ). I personally prefer this strategy because: 
+
+error differentiation avoids hell and generalized catchers (although you will use in your code, and you still have access to a generalized catcher if you need one). 
+
+Now, I could simply pass the to the the View, but that is not a good practice and the community (this one!) strongly suggests I use Models to avoid placing logic into the view. However, I can't help to think that the way I am building my sucks terribly bad, because I am iterating over a large set of results. How can I improve this code and make it decent without the loop? Additionally, should I pass everything as a parameter to my model, or should I just pass the object into the Models contructor and have it do the quereies there? 
+
+Your code is easy to read and it looks synchronous (while still have the advantages of asynchronous code). You do not have to build and throw error objects every where, you can simply send the message immediately. And, you can BREAK the code flow via . This is not possible in a promise chain, as in those you have to force a (many times a meaningless one) and catch it to stop executing. 
+
+You should also consider extracting some of the hard computational lines to helper methods, and name them so that the reader will better understand your code: 
+
+Mind your scope You have a lot of members (, , etc.), which you calculate in one method, and the pass them as arguments to other methods. This means that they should be members at all - they should be declared locally, and not be exposed outside the method. This way you can be sure no-one else is changing them when you are not looking... What should a method do? Your method contains a lot of functionality. I suggest you move this functionality to another method (). This way, when you decide to take this code, and use it as a module in another application, you can simply do it! Keep it DRY As a programmer, you should have bells ringing in your head each time you find yourself using . Say you find a bug in your code, now you have to fix it 9 times! and if you miss a fix somewhere - good luck finding where it is... Take the similarities between your snippets, and refactor them out. Analyze the differences, and pass them as arguments. Find how you decide which argument values to pass, and develop an algorithm to make that decision for you:

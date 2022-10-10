@@ -1,0 +1,57 @@
+Here, Postgres knows that the index is bad and marks it as such in . There are countless other ways to create a corrupt index that Postgres won't immediately notice: Erwin's answer, mismatched glibc or other collation behavior between a primary and a standby, writing arbitrary bytes to the files behind those indexes, performing bogus updates to Postgres' catalog tables, and on and on. 
+
+Postgres can actually (in the following contrived case) use an index to satisfy queries without adding range scan kludges like the suggested . See the comments on Craig's questions for why Postgres is choosing this index in this particular case, and the note about using partial indexes. 
+
+Supposedly it is possible to hook up Bucardo to RDS now that RDS Postgres supports the session replication role, but if you want a nightly snapshot I think you'll be much better off using RDS instance snapshots. 
+
+I am wondering if anyone knows the history of why is the default transaction isolation level for PostgreSQL, SQL Server, Oracle, Vertica, DB2, Informix, and Sybase. MySQL uses default REPEATABLE READ, at least with InnoDB, as do SQLite and NuoDB (they call it "Consistent Read"). Again, I am not asking for what the differences are between different isolation levels, but rather for some explanation of why the default was chosen to be in so many SQL databases. My wild guesses are: small performance benefit, ease of implementation, some recommendation in the SQL standard itself, and/or "that's the way it's always been". The obvious downside of this choice is that tends to be quite counterintuitive for developers and can lead to subtle bugs. 
+
+But then again, the report also shows that these queries are only using a small percentage of the Data IO usage on the server (< 4%). I also run statistics updates (and index rebuilds) on the entire database on a weekly basis as part of its regular maintenance. Here is another report that shows MAX data IO queries for a timespan that covers several hours only during the high-resource-usage incident. 
+
+I've spent some time on this query over the months tuning the execution plan as best I know how, ending up with it's current state. Queries with this execution plan are fast across millions of rows (< 1 sec), but as noted above, are eating up server CPU more and more as the application grows in size. I have attached the actual query plan below (not sure of any other way to share that here on stack exchange), which shows an execution of the sproc in production against a returned dataset of ~400 results. Some points I am looking for clarification on: 
+
+Due to the bad naming convention on your question, I will use ColumnA as A, ColumnB as B and ColumnDate as Date. I am assuming that you require the first item as it's fetched from storage, no particular order. And you have to know that if the row gets updated it can be migrated from the current block and so, the query result will eventually change. This queries are examples only and you have to edit them to get exactly what you want. You may try the following query: 
+
+If there is no backup and no way to restoring the lost datafiles, what you can do is backup any other important datafile/tablespace and recreate the database. I think it will be the less painful way to get a fully working database. 
+
+To complete some of the previous answers: A commit will end the current transaction in the current section. It will guarantee the consistency of the data that was "touched" during the transaction. A checkpoint writes all commited changes to disk up to some SCN that willl be kept in the control file and datafile headers. It guarantees the consistency of the database. 
+
+Queries against the server from the application still seem to be operating quickly during this overloaded state. I can scale the server from S2 => anything (S3 for example) => S2 and it seems to clear out whatever state it is hung in. But then a few hours later it will again repeat the same overloaded state cycle. Another weird thing I've noticed is that if I run this server on an S3 plan (100 DTU) 24/7 I have not observed this behavior. It only seems to occur when I have downscaled the database to an S2 plan (50 DTU). On the S3 plan I am always sitting at 5-10% DTU usage. Obviously underutilized. I've checked into Azure SQL query reports looking for rouge queries, but I don't really see anything unusual and it shows my queries using resources as I would expect. 
+
+I have an Azure SQL Database that powers a .NET Core API app. Browsing the performance overview reports in the Azure Portal suggests that the majority of the load (DTU usage) on my database server is coming from CPU, and one query specifically: 
+
+PostgreSQL reads its (index, heap, etc.) blocks either from shared_buffers, if they are available there, or from disk if not. Postgres does not need to read out of its WAL files other than for crash recovery (similarly, standby) purposes. 
+
+You can set seq_page_cost and random_page_cost per tablespace via ALTER TABLESPACE without restarting Postgres. 
+
+You can also see in the pg_constraint table (e.g. via for some referencing foreign key ) that PostgreSQL is internally tracking this dependency by the OID (in particular, the column in ) of the index rather than the name of the index. The OID of the index does not change when you use , which is how Postgres avoids becoming confused by the rename. 
+
+Canceling queries (or, equivalently, rolling back a transaction) in PostgreSQL doesn't have any database corruption hazards which you might have been spooked by in certain other databases (e.g. the terrifying warning at the bottom of this page). That's why non-superusers are, in recent versions, free to use and to kill their own queries running in other backends -- they are safe to use without fretting about database corruption. After all, PostgreSQL has to be prepared to deal with any process getting killed off e.g. SIGKILL from the OOM killer, server shutdown, etc. That's what the WAL log is for. You may have also seen that in PostgreSQL, it's possible to perform most DDL commands nested inside a (multi-statement) transaction, e.g. 
+
+As we can see, query 3780 is responsible for nearly all of the CPU usage on the server. This somewhat makes sense, since query 3780 (see below) is basically the entire crux of the application and is called by users quite often. It is also a rather complex query with many joins necessary to get the proper dataset needed. The query comes from a sproc that ends up looking like this: 
+
+As we can see, not really any queries reporting significant data IO usage. I have also ran and on the database and do not really see anything jumping out at me (though I will admit I am not an expert with these tools). How do I figure out what is going on here? I don't think any of my application queries are to blame for this resource usage and I get the feeling that there is some internal process running in the background on the server that is killing it. 
+
+You can look under the "base" subdirectory of the data directory, and you should see something like this: 
+
+However, this is really not what CHECK constraints are supposed to be used for, and it actually introduces a race condition if you have multiple transactions writing to example_table at the same time (can you see how?). Use the UNIQUE constraints that PostgreSQL provides. If your values are too large for the UNIQUE constraint's B-Tree index, create the UNIQUE constraint on an MD5() of the value. 
+
+Assuming you are talking about the column in , or some status field derived therefrom, you can create an invalid (or intentionally corrupt, if you prefer) index like so: 
+
+Not sure why Teradata has that limitation, but should be fine in PostgreSQL even when other tables have foreign keys depending on that index. PostgreSQL has fairly sophisticated tracking of such dependencies -- for example, if you tried to do you would see a complaint like: 
+
+In Oracle every result set have an implicit row number that you can use for limiting output. If, by any chance, you're using oracle 12c you can use the brand new feature for top n queries 
+
+So changes are made to blocks kept in the Database Buffer Cache (DBCache). Once commited, the changes are pushed to the Redo Log Buffer (RLB) which is dumped on a regular basis to the Redo Log Files (RLF) and, eventually to the database storage files (DF). Also on a regular basis and not completely unrelated to commit, the checkpoint process dumps the dirty blocks from the DBCache to permanent storage DF. During the checkpoint process the SCN associated with the latest DB block written to storage is written on the DF headers and the control file. That will be from that moment on the latest consistent estate of the database. 
+
+db_create_file_dest is set and points to ASM (i.e: +DATA): The database will take 'DATA' as an alias and will create ASM file on the destination associated with the 'DATA' alias that will be located at the ASM +DATA root directory. db_create_file_dest is set and points to filesystem: It should be quite obvious that you'll have a new 'DATA' file in the location pointed at the parameter. db_create_file_dest is not set (worst scenario): The database will default to $ORACLE_HOME/dbs and create a datafile there with the name 'DATA'. 
+
+As we can see here though, the usage is all coming from Data IO. If I change the performance report here to show top Data IO queries by MAX, we see this: 
+
+Download full execution plan here: $URL$ I feel like I can get better CPU performance out of this query, but I am at a stage where I am not sure how to proceed on tuning the execution plan any further. What other optimizations could be had to decrease CPU load? What operations in the execution plan are the worst offenders of CPU usage? 
+
+If you care, full source for this database can be found on GitHub here. Sources from the query above: 
+
+Looking at these long running quires seems to point to statistics updates. Not really anything running from my application. For example, query 16302 there shows: 
+
+I am running an Azure SQL database under the S2 edition (50 DTUs). Normal use of the server usually hangs around 10% DTU. This server gets into a state where it will send DTU usage of the database to 85-90% for hours. Then all of a sudden it goes back down to the normal 10% usage.

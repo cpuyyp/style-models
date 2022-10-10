@@ -1,0 +1,75 @@
+Yes, it is possible to perform an SQL injection attack without supplying quotes in the parameter. The way to do this is with an exploit to do with how numbers and/or dates are processed. You can specify at the session level what the format of a date or number is. By manipulating this you can then inject with any character. By default in the UK and US, a comma is used to indicate the thousands separator in numbers, and a full stop for the decimal point. You can change these defaults by executing: 
+
+As Justin's said (and the links in his post prove), the cardinality rule is a myth. This aside, there's a good reason to use bitmap indexes on fact tables: separate bitmap indexes on can easily be combined by the optimizer to reduce the numbers of rows to access. This is very useful with fact tables with a large number of dimensions. While any single dimension may return a large percentage of the data, when combined with others this may fall dramatically. For example, you may have thousands of orders per day and thousands of customers (with hundreds of orders each), but a given customer is likely to only have 1-2 orders on any given day. This saves you having to create multi-column b-tree indexes. As (ignoring some skip-scan conditions), the leading column in an index must be referenced in the where clause to be used. So with three dimensions you need to create six multi-column b-tree indexes to ensure an index is available for every query your users may throw at you ( ind1: col1, col2, col3; ind2: col1, col3, col2; ind3: col2, col1, col3 etc.) With bitmaps, you just need three single column indexes and can leave the optimizer to decide whether it's beneficial to combine them or not. This example shows how the two single column bitmap indexes are combined, but the b-tree indexes aren't (note Oracle can convert b-tree indexes to bitmaps, but this is rare): 
+
+However I can't figure out how exactly I need to escape the quotes. It always wants to treat the as a separate column. How can I escape the comma properly? 
+
+Currently I run when I want to wipe information out of the buffer pool between running SQL queries. However, I was reviewing this Technet article referencing . What caches does wipe that doesn't? 
+
+When I restore after dropping the database, the fastest I can get a restore going is 4 hours. This is when I put the .bak on a RAID 10 logical drive, with the data files being written to a separate RAID 10 logical drive on the same server. The log files go to yet another RAID 0 on the same server. However, if I restore with Replace, the restore process only takes 56 minutes (similar setup). Did I find some sort of turbo button? This is so fast that I am worried. 
+
+The way to gauge hardware performance is to be take a look at your current workload. So I would begin by quantifying that: 
+
+I found the answer elsewhere on the Internet, courtesy of Grant Fritchey. "When you look at the fragmentation percentage, you're looking at external fragmentation. It means the percentage of pages that are out of order showing an inneficient storage mechanism." $URL$ So it's how many pages out of the whole are out of order. 
+
+This can be done in a single statement, but you have to wrap the sequence call in a function. By calling a function in the select (as opposed to the sequence directly), you overcome the problem of getting ORA-02287 errors. However, the function will be called once for each row in A, which is not what you want. This can be overcome by defining the function as deterministic. This allows Oracle to optimize the function so it is only executed once for each distinct parameter value passed in. To make this work in this case, you'll need to pass in : 
+
+These are numbers left padded with zeros. This will help make the point about compression later. So you've got three common queries: 
+
+If you've no need to store the date component, then an is the most practical approach. The biggest advantage comes if you need to do any calculations finding how long has elapsed between two times as you don't need to do any extra processing out of the box. For example: 
+
+If you have complex constraints you want to apply "invisibly" in the database, you can do so by creating a materialized view then applying constraints to that. In this case, you can do it using an MV outer-joining to . A check should then be made that neither of these are null when the , like so: 
+
+The IP reported is the SQL Server. Since this is ongoing, is there a way I could figure out what is trying to pass this credential? If I could get an application name or anything I could probably fix the problem. 
+
+After a test completes (on a SQL 2008R2 system), the system updates a row in the TestRun table to include an end time. I am creating a trigger that will take action after that update, and do some post-test analysis for me. Right now it's very simple. 
+
+This is in addition to other IT concerns you'd want to keep in mind like maintainability, support contracts, and your space/power requirements. 
+
+However I would like to have that integer replaced with a variable that is the RunID of the row updated (which is causing the trigger to fire). How can I do that? 
+
+I have the need to restart Microsoft SQL Server's group of services on a given computer, remotely, through some sort of programmatic method I can insert into a workflow. I'm looking for the best way to do this, I've seen a few different ways and I'm wondering if there's anything I'm missing: 
+
+I'm gathering wait types on a load test environment, and the second biggest wait type is . The stats are coming from sys.dm_os_wait_stats, but I can't find any documentation that explains what that particular type means. I'm running SQL Server 2014, SP1 on a physical Windows 2008 R2 instance (no VM involved). 
+
+Then I would go with storing a row for every day each resource is assigned to a project. While these kinds of query are possible when using start/end date ranges, they're harder to write. Overlapping dates are also easier to prevent entirely using constraints or identify using queries. So your table would be like: 
+
+However, to get these benefits you need tables where you (nearly) always include the leading column(s) of the primary key in queries and you're likely to be fetching several rows at once. Some common examples of such tables are: 
+
+Oracle is unable to do partition pruning when a function is applied to the partitioned column. From the docs: 
+
+If you just want an overview of your system in a time period (including "heaviest" SQL statements), the AWR report itself gives this. You can find an intro to this on oracle-base. 
+
+By doing so, you'll make it much easier to answer questions such as "What are all the trains going to station X on 1 Oct?". It'll also makes "temporary gaps" when trains aren't running (e.g. Christmas day) possible to identify. A one-off train is now simply one with only one entry in SCHEDULE_DAYS. As the schedule can be different on weekends to weekdays, I think it's better to have separate rows for each day. This allows linking different schedules for every day of the week, should you ever need to do this. 
+
+That exception usually doesn't refer to the SQL Server itself running out of memory, but instead the client workstation that is processing the results running out of memory. You will generally see this if you are outputting a very large result set into the Output window. To troubleshoot the issue (and possibly resolve it) allow SQL to write the results to a file rather than trying to put it all in the output window. 
+
+So I have a database (on a SQL Server 2008 R2 SP2 instance) that is 2TB uncompressed, with a .bak file that is 500GB compressed. As I have been toying with the fastest way to restore this database after a series of tests, I've tried a couple of things: 
+
+So the first thing I did was to make sure that the instance is accessible via SSMS (it is), and that my CMD prompt is Administrator (it is). Then I checked to make sure the instance has TCP enabled (it does) and allows remote connections (it does). What am I missing? The commend I use, minus the script, is: 
+
+Upgradability - SQL Server will rapidly test the limits of your hardware if you let it, so try to anticipate that Affordability - SQL Server licensing in 2014 is core-based, so this should be a consideration. 
+
+When choosing index column order, the overriding concern is: Are there (equality) predicates against this column in my queries? If a column never appears in a where clause, it's not worth indexing(1) OK, so you've got a table and queries against each column. Sometimes more than one. How do you decide what to index? Let's look at an example. Here's a table with three columns. One holds 10 values, another 1,000, the last 10,000: 
+
+The design doesn't meet third normal form, but not just because of the city. The fields STREET, CITY are functionally dependant on each other (if you change the city, the street should probably change as well and vice-versa). You could also have the same street, city combination represented in different ways (Foo St, Foo; Foo Street, Foo; etc.). To normalise this you would create a new table ADDRESSES which has the street, city etc. in and link the customer to that via an address id. This would also allow you to list several addresses for a customer (via a link table) if this is what you require. This still leaves you to decide whether to extract the city into it's own table. To fully meet 3NF you should create a cities table, whether you need or want to depends on the answer to the following questions: 
+
+You're right that SQL Server rarely bottlenecks at the CPU, but it's not impossible and you can tell whether you're seeing a CPU bottleneck by looking at some perf counters. Then you'll know whether or not you'll see a performance improvement simply by updating the CPU to a faster one or one with more cores. If your SQL isn't written to take advantage of parallel processing, it won't matter if you throw more cores at it. Additionally, there's more things I would want to consider in buying a system: 
+
+I'm not sure where else to check, I know I have a lot of moving parts here but I'm getting the feeling I'm just missing a max pool setting somewhere. 
+
+I have a group of about 30 tables, and I want to know the physical size on disk of all of these tables (plus indexes). Is there an easier way of doing this than through the GUI in SQL server 2008 R2? 
+
+Currently this takes something like 3 minutes to run. Is there a better way to get the information I'm looking for? 
+
+I'm running SQL Server 2008 R2 SP1, on a Windows Server 2008 box. I have a .NET script running from Visual Studio 2010 that does the following: 
+
+It looks like this is a bug with the handling of functions on collection variables. Given the following function: 
+
+The check constraint on the MV will only be invoked when it is refreshed, so for this to work successfully you need to ensure that this is done on COMMIT. This will add to your commit time processing, so you'll need to bear in mind the following: 
+
+As you've identified, storing the price on the order makes the technical implementation easier. There are a number of business reasons why this may be beneficial though. In addition to web transactions, many businesses support sales through other channels, e.g.: 
+
+The psuedo-column ORA_ROWSCN is assigned at commit time and can be used to identify the order of commits, with the following caveats: 
+
+Two to the power eighty-six records?! This is about fifteen orders of magnitude larger than any table I've ever worked with - I doubt even Google or Facebook have tables close to this size! Based on this alone, I'd say that having a lookup table of all the possible values is a nonsense. Regarding normalization: I believe your table is already fully normalised (to 5NF), though I think you're missing from your (candidate) key. The co-ordinates of death are than all dependent on a given player and their time of death (). so you don't need to "normalize" these into another table. It can be useful to have lookup tables when you're fully normalized though to help with the following:

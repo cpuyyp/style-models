@@ -1,0 +1,97 @@
+and tells you how many units the viewport spans in 1 pixel. If your camera spans from -1 to 1 on the X axis (default OpenGL camera), and your screen width in pixels is 1024, then the ratio will be , which tells you that for each pixel on the screen, the OpenGL position increments by that amount. You then need to multiply your and with those ratios: 
+
+So as you can see, we are far away from a pixel-perfect camera. Input coordinates Each hardware can have a different implementation of this, but the most popular by far is to use the top left corner for the origin and use a 1 unit to 1 pixel ratio. So when you poll a mouse (or touch) position, (0,0) will be top-left, and the position will match screen size in pixels. Conversion What you need to do now is convert the input coordinate to fit in the graphics space. In your example, it is quite simple: you only need to take the height of the screen and subtract the Y position of the touch. This will "flip" the Y position, thus giving you the value you wanted: 
+
+We start by scaling the x value of the player down to the size of the terrain. If the x value of the player is 4.6 and the width between 2 points of the terrain is 2, then the relative position is 1.3. The player between point 1 and 2 of the terrain (with index starting at 0) and is at 70% towards 1 and 30% towards 2. More visual: 1 - - P - - - - - - 2 Then, we extract the current terrain index by getting the integer part of the relative x value and extract the ratio of "in between" by getting the floating part. We then multiply the y value of the terrain at cell 1 by 70% and the value of cell 2 by 30%. 
+
+At the end, you may need to translate the bullet's position relative to the view (if any). It is in the end pretty simple, you only need to apply two rotation-around-point transformations. If you want more specific code, just leave a comment. 
+
+To render your texture with size , you have to calculate the ratio of the pixels compared to the viewport: 
+
+This will give you pixel-perfect rendering of textures. If you want to take into account a texture position, you can multiply your and the same way to scale it. How can I setup a pixel-perfect camera then? It is simple to setup a pixel-perfect orthographic projection. You only need to modify 2 matrices in OpenGL (legacy): 
+
+First, inverse the player position and the mouse position. This way, you will have the real angle from the player to the mouse, and not the opposite. Second, atan2 takes the y difference as the first argument, and the x difference as the second. That is probably why your code looks like it fails. Your code should look like this with the 2 corrections I mentioned: 
+
+Instead of getting the center of each land with mean(X) and mean(Y) (which, by the way, is not a bad solution), you could calculate a rectangular bounding box around each of your lands: 
+
+When doing a collision check on the X asis, going left will move your character of -speed pixels. You must then check the collision at the position -speed in order to catch any present wall. I also have fixed the down and right collisions, you didn't need to put +1 to speed. 
+
+This will give you a good approximate of the center of each of your lands. THe approximation will not be very accurate for small grids (as you can see) but with bigger sizes it should give better results. 
+
+It will save the screenshot as screenshotX.png, X being the smallest number available, starting with 1. Just make sure you draw the frame number or an identifier on the image to be able to match it with all your debug messages. Source 
+
+JSON Philipp makes a good point about JSON. It is human readable and makes debugging network code easy. If you have no experience in programming network code, this would be the way to go. Yes, there is a lot of overhead by using JSON, but for small to medium data transfers, it should be more than enough. And like Alexandre Vaillancourt said, you can always compress data before sending it. Faster and smaller But if you want to optimize your network code to send the less data as possible for your game to use the less bandwidth (and be fast), then I would suggest using frames. Let's say you want to send all the information you mentionned: 
+
+I have added comments in square brackets ([]) for clarity. NOTE: P with respect to A is PA, and P with respect to B is PB. X in respect to/of Y is a point X in the base Y: Coordinate vectors But this part is slightly unclear because in this paragraph there are some typos inverting the letters. Just ignore this passage, the rest of the article seems mathematicaly accurate. 
+
+Another option would be to spawn a fixed number of snow particles and make them teleport to the top when they reach the bottom of the screen. This is trivial but in your case it should work fine. 
+
+You are applying a translation of 200/2 (100) on both axis, which will transform your vertices to these: 
+
+As you can see here, as soon as a side is too far, the rectangles don't collide. You would need to take into account the size of the rectangles, which you seem to have forgotten in your little example. Supposing 2 Rectangle structs a and b with fields x, y, w and h: 
+
+NOTE: You might need to call .toString() on the return value of .getResource() since it returns a URL object and .getImage() takes a String as parameter. See if that works too. If there's any problems, feel free to ask. 
+
+Instead of testing the collisions ON the player, you should testing them AHEAD, to check whether there's a wall where the player WILL be walking. To do that, you'll only need to change 2 things: 1- Your player.collision function should accept two arguments: an x and y offset. You should add them to your collision checking algoythm too. 2- When calling player.collision, you should pass the offset equal to the movement the player would make. In your code, this resumes as this: 
+
+Step 1 - Don't check collisions in each key, test them at the end In your example, you are checking collisions for each key independantly. This will cause some trouble and code replication. In order to avoid that, I would suggest you use temporary variables that will stock the movement, increment it for each key and test collisions only once at the end: 
+
+This is false. If you place your Update() method inside a simple while(true) loop, it will be called as much times as the processor can handle. If your processor can run it 123456 times a second, it will. The method the tutorial you follow is using is called a fixed time-step update. In other words, you call your Update() function X times a second (often 60) at fixed intervals (1/60 or 0.0166... seconds). By using a simple while(true) loop, you can use a technique called a delta-time update. This technique calls the Update() functions as many times as it can, but passes the time elapsed between 2 loops to the Update() function, so that you can make your calculations accordingly. There is a lot of documentation on the various advantages and disadvantages of both methods, a quick Google search or a search on this site should give plenty information. But nobody can tell you which one is the ABSOLUTE better. NOTE: In your example, the Update() function is only running 1 time per second. You'd need to change a line in order to have the 60 updates per second you want: 
+
+Let me get this straight: render performance is in (almost) no way related to the programming language, but to the graphics API used (Ex: OpenGL, DirectX, software, etc.) The programming language used is only an interface to these APIs and will not affect graphics performance. What the language will have an impact on is the arithmetics. If you want to do a lot of calculation, then you will need to chose a fast language like C or C++. If you only need to do graphics, then any language will do (hell, even Brainfuck for what I care.) 
+
+Step 2 - Independant X and Y movement A nice thing to add if independant movement for X and Y so that if the player is moving diagonaly, and is hitting a wall on one axis, it will still move on the other axis: 
+
+The website you linked in the question has a part on this. It talks briefly about transforming a point from world-space to local-space: 
+
+Texture2D objects are allocated on system memory, but the actual textures loaded from image files are, on the other hand, loaded on the graphics card's memory. You are not completely off with your assumption, but here is how it goes when you want to load and render a simple texture: 
+
+Java can be quite a pain when trying to load files that are inside the .jar. So first, try to put your sprites folder outside of your jar, on the same level. See if that works. To load files that are inside the jar, you must use this following piece of code to retreive it's URL: 
+
+This way, you won't get the mouse's coordinates relative to the window but relative to the game world. 
+
+Please note that this will only work if both the graphical and input spaces are the same height. If not, you will need to multiply this value with the ratio of the two spaces: 
+
+In this example, I am reading the time the user has pressed the A key and putting the value in the timePressed variable. 
+
+I am not sure what you want to achieve by limiting the FPS of the Update and Render both to 60. If you limit them to the same value, you could have just put them in the same thread. The goal when separating Update and Render in different threads is to have both "almost" independent of one another, so that the GPU can render 500 FPS and the Update logic still goes at 60 FPS. You do not achieve a very high performance gain by doing so. But you said you just wanted to know how it works, and it's fine. In C++, a mutex is a special object that is used to lock access to certain resources for other threads. In other words, you use a mutex to make sensible data accessible by only one thread at the time. To do so, it is quite simple: 
+
+If you want to keep the ratio (always draw a square if the texture is a square, or always draw 2x3 if the texture has a ratio of 2x3), you can add the following to the condition: 
+
+Let's say we have a point in local space. To get the values of in world coordinates, we need to apply the transformation on it: 
+
+So, when you create on of the two objects, it will start creating an infinite amount of maps and Peters (probably not what you want). This is a basic problem of cross-reference that can be solved by deleting one of the two lines specified at the top of my answer. EDIT Having looked your code more carefully, I can see that you do not need to instanciate a Map object in your Peter class nor do you need a handle to any map object, so you can delete this line at line 12: 
+
+When you call , it changes the position of all the emitters, but not of the particles. In libGDX, there is currently no way of changing the position of a single particle, so in order to draw particles at 2 locations, you must do the following: 
+
+Having no brackets, only particle1.setActive(true) is in the condition. The other two will be called on each Update() loop. Try adding brackets and see if the problem persists: 
+
+The only thing you have to do if you have this class in your project is to call the following line in each of your render loop: 
+
+Now we're talking! That seems way better! But don't forget to apply the opposite translation for the quad to come back to it's position. It should give this code: 
+
+This will fix all problems but will be less accurate (though the accuracy loss is not significant). Another option is to add this after this line: 
+
+As you can see, these vertices are not centered. There is something that is missing: you need to translate according to your initial position (50, 50) too. So the translation you need to make would not be 200/2, but 200/2 + 50, which equals 150 and transforms the vertices like so: 
+
+Make sure that you export the as a "Runnable JAR File" so that all libraries are included. You didn't need to do this setup on your own computer because you've already imported the native files in your IDE. When distributing your game though, I suggest a file with the given command and a command (on Windows) so that the person who runs the game can easily send you a screenshot or copy-paste of any error or debugging information. Source: Distributing Your LWJGL Application 
+
+If you could post your entire code, I could tell you exactly where to put this line, but your engine should have something like a constructor or an init() function. 
+
+Step 3 - Simplify the CheckCollision method You have a lot of useless lines in your collision method. It can be simplified as such: 
+
+What you have probably overlooked is the flag. This is a flag that must be set when running the command to tell the JVM where the native files are located. Let's say you have this file hierarchy: 
+
+I will assume that the player collides with the ground only on the middle point. We can do an approximation of the height of the terrain at a given point with this: 
+
+You could simply have a variable that you will increment each step if the key is currently down, and read its value once the key is released. Create event: 
+
+Source: Experience. Here's a link demonstrating the X and Y axis in the atan2 function (notice how Y comes first). 
+
+Wrap this in a UDP or TCP packet and send it. The server, when receiving it, would then read the first byte of data to extract the identifier, see that it's a player information packet, and know exactly how to read the remaining data. About big games like Dota 2 and CS:GO Don't even bother with this. They use highly sophisticated networking algorythms that are in almost no way applicable to small games people like you and I make. Keeping it simple is the key, because if you ever need to debug your packets (and trust me, you will, and a lot), you cannot call a team of 10 people specialized in network programming like Valve would do. 
+
+Then we need to rotate around the player. To do so, we will translate not to (0, 0) but to the position of the player, here pX and pY: 
+
+The problem you are facing is conversion between two different coordinates systems: the graphical one and the input one. Graphics coordinates Like you said, libGDX uses a 1 to 1 ratio between space coordinates and pixels, and starts in the bottom left corner. But it can be anything, really. That is just the default behavior of libGDX. You could change the origin of the coordinates system, flip the axis and even scale them. Under the hood there is a graphics library called OpenGL. This graphics library will use a transformation matrix in order to draw shapes on the screen. Its default matrix will create the following coordinates system: 
+
+Short answer: no. Long answer: Game Maker's performance are really bad. If you are a good programmer, you will find yourself hitting the performance wall more than once or pay for the YYC (Yoyo COmpiler) which unlocks decent performances at a price. Libraries like libGDX, slick2D, LWJGL or any other will beat GameMaker by a lot. Object oriented patterns in GameMaker are not so bad. You can create instances that derives from another and most of the basics of OOP are present. Still, it is not as flexible as the other options you stated and does not cover the whole OOP capabilities. On the flexibility side, it is poor too, but performance and flexibility has never been the goal of Game Maker. It was an engine made for beginners and for those who want to learn how to program. Other libraries like libGDX, LWJGL or Slick2D are more complex to get working and to program but offer a lot more flexibility. On the other hand, GameMaker wins for the simplicity and by far. The free version is nice and easy to use and, yes, you will have a good idea of the general product with it. They released a new free Game Maker Studio: Standard with all resources unlocked, which is nice. In the end, GameMaker can compete with libGDX, LWJGL Slick2D or any other library, but only for beginners or people who want to simply make a game without complicating their lives with libraries. If you want performance and flexibility and can afford the complexity added by libraries, I would avoid GameMaker. Source: 10+ years of programming in GameMaker 5, 6, 7 and 8. When I tried Studio, it didn't look that different to me, sadly.

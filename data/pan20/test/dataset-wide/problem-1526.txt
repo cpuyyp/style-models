@@ -1,0 +1,55 @@
+Swapping I suspect the problem is more the same elements in the same order? That lends itself naturally to a recursion which I will discuss in a minute. Regardless, your function should not modify the input arrays! That would be very surprising to your users. In fact, you should explicitly forbid yourself from modifying the input arrays by taking them as const: 
+
+doesn't actually do anything. It will return a slice of , but it doesn't actually modify it. What you wanted to do was 
+
+And also I should be able to construct an element in place. Because why should I incur an extra copy/move if I don't have to? 
+
+reduce Whenever you need to fold an operation across a list, like you're doing, you want to use . That takes a function, an iterable, and an optional initializer, and performs the operation across all of them. So: 
+
+Checking things Prefer just to . Prefer to comparing against 0. Recursive and Iterative is both recursive and iterative. Pick one - iterative is good enough. Just have it loop until done: 
+
+Copy/Move Assignment The best way to write copy assignment is copy-and-swap, and the best way to write move assignment is swap. Self-assignment is a pessimization, since that's going to be a rare occurrence anyway. Plus, with swap, we can make everything : 
+
+Taking advantage of the fact that gives us where it was put in, we don't need to do the extra search. Now all the other loaders can just forward to that one, e.g.: 
+
+Swap your template parameter ordering The doesn't really matter - but the does, so I would put it first: 
+
+PS. There is a fourth way to pass a functor: the lambda that was a lambda before C++11 lambdas: Boost.Lambda: 
+
+But we can do way better. Palindromes are fairly sparse, so rather than go through a million numbers and checking them to see, we can actually just generate all the palindromes in one base and just check if they're a palindrome in the other base. Basically, for every number from 1 to 1000 we can just add its reverse with or without duplication (e.g. 146 can become the palindromes 14641 and 146641). That is: 
+
+Firstly, is a terrible variable name. It looks like . Avoid it at all costs. Secondly, this function is less useful than it could be simply because it requires a list of numbers. It'd be better if the function took a single number, then you could call it on a list separately if you want: 
+
+memcpy to Instead of copying raw bytes, and having to remember to multiply, you can just use - which will under-the-hood do the same thing anyway, but will be less error-prone. So instead of: 
+
+Containers and algorithms make the code shorter and easier to follow. Win-win. Start with a function You should ideally just have: 
+
+in three places. Whenever we repeat ourselves, we risk repeating ourselves incorrectly. In this case, we did! For addition questions, we check if the user actually gave us the right answer. For the other two questions, we forgot to check! There's no if statement! Much better to first determine what the right answer is: 
+
+That comment is useless, the naming of the variable as is sufficient to indicate that we don't intend on using it. Also, in python2.7, returns a full list of all the values, which can get pretty inefficient as you go up, so you should prefer to use its lazier cousin, : 
+
+Always Return An Answer Whenever you're writing an algorithm, it should return the answer. Not print and return, not just print. Just return. If you want to print, you can always write . is_diff_one We can write this a little cleaner. There is a function in the Python standard library that can walk multiple iterables at once. (In Python 2.7, we should use since that won't generate a whole list up front). The advantage here is that we can write: 
+
+Pick a good return type A deque is a Double Ended QUEue. Deques are great for when you have to insert and erase from the front as well as the back. You never need this for your problem - all you ever need is to insert at the end. You just need a normal list. Generate when you can Rather than necessarily giving the entire result all at once, it's better to just the next element as you go. This is a simple change in your algorithm (just instead of ), but could have serious performance implications down the line if you have lots of large iterables. If the caller wants a full list, then can always explicitly write . Use the standard when you can There is a function that already merges sorted inputs into a single sorted output: . It will give you duplicates, but that seems like a much better starting point than writing everything from scratch: 
+
+You will want to make sure that you write the copy constructor to actually do a deep copy of so that this doesn't happen. Alternatively, make the class noncopyable by either. Even better, just use internally and let the compiler do all the work for you. 
+
+So what one iteration will do is try to add to each of the groups in (which is a terrible name), and recurse on the next iterator. Just directly that's: 
+
+Although, typically with the standard library, the member functions also do range checking. So consider some other non-throwing indexing mechanism (maybe ) and have defer to that one while doing bounds checking. Note that you don't need to pass the s by reference-to-const, value is fine. Now, for the other two, prefer instead: 
+
+This will let you then implement other very useful functions like and . Indexing You have these three member functions: 
+
+Next, we can do better. All we want to do is write the int into the byte buffer in big-endian order. That's effectively an assignment. If you already are on a big-endian machine, that's as easy as: 
+
+Your program actually gives the wrong output for every number. You're forgetting that is a factor of ! The easy fix is to simply initialize to 1. Even better to initialize to 2 and start your loop at . Once you fix that, your program is fine. It's just that you can just do a lot better performance-wise. Let's start with the general formula. Any number can be expressed as the product of primes raised to some power: \$n = \prod_i p_i^{k_i}\$. The number of factors of \$n\$ in this case is \$\prod_i(1+k_i)\$. So what we need to do is find all the prime factors. How do we do that? We can actually reduce as we go. Everytime we find a factor, if we do it right, we can be sure it's prime, so we reduce it as far as possible: 
+
+Similarly, I would initialize with . You take arbitrary iterators, what if we had a huge container of ? You'd overflow. Also, avoid this construction: 
+
+The difference between and is that the latter can deduce reference types as well. But you're returning a value, always, regardless of . This choice makes it seem as if you could be returning a reference. If you are going to use a placeholder return type here, use simply . Even better, the return type for this function is not a complicated expression that's difficult to spell. It's simply , so let's just use that: 
+
+That is the wrong mindset and you are going about his challenge the wrong way. First, readability always matters. I don't remember who said this, but the goal of a program is to tell other people what you're telling the computer to do. And the way to shorten code isn't to arbitrarily cram lines together - it's to avoid code duplication. You have a lot of code duplication (which I'll get to) and it's quite easy to solve this problem in less than 50 lines. 
+
+This is a more direct comparison. As is, you're comparing the levels, but there's not one unique tree that has three levels 'A', 'BC', and 'DEF'. For instance, what if your code erroneously returned one of these: 
+
+Rather than using at every opportunity, it would help to just define the current and previous index up front and use that throughout. Also comes in handy:

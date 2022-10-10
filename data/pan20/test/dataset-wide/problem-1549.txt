@@ -1,0 +1,47 @@
+One file per level still applies, though, as it will reduce loading time and memory usage (not that either is significant in a game this small, but the principle is important). 
+
+Which basically moves all of your if-else logic into standard library calls. By the way, a popular method for switching numbers in place without a temporary integer goes as follows: 
+
+Of course, you could instead use std::swap. However, given all the alternatives, if performance was a non-issue (e.g. absolute clock cycle count was unimportant), I'd impress simply using std::min and std::max. 
+
+Avoid Hard-Coding Values should validate the level range. In a real game engine, you'd probably have files in a data folder instead of hard-coding the levels within the source code. For example, you might have files that look like this: 
+
+Where 's' is the starting point, 'e' is the goal, and # are the walls (basically, similar to the format you have now). I'd also include a title, but that's a personal preference. In this case, I'd read the first line from each file while displaying the menu. Alternatively, to avoid reading tons of files, you might just have an "idx" (index) file (e.g. levels.idx) that contains some format, like: 
+
+Adding a new message type does not require any modification elsewhere to be supported. Subscribing to an event is as easy as creating a method with the correct event class. There is practically no overhead for listening to a specific event - no need to instantiate a class, inherit some event-specific interface, register interest at run-time with a subscribe method, etc. As messages are represented by classes (like a MoveMessage), they can contain all the relevant data without needing to be cast or coerced. 
+
+I am quite sure this code is okay, outside of the overhead induced by the run-time typing - my apologies if this makes it a bad fit. I am just hoping for a once-over review by someone more experienced to reassure me that this is a good design. 
+
+For every list, Open or create Sequentially load each file in the folder into memory by creating a new instance of and calling 
+
+I'm working on a game which utilises a variant of the entity component system pattern. In my current code, I have been communicating between components using code of the form: 
+
+Using method will have an side-effect if is modified. This is because arrays are passed by reference, and so any changes to will be visible to the caller when the function returns. Use if you need to manipulate id or name, unless you intend to return the modifications to the caller. Example: 
+
+You can bind a single click to many elements using a class selector, etc. refers to the element that ended up being the target/srcElement for the event. 
+
+Load From Data Files Instead of Source Code Once the user selects a valid level, you can then have the function start by loading the level, when repeatedly drawing the map and polling user input until they win: 
+
+Using this design means that you could literally edit levels into the data folder and have them appear when the menu is displayed, and offer (potentially) unlimited levels. Since we're talking about C++, the files could be simple, something like: 
+
+And so on. Your selectLevel function could open the data directory and read the list of files (it doesn't necessarily need to actually to read the contents of the files, just a directory list). Use Structs/Classes To Track Data You can make your design simpler by having a struct that contains the game state. You could even eventually add a save/load routine later by isolating the game state from the rest of general memory. Here's a suggestion (feel free to modify as desired): 
+
+However, as mentioned at the beginning of my question, I am concerned about using run-time dynamic typing in this fashion (See my dispatch code in Entity - the second snippet in this post). This system will probably be handling a lot of messages, and I have some concerns about the overhead incurred (it also feels like a code smell in general) I would really appreciate feedback on this approach; particularly whether it seems like an abuse of dynamic to more experienced C# developers than I, but would also appreciate alternative suggestions. Alternative approaches I've considered, and why I did not go with them initially: 
+
+Originally, I began writing code to loop through my list and my list and then realised I was going to be writing duplicate code for every list of data and switched to having a and looping that and ended up having to use reflection. I was wondering if anyone can think of a way of achieving my goals without using reflection or having duplicate code for every type of model stored. I'll attach my current completed class below. I don't mind doing so much but it's the code: 
+
+This final version allows new .toggleable elements to be added to #parent on the fly, and they will also react correctly (assuming they are styled, loaded into assoc, etc). 
+
+I'd rather prefer the first method, as you can then add/remove elements in your HTML without having to refactor code. There's plenty of other ways you could do this dynamically, including using to bind to a parent element and then determine which element was clicked. 
+
+In addition to janos' answer, I'd like to add some additional tips. Avoid Goto Goto simply creates "spaghetti code" that will become harder to maintain over time. Instead, use do/while and break as appropriate. Once the user wins, simply return from the function that should be maintaining the play loop; once the user requests an exit, return from the main application loop (examples further down). Keep Main Simple In a typical application, the main function only calls 1 or 2 functions, usually in the form of Your main function should be close to: 
+
+I'm not sure whether my distaste for reflection is justified or not, but it feels ucky that I'm using reflection here. I'm trying to make a very simple class which has a number of where with a load and save method. The load method should: 
+
+I wanted to remove this very strong coupling which my components have (as a result of specifying exactly which component should receive the message), and transition towards an event / message system. As a result, I've written an implementation which seems ideal, however it uses run-time dynamic typing which has me concerned that there may be a better way to achieve my goals. 
+
+I am implementing a multi-player game in C# and having seen all sorts of projects, from indie developers all the way to large studios struggle to patch networking into existing products in the past, have made the decision to get the networking aspect done first, and build the game on top of that. I've so far gotten to the stage where my server can accept clients asynchronously, but I have a strong feeling that I've implemented the threading very badly. I think it is possible that I am misunderstanding and/or misusing async/await and Tasks, but having read documentation and similar questions I think I will need practical experience to get my head wrapped around the correct usage of these. As a result, I am hoping that someone would be generous enough to look over my code and help push me onto the right track. I have excluded 'using' statements and the client code for the purposes of this question, however I can confirm the code does function correctly. I am not too concerned about issues such as naming, and the fact that I have a bit too much code logic in the Main function right now -- these will be modified and extracted to more appropriate locations respectively as the project progresses. I have denoted lines I am particularly concerned about with 
+
+This final version, $URL$ works the same as the original code, using just 35 lines of code. Included here is the JS code. 
+
+Generally, when you free something, it's a good idea to null out the pointer afterwards. While in a program this small, you'd be unlikely to make a mistake, when you null a pointer, most platforms will terminate the program rather than have potentially undefined behavior from a dangling pointer if you accidentally reuse it. You should get in the habit of doing this. There is a function called realloc that performs a malloc/memcpy/free cycle for you on your behalf. Some platforms can also resize the memory without moving it (assuming enough contiguous space exists after the allocated memory), which can be a performance benefit. You should use realloc instead of malloc/memcpy/free, because it will always be at least as fast, and often faster. That said, your code appears to be free of memory leaks, accessing invalid memory, buffer overflows, etc. There's a lot of minor optimizations that could be recommended, but this code is at least logically sound.

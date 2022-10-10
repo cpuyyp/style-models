@@ -1,0 +1,67 @@
+I have the following, quite ugly statement - is there a better way to write something of this nature? 
+
+I'm somewhat new to SQL (using it in the past but only being exposed to it heavily in my current role). Unfortunately nobody at my current company has really given me any advice on formatting. How can I format this better / what should I avoid doing that I may have done below? Any feedback on re-factoring would be greatly appreciated also. 
+
+I'm retrieving e-mails from a collection of a few hundred *.json files using the following: Python Script 
+
+And the method that's referred to here come's from a base class I inherit to this class (unsure if this is bad practice, please let me know if so): 
+
+I know it's only a simple function but I'm keen to see where my thought process could be improved (even in such a simple context) for future projects. 
+
+Checking whether two lists are equal is naturally an O(n) operation. So yes, your code looks efficient. Note that you could also replace your loop with 
+
+In a sense, your usage of properties is somewhat incorrect. From the book Effective C# by Bill Wagner: 
+
+Context I'm trying to write a function that drops a list of tables from a database (e.g., tables A, B and C). This function has the following type, it returns a list of booleans indicating whether each table was successfully dropped: 
+
+I could have easily defined these as extensions on or , but I wanted to try and define them for the most abstract type possible, . For this, a is needed (I think). Code: 
+
+What you want is to have multiple producers - and a single consumer. You can use TPL Dataflow's for this. Here, acts as a single-threaded thread-safe consumer. 
+
+I've created two methods in a class that allow me to download the contents of an FTP folder and if specified then delete them. Although the code operates as intended I think it's vastly bloated and I'm looking for direction on how to correct it. Of note I believe that there's far too many FTP connections opened in a single file move (three I believe - list directory, download files, delete files). I'm a bit unsure how to refine this. 
+
+This does need more refactoring (quite a bit of erroneous code) but the main points which I felt needed covering were: 
+
+I have an ordering system that uses SharePoint. Below I've included a small snapshot of the system that is used in a WPF form when the user clicks a button to refresh the order listing. The outcome is a populated WPF datagrid. Note that this code is using C# 6.0 as well. Everything works well, and it's quite quick, but I feel there's lots of room in my skill-set for improvements - happy for all guidance that can be offered! Refresh Orders code 
+
+The .NET serial port is notorious for making it easy to write horrible code :( As far as reviewing yours, I can't get past the usage of . It's wrong, irredeemably broken, because the sleep starts when the data is appended to the kernel buffer, not when it gets transmitted. Actual time of transmit is affected by how much data was already in the write buffer, what busses exist between the UART and your CPU (for example, is it connected via USB? Then transfers have to wait for USB timeslices and may get delayed behind bulk transfers to USB mass storage devices), UART flow control, and then there's the actual transmission time based on the number of bits (including start, stop, and potentially parity) divided by the baud rate. So your sleep does not guarantee a period of inactivity on the serial line or give the device a chance to process one command before you send the next. The Windows API provides an event when the kernel write buffer has been completely drained and the serial wire becomes idle. Use it. Even if that means throwing away the C# class. Ultimately, that's the better approach: don't use the horrible wrapper provided by .NET web developers, use the Communications Functions API that was written by people with hardware experience. (This code also makes the mistake of confusing serial data with strings -- serial ports transmit bytes, not characters) 
+
+Your implementation is technically correct, but... There is no benefit in using in an web application. All you're doing is deferring work from one thread to another. So, in fact, not only is there no benefit, you're actually adding overhead. I'll quote Stephen Cleary, because I could nevet put it better: 
+
+Also notice how you're returning a 200 OK response, even if the request failed. This is definitly not right. You should serve a 500 Internal Server Error instead. 
+
+If you take a look at its implementation, you'll notice that it's very similar to yours. It might be just a tiny bit less efficient - so if performance is an issue here, measure both approaches, and then weigh readability/maintainability vs performance gains. On a different note, I would rename the method to and consider it a "specialization" of for lists. I would also consider throwing an exception if either argument is null. This would be consistent with the BCL's own extension methods (, , , , , , etc). 
+
+I believe it will be much faster than yours, because I was able to avoid ever using division ( and ). As a matter of fact, I don't use any multiplies either. (It's about 6x faster with g++ than the code in the question, and the actual factor generation part is marginally faster, about 10%, than lol4t0's. Returning factors in a takes 5x as long as the factor generation.) Test program: $URL$ Original application: 
+
+Equally-sized sequential subsets of primes don't evenly divide the task. The smallest numbers lead to a lot more multiples. Test-before-set might significantly reduce cache contention. Even better, don't start at , start at . 
+
+Instead you should be using a for accumulating fields. It remembers how many items are stored, so you won't need . And it remembers its capacity, so you won't need . As well, clearing it doesn't change the capacity, so you won't need . And it already grows exponentially, as needed, so you can get rid of all the tests comparing to . Much better: 
+
+The same goes for properties - so should be named Coding Style You could mark your private field . People often also explicitly mark them as though it's not entirely needed. The type doesn't really represent a role, does it? The name seems misleading. I think would be a better fit. Why does have a parameterless constructor? Using that constructor would result in s being thrown, since would be unassigned. This cast is unnecessary: 
+
+I was wondering if there's a simpler way of implementing . I had a look around to see if there was anything I could use, but no such luck. Being a Haskell novice doesn't help either, I'm only familiar with a very small part of the core libraries. Other improvements (naming, conventions, greater generalization) are also welcome. 
+
+HTTP and Web Api The route does not seem RESTful. RESTful APIs are resource-oriented - a more natural way would be to simply issue a POST requets to . If you're using Web API 2, your method could be re-written to leverage the family of classes 
+
+I know it's not very functional however I'm a C# developer primarily - I can get the job done in Python (and had to quickly for this task) but I'd love to know how to think more "pythonic". Any feedback or suggestions about style or performance are also appreciated. 
+
+I have a few thousand json files containing order histories sitting in a directory from one of our systems. Since customers can opt in to receive marketing I'm opening each json file and then processing the data to scrape our active subscribers. At a later date I plan to expand this to bring this data into our CRM. As I'm not a Python programmer by trade so I'm wondering what I could do better to make this more functional and (for lack of a better term) 'pythonic'? 
+
+I wrote a method called , which moves an element to the first position of a sequence if it exists; otherwise, is returned. If appears in the sequence more than once, only the first occurrence is moved. Sample input/output: 
+
+So, unless you're doing true async I/O, do it synchronously. Alternatively, if you want to expose an async interface, where the implementation may or may not perform asynchronous I/O, synchronous implementation should use instead of . Example: 
+
+Exceptions Regarding : Catching all exceptions is usually regarded as a bad idea. I'm not saying this is the case, but consider catching the specific exceptions you expect to happen, e.g. , , etc. Why does the method return a if the string is always empty? Why not just ? Similarly, your checks if the string is null: , this seems redundant. Also, returning a empty/non-empty string to signal that something went wrong does not seem right. Surely, if the API call fails, that would be an exceptional scenario, would it not? Consider letting the exception bubble up to the controller, where the error can be handled. Then, change the return type from to simply . This is how I'd report errors: Web Api: 
+
+That even gets rid of the need for , because now the value-setting code is so dirt simple it can safely be repeated. I notice you already did this exact thing with , so why not with the ? is to as is to . 
+
+This is a C++ wrapper for the National Instruments ANSI C library for interfacing with NA-DAQmx devices such as the USB-6008. I wrote it for use in real-time data processing to test algorithms developed in my dissertation research. I'm sure there's lots of room for improvement. Suggestions on style are welcome, in addition to contributions to support more features of the NI hardware (the emphasis of the current code is on near-simultaneous acquisition of a few analog voltage channels) 
+
+If you understand your toolbox (standard library functions) you can make them perform well and not need to reinvent them. This is crazy: 
+
+I then tried to generalize the core algorithm, and remove all references to tables and database connections: 
+
+Now, imagine table C depends on table B, i.e., table B cannot be dropped while table C exists. The function will be able to drop tables A and C, but not B, and so it will return . So, I wanted to write a function that takes a list of tables, and calls . If any of the operations fail, it calls again but this time only with the tables that could not be dropped in the first iteration. And so on, until either all tables have been dropped, or progression halts (i.e. all operations in a given iteration fail, due to e.g. a connection being closed) This was my first stab at it: 
+
+I would consider setting the value to something else other than the input value an unexpected result. In other words, it violates the principle of least surprise:

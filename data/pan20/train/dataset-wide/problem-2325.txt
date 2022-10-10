@@ -1,0 +1,43 @@
+Just tell me that you don't have databases on the system drive. :) Seriously, what they said. If your databases aren't in simple recovery, they must have transaction log backups or the log will grow until it eventually consumes the disk. (Which is why I said "not the system disk." One of my lesser colleagues once installed software, including SQL databases, on the system drive, and it ate Windows.) Also, there's no guarantee that those .mdf, .ndf, and .ldf files will attach off your backup, especially if there's any kind of time difference between when they were backed up. (They might, but it's not supported, and they might not.) So... what Thomas Stringer and vonPryz said. Back up through SQL. Run DBCC CHECKDB. (Reindex, even.) Back up the backup files with Acronis. 
+
+Disable the log shipping jobs on both servers. Back up the database on Server A. Restore the database with the backup you just created and on Server B. Re-enable the log shipping jobs on both servers. 
+
+NO. DO NOT DELETE YOUR LOG FILE. You'll probably kill your database and the symptom you're trying to fix is that it won't back up properly. I'm going to recommend this article, "A beginner’s guide to SQL Server transaction logs." Especially this bit: 
+
+(Or you could do it through the GUI. If you right-click on the index and choose properties, there's an included columns pane.) This will hopefully have the effect of replacing your heap scans with nonclustered index seeks, but since your query has a "where in [30,000 items], it might do a index scan instead. Either way, it won't be rooting around in the heap, which I expect will be a good thing. 
+
+Are you 100% sure that this is SQL Server 2008? This behavior suggests SQL Server 2000. The SQL Server 2000 syntax was 
+
+Try that. If that works, when you get into the server check the compatibility level of all your databases in addition to running . 
+
+Check the file permissions on the backup on the second server. It's possible that's your problem, and it's easily fixed. If that doesn't fix it, you should run a on the original database, which will tell you if the database itself is corrupt. If DBCC returns okay, run a on the backup on the original server. If all of that returns okay, go back to the second server and double-check the file permissions. 
+
+Pretty much what Edward Dortland said. If I understand what you're wanting, you probably want to create the user, add them to the datareaders role on that database, and manually give them update on the tables you want them to update. 
+
+You could do it as a case statement, but since @@VERSION returns service pack information it might be providing TMI when all you want is to check for a supported feature. Good luck! 
+
+This will take some time to complete AND will be a blocking query, so do it during downtime. This will give you a clustered index and lay out your table on a completely random sequential number, unfortunately, but since you don't have any non-unique values that might be the best course of action. I would then include the columns note_id and timeoffset in your nonclustered index on HASHKEY. 
+
+If you're able to insert into documents right now, it's in whatever database is your current context. You can find tables in the future with the undocumented sp_msforeachdb command: 
+
+Your table is a "heap," which means that it doesn't have a clustered index. The short version of what that means is that your data isn't laid out on the disk in a logical way. A heap really isn't an optimal structure for an actively updated table. Here's an excellent video on heaps. So, my suggestions--please test them before deploying them in production--are: 
+
+8GB doesn't sound like very much RAM for SQL Server. How big are the databases on that server? If the problem isn't VMware, perhaps you should check what's happening in SQL Server itself. Check the Windows event viewer's application log for messages like, "A significant part of sql server process memory has been paged out. This may result in a performance degradation." Also try running some of the queries here, particularly the top 20 resource-intensive queries. If the drops occur at specific times, there might be a resource-intensive agent job running at that time. 
+
+This is normal. Max server memory means that your server cannot use more than that amount, not that it must use that amount. Min server memory doesn't mean it must use that amount, either; it means that once the server uses that much it doesn't surrender memory to below that amount. Basically, SQL Server uses the amount of memory it needs until it reaches the upper limit you set, and if it stops using it it might surrender part of it back unless you've set a min memory. (However, in my experience, it's pretty memory-greedy.) In short: This means that you're currently not using 6GB of memory on your SQL Server. 
+
+Run on the database Stop all user activity in the database Switch to the SIMPLE recovery model (breaking the log backup chain and removing the requirement that the damaged portion of log must be backed up) (which you've done, yes) Switch to the FULL recovery model Take a full database backup (thus starting a new log backup chain) Start taking log backups 
+
+If the database fails, you can recover the database with the last full backup regardless of whether it's set to full or simple recovery. Simple recovery doesn't support log backups at all. So basically, you'd lose everything from your last full backup forward. 
+
+This should allow you to get all articles in en or sv, and you can also query for en-US or sv-SE. Presumably, although it wasn't in your example, you could also query for en-CA, fr-CA, en, fr, or CA. Edit--I'm sorry, you're right, no search by Culture in my old code. Revamped above, sorry. Here's a sample of content: Language: 
+
+That should be fine. As long as they are on different servers ("Prod" and "Dev"), you would just address them across the network by their server name. 
+
+Yeah, you need that .ldf file. In the future, don't delete that. If your database is running in full recovery, you need to run log backups regularly. "Regularly" is a term that depends on your particular environment, but hourly during business hours is a common choice. Basically, it only purges the transactions out of the log file when it's backed up. If it's never backed up, the log grows until it consumes the entire disk, as you've seen. In the future, set the database to simple recovery, shrink the transaction log, and then back it up immediately, as NathanC suggested. As for now: I don't know what kind of backups you have beyond the one you restored from, but I agree with NathanC that you need to let it sit and wait for the restore to finish. It's chugging through that log file. Once it finishes, truncate the log and set it to simple like your other databases, or implement log backups. 
+
+Go into SQL Server Configuration Manager Select SQL Server Services On the right side of the pane, find your instance and right-click for Properties On the Startup Parameters tab, in the Specify a startup parameter box, type -m and then click Add. (That's a dash then lower case letter m.) Click OK and restart. MSDN suggests launching Management Studio as an administrator for 2014. The traditional way is to use SQLCMD -E. Either way. 
+
+Because this is production and this requires a restart, you'll have to do it after hours. Good luck! 
+
+Without knowing more about your data I'm not sure about your table structure, but I will say that GUIDs/uniqueidentifiers are controversial for clustered indexes. Traditional logic says that your clustered index should be unique, small, and sequential. GUIDs are unique, large, and random. (There is a newsequentialID() function that you could use as a default value to get around the random bit, however.) An article against random GUIDs as PK/clustering keys: $URL$ Summary: Your data can end up a scrambled mess, and selects of ranges that should be next to each other can be slowed down. Also, it takes up too much space in large tables and indexes. An article for random GUIDs as PK/clustering keys: $URL$ Summary: If you have a LOT of inserts, it might be faster to spread them out instead of having them all be "at the end." Personally, I think that if you have a specific business/logic reason to use GUIDs, then use them. Otherwise, you might want to consider using an autonumber column instead.

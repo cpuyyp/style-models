@@ -1,0 +1,81 @@
+To fix this, you should configure G0/1 on Dist_Switch to trunk specific VLANs and VLAN 99 as native VLAN: 
+
+===== I also noticed that your Interface VLAN 1 and 2 are using the IP address 10.1.1.1 (subnet mask /24) and 20.2.2.2/24 (subnet mask /24), respectively, so that in the 'access-list 100', you should have and , NOT . 
+
+I hope it is useful and answers your questions. Please check Cisco docs about Template Inheritance Rules for BGP on IOS-XR. 
+
+I would assume that you want hosts in VLAN 62 to reach hosts in VLAN 2 (and vice versa) only, and nothing else (no Internet...): 
+
+At the same time, please turn on your capture on ASA as below (I assume you have a real host with IP address 10.111.22.10, if not please change the following IP to correct one) 
+
+===== I do not see configuration for NAT Exemption (which we often do with VPN tunnel so real source and destination IP addresses would not be translated when they pass through the tunnel) at both ends. Please ensure that you have this part configured as well. ===== Another thing is: In terms of Transform Sets/Combinations, Cisco no longer recommends using ah-md5-hmac, esp-md5-hmac, esp-des or esp-3des (Link here). Instead, you should use ah-sha-hmac, esp-sha-hmac or esp-aes. Suggested transform set combinations follow: 
+
+I am afraid that the interface f1/0 (with IP 200.100.30.252/29) on R2 is NOT really up, causing the issue. Please check it again. And please use the next-hop IP addresses for all static default routes The configuration on R1 looks good as I used that to reproduce the following case and I can ping both IPs 200.100.30.251 and 200.100.30.252 from R3. 
+
+In this kind of setup, I always prefer route-map to access-list. To my best knowledge, you are right that you cannot have multiple following lines. The last line (and only one) you apply will stay: 
+
+Updated answer: Below is my setup. Both IP_Phone and PC (in VLAN 12 on Switch1) can get the IP addresses from DHCP server: 
+
+The best way is to request a network downtime (non-production or off-business hours) and test your network with different cases. Note that EIGRP provides very fast convergence. 
+
+VPNv4 is the "transport". Your VRF route-targets match on both devices. Long story short, RT is extcommunity that is sent over VPNv4 session in BGP update. If one of local import RTs matches received extcommunity, routes are being imported in VRF with this RT configured. Actually VPNv4 is quite complex and complete explanation is beyond the scope of this site. VPNv4 is not required in order to run routing protocol inside VRF. Cisco calls it VRF-lite. Your problem with state here is related to routing. 
+
+I've done some tests with different MTU values. All tests were performed for mobile data, no voice affected or tested. Results are as follows: 
+
+MAC address consists of 48 bits. It is 2**48 or 281 474 976 710 656 addresses, which is more than enough at the moment. Plus there is practice to reuse MAC addresses of obsoleted equipment. MAC address is usually represented in hex, which is n in your formula. But one "element" has 00 to FF - which is 256 - combinations. So 256**6 should be used for calculation. 
+
+You're not actually telling BGP to run inside VRF. I would say you're activating address family ipv4 vrf inside BGP process. I. e. BGP process is always bgp 2, but it may contain different address families. Correct. 
+
+Generally all the devices at the AP communicate through AP. There are technologies as Wi-Di and Wi-Fi Direct, but those are beyond the scope of this question. So devices can't communicate directly in common Wi-Fi network. Regarding traffic interception, you should take into consideration ciphering here. Though there are ways to intercept traffic and read it contents, with WPA2 those attacks are very complicated. 
+
+Flow is a chain of packets combined by some attribute. For different protocols attributes are different (ports, seq numbers, etc). Load balancing in LAG may differ, but usually per-flow load balancing is being used. When per-flow balancing is used, flow is guaranteed to be transmitted via the same link. On the other hand it is possible to balance based on packet (per-packet balancing). It's not usually the case because of issues, such as out-of-order packets. You should consider using different hash methods based on your traffic profile. If you have big diversity of MAC addresses (e. g. L2 switched domain), use MAC for hash. If you have big diversity of IP addresses (e. g. small L2 domain + routing), use IP for hash. 
+
+With , you can have mullple lines for different subnets at Site-1. If you would like to have a single-line access-list, you need to put all subnets (for VPN traffic) at Site-1 under one object-group (for example: object-group NET-SITE-1), then your would be: 
+
+With your first setup, ASA5508 G1/3 is a routed/L3 interface, you can connect it to L3 port (as you are doing) or to a L2 access switch port (access a VLAN, given that you have its L3 VLAN interface in your network). With your second setup, you configure ASA5508 G1/3 into sub-interface (encapsulation dot1q), you have to configure the other end, L3 port, as a sub-interface as well (encapsulation dot1q) or a L2 trunk port (trunk a VLAN, given that you have its L3 VLAN interface in your network). Let us assume you have VLAN 10 and its L3 Interface in your network (in the same IP range with ASA5508 G1/3 interface), the following configuration should work for you. Later, you can trunk more VLANs between firewalls and switch. 
+
+Your output looks strange as I do not see Encryption Domains (Local and Remote subnets) at both end. Indeed, your Encryption Domains are also your VPN IP peers (10.140.134.50 and 192.168.1.10), that is incorrect! When see only encaps/decaps packets at one end, it is likely an issue with routing, thus return traffic cannot hit Firewalls/Routers for being encrypted. You can try initiating traffic from Router end and see whether the traffic is encrypted (encaps packets counters). 
+
+You can try with and features (Link here)? Be aware that not all commands are supported under this. Another approach is to use command (Link here). Updated answer: It turns out that your device does not support feature either. You may need to do this manually as will make configuration of destination ports consisten with that of source port and this is not what you would like to do. 
+
+DR and BDR election happens in Multiaccess Networks/Segments. And other routers establish full adjacencies with these DR and BDR only. In this situation, LSA is NOT flooded in the network by non-DR routers but DR. When there is a change in a link state, a non-DR router multicasts update packets (LSU) to DR and BDR (at multicast address - 224.0.0.6). DR receives and floods the update packets (LSU) to its adjacent routers (at multicast address - 224.0.0.), thus the LSDB is synchronized. I hope it is helpful and answer your question. 
+
+Why would you need filters to begin with? It is in Cisco IOS. Copy all the interface config into you favorite editor, and replace with . Then just paste result into console. Make sure it is pasted properly using some technique. For instance you can simply paste not all 100 at once, but 10-20. If you need to change priority for plenty of noncontiguous vlan interfaces, delete unnecessary ones manually or use regexp. 
+
+I believe this is not possible as @jwbensley said. Though it's also unlikely that cisco.com explicitly says that this functionality isn't implemented. When you're viewing attributes such as community you're looking at BGP table. Route is getting into BGP table after policy has been applied. So if you change attributes with policy, you can only see modified attributes. 
+
+It's kind of strange to differentiate price for the service based on technology rather than SLA. Nevertheless, the best way to find out certainly is to ask your ISP, because there're plenty of techniques to do so, such as: 
+
+ARP requests are normally limited to one broadcast domain (one subnet if you like). So when host A knows (based on subnet mask) that host B is located in the same broadcast domain, it sends ARP directly to host B. With ARP host A determines B's mac and sends frame with MAC B and IP B. Otherwise it looks into IP routing table in order to determine nexthop for B's network if any. You probably have only one IPv4 route on your host - default one. So now host A should send IP packet with IP B and MAC of default gateway - that is how frame reaches IP nexthop. That is why ARP is being sent to DGW. P. S. I believe your question is off topic here. 
+
+I think your question is way too wide. There's protocol stack for 2G, and for 3G. They're different. Frequencies are different. Even controller/core is at least logically different. For documentation you can visit $URL$ Find protocol stacks and compare them "line by line" if it meets your purpose. 
+
+Both IPv4 and IPv4 vrf TEST22 address families have Lo0 as the source. As long as IPv4 adjacency is I assume Lo0 is not in VRF. That makes your BGP source inaccessible. 
+
+If you want to do this on public internet-facing IP (belong to your assigned public IP block) - 5.6.7.8: 
+
+Another point we should take into consideration is that when configuring sub-interfaces, the sub-interface and VLAN numbers should match. It would make your daily operations easier as you could quickly point out which sub-interface is in which VLAN: 
+
+Add a route for additional subnet. I do not see a route for 172.16.0.0/16 in your configuration, so I assume you have a default route. Otherwise, if you have a route for 172.16.0.0/16, you have to configure a similar route for 172.20.0.0/16. 
+
+Technically, you can have more than 50 users but would violate the terms of your licenses (please read more here) 
+
+You can check more details at Configuration Guide for Autonomous Aironet AP and Cisco Aironet AP FAQ 
+
+As you know how to remove a single line from the ACL (using form), I would focus on your two commands: 
+
+log message indicates that the traffic is entering and exiting on the same ASA interface. And by default, ASA does not allow this traffic. To fix this issue, you need two things: 
+
+What DAI does is to intercept and inspect all ARP request and reply packets on an untrusted port. If an ARP reply packet contains INVALID information/value (invalid IP_Address-to-MAC_Address, NOT invalid switch port), it will be dropped. Therefore, with only DAI feature enabled, you can move your host to different ports without facing any issue because it has valid IP_Address-to-MAC_Address binding. IP Source Guard makes use of DHCP snooping database and static IP source binding entries. Therefore, DHCP snooping database is "SMALLER" than IP source binding database (with dhcp-snooping and static type entries). I would not use the word as it is not quite safe for me to say so, even though it looks like that :). When you enable IP Source Guard with source IP-MAC filter mode, DHCP snooping Option 82 must be turned on. The DHCP host MAC address is not learned until the host is granted a lease, and DHCP snooping uses option-82 data to identify the host port when forwarding packets from the server to the host port. You can check this Cisco doc for further information. 
+
+VPWS and Xconnect is about the same technology. VPWS is the name of technology, xconnect - keyword for configuring pseudowire. You can find different naming like VLL, L2VC, PWE3, etc. Essentially they are referring to the same technology of p2p l2 connections. You can find more info in RFC 4664 For instance section 1.3 says: 
+
+This is autoconfigured link local address. First 64 bits are always fe80:: according to RFC 4291. Last 64 bits are interface ID. Interface ID is modified MAC address. You can disable autoconfiguration: 
+
+You can't determine configured hostname by using IP or MAC. You can do it with CDP or LLDP, if protocol is enabled on interface of the switch. 
+
+Router can't advertise "source address". When you see some prefix in RIB, router talks about destination as opposed to source. In case of S/RTBH packet from specific source should be dropped. uRPF checks whether source of the packet is reachable via some interface except "null" one. S/RTBH technique uses null routes along with uRPF. So if detected source of the DoS attack is reachable via "null" device, and packet from that source comes through interface with uRPF configured, uRPF check will fail and packet will never reach destination. On the other hand all the healthy packets will be permitted by uRPF check. 
+
+I don't know platform that allows IP address with mask of 0. So generally the answer is you simply can't use /0. On the other hand if route is pointing to the interface, hosts with /32 masks can reach each other. Again, not each host allows /32 on the interface configured. EDIT: Linux does allow /0 CIDR notation. Behavior doesn't really change: you still can access hosts on shared segment with ip route via interface. General answer: If host supports particular CIDR notation and routes are pointing to the interface, it can reach other hosts with similar route configuration. Mask doesn't really matter in this case. Note: all of above may be useful for educational purposes but is almost not applicable in practice. Don't do this in production. 
+
+One more notice: packets with DF (don't fragment) bit can be successfully fragmented on underlying level and reassembled at packet core with DF bit preserved. E.g. pinging some host with DF bit set and ICMP payload of 1472 is possible, but packets between base station and mobile packet core are still small.

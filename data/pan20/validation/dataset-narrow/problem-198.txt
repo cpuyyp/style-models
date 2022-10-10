@@ -1,0 +1,53 @@
+Based on the description, this is related to Amazon Aurora product, and not PostgreSQL by itself. See $URL$ 
+
+This explains your results when ordering on except that ē does not exists in code page 1252, so I have absolutely no ideas what it does with it. Or if we do the Unicode algorithm by hand, using the keys value of DUCET at $URL$ : step 1: Normalization form D, so each case becomes: 
+
+Second update based on Solomon Rutzky's comment about Unicode versions. I used the data about latest Unicode version at this time, that is version 10.0 If we need to take instead into account Unicode 5.1, this would be: $URL$ I just checked, for all the characters above, the collation arrays are the following instead: 
+
+It is a very broad question, even more so as you give absolutely no details about your setup and kind of database (volume, type of queries, active connections, size of RAM, dedicated server or not, etc.) You can start by enabling PostgreSQL to log slow queries, see the in the configuration. That will give you historical data that you would then be able to analyze and maybe correlate with other things (like from the list of @Vérace) You will then have various tools to help, as described on $URL$ : 
+
+There is no absolute right or wrong way to do it, because it depends on how you use this data afterwards, that is what kind of SELECT queries will you need on it. So your schema could be good enough without anything to improve. Here is my alternate take that could give you other ideas: 
+
+The easiest way to test AG network throughput is to rebuild one of your largest indexes. While the index rebuild is running (and afterwards), measure the latency for each replica using any of these scripts: 
+
+There are two plan cache DMFs: sys.dm_exec_query_plan - returns cached plans in XML format, but only up to a certain size (and only as long as they can be formatted as XML in SQL Server, which means up to 128 nested levels.) sys.dm_exec_text_query_plan - returns cached plans in text format, of any size. But the drawback is that when plans are large, you can't convert them to XML inside SQL Server, and even TRY_CONVERT as XML returns a null. sp_BlitzCache only hits the former DMV (because it needs to analyze query plans as XML to do all kinds of slicing and dicing.) I made Github issue #838 to improve this so we could at least alert users to go check sys.dm_exec_text_query_plan for their bigger queries. We still won't be able to do XML analysis on it, though. 
+
+Just run it, no parameters required, and you'll get a prioritized health check. Priorities 1-50 are things you want to jump on right away, and priority 51+ are things to take a note of for later. For support or to contribute code, head to the Github repo at FirstResponderKit.org. 
+
+Remove the column has it can be computed from other database information. Create a view over with something like: 
+
+and of course replace by the timestamp your are dealing with. This could be abstracted in the function that creates this based on the interval value and step you provide, for your specific timestamp. Not sure to have understood the exact truncation you want, so you may need to replace by . 
+
+step 3, Form sort keys (for each level, take each value inside each collation array, then put 0000 as delimitator and start again for next level) 
+
+If you want more, you need to increase the number of connections (backends) which default at 100, see this other part of the documentation 
+
+It is a wrapper around PostgreSQL tool, that can be used to upgrade a database in place, hence not loosing anything, including between major versions. This article ($URL$ can give you a lot of information on how to upgrade PostgreSQL, and what happens when you use . 
+
+So Amazon added some settings. You will need to contact them directly and ask since their documentation does not provide a result when doing a search, $URL$ gives Your search for "shared_heap_size" returned no results. 
+
+step 4, Compare sort keys: Basically the third value determines the order, and it is in fact only based on the last digit, so the order should be: 
+
+Not natively with BCP, but if you define SQL Server Integration Services as native (after all, it's free in the box with SQL Server), then use SSIS instead. You can even output to compressed files with third party add-ons for SSIS. 
+
+The query finishes instantly and has an estimated subtree cost of just 0.66 (as opposed to 30k). In summary, if you organize the data in a way that supports the queries you frequently run, then yes, SQL Server can take shortcuts to make your queries go faster. If, on the other hand, all you have is heaps or clustered indexes, you're screwed. 
+
+And that'll give you a line graph to identify when your plan cache is dropping. If it's happening at very specific intervals (like every hour), then I'd use the techniques in this answer to track down what's causing it. 
+
+That's the error you get when you restore the master database from a server with AlwaysOn Availability Groups configured, or try to restore additional user databases onto a server that had the master database from an AG replica restored. Don't restore the master database from an AG replica onto a different SQL Server as the master database. If you absolutely have to restore master to get user objects out of it, restore it as a different database (like master_old) and then transfer the objects you need. 
+
+step 4, Compare sort keys (simple binary comparison of each value one by one): The fourth value is enough to sort them all, so the final order becomes: 
+
+It depends if you need something generic or if it can work with a "small" number of columns. In your specific example, this query: 
+
+The Unicode Collation Algorithm is described here: $URL$ Have a look at section 1.3 "Contextual Sensitivity" that explains that the sorting can not depend on just one character after the other as some rules are context sensitive. Note also these points in 1.8: 
+
+so should be called only if directory is not already populated, so in your case the database just got initialized in a new directory, empty, while your data is still in another directory. But things have changed recently. Homebrew 1.5, released on January 19th 2018 has this in its changelog: 
+
+This question is not so related to databases but more on Unicode handling and rules. Based on $URL$ Latin1_General_100_CS_AS means: "Collation uses the Latin1 General dictionary sorting rules and maps to code page 1252" with the added CS = Case Sensitive and AS = Accent Sensitive. The mapping between Windows code page 1252 and Unicode ($URL$ show the same values for all characters we are dealing with (except e with macron that does not exist in Microsoft mapping, so no idea what it does with this case), so we can concentrate on Unicode tools and terminology for now. First, let us know precisely what we are dealing with, for all your strings: 
+
+Your tested and proven settings. Some folks have enough time to do repeated benchmarks of their own applications on their own hardware. That's fairly unusual, though. Microsoft's Fast Track Reference Architectures. These are very specific documented setups done in partnership with hardware vendors. They include everything from firmware versions to SQL config settings. Unfortunately, they're not available for all combinations of hardware. (Don't worry too much about the SQL Server version - SQL IO hasn't changed much since SQL 2000, with the exception of SQL 2014's new in-memory OLTP.) Your storage vendor's SQL-specific guidelines. Major storage vendors like Dell, EMC, and HP provide detailed documentation for SQL Server as well as other database platforms. Make sure to get the docs for your exact make/model of storage - different models can have totally different recommendations. General advice from some bozo on the web. Myself included - my work was quoted in one of the other answers. General advice just doesn't hold true for all combinations of storage hardware. This is a last resort. 
+
+There's a lot more around server-level config problems, database schema problems, hardware problems, etc. I wrote a script to quickly analyze servers looking for these kinds of problems: $URL$ 
+
+Look for warnings about CPU and/or memory nodes being offline. SQL Server Standard Edition only sees the first 4 CPU sockets, and you may have configured the VM as something like 6 dual-core CPUs. It'll end up hitting an issue similar to how Enterprise Edition's 20-core-limits cap the amount of memory you can see. If you want to share sp_Blitz's output here, you can run it like this to output to Markdown, which you can then copy/paste into your question:

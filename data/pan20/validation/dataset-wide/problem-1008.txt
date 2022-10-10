@@ -1,0 +1,67 @@
+Obviously, you can use powershell as well, but I have found the above ones more useful when you have to load large number of trace files efficiently. 
+
+See my answer 1. Once you failover to 2017, you wont be able to switch back to 2012. Remember that it will have the same old IP if listener. You can technically add 2nd listener (as client access point) with an OR dependency of your AG on both the listeners. This way once you decom you old listener, your AG will not go offline. 
+
+Its up to your business what RDBMS they want to use. We are a Microsoft shop running majority of our software on Microsoft stack and so we move our Sybase Clients to SQL Server. If you have any specific step that you find hard to proceed further, let me know and I will help you out, but above links will give you a good start. 
+
+Another cool powershell utility that I use everyday for server migrations is Start-SqlServerMigration.ps1 written by Chrissy LeMaire It is very adaptive with different options. Eg. In your scenario for migrating jobs with schedule, you can use 
+
+You can create linked server and use . This is what I am doing in my current scripts when I have to refresh AG env in Dev / QA from PROD. You can use powershell, etc .. but just works fine for my needs. 
+
+The restore speed will depend on the hardware you use for DEV environment. I would suggest to turn on Instant File Initialization. When backups are restored the space has to be pre-allocated before a restore can occur and IFI is a boon for such scenarios. Instant file initialization only affects MDF and NDF files, not LDF files. In other words, transaction log files can’t take advantage of instant file initialization. Also, you can play with and . Read up Optimizing Database Restores. 
+
+Then once the restore is done ... you have to sync the users as they will be orphaned in the database : 
+
+Looking at above results, the only difference is the Sort Order between the 2 collations.But that is not true, which you can see why as below : Test 1 : 
+
+Create a tail-log backup of the currently active transaction log as of the point of failure. Restore the 8:00 A.M. full database backup, and then restore all four transaction log backups in sequence. This rolls forward all completed transactions up to 9:45 P.M. 
+
+SQL Server editions differ by the features and capabilities that they provide like no.of cpu's , memory, database size, High Availability options, Disaster recovery options, etc. You can refer BOL for more details. When you say Trial - it can be Enterprise Edition for 180 Days. Unless you have the same database version, I would recommend your to do a backup restore from Express to Standard/Enterprise edition (trial version) and test it with your workload. Pretty sure, that it will outperform compared to Express edition in terms of performance as well as maintenance. 
+
+In simple terms, SQL Server tends to rely on Buffer Pool to do its normal operations to avoid expensive disk I/O's. If you have enough RAM and have set up MAX Memory appropriately, then all the queries that are ran across your database will CACHE the objects that are required by your queries. 
+
+In order to see the additional logged information you need to use this stored procedure sp_help_jobsteplog or you could query the table directly. More info here 
+
+Kevin Kline highlights the functionality here and there is a good article by Dale Kelly for migrating reports using RSScripter at MSSQLTips. Another way is to use the power of PowerShell. There are many script available like here and here. There is other utility (which I have not used) called reportsync 
+
+From Table and Index Organization: When a table or index uses multiple partitions, the data is partitioned horizontally so that groups of rows are mapped into individual partitions, based on a specified column. The partitions can be put on one or more filegroups in the database. The table or index is treated as a single logical entity when queries or updates are performed on the data. The pages in the data chain and the rows in them are ordered on the value of the clustered index key. All inserts are made at the point where the key value in the inserted row fits in the ordering sequence among existing rows. The page collections for the B-tree are anchored by page pointers in the system view. If you want to really dig more into how data is layed out then refer to : Inside The Storage Engine: sp_AllocationMetadata As a side note : SQL Server 2016 CTP2 has TRUNCATE TABLE ... [ WITH ( PARTITIONS ( { | } For automating partitioning switching check out - SQL Server Partition Management utility 
+
+Query Store is persisted to disk, so it survives a crash. But Query Store is also Async, it means if the data has not been persisted and a crash happens in the meantime, the data will be lost. Although, if SQL Server must be restart because of a maintenance routine you could force Query Store to be flush using the procedure: sp_query_store_flush_db. 
+
+ANSI_NULL_DEFAULT { ON | OFF } : When you dont specify in or statements, this database option will determine the default value, or for a column or CLR user-defined type. When SET to , the DEFAULT value is . When SET to , the DEFAULT value is . 
+
+When you want to change collation, then such scripts are useful. I have found myself changing collation of databases to match server collation many times and I have some scripts that does it pretty neat. Let me know if you need it. References : 
+
+You can achieve it in 2 ways - Go in job step and select the Advanced tab: a. Output to a file (<== My preferred method) 
+
+You must remember to resume data movement once secondary database is online. Also, depending on the database size (if its small), you can think of removing the database from AG and putting it back again once the move is successfully completed. 
+
+Seems like you dont have permissions on msdb database - so you cant create jobs. One way would be to use SQLCMD : 
+
+As Mike mentioned, T-Rep is not free. You have to maintain distributor database and there are dependencies on log-reader agent. If the amount of changes occurring on Publication are large and depending on the network latency, there will be commands accumulating in distribution database waiting for the log-reader agent to scan and send them to subscriber. Schema changes will require a new snapshot - which causes locking on publication database until the snapshot finishes. Also, replication of the entire database as opposed to a subset of data (selected tables, SPs, etc) often leads to problems related to its maintenance. Based on your situation, I would recommend logshipping. Its easy to setup and there is minimal dependency (network share - should have appropriate permissions). The good thing about logshipping is that you can have the secondary database as read-only in STANDBY mode. You can delay the restore of log backups on secondary. Note: that if you use logshipping with STANDBY option, the secondary database cannot be on a higher version of sql server than a primary. 
+
+Note: Enabling , you dont need to set the compatibility level of the database to a lower level. From KB2801413 : 
+
+Depending on your database size, checkdb can take hours to finish. It is heavy on the disk subsystem as well incurring lots of I/O's. Check out Aaron's excellent article on : Minimizing the impact of DBCC CHECKDB : DOs and DON'Ts Backups are also I/O intensive operation. I would suggest to look for a maintenance window - when activity is low or minimal on the server. Now if you want to dig deeper(prove it), then you can use . It will show you where the hot-spots are and you can ask your SAN admin to move them away. 
+
+A much better way to monitor is using sp_whoisactive - from Adam Machanic. I use sp_whoisactive with below parameters : You can even log the output to a physical table for future analysis. It allows you to capture query plan, blocking, etc as well. 
+
+Its always a best practice to have same hardware configuration on primary and secondary servers - Disk, CPU, RAM, etc. 
+
+The algorithm that SQL Server uses to determine when and how plans should be removed from cache is called the eviction policy. The cost of plan is analyzed to determine which plans gets evicted. Upon detecting memory pressure, zero cost plans are removed from the cache and the cost of all other plans is reduced by half. 
+
+I would suggest to use Ola's backup solution (and Index maintenance solution as well). This is a well applauded solution that is smart enough to work with mirroring (in your case). Maintenance plans are not bad, but when your environment grows, the limited flexibility and functionality that maintenance plans provide wont be sufficient. For e.g Maintenance plans suffer from below drawbacks : 
+
+This is my assumption based on the log entry - If you are using Memory optimized tables, there are Checkpoint File Pair (CFPs). 
+
+You can use Event notification with Service broker as described in Trace Event Groups for Use with Event Notifications. Below is the script that will help you : (and apologies that I misunderstood your crust of the question. For 2012, it is much better with XEvents) Note that the script source is Identifying and Solving Sort Warnings Problems in SQL Server. I have modified it for as per my environment as we need both batch and sql statements that caused it. 
+
+You can use to check using cmdline. Additionally, you can check what got cached earlier in the registry on the client side as to what port it is using to connect to sql server : 
+
+Use Import/Export wizard and instead of exporting the entire table, choose sql to export specific rows and columns. You can write sql like : or if you don't care about specific data then you can use top command to extract any number of rows that you require. Edit : Below are screenshots for Import export Wizard (Launch it from SSMS): 
+
+The take away is to do proper storage planning. Enable Instant file initialization and yes do test your restores ... since a backup is no good unless you can restore it ! 
+
+Your all points are covered in backup myths - by Paul Randal 30-01) backup operations cause blocking No. Backup operations do not take locks on user objects. Backups do cause a really heavy read load on the I/O subsystem so it might look like the workload is being blocked, but it isn't really. It's just being slowed down. There's a special case where a backup that has to pick up bulk-logged extents will take a file lock which could block a checkpoint operation – but DML is never blocked. 
+
+Note : Below solution can be automated using tsql or Powershell as described here You can restore the databases with the MOVE and REPLACE option if the folder paths are different and to overwrite the existing ones:

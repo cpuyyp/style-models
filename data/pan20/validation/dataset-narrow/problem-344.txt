@@ -1,0 +1,85 @@
+This all depends on the size of the table. You're doing a full table scan without a where clause so an index isn't going to help. The use of the rand() function for sorting is going to produce a temp table and this will harm performance. If you have a primary key you could generate a random number in the app and perform a query where a single row is selected and can make use of the clustered index. You're likely to be serving this all from memory if you're using the InnoDB storage engine. 
+
+How large do you expect the data to grow? No harm in keeping older data in the same table. You could plan to use partitioning and implement date range partitions (per year). Using WHERE statements is completely natural in SQL so don't consider this as "messy" at all. 
+
+Get advice from the vendor. If you're using the commercial product you're paying for expert advice from Oracle themselves. 
+
+Mysqldump is single threaded so you’re bound by the speed that 1 core can run at to play all your SQL commands in serialised fashion. There are some config variables that can be changed to reduce the amount of disk flushes needed and permit larger memory buffers for speed. Innodb (if that’s what engine you use) variables (plus others) 
+
+As has been mentioned in an answer previously, Thomas Kejser has referred to TF834 as SQL Servers only "go faster" switch. TF2301 enables optimisations which are beneficial to DW type queries. TF4199 requires reading the linked document, so do. 
+
+Indexes are rebuilt to remove fragmentation. There a thousand and one articles and blog posts on the nature of index fragmentation but @BrentOzar recently posted a particularly concise explanation in Stop Worrying About SQL Server Fragmentation. 
+
+IIRC it may be necessary to disable the features at the card driver level in some circumstances, it certainly won't hurt to do so. 
+
+Cancel your other plans and do this now. Stop trying to optimise the evaluation of 3 billion rows and instead evaluate rollup + 300k rows. From your outline of the situation, anything else is a waste of time and someone's money. A parody definition of insanity is doing the same thing over and over and expecting different results. Reading 3 billion rows that aren't changing fits that definition. Stop. 
+
+What about SSMS + <--insert schema comparison tool-->? This is definitely a step in the right direction and takes away much of the manual effort required to maintain scripts. But (and it's a big but), typically there are manual steps involved. The popular schema comparison tools can be fully automated and integrated in to the build process. However, in my experience the more common practice is for a comparison to be run manually, the resulting scripts eyeballed, checked in to source control, then executed manually to deploy. Not good. Anytime we fallible humans have to get involved in the process of build or deployment we introduce risk and we make the process non-repeatable. If you and your team are among the few that have fully automated schema comparison and deployment, hats off to you! You guys are the most likely to be open to the benefits that VS2010 has to offer as: 
+
+One method to address this issue is to use a logical backup tool, such as mysqldump to backup the database. Refer to your my.cnf (usually under /etc/my.cnf) and then ensure you have the setting 
+
+Slave_SQL_Running_State: Reading event... Suggests that it's working on a large event. If you have MIXED or Row based binary logging and have changed a large amount of data on the master you might end up with a large event or series of large events. Use the mysqlbinlog tool to see what's going on with your relaylog. The master might show a concentration of binary logs over a small period of time (on the filesystem) 
+
+This is an [info] message and displays due to the steps taken by the Debian mysql startup script. It is not an error. 
+
+Review indexing on cours table as you're getting a full table scan there. $URL$ Great indexing tips there ^ 
+
+You should use the MySQL event scheduler to run a a query to update all rows where the age of the row is greater than your threshold and have it execute the update at a suitable interval. 
+
+I'm left wondering why your staging table contains 12 million rows when you mention the daily increment being 1-2k. If you've previously processed the data why not truncate the table before loading the increment for processing. 
+
+Not aware of any built-in method to record bytes over a particular port so if you really need that level of detail, Wireshark is a good bet. If the server is dedicated to SQL Server I'd be reasonably confident that the majority of traffic over the network was related, so the perfmon counter should give you a broad guideline. To be honest it's a mute point in my book. Unless there is a large and nonsensical additional cost for the gig port where your servers are hosted, take it. 
+
+Increase the memory allocation to SQL Server. You said the server is dedicated but have only half the RAM allocated. 32GB server, allocate 28GB. Upgrade the server memory to [size of database] + 4GB. Post the problem queries on dba.se. Engage an expert. 
+
+NB: As of 2014-8-27 BOL has been updated to remove the incorrect statements quoted above. Thankfully this is not the case. If it were so inserts to a table would occur serially and all readers would be blocked from the entire table until the insert transaction completes. That would make SQL Server as efficient a database server as NTFS. Not very. Common sense suggests it cannot be so but as Paul Randall points out, "Do yourself a favour, trust no-one". If you can't trust anyone, including BOL, I guess we'll just have to prove it. Create a database and populate a dummy table with a bunch of rows, noting the DatabaseId returned. 
+
+If you're more of a manual SQL kind of person, see below. The provider string is pulled into a variable for inline commenting purposes only, while still having executable code. Modify as needed: 
+
+I recreated this test using an empty table and did not encounter this error. For confirmation's sake, I would suggest formatting the statement as such: 
+
+We had a nightmare setting something similar up, specifically with the issue of connecting to multiple Informix environments. I had several Informix instances that needed to be linked to a single SQL Server instance for warehousing purposes, and was told by our resident SME that this was impossible; only a single Informix instance could be referenced per server. I would consistently receive the same errors as you, and nothing I was able to dredge up online proved helpful. Ultimately, the solution had several parts, of which you've done the first few: 
+
+As an anecdote that may or may not shed some light on your particular issue, we've had a similar problem to this where an external application would execute a stored procedure and improperly roll back when an error was encountered. This procedure was vendor provided and unable to be modified. Adding to this, was set to the default value of and could not be modified. The application would reach a CommandTimeout event (due to being thrown and the application not handling this appropriately), but the session would remain open. Since is and explicit transaction statements were used in the SP without appropriate error handling, the session would maintain any locks held by the aborted procedure. The session itself would be in a "SLEEPING" status with "AWAITING COMMAND". This was a somewhat insidious issue for us, because the failed session would not be immediately obvious. However, contention would rapidly grow in the way that a vehicle stopping in the middle of a busy intersection will cause a multi-car incident. Unrelated applications attempting to access the locked resources held by the now-orphaned session would simply , entering a status while potentially holding locks of their own, creating a scenario of branching contention and lock escalation. While there are certainly other methods, this was a very busy application database which limited the usefulness of more direct methods which would have been optimal in a more controlled or quieter environment. In order to quickly and easily identify the ROOT session responsible, we cobbled together the following query, which returns the contention "tree" and allowed us to the offending session (once appropriately identified). 
+
+If you can convince the reporting users that they don't really need real-time reports, you can take advantage of the ability to create a snapshot of the mirror database. See Database Mirroring and Database Snapshots on Technet. 
+
+The isolation part of ACID is widely misunderstood. There is a degree to which transactions are isolated from each other, as determined by the transaction isolation level. The other elements of ACID are absolute. 
+
+Kimberly Tripp has some excellent material on indexing strategy that while SQL focused is applicable to other platforms. For the SQL Server folk, there are some handy tools for identifying duplicates like the example above. 
+
+To address your developers concern only (i.e. demonstrate memory isn't the problem), you could start by proving that the query isn't waiting on memory grants and that page life expectancy is at a comfortable figure. Memory grants (from Glen Berry): 
+
+If the index is covering it's likely it will be used in conjuction with a sort operation in the query plan to reverse the order. Edit: Following a little more thought! It will depend on whether this is a trivial query or involves joins. If trivial: 
+
+There are multiple audit logging products available. If you are using Percona or MariaDB flavour of MySQL you have the option of their plugin. If you are using Oracle MySQL you can pay for their enterprise version of audit plugin (as part of Enterprise Edition). There is also an audit plugin from McAfee that will fill this requirement and is generally available cross-alternative and from 5.1+. These products permit you to log both logins and queries. Finally there's a plugin to track logins only from a community contributor. Links to all below. $URL$ $URL$ $URL$ $URL$ 
+
+You can write a simple script externally or use the MySQL event scheduler. Both will work just fine. The benefit of the MySQL event scheduler is that it will be part of your database backups. 
+
+I would advise you to drop mysqldump and move to Percona Xtrabackup. It will give you a filesystem level backup that can be made online. Restoring those backups will be orders of magnitude faster. 
+
+Slave_SQL_Running: No The above indicates that although the replica is connected to the master it is no longer applying SQL statements to the dataset. This is due to the problems exposed in the 'Last_Error' field. You should resolve these issues either by aligning the data or skipping the transaction and syncing the data thereafter. You've likely arrived at this scenario because of data or database object inconsistencies between the nodes. You should explore monitoring the replication health using any of the popular methods for example using Nagios and Percona's Monitoring Plugins for MySQL. There is a broad choice in this space. 
+
+To satisfy the MAX(k1) query in this case requires a clustered index scan of each of the 70 partitions. 
+
+Not possible unfortunately, you'll have to change the view as the table changes. If you didn't need the casts, you could SELECT * but you really shouldn't. Edit: It pains me to suggest it but it is possible you could do this with SQL2008+. You could script up a very nasty DDL trigger, to drop and recreate the view if the table changes. 
+
+Yes but it will be the rollback which actually causes the log to become physically full. As a transaction generates log records, it will also reserve space in the log for any records required required to rollback. With 20MB of log space remaining and a hypothetical transaction that generates 10MB of log records, you would receive the log full error with 10MB still free and the rollback would then consume that 10MB. 
+
+Are they really transferring the mdf file to the DR site? If so, stop, now. If thankfully backups are being taken, or you can persuade them to start taking backups instead of shifting the mdf, split the backup to multiple files. 
+
+The correct must be installed on the database server. Use the SetNet32 application provided with the drivers and set up the Server Information tab appropriately. Additionally, set up a corresponding System DSN entry. The trick with the Linked Server setup is to use the following (items in codeblocks are literal): 
+
+Since you're dealing with a single instance, it should be enough to simply match the values used to create your System DSN. If you need to add additional linked servers for other instances, that can be done following exactly the same format described above without additional DSN entries. I hope that helps. 
+
+is obviously the orphaned session and should be ed. A is a blocked session which is not, itself, blocking other transactions. A is a blocked session which, due to its own locks, is blocking another session--either another in the chain, or a (terminal). 
+
+The use of returning our text as an XML may seem odd, but was deliberate to circumvent truncation, preserve formatting, and bypass the need to explicitly escape characters. 
+
+Let us know if you encounter the same error, and ensure only this statement is ran in your batch. While unlikely the issue here, remember if already contains a value of , the will fail. You can use the option after your table name, which will create the constraint without validating it against the existing data. 
+
+The right direction for this is to use an audit logging plugin. There are some choices out there. Please check out the following post for more information $URL$ My personal preference is the Percona Audit Plugin but you should be using Percona Server (MySQL Alternative) for this. 
+
+You should consider some group ID within this or another relataed table. Marking accounts with the same group ID you can have 1 or more of them as an enhanced account type. Make sense? 
+
+It could be related to indexes. Think about how a constraint could affect inserts. PK is unique by design and you have three columns and with your 3 col PK MySQL needs to check each time a new row is inserted whether that PK is unique. Why can you not simply use the 1st column as your PK? Secondary keys need to be updated when you add new data, ensure that you have expand_fast_index_creation turned on. FK relationships need to be maintained based on their inclusion in the table. What rippling effect does your INSERT have on related tables? On the other hand it might be due to your settings. Check and tune the following: innodb_buffer_pool_size innodb_log_file_size innodb_flush_log_at_trx_commit Some tweaks to these could spin you up a few notches.

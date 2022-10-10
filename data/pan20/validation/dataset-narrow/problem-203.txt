@@ -1,0 +1,39 @@
+Let me also note that your query will arguably be clearer if you use aliases for both instances of , as well as avoid excessive use of backticks: 
+
+and so in the end gets the result of evaluation of , which will simply be a new ranking. Note, however, that actually evaluates on every row but assigned to only when changes to a new value. And it is the fact increases on every row that allows us to get this kind of ranking, with gaps. For comparison, consider this CASE expression: 
+
+(Note the brackets around the disjunction, they are important for the whole condition to work correctly.) 
+
+The column is declared as an IDENTITY column and will be populated automatically as rows are added to . So now after running your INSERT statement, the contents will look like this: 
+
+Knowing a name, you can easily get the matching ID by filtering by the name. For the table, it would look like this: 
+
+Basically, the LEAD function is used to calculate the startdate of the next pr_order. The date is then used in the joining condition. Note that the query uses an open-ended range: the next date, when it is not null, is compared using a strict inequality rather than a non-strict one, because otherwise some rows would be matched twice. 
+
+Granted, this is not as pretty as just , but it is a conventional way of working with data in SQL. Note, though, that if you need to retrieve the contents of this table in a query involving other tables and the row ID is going to depend on some table's column, it will be more natural to join to the corresponding table: 
+
+The immediate issue is that you are appending the formatted date string and to the end of the query string, rather than to the end of the file path as I am assuming is the intention. It seems to me your CONCAT expression should actually go like this: 
+
+to make it clearer (perhaps both for themselves and for future maintainers) that the nested join takes place before the outer-level one, logically, although the syntax is unambiguous enough without them. Nevertheless, many people find it confusing even with brackets, and if you find yourself struggling with it as well, there is another option – right outer join: 
+
+Specific formatting, like e.g. , may be achieved using MySQL too, but normally it is better to use the presentation level for that. 
+
+If, however, you want to return something (like nulls) in both columns instead and would like to avoid repeating the condition, then you could use OUTER APPLY, but you would probably need to rewrite your comma join to use the explicit join syntax, like this: 
+
+This way the query will not contain a reference to – instead, it will have the contents of as its integral part, and the commas will thus be treated as part of the syntax. Each query that you want to use the list in would have to be executed in the above manner. I think you will agree it is not very convenient. There are other considerations to keep in mind as well. When you use a dynamic query and concatenate the contents of a variable into the dynamic query as described, you may be open to SQL injection attacks. Also, with a large number of items in an IN list the performance may degrade. I would suggest that instead of a variable you use a temporary table to store the IDs: 
+
+Unless SoldTickets can decrease as well as increase (can tickets be returned?), in which case, rather than the minimum and maximum, you should probably take the first and last value. But in order to be able to do that, you should have the Date attribute in your table variable as well. Then the calculation could be organised using the analytic functions FIRST_VALUE and LAST_VALUE: 
+
+is acceptable only if that statement is first in the batch. The more universal way of calling stored procedures that would work regardless of where the statement was located would be using the / keyword: 
+
+Of course, if you do not really need to return the balance – only to compare it to 0, then nesting is not needed and you can put the expression directly into the CASE, replacing . 
+
+If you want random rows per , your inner ORDER BY should arrange rows in a way that same rows are grouped together. So, instead of 
+
+My range, therefore, took the form of , i.e. it included four characters: , , , . I also specified that the pattern use a Binary collation, to match the ASCII range exactly. The resulting expression ended up looking like this: 
+
+So, the last query will give you all the members that are renting more than two books at the moment. How to have your trigger prevent any of them from renting another book? By simply adding a condition to the WHERE clause: 
+
+The computed column in the nested SELECT marks the beginning of each island. Additionally, the nested SELECT exposes each row's previous date and the dataset's last date. For rows that are the beginnings of their respective islands, the previous date effectively is the previous island's ending date. That is what the main SELECT uses it as. It picks only the rows matching the condition, and for each returned row it shows the row's own as and the following row's as . As the last row does not have a following row, returns a null for it, for which the COALESCE function substitutes the dataset's last date. You can play with this solution at dbfiddle. When introducing additional columns identifying the islands, you will probably want to introduce a PARTITION BY subclause to each window function's OVER clause. For instance, if you want to detect the islands within groups defined by a , the above query will probably need to look like this: 
+
+Assuming the test numbers suggest the order in which the tests are taken and you want athletes having a Negative test coming after the last Positive test of theirs, you can group your table by and then:

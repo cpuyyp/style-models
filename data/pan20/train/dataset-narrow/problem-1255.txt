@@ -1,0 +1,105 @@
+could just as easily been a foreign key from the provider table. Calculating the best price was done by selecting the rates that match the prefix, grouping them by provider, ordering by longest matching prefix and taking the best price from the first sub-group 
+
+Referencing Async/Await - Best Practices in Asynchronous Programming As already stated in the OP should be avoided as much as possible. The one exception to that rule being for event handlers, which can be the loophole to achieving the desired behavior while still having the ability to catch and handle any thrown exceptions. Create an event 
+
+Also noticed that there is no error handling in case the email confirmation fails. However is a leaky implementation concern from Identity Models. I Got around this by doing something similar to how it was done in the framework. 
+
+Which in itself is rather simple for this example. But for more complex data, can become really complicated really fast. I am very partial to building expressions and delegates to handle generic repeated tasks that lend themselves well to LINQ. This scenario would fall into that category. Building upon the already provided suggestions, which provide some good suggestions, a lambda expression can be built using reflection and naming conventions to simplify the creation of your objects from the CSV file. The following utilities were constructed to satisfy that. Hopefully the code and accompanying documentation speaks for itself. 
+
+Entity Framework is already built following the UOW/Repository pattern and Identity Framework is built on top of it. and by extension Identity Framework is more of an implementation concern/detail that you can encapsulate behind your own abstraction in whatever structure/pattern you want. Instead of focusing on that pattern consider just creating a service to perform the desired functionality and inject that into your dependent classes. 
+
+This simplified the and removed having to repeatedly calculate the value and name. The bitwise operator was added and the original was renamed to avoid confusion : 
+
+will be converted to which takes us right back to what was said in the beginning. BAD!!! Instead refactor that lambda out into its own method that returns a 
+
+... and have whatever is binding/using to the view model (ie the view, another model, a test, etc) load the data after initialization. This allows the testing to be much simpler and to the point For example 
+
+should be refactored into its own service abstraction and implementation and also follow explicit dependency principle by accepting a argument directly 
+
+Consider taking advantage of existing features that could provide an additional layer of validation. mainly Also as mentioned in a comment, no need to be creating the regular expression every time the function is called. 
+
+If anything changes in the core functionality then there is no need to touch the controller as it is performing its Single Responsibility of handling requests. The service can be modified independently of the controller. It can also be reused elsewhere if needed. I am personally not a big fan of using underscore prefixes on variable names, so will notice that I removed them all. As for your concern about additional functionality, they can be isolated to their own service abstraction and added to this controller or its own controller depending on your choice. Splitting functionality into small easy to maintain modules helps separate concerns within the application and allows the code to grow softly 
+
+and register the abstraction with its implementation in the composition root (Startup) with the following extension 
+
+Using the suggestions from the provided answers and comments I settled on the following. implementation was refactored to also include and the base properties were reverted from being abstract which also means that the value object is immutable once created : 
+
+whose implementation will be injected explicitly into the dependent class. Other than that you logic is sound but can also benefit from some defensive coding (null checks on the provided arguments) and separation of concerns. 
+
+I see no apparent reason why having a outside of a block would cause a problem as disposables wrapped by blocks will be disposed once they go out of scope regardless of exception or not. 
+
+You are trying to recreate functionality that is already provided out of the box. Reference Configure an ASP.NET Core App From documentation it supports providers for INI, JSON, and XML. 
+
+The extension method is an initial attempt and there is room for improvement in terms of what the predicate can handler. This should however be enough to get you started. 
+
+Why so lean? The has been abstracted out as classes should depend on abstractions and not be tightly coupled to concretions as the original example implies that dependency injection is already being used. The and exception handling is no longer needed in the controller as that is a cross-cutting concern that can be moved to an 
+
+Initial observation, assuming was static (tight coupling to static dependencies), was to abstract that core functionality out into its own concern and have it explicitly injected via constructor. That was done. However, the extracted helper service implementation was registered like 
+
+should be created once and used for the entire lifecycle of the application. Avoid functions. Instead have them return a . Tasks can be executed simultaneously using . As for scale, group the requests into manageable batches and execute them asynchronously. You can add a cancellation token to time out any requests that take longer than a predefined duration. This would mean that for a batch it will only go as long as the set time out. Each request can be encapsulated in its own function to handle exceptions or response functionality. 
+
+You could avoid that exception entirely by checking the value before trying to return it. And taking action based on what was returned. 
+
+After my initial answer and based on your subsequent comments, I would say that your implementation is OK. As for naming I would keep it simple like 
+
+According to reference source code, internally will try to parse the address given to it. This avoids having to roll your own parser as one already exists out of the box that has been tried, tested and is stable. 
+
+This code is well written. abstracting away the Identity framework is exactly how I have done it in asp.net mvc and asp.net core. The two abstractions shown do not appear to be leaky, which is another plus. in which was edited out could have been refactored to 
+
+I've basically only added the null check on the provided argument. I considered doing null checks on the function and task returned like 
+
+Apart from converting the service configuration to extension methods, There is not much else I would change in the current code. There is repeated code that can be refactored out into their own concerns. 
+
+My initial issue was with allowing for a more flexible factory delegate that would try to convert the provided string values when mapping to non-string properties. 
+
+Controllers should be kept as lean as possible. Consider adding another layer of abstraction specific the controller in order to separate concerns. 
+
+the handler can now be added as a global error handler for API calls. The following extension method is added to simplify adding the handler when configuring the Web API at start up. 
+
+You have the added advantage of having a strongly typed object model to work with that will provide you with usable properties. The following Unit Test demonstrates the desired behavior. 
+
+While it works, for a more SOLID design, classes should depend on abstractions and not concretions. An abstraction exists, so I suggest refactoring the helper to explicitly depend on abstraction 
+
+but figured that would all be caught by your simpler implementation, so decided against it. Though you have not added cancellation as yet the following should be of some help with an optional cancellation token 
+
+As you have already suspected, your code is trying to do too much. Consider separating functionality out into their own distinct concerns. (SRP/SoC -Single Responsibility Principle / Separation of Concerns) Your abstract acts more like a base model and should be refactor to reflect that 
+
+Handling exceptions within the action is a cross-cutting concern that can be extracted and placed into one of the available extensiblity points. This will greatly reduce the repeated exception handling in all controller actions. Reference Global Error Handling in ASP.NET Web API 2 
+
+Common practice with custom middleware when manipulating the response body is to replace original stream with one you can rewind as once you start writing to the original stream everything is sent to the client. You should put the backup body back into the context response so header values like content length can be calculated accurately. A disposed stream was being left in the response. 
+
+Lastly take note of how the functions were broken down into smaller chunks that allowed for cleaner, more easy to read code. 
+
+could be seen as a service locator anti-pattern within the action being called. Assuming the is being injected into the controller then user manager and authentication should be explicitly injected as well. 
+
+Assuming the above code is not itself an abstraction, tightly coupling your code to would make it not unit testable as is outside of IIS. Consider encapsulating that code behind an abstraction. 
+
+Reference ASP.NET Core 1.0 Configuration Deep Dive For XML, you need to add this NuGet package: Microsoft.Extensions.Configuration.Xml and the format that provider uses would look like this for your settings Note: It matches closely to version 1 in your example 
+
+The class is now responsible solely for storing the data to be sent. This would mean that the class definition would now look like 
+
+The internal types were removed and created directly as exposed types. Any business rules related to type combinations can be done when creating the combined types. Combining types now reflected the proper intent 
+
+Since you already knew the headers as used in your loop, then a delegate would reduce the number of loops needed to do the repeated task of creating the POCO. 
+
+Which builds an expression tree that predicates on the provided object type to be used with Linq extension. For example 
+
+While the provided utilities may look like a lot under the hood, it will allow for a more simplified method when refactored 
+
+I would personally recommend using a view model. It would actually make reading the code easier and will also separate concerns as the code grows. 
+
+Even the compilation of the razor template can be extracted out into its own service in order for this code to be more SOLID. I'll leave that choice up to you to implement. Finally, the would now explicitly depend on the in order to be able to send notifications. The derived model can be then passed to the service and the message sent. 
+
+Which actually performed not that much better than the previous suggestion using Zip when run against the same test above. 
+
+Keeping it simple with a basic structure under the assumption that the data is stored in a flat format. 
+
+While possibly overkill, your use of reflection and request for linq got me thinking about building the expression dynamically. I believe that the method on the collection could be delegated out, but using a simple extension method that followed your initial attempt at filtering the properties I came up with 
+
+and this will now allow for the use of with all the machine configurations retrieved from the query. 
+
+The body of the created extension method could have been done on its own, but creating the extension method allowed for a cleaner approach. While I would say it is easier to read IMO, technically you will be enumerating the list more than once, which makes this not as efficient as your one pass through. That then lead me to rethink my approach. After reviewing the source code for Enumerable.Zip and realizing your approach had the right idea I refactored the code to use the enumerator of the collection. 
+
+Any exceptions in the above code should bubble up to be handled by the caller. This allows the method to have a single responsibility by not mixing cross-cutting concerns. 
+
+and a proper would be passed to the mapped property. For now, the simplified method should be able to handle simple type conversions between value types and also nullables. There is room for improvements here as a library like Automapper could come in handy. Using a simple naming convention like removing spaces from CSV header names to compare against target property names, simplifies a one to one mapping of CSV header names to property names. Again this could be improved to use metadata from attributes if so desired as suggested in another answer. for example

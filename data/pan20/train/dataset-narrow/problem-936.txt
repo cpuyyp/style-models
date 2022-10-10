@@ -1,0 +1,77 @@
+That's all you need when you use the recursive approach. If you add code to print out the results as shown: 
+
+You would not have all those extra while loops all over your code. Each message would be a header indicating the number of bytes in the message and the content, or some other protocol. Each one of those steps would be a separate function. So your main loop would be about 10 lines of code (like my pseudo-code), and would be easy to read and understand. 
+
+You appear to be new to Java. For one thing, you are using integers to store ones and zeros to be used as flags. Java has a boolean type to handle that. If you need to store more than true or false, then you can use an Enum to signify the separate "states" you wish to convey. You might consider using separate threads for reading and writing to and from the server. However, your current design does not really need this, since it's a simple back and forth of messages in pre-ordained sequence. More complicated scenarios could be handled by having separate threads, one reading from the user, another sending messages to server, a third reading messages from server. Your while (sTalk == 0) loop should not be a loop. In fact, it is a common pattern in your code for you to put in loops that never actually loop. Most of your "while" loops do not need to be there, none of them will ever repeat the loop. They are really just "if" statements. You use a the scanner class in this case, a more robust solution would use a messaging library like protobuf, or JSON, or http, or use some sort of protocol to organize data being sent into messages. Those three I listed are popular, but the basic idea is that you define what a "message" looks like and you always send data as a "message". That way you would not be making assumptions about what is being sent over the socket (ie you magically know when to expect a string or an int or whatever). A message would have a format, perhaps a header, a length, and you would read each message all together as a unit. You would also not need the magic" character 'a' to have a special meaning. Having a protocol defined allows you to avoid making such assumptions. JSON is a message type that does not even require a header, you might look into that one, it is a very simple protocol and very popular these days. You should probably not catch "Exception", catch "IOException" or whatever is specifically thrown, and you should have try/catch around the different places you do I/O to be able to differentiate the different issues that occur. Overall, I would say that your code is long-winded and not broken up enough into individual pieces. It also makes too many assumptions about the ordering regarding who says what and when. A simple client design would simply be like this: 
+
+Your code is quite inefficient by storing all the sums of pairs into the hashmap. The memory requirements grow exponentially (adding array entry n adds n more pairs, so it grows in a factorial manner). You are better off by holding onto a pair only as long as you need it. This can be done by checking all possible additions to that pair at once and then throwing it away. This is most easily done recursively. You have a set of numbers, and the next number you can either include in your set or not. Repeat this recursively. Generally, for any given set of array values, you hold onto it only as long as you need it, to try combining it with other items from the array. Once you find a solution you save it. Once you've exhausted all possibilities with that set you throw it away. 
+
+If is your slowdown, you're not going to be able to get a huge improvement, but you can get some by parallelizing all the calls to it. Replace your loops with this version: 
+
+You'll still need to code each calculation function, but you don't need to manually attach each calculation to a specific crop or trait. You can just have a database table which tells the code "Crop + Trait = Enum value" 
+
+You could use instead of the in the second case, but I seem to remember reading that it's faster to do as an array than with LINQ. 
+
+is just a call to get as a (instead of an ). And so on... This lets you easily add a lot of logic ("Do I add this set of tags?"), doesn't require a multitude of s, and you can go back and add more things to a tag later. 
+
+As an alternative, since you already have the letters and their counts, sort the string then make the regex . 
+
+By doing it this way, you separate the formula (which is basically just Ingredient/Percentage pairs) from each application of it. You can use the same object to calculate the weights for 10000g of dough or 50000g of dough - simply call with a different value. Notice how many fewer properties you need on each class, and the question of "late setting" of some of them is entirely irrelevant. Effectively, weight is not an intrinsic property of an ingredient, because it varies based on the total weight, so shouldn't be a property of . 
+
+Then you can use LINQ to find matches by recursively building up a query which looks like: (ab)(bc)(ca) 
+
+Here's a pseudo-coded recursive function to build the query, since I'm feeling lazy and don't want to double check all the string functions. I haven't tested it for speed - it might be too slow, but I think it should work. 
+
+Back when using .NET 2.0, I wrote a class which inherited from , and a which inherited from . For legacy reasons we still use it, but I'm pretty sure it could be rewritten in half the code as a few extension methods. Here's a small sample: 
+
+I find this much more readable than trying to do conversions to an Enum, and more straightforward than a decision grid. That being said, it doesn't scale as well as either option. 
+
+Heslacher is correct in that you should split this into two separate methods. That said, sometimes doing that isn't an option, so I want to point out an alternative to passing the "magic values" of and into your function. When you have a function argument that only takes a very limited number of values, you're usually better off replacing it with an . That enforces the limitation when you're writing code, and helps avoid typos and other subtle gotchas. 
+
+You're right that all the casting is a sign that there's better way. Rather than using the value of an as the index to an array, you should use a structure that's designed to store two values in the first place. There's a couple of alternatives here. My first instinct is to use a . That most explicitly matches the concept of what you're trying to do (each has a value ), but it's not actually the best option. You're not going to be looking up the value based on the key, the order of the keys may change which could lead to hard-to-reproduce bugs, and it's less memory-efficient. Instead, I'd use a , , or (in C# 7) . They're all effectively the same thing in this case, and best convey the concept "here is a pair of related values" without implying the A->B relationship of the Dictionary. (Note that you can also use arrays instead of , like I do below). To make handle this, you would need to make it generic, so that you can pass any arbitrary type in and get that same type out. Here's what the code would look like using C# 7's ValueTuples: 
+
+This is guaranteed to be faster than your Trie method; the initial overhead comes from creating a tuple for all entries, which is still less burdensome than your solution having to create O(n) dictionaries; the lookup is guaranteed to be faster too. 
+
+In case this is not fast enough, then instead of a trie, you can store all prefixes in a single dictionary! 
+
+The returned value is tuple ; now just check if the ; if it does, the answer is , if it does not, give -1. Adapting this into a class one gets: 
+
+However, if you need to serve lots of files like this, then you might want to increase the limit of open file descriptors per a process, use a front-side cache such as Varnish and/or scale up into multiple processes, or hosts, or even use a CDN to deliver your files. 
+
+In Python there is an agreed-upon standard on how the code should look: PEP 8 -- Style Guide for Python Code. The standard is to use lowercase names with underscores. For shuffling a list, there is a function in aptly called . Use to interpolate values in string. Do not repeat yourself and just ask the thing once; one can combine these inputs together. Do not needlessly compare against using ; just use the implied boolean value of the expression (and if you need to be explicit then use instead of ). Store the letters in a list for easier modification. Also there is no need to write as a function, if you really want a set operation (that is, the same letter can occur multiple times in the word, even if only once in the original). Thus we get: 
+
+Do it the simple way: make the usernames into a list of tuples . Then sort this list; the usernames are now ordered lexicographically; in your example you'd get 
+
+In total, a process in Unix systems can have a limited number of open filehandles. By default this is only say 1024 per process in Linux; all of the open sockets also consume file descriptors. Even if you optimize the system, then reading the file for each request will be costly. In this case, if you are really concerned about the performance, read the image into memory (as bytes/str), and send it from there instead: 
+
+Write the algorithm as a generator so that it outputs the numbers in monotonically increasing order, as required by the answer. Then you can drop successive same counts by using . returns a generator where successive values are pairs (k, g) where k is the key for the group and g is an iterator for the group. 
+
+However if you have a veery big file, then you could mmap it into memory in the beginning of the process (this consumes just 1 file descriptor) globally and send it from there in each client: 
+
+Actually you should be more troubled by the use of as the dictionary key. Indeed, will catch not only but any exception derived from there. Now if anywhere in the code there will be that is being thrown, both yours and Janne's will just throw a , losing all the traceback. Also some of your defined exceptions might be subclasses of other exceptions, and in that case you would want defined order for codes in those case, thus we get something like: 
+
+This removes the need to worry about casing, lets IntelliSense prompt you for valid values, and throwing an exception on an unexpected value ensures that you catch it during testing the moment it occurs, instead of the subtle "hey, this just keeps failing to validate" of always returning . 
+
+You don't provide any example of how would differ from , so I can't be more specific, but here's the gist of what you should do: 
+
+Another possibility would be to store the words in a dictionary of nested dictionaries. The key would be a letter, and the value is another dictionary of every letter that can follow that. Repeat until you've reached the maximum depth. For the sample case, this would look like 
+
+LINQ has extension methods for any which will help with this. There's , which will return the first elements, and which will skip elements, then return the rest. Of course, these don't actually change the they're operating on - they just return a new one. But that's a safer pattern to use - it means you have the option of keeping the untrimmed version around if you need to. 
+
+I can't say that it's going to be more efficient, or better designed, but one option is to take advantage of polymorphism by creating a set of classes for this. 
+
+I'm not entirely sure how your second example fails to match, because the string contains all of "AU", "A3", and "2.0". That being said, here's an attempt at a cleaner rewrite: 
+
+The first method is an all-purpose "Add"-type method which will either add it or update it depending on whether or not it exists. The second is specifically for dictionaries where the value is a . It'll let you add an element to the , creating the key if neccesary. 
+
+Everyone has had good ideas, but since you're asking about OOP, I'd suggest refactoring it altogether. 
+
+Each grouping of numbers is an instance of a object, and we test if two are equal based on the items in each . 
+
+There are other improvements that can be made here, too, depending on how much you simplified for this question, and how far you want to go. For a few examples: 
+
+Everything in your code should either require the interface or the interface. If the former, it can accept any of the four classes. If the latter, it requires the plus four bit. Since a plus four can always be downgraded to a pure zipcode, this set of inheritance will let you pass a +4 wherever you are looking for a . Also, by always requiring the interface, rather than the concrete type, you can trivially implement the null object pattern you asked about. 
+
+Just to build on what @svick said, this is definitely not a good way to handle things. If you want to catch all exceptions, simply . If you don't want to catch everything, then only catch the specific types you want. There's also the block which you can use to do any cleanup which is necessary, regardless of whether or not you've handled the exception. 
+
+Everything that's the same gets put into . Everything which could vary is defined as an method or property, and then the subclasses implement just those things which make it different.

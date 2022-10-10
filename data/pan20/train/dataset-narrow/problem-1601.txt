@@ -1,0 +1,81 @@
+It means PHP crashed. Visit PHP's bugs page for more information on determining why it crashed, and how to report the bug (if it wasn't already reported and/or fixed). 
+
+You need to enable the options and/or in . Otherwise only the user who mounted the filesystem can use it. Once you've made the change, unmount and remount the filesystem. 
+
+You have one major problem and one minor problem. First, the major problem: You haven't supplied the correct name. 
+
+The EPEL repository is intended for use with Red Hat Enterprise Linux and its clones (e.g. CentOS, Scientific Linux). It is not guaranteed to work with other distributions, even if they use RPM. Since Amazon Linux is not a clone of RHEL, (it was a fork and is significantly different today) and is not guaranteed to be compatible with packages built for RHEL, this is why it is not working. The only thing you can do is to remove the EPEL repository, or switch to a distribution other than Amazon Linux. 
+
+This does not indicate that the reverse DNS for 94.130.34.42 is (or was) mail.com. Rather, it indicates that the SMTP client sent in its (or ) line. (A well-configured mail server would have rejected this connection entirely, but that's on Swisscom, not you...) This line does not indicate any reverse DNS entry. If it did, it would have appeared within the parentheses. For example: 
+
+On a Red Hat based system, there actually is no such package which will pull in everything necessary for a basic LAMP stack. A minute or so with is sufficient to demonstrate this. To install such a stack, you need at minimum: 
+
+If the clock drifts more than 500ppm in either direction, ntpd considers it insane and stops updating it. You will see a single log message when this happens (if you go looking for it). In this case you will need to use an alternate ntp client, such as chrony, which can be configured to continue to work in this scenario. 
+
+What I would do is to have roles for each system service that your application needs, a play and a role for each application/microservice, and group and/or host variables and role variables and defaults which define what to do. I deploy a lot of PHP-based applications, so that looks a lot like this: I'll have a play : 
+
+You seem to be confused as to what version of PHP is installed on your system now, so let's start there. First, you have PHP 5.6.4 installed, from the remi-php56 repository, not PHP 5.4.6. You should have no issues installing from remi-php56, presuming you remembered to enable the remi and remi-php56 repos. Since they appear to be disabled, that is almost certainly the cause of the problem. There's no need to add webtatic here, and the cause of this error is that the webtatic packages conflict with the remi packages. You should remove the webtatic repo, enable the remi and remi-php56 repos, and then install php-soap. (Remi's high quality packages over the years helped him become an official Fedora packager and become employed at Red Hat. I don't know who the webtatic people are, but I have never been impressed by the quality of their packages.) 
+
+You should also reconsider your names. Having "lv" and "vg" in names is redundant and unnecessary. It's always obvious which is which. 
+
+You may want to check the security context that your container's processes run under. To do so, add the option to . For example: 
+
+Aside from preventing any overcommit at all, and preventing the system from using all free memory and swap, this also causes additional memory to be reserved for admin and user processes as specified in and . I can't find a single system I manage, embedded, desktop or server, where this setting is anything other than 0. Finally, about DD-WRT... I'm not happy with them. They went overly commercial some time back and stopped making regular releases and updates. These days I recommend OpenWrt as a platform for building embedded systems. 
+
+You said that is owned by and has permissions . This means that all users can write to the directory, but only root can read. The result is that PHP can create session files, but cannot go back and read them later. This appears to be why your sessions are failing. Fix the ownership and permissions so that can both read and write (). For instance: 
+
+Services such as Amazon EC2's Auto Scaling can accomplish this for you. Once you have your web app set up on EC2, it's pretty easy to get set up; Amazon's docs cover it in depth. Other "cloud" services usually will have similar features. 
+
+After you've set up your partitions and the system creates them, you then come to the package selection screen. Here, you can press Ctrl+Alt+F2 to switch to a virtual console with a root shell. You can then reformat the partition to your liking. Press Ctrl+Alt+F6 to return to the installer when you finish. 
+
+The traffic itself is probably legitimate, though the running every five minutes is probably not. This looks like standard whois traffic; it's being sent on the whois port and it's being sent to official whois servers. However, the fact that it's happening on exact five minute intervals suggests an automated process is running the queries. The registries aren't going to like this much, and they may cut you off if it gets excessive. You may find it useful to capture the traffic contents and inspect them to see what whois records are actually being looked up. This may give you a clue to what might be originating the queries. If the server is running Linux, you may be able to write a systemtap script to find the process originating the queries. (The source ports are irrelevant; that's a choice of the operating system. Go read TCP/IP Illustrated or another good IP reference if you want more details on that non-issue.) 
+
+Don't bother with using any of the "advanced" features of upstart on RHEL6. It only uses upstart as a "replacement" for the original SysVinit, and only uses old-style init scripts. RHEL itself doesn't take advantage of any new upstart features, and RHEL7 does not include upstart. In fact upstart has pretty much been abandoned by everyone at this point except Ubuntu (only because they invented it) and Debian. RHEL7 uses systemd, which many other modern Linux distributions now use, and Debian is in the midst of switching. To future-proof your script, write a "normal" init-script; these are also supported in systemd for backward compatibility, though unlike upstart in RHEL6, systemd's new features actually are used in RHEL7. A number of tutorials are available on the Internet for writing SysVinit scripts; one very good one is provided by the Fedora Project. When you move to RHEL7, you can switch to a systemd unit file if you like. 
+
+If you ran yourself with the (verbose) flag then you would be able to see progress. But since you ran it in the background through a web app, you are stuck. You will just have to wait it out. In the meantime, you might want to spend some time learning how the system really works, rather than relying on the crutch of webmin. 
+
+The first type of firewall you have described is stateless. It is simplistic and does not keep track of connections; it just checks the given rules as fast as it can. This is not generally recommended anymore except in circumstances where firewall performance is a significant bottleneck, as it allows significantly more traffic than is obvious from first glance. Particularly, traffic which isn't associated with a legitimate connection can pass through such a firewall. The second type of firewall is stateful. It is capable of tracking connection states, determining whether a particular packet is associated with a known-good connection, and accepting or rejecting it. It is much better at catching invalid traffic than a stateless firewall. Without some overriding concern, all firewalls should be stateful for maximum possible security. 
+
+The most common cause of this problem is trying to start MySQL when it is already running. To resolve it, kill off any running instances of MySQL and then restart it using your normal startup scripts, e.g. . Don't attempt to start MySQL manually when using distribution-packaged versions unless you are prepared for a world of hurt. 
+
+You can use a proxy designed for MySQL, such as MySQL Proxy or MaxScale, to not only load balance your read queries, but also to ensure that writes are directed to the master. From the point of view of the clients, there is only one MySQL connection, which is useful for clients which can't make separate connections for reads and writes. 
+
+The people suggesting a TAP device were on the right track, but you need something else as well: First, create a veth pair. This is a pair of virtual interfaces, each of which simply passes any traffic it receives to the other. Next, attach one of your two VMs via macvtap to one of the veth interfaces in the pair, and attach the other VM to the other veth interface. Finally, send some traffic. 
+
+Looking for "OK" (or indeed, anything beyond the number) is a logic error in the program. The ABNF grammar makes clear that the Reason-Phrase may be empty: 
+
+It sounds like ntpd has an incorrect idea of the virtual machine's clock drift, and is incorrectly compensating for drift. Stop ntpd, delete the and restart ntpd. If this doesn't fix the issue, consider switching to chrony. This is the default NTP client in EL 7, and is available in EPEL for EL 6. 
+
+Most likely the attacker has set the immutable attribute on the files and directory. This is commonly done by rootkits to make cleanup more difficult. To confirm this, try: 
+
+Volume groups are separate and distinct from each other, and it is not possible to have a single logical volume in more than one volume group. Volume groups are comprised of one or more physical volumes; it is physical volumes that a volume group is a group of. In order to gain more space in one volume group, you will need to either enlarge one of its physical volumes, or add another physical volume to it. In order to reduce space used by one volume group, you will need to either remove a physical volume from it, or shrink one of its physical volumes. Both of these operations must be performed carefully in order to avoid data loss. Given your circumstances, it is probably not possible to do what you want. You might describe your storage setup in more detail, though, and it may be possible to find a solution. 
+
+The CentOS "minimal" disk is customized and may do unexpected things, as it was intended and customized only to install a single set of packages. It should not be used with a kickstart installation; use the netinstall or DVD images instead. 
+
+Well, that confirms a permission problem. Check the permissions of all the parent directories as well. 
+
+Your browser is too smart, and thinks that if you enter a single word into the address bar, that you meant to search, rather than browse to a site. Enter in a complete URL instead, for instance: 
+
+Suppose somebody got your password from you by swiping the Post-it Note from under your keyboard? Or by using a rubber hose. It would be mostly useless if password authentication is disabled. 
+
+You have SELinux enabled, and you moved the files instead of copying them. Therefore they have their original context (probably or something similar) rather than the necessary context for MySQL to use them. To solve the problem, put the files in the correct place in the directory structure (probably and run on the files. 
+
+A better practice would be to use the pwauth plugin, which lets you run jenkins as a non-root user, and only pwauth itself needs to be setuid root to perform the actual authentication. 
+
+Since you have varnish in front of nginx, it thinks all the requests are coming from 127.0.0.1, since technically they are. To resolve this, use the nginx real ip module to pick the client's IP address out of the header, which Varnish automatically adds to requests (unless you told it not to). An example nginx configuration would be: 
+
+OK, here's a completely different answer. Place the offending hosts with crappy IPv6 connectivity in with their corresponding IPv4 address. For example: 
+
+Monthly is not frequent enough. This script should run at least weekly, and preferably daily. Remember that certs don't get renewed unless they are near to expiration, and monthly would cause your existing certs to occasionally be expired already before they get renewed. The name of the program is , which was renamed from . If you are still using , you need to update to the current version. Aside from those issues, it's about the same as my cron jobs. 
+
+To answer your question about the GPU power connectors: Some GPUs only need the power provided by one connector, and will only have one. More high end GPUs will need more power and have two connectors. If two connectors are present, you need to connect both of them, or the GPU will not have enough power to run at its full capacity. As for the cables themselves, they are easy to find. The 8-pin to 6-pin GPU power cable can be had from a variety of web sites. For the other connector, use a Molex to 6-pin adapter. Note that with these adapters, both Molex connectors need to be connected to power in order to provide sufficient power. Sorting out what to with redundant PSUs is left as an exercise for the reader; it will probably involve Y cables and prayer... 
+
+You should not have IP addresses meant for guests assigned to the host. (And you should not be using interface aliases. Those were deprecated many years ago.) Instead, create a bridge, and add enp2s0 to it. Then assign your KVM guests to that bridge and assign their IP addresses in each guest. 
+
+It's not really designed or intended for you to install the pieces separately and "roll your own" as it were. (And, saying FreeBSD isn't a real operating system is not only inaccurate, but insulting.) 
+
+Why don't you just set the application as the user's shell? That means it is the only thing that gets run when they log in, and (barring some sort of access within the application itself) they can't really do anything else. 
+
+You clean up the unprocessed orphan inode list by unmounting and remounting the filesystem. An extended discussion from the linux-ext4 mailing list has more information about what this message is and why it may appear. In short, one of two things has happened: Either you've run into a kernel bug, or much more likely, some filesystem corruption happened one of the previous times you remounted the filesystem readonly. Which is probably why the system thinks something is still using the filesystem when there isn't. If it's been a year and you still haven't rebooted the machine, just give up and schedule a maintenance window. 
+
+You said you used . This tool builds packages in a clean chroot environment, but it also keeps a cache of the minimal environment for use in building the next package. If you don't intend to build any other packages ever again, then you can clean out all of the data that keeps around:

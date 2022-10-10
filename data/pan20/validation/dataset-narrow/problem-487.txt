@@ -1,0 +1,91 @@
+returns 0 if is . But I guess the function could also return 0 as part of a "normal" result (X == 0 for example). Not sure if it's important to distinguish between those two. You could consider returning a and pass the result through a pass-by-ref argument. This would be slightly more consistent with your other functions which basically do the same. 
+
+On my machine which is an i7 with hyperthreading enabled (so going much beyond 8 in parallelism is probably not going to change much) results in this output: 
+
+No, your function does not destroy the entire tree - it just frees the current node and you'll leak all other nodes. You will have to implement a recursive delete similar to all your other functions: 
+
+Technically it's better to write because if you accidentally write instead of then the compiler will throw an error instead of compiling buggy code - I just can't seem to get myself into that habit for some reason. Probably because it reads a bit clunkier that way (imho). It's perfectly legal for a struct to contain a pointer to itself like this: 
+
+Your interface exposes some internals which should not be of any interest to the user, namely , and , . I'd say the user only cares about the fact that he can get the up/download rate and add new data points. So your interface should look like this: 
+
+should actually not be a member of the heap. It's only ever used in and that function is only called from . The way it's used is as a temporary scratch pad and as such should just be a local variable in . 
+
+This should get translated into a single query on the server, independent of the number of company ids present in the system. Whether or not it's going to be better I can't say since it will depend on your database design, the data present, etc. but I'd argue it's a lot easier to read and understand. 
+
+In you start a long running task - you should pass the to to help the framework making better decisions. Also the task runs in a loop without an obvious bailout condition. It would probably a bit cleaner if you pass a to it so you can cancel the task and end it when shutting down 
+
+This make their usage clearer and you can implement the of different objects in the base class yourself and the derived class doesn't need to care about it. If you do the above then I'd add two test cases to make sure the implementation conforms to the requirement and make sure that objects returned from always compare equal and objects from always compare false. This catches programming errors in the unit test implementation for the derived classes. In this test: 
+
+I would not make this class a static class. If you have a few places where you want to use this then make it non-static and give it an interface like which you pass around. This will ease unit testing and remove an implicit dependency on the static helper class. 
+
+I like that one better because I find block always a bit ugly . It also conveys the intend of the code better. 
+
+The class name is misspelled - should be rather than Consider putting your constant definitions as static members into the class like this: 
+
+I concur that is probably not all that useful. should be Your class is called but you don't implement any of the collection interfaces. If you want to make it more useful consider implementing , and possibly . 
+
+The correct way would be to make a local copy of the queue (inside the lock) and return the enumerator to that. The other option is to iterate over the queue inside the lock and yield the items which effectively locks the queue for the entire duration of the enumeration. However this is probably a bad idea since a caller which is not aware of this can easily lock out all access to the queue for a long period of time. 
+
+So your spin lock implementation is considerably more complex and it takes twice the time. What do we learn: Do not optimize things before you have measured them. 
+
+I don't really think there is actually a need for the helper class - I would have added the factory methods to the . I don't like that you use two to track two different values for the same key (one for the timeout and one for the actual value). A better way would be to encapsulate that into a member class which is responsible for tracking the timeout. 
+
+To provide another view on the use of double to represent integer numbers. If you run the following code (ideone link) you will find that around 2^53 double will fail you. The reason is that double is a 64 bit floating point type with 53 bit mantissa which gives you around 16 significant decimal digits. Test code: 
+
+It's been a while since my assembler days but your routine should really use a loop to check the array. Basically it should accept the start address of the array, the number of entries and the number to search for. Right now if the requirement changes to lets say have an array of 10 numbers you are in to do a lot of copy and paste and bound to make mistakes. You have already used a loop for the input so why not for the search as well? Also some of the names like could be a tiny bit more descriptive. 
+
+In addition to Nik's comments: If you are not married to the structure of your XML document and are happy to change it then a simpler method would be to use the Using it your can be de/serialized easily by a few lines of code: 
+
+which turns something like into Then you can perform a binary search for the first bucket instead of having to do a linear scan (so at most 5 steps instead of 26). 
+
+Your code is a prime example of what I would call spaghetti code. It's unmaintainable and if you come back to it in 6 months time you'll have a hard time understanding what all of it is doing. Just from skimming over the code there seems to be a lot of code repetition especially in . Strings in Java are immutable. Which means any operation which modifies a string actually creates a new string. Also you do a lot of parsing and converting back and forth between strings and numbers which won't help with the speed issue. 
+
+Design Reading the code it looks to me as if there are two separate things mixed. Effectively you have two different code paths through your class - one for static method calls and one for instance method calls which do not have much in common. I'd consider to refactor this into separate classes to simplify some of the logic and separate the concerns. Something along these lines: 
+
+Well, it's a large chunk of code so here just a few things which came to mind when skimming over it: 
+
+is a bit of a generic name (although I guess if you put it in a sensible namespace it might be ok). I'd consider renaming it to something like . From looking at the code it is not obvious what units the upload and download speeds are (apart from one comment). Consider abstracting it behind a class from which you can get any sensible transfer speed (e.g. KB/sec, MB/sec, MB/min, ...) or at least put the unit in the property name. 
+
+I'm not doing a lot of Python but one thing leaping out at me is the usage of all these single letter variables which make the code really hard to read. While longer names will make the code a bit longer I think they will improve readability quite a lot: 
+
+The conclusion from these points is that a list with the given properties can be divided into three parts 
+
+in C is usually used for macros and not function parameter names. Rather than making a copy of the passed in character sequence you could use a pointer to iterate over it. This would man you can get rid of the function as you could simply increment the pointer by the required index. Something like this: 
+
+I might be misreading things so correct me if I'm wrong but Ithink your assignment operator can deadlock. A only makes sense when accessed from multiple threads, doesn't it (otherwise what would be the point)? 
+
+This will in theory also move the name selection and distinct filtering to the database which means that probably slightly less data has to be transferred. Adds a bit more work for the database server but that kind of stuff is what they should do well. 
+
+I think I'd go with the first option. The factories are all very light and really only contain so it's unlikely the implementer will forget to overwrite it. Unit tests should catch inadvertent calls of the base class method. I might have assumed totally incorrectly though so please correct me if I'm wrong in my assumptions. 
+
+Instead of a you should use a this will avoid boxing of the value (a operates on which requires boxing for primitive types like ). I'm not sure why you think asynchronous methods would make your code faster. Asynchronous processing is not free and incurs overhead. is so should be wrapped in a block. Not entirely sure why you write the output to a temporary file first and then append to to the output file. You could simply append it to the final output file directly. You are only measuring specific parts of the code. All the output writing and copying around is not free and uses time. In the end from an end-users perspective I don't care if you application can count specific lines in a file in less than a second when it spends much longer copying stuff around. 
+
+Code Review is for reviewing existing code and not to discuss what additional features to add so I'm going to focus on reviewing what is there. This should reduce the amount of existing code somewhat and make it less daunting to add new functionality. 
+
+You are reading all files into memory and then writing it out. While this probably has a fairly good performance as it's first performing a bunch of (probably) sequential reads of all the files and then one big block write you could consider writing it out as you read it: 
+
+The use of a magic number here: - This should be a parameter (maybe with a default value) you can pass in. Your naming convention is a bit weird. Standard naming convention for methods in C# is PascalCase. Also local variables are normally camelCase (your variable is not while other variables like are). In you use a block-wise read to get the response while in you simply read to the end of the response stream - why the difference? The version seems much simpler so why not do it the same way? In fact both those method get a response and read it and deal with the exceptions - this is duplicated code which you should move into a dedicated function which you can then call from both main methods like this: 
+
+Your approach intermingles the iteration of the structure (filesystem) with the actions of what to do for each item (printing). A better way would be to simply use the DirectoryIterator to iterate over the filesystem and print each item. 
+
+Yes, what you are doing is a problem. is not thread-safe and adding items from multiple threads can lead to data corruption (for example individual elements overwriting each other). You said that you don't care about the order of items inserted quickest fix is to use Another option is to the PLINQ extensions and use the extension of the . The code would look like this: 
+
+This way the user doesn't have to care how you implement the stack, just that they need a object to pass around and use. 
+
+You should really think about whether or not this check is something you want to do on every loop iteration. Especially if is a bit larger this gets wasteful. There are probably better ways to organize your data so this check can be avoided but that entirely depends on the actual problem you are trying to solve. 
+
+Similar for and your various event handlers. (I'd also remove the suffix.) should be a . Then you can remove the unit as part of the name and gives the caller more flexibility. If you call in just the right moment again after it has been called before, you can have multiple calls going on. The right moment is that the timer just elapsed from the previous call and started to execute but hasn't set the flag yet. I don't know if you want to protect against it. You will call twice on the timer. This should be harmless but you might add to . This: 
+
+Your naming conventions are inconsistent - you mix PascalCase with alllowercase (don't know if that convention has it's own name). In Java types (like classes and interfaces) are PascalCase and method and variable names are camelCase. Declare variables where they are used and not all at the top of the function. one is not a good name for a variable. The variable name should express the meaning of it. In this case it should be . won't compile due to the first line in the function (there is no type in your source code and nothing actually references a type except that one line of code). It should be removed ( is never used) There is no need to prefix the variable name with the type of the variable it just adds clutter and no real value. So should be as that's what the collection represents (a collection of movies). If you use instead of arrays you get automatic resizing when adding new movies and a whole bunch of nice utility functions like which reduce a lot of code clutter and does not impose the limitation of fixed sized arrays. requires the caller to pass in the index in the array where the movie should be stored. This is bad as it requires the caller to keep information about the structure of the list. It should just add a new movie to the end of a list (see previous point about ). You can reduce nesting by breaking early when hitting the negative condition, for example: 
+
+will guarantee you that will point to which it doesn't. It might work or it might not. Your registers should be an array instead. Your machine state is a set of global variables. I'd actually consider encapsulating this in a like this: 
+
+Now all you need to do is to check if there is a solution for with where is a whole number which ultimately boils down to finding the smallest where 
+
+Can't comment on whether there is a better way or a better place in the framework to do this but some general remarks: 
+
+Not a direct answer to your question and possibly far fetched but here you go: Your code looks like it's parsing a string (presumably a query string) and serializes it into JSON. I would consider extracting the json serialization dependency out of it and pass in an abstract serializer. The line in question would turn into: 
+
+The use of defines for and are a pretty bad abuse of the pre-processor. You just use it as an automated copy-n-paste mechanism and copy-n-paste code is bad. has it's uses but in this case it's the wrong choice. 
+
+This deals with that special condition immediately and doesn't disrupt the logic flow (as opposed to - do something if valid, then handle empty case and then continue with normal case) I don't know which language this is for but you should name you namespaces slightly less generic than - there are many compilers out there and your namespace should be more distinguishable. I'm not convinced that the implementation of is ideal with the and logic. I think it would be better to use temporary variables to update current positions and then discard them for or set them as current positions for . Same as you've done in the method in . In the method of the local variable should be named or . is an action and doesn't describe what the variable is meant to contain. The null coalescing operator () is quite useful in situations like in the . With its help can be shortened to:

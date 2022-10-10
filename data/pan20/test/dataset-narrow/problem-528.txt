@@ -1,0 +1,77 @@
+The second option is the classic use of argparse. argparse is for execution only, but not for import. on import the module provides something with a common name (i dislike but ...) but with a potentially different number of parameters. The first one provides a somewhat generic interface as there is always a function with a single as parameter. This is very flexible if this generic interface is needed. It also provides a way of getting such a parameter with default values via . So it depends on your requirements. In my opinion every design aspect should serve a requirement. And when I say requirement I think of precise requirements not of buzzwords. Ask both parties for the requirements their proposal is based on and discuss the requirements first. 
+
+Do not use 'magic values' in the code but define named constants The most obvious use cases is to change the GPIO pin. The value is appearing 7 times in your source and must be maintained to match. forgetting to change one will lead to subtle errors. So we do 
+
+setting default values in you set a default value which is then overwritten in 2 cases. this is a common and accepted pattern if the default value is a simple value (, , ..) which is overwritten in a somewhat complicated decision tree. however in your case all three branches are of equal rank, so instead of 
+
+you have two code blocks differing by just one value. all the other parts are required(!) to be identical. this is asking for a function definition (I'm not sure if you already learned that). We do something like (still not perfect) 
+
+after removing spacing (17 string constants) and column index offsets (12 times) we also hav to fix column indexing to be 0-based. If you have to present indexing to the user 1-based then do so. but always keep all internal indices 0-based so you can use them directly as list indices. We convert the user input immediately 
+
+saving some lines without any negative implications. Do not repeat yourself This is one of the most important rules to consider. In 
+
+The answers so far do not address the big design issues properly Separate I/O from the internal data model You have a horrible mix between internal data representation and concrete I/O formatting. contains extra grid characters for output, on the other hand there is handling the extra grid lines. This would not make it difficult to do a different output (graphic?) but also causes enormous pain in column indexing. The data representaion shall contain only cell values in a 3x3 matrix (you may stick to character representation). Drawing separators shall be pusehd to . 
+
+there is not only to completely identical big clauses in the if-else but also inside the different cases are identical. the whole function collapses to 
+
+and use this name throughout the code. the same applies to all other constants, especially the time values. About morse code and your implementation the most frequent letters in western languages are 'e', 't', 'n', ... that is why Morse assigned short codes to these letters. you are outputting many 'none' instead of a single pause separating letters. we fix this by not outputting anything on but inserting a single pause. 
+
+Again - do not repeat yourself okay, let's go further down the road. we find two functions and where one is an obvious copy of the other. even prompts for a row . you shall not repeat yourself . While other cases of repeated code were cased by an initially bad choice regarding internal representation, this is a case without an excuse. as the functions are implemented one could safely call for getting a column and vice versa. So we delete without replacement. If we wan to prompt for "Row" or "Column" we make that a parameter. some smaller repeated code we continue into where we replaced the calls to 
+
+naming conventions (and PEP 8) you use different styles of naming (underscore, upper/lower/camel case) 
+
+Reading the csv file While this might have been part of your assignment - csv is a little heavy here. this is implicitely shown in your code as you never use the header names. Another hint is that you have to use fill values of . However you could read such a simple file in python directly. Also we get rid of this superfluous immediately. Nowhere in the code we are expecting a fixed length code, quite contrary we have special handling for it. 
+
+Your assertions are not necessary as you call the functions yourself. if any you cold assert that the input is a valid square 
+
+Note that we also encapsulated all GPIO stuff in this function. there is no neet to initialize GPIOs before outputting. Main guard In python modules may be run directly or they may be imported by some other module e. g. a unit test. So there is a pattern to avoid hassle on import 
+
+Note: whenever you have string literals used more than once define a variable and use that one in all tests and assignments. in case of a typo you are more likely to get an interpreter NameError while misspelled literals may cause really ugly bugs. so e. g. do 
+
+Thas limits visibility of name like or . also it adds testability. we can now call from some testcases without needing interactive user input. Further down on internal data representation When doing debugging you most probably do not want to print more likely you want to print . So why not represent the symbols as shorter characters througout the code? We improve our existing function 
+
+Structure your code Avoid so called spaghetti code, that is many lines of code at the same name space. As already stated about your variable names, have good names and make clear what scope they have. when using functions local variables are not visible outside. this improves readability and avoids name collisions. so we define some functions of already identified code blocks 
+
+I did some other minor changes: - i like to name functions after what they return so the usage reads like a natural language sentence. in python2 you should use instead of if you do not need a real list but just an iterator. what you could do also: make the magic numbers and constants and/or pass them as parameters. if it is about the number of digits you could define them as and pass digits as single parameter. 
+
+your class is not really a class It is not intended to be copied, compared, it does not communicate with other program parts. It even has a blocking loop. It is just a namespace like container. however modules do already fulfill the namespace. you could safely remove all and stuff and run the application like 
+
+first will always be false here. A tied game would not have continued and the current tie status is still to be checked. Also there is something like a token counter already up to date (). Again there is a superflous check when the counter reaches 9. This could be reduced to 
+
+to get an idea what is going on whe you are inserting nodes. Your tree is not persistent as nodes are deleted and recreated with the same value. 
+
+learn to write unit tests python provides built-in unit test support. it is really easy to use and of great use. what you invest in unit testing you get returned in better design, less errors, better maintainability and probably you even save time you use for debugging otherwise. again seriously, you will be a much better programmer when you have done your first little project with unit testing. finally my answer is intended to help you, not to intimidate you. try to understand and get better. if you have questions regarding my points, please feel free to ask. 
+
+there we again see a lot of repeated code the only thing differing is the player. we refactor and pull some code outside the clause 
+
+indices in you use a parameter choice which is one-based. most programming language use zero-based indics (offset from the first element). while on the user interface it is natural to use [1,2,3] as choice you should immediately convert this to a zero-based internal representation. this is what other programmers expect (or even yourself in a year) when maintaining your code. 
+
+We also have to remove all the column indexing offset stuff as grid is now a real representation of our data. Also we have to remove the spacing from the data values like used to test/set values. 
+
+as this is a very lengthy list of more or less important issues i have to say this still is a very good start 
+
+we notice a parameter which has two values. we could replace that with a boolean parameter and avoid checking strings and raising an exception 
+
+again we do not want to collect all palindromes but only the biggest one. we can abort safely when we cannot get a bigger product than the current maximum one. 
+
+However there is good reason to have detecting a tie not depend on some variable intended for different use. it shall be a function (so you could e. g. detect a tie also before the grid is full). 
+
+here we do not only replace longer strings by characters but also join this characters to a string. this string allows better logging. For we get . Wouldn't it be nice to have where the blanks represent the pause between letters? this would make the output loop better as it would not do an additional pause at the end. So somewhere in the code we should do , either just before outputting or in encoding. your choice. for debugging I'd prefer to have it in encoding. 
+
+BTW: your code may raise as well which goes through other than the While we have reduced complexity there still is this ugly in the inner function. I'd say we improve readability by avoiding the inner function and 
+
+In your case the testing of the second variable is quite cheap, it is a division only. however there are many cases where testing in a closed form is not possible (modulo operations, ...) or expensive (sqrt, ...). Then you have to try all combinations. But again you can do this more effective by avoiding to test previously known impossible combinations. you fill the sum completely with one type of elements (X) and depending on whether it is to big or not you continue by removing an X or adding a Y. 
+
+if you assume a very long magazine and a short ransom message you could go for an early break by counting the ransom first, then do a down count with magazine words. magazine could be a generator in that case reading from an arbitrary large file. 
+
+I'm aware that you are a beginner. So I will try to improve your code starting from the most obvious problems and try advance step by step. Variable names Names like are an absolute no-go (unless naming coordinates). This is like naming them . Names should describe what the variable holds as close to natural language as possible. So legal names for would be . Aloso other names are far from perfect. should read . You generate a lot of temporary variables which requires you to invent a lot of names. Try avoid some temporaries and/or name temporaries 'less important' than variables you want to use later on. could read . When reading I do think of 'singing', 'letting' and 'up'. There is no need to save letters in names, if a long name is needed, let it be. But a letter is always a single one, a group of letters shall be named 'word' or 'message' anyway. Temporaries As already said, you tend to use too many of them. one case where it makes the code bloated and thus less readable is 
+
+Since there is no answer yet - what I would try: I would search words rather than characters. make a dictionary of words (bag of words) and count the frequency. your test bag of words should be a subset of the source bag of words mostly. by comparing to other sources you could analyze relevance of words and other measures. The big advantage of words vs. characters is that the comparison resyncs with every whitespace. an insertion/deletion of a character will result in a single changed word. you are now talking in edit distance of words, rather than characters. so translate your strings to arrays of words (whatever representation you use for a word (sequential number, hash, reference, ...). Now slide your test words over the source words and count the number of word matches. for your parameters this will be around 1,000 word over 1,000,000 words, which sounds reasonable. you get an array of match counts with length 1,000,999. it will have the following properties 
+
+EDIT: in your second version you use 0 as return value for a not successful search. you should use None instead as this is what you use in prev and next attributes. this would also simplify your code. 
+
+As there is no answer yet - some observations in no specific order you miss the top level main guard which allows the module to be imported 
+
+here you repeat yourself, the only difference is the key. we may hide that detail, again we get rid of an explicit exception handling 
+
+Indentation is not defined for odd Special case handling for even always prove it is necessary/useful to do extra code. the best implementation (given that it matches the requirements) is the one that is most easy to understand, implement and test. your special looks like a fine shortcut but requires extra testing odd/even. the indentation error would probably not be there when this case had been omitted. however it is needed as you copy all values from the parameter to a set. Parameter name this suggests the imput parameter is a list. however your algorithm could work on every iterable (if you omit the special case) so a name like or would be less suggestive. Copy iterable to set this is a good strategy if the operations beeing performed on the values lateron are expensive and the values are expected to contain many duplicates. if one of these conditions is false - don't do it. as your test is quite cheap (the set containment check is more or less the same as an insert to a set), you could omit all that special case handling and iterate over the parameter once. however if you work on an iterable with duplicates you have to sort out duplicate pairs by using a set as storage for the sorted pairs. also if you avoid the filtering on the input you could adapt to different problem definitions (see problem definition above) easily.

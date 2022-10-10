@@ -1,0 +1,81 @@
+If you cannot afford , or wish to design an alternative where buffer ownership can be external (so as to use fixed-sized buffer), then I advise using a class approach and simply make it compatible with C-Strings for interoperability: 
+
+In the case of /, this may occur only in the destructor of . In this case, the element to be destroyed is no longer visible (the size is reduced before), and in the garbage zone. Interestingly, this means that even if or throw, they have already succeeded. This is an edge case of the Strong Exception Guarantee, the "transaction" is committed but an error is still signaled. You could conceivably swallow the exception here, however I would let it bubble up because the user decided to throw so they must have a good reason for it. 
+
+Note: in C++17, where throws can actually be tested with the trait, which can be used to SFINAE those methods or with a . This is an exercise left to the reader ^^. 
+
+In the case of , you can see the length is only incremented if construction of the object is successful, for example. In the case of , note how it reuses the current class to handle the destruction of already copied/moved elements if an exception is thrown in the loop. 
+
+Unfortunately, the C++ standard library does not allow one to pass an existing buffer to a string (sigh) and is generally pretty lacking in raw buffers (sigh), so you'll have to roll your own. I would do so in two steps: an abstract base class which exposes a way to write bytes in slices and a ready-made implementation based on + size + capacity (not , because it zeroes the memory when resizing...). The second is an issue for extension, and performance. In order to format their own types, users are encouraged to "pre-format" their own types into strings, which will result in needless temporary allocations. There is unfortunately no simple way to solve this issue, it's a fundamental limitation of -based solution. It will be up to the users of the solution to decide whether the cost of temporary allocations is worth bearing, or not, on a per-call-site basis. 
+
+Of course this fails spectacularly, but is easily fixed with some "domain knowledge" (namely that in a leap year February is a day longer): 
+
+The benefit is more information - the array size - for you (and the compiler) in some circumstances. A C style array "decays" (is implicitly converted) to a pointer to its first element in most situations. This conversion loses the information about the array size. I doubt that this has any benefit to you in your particular case, though, because you can use ... range based ... even with plain C arrays, too. This saves you from accidentally wrong indexing and other, often hard to find bugs: 
+
+This is not directly applicable to above example, but ... Hide the initial value ... works nice with this, which should behave as you wanted (minus the default parameters): 
+
+Look at the capitalization. Your (and ) function parameters are completely unused. That's why you constants to be ALL UPCASE normally. Naming Functions are usually named for what they do: "erase" something, "sort" some elements, "activate" some timer, ... (and it's variant) don't follow this style. They name what they return, not what they do in order to be able to return that value. How about ? (measure used as a verb then.) 
+
+Note that you could do similar tricks in the header file for and , but I'd advise against that as the benefit is minor compared to the issues that may arise if the used macros interfere with code including that header. Better keep ones macros behind closed doors ;) No pointers to arrays without a size or end, please 
+
+Just always use . Saves you from potential headaches when you later add a line of code without looking too closely. Consistency Just some small oddities, nothing of real importance: 
+
+For simplicity's sake, I will only demonstrate operations at the head of the list; the tail is symmetric. 
+
+The first step is to ditch the , and specifically the call at the end. Calling on the head of a vector means performing a copy of the full buffer; it can, at best, be optimized to a , but because of the header size (14 bytes) it cannot be vectorized, this really adds insult to injury. In general, for parsing, I recommend using a slice: a lightweight container containing just the length of the content and a pointer to this content... owned by another container (maybe , maybe , ... ). Using a slice also allows abstracting the underlying storage, and that's sweet! So, let's redefine to: 
+
+The use of gives us raw storage of suitable size and alignment: this obviates the need for default constructors of ! The use of allows us to offer the best possible Exception Guarantee with little code. 
+
+Where makes sure that the data is not buffered in the process but fully sent to the Operating System (it does not guarantee that the data is on disk, sent over the network, or anything else). There is very little reason to call in general: 
+
+The design is sound. Despite what naysayers may express, there are a few overwhelming advantages that your solution based on venerable and C-variadics arguments has over and C++ variadics: 
+
+What does do? Finally, a trick question: what do think is and does? is a so called stream manipulator, it is a function whose signature is: 
+
+Moving on to . Good encapsulation is about hiding internal implementation details, and therefore the interface should NOT expose the fact that there are instances under the scenes. Instead, it should allow the user to manipulate values. On top of the previous remarks: 
+
+BAAM! Undefined behavior due to signed integer overflow: After assigning the largest representable power of two, you do another which causes said overflow. lambdas ... Perhaps you don't want the "raw, unhidden" lambda there, but instead have names () for everything. Then, instead of writing structure templates ... how about this: 
+
+is absolutely not ok! If your header needs some other (standard or non standard) header, then include it. Same for the implementation files: include all headers from which you reference something. Including the same header multiple times is not an issue if all headers have include guards. Call functions with their qualified name to avoid ADL surprises 
+
+Separate logic from IO Don't put any or calls inside of "business logic" functions (like when you "calculate" the winner). Separating these two concerns allows for easy adaption to other IO situations (web app, GUI) and makes it (better) possible to test the business logic. TEST Your code should have tests. Look also into TDD (test driven development), where you write your tests before you write any code. 
+
+Note: Untested, it may be necessary to have the token concatenation () in a helper macro. Using it as such: 
+
+First, is not a descriptive name, and it's reused for (though only slightly) different behaviors. But, more "serious", neither of these functions actually does what it says: The first is not creating / making a "remove playlist duplicates" action, and neither is the second creating / making a "playlist path action". They are creating an action that takes (one or two) values from the parser, opens the first as a file, and then runs some given function with the file (and the remaining argument, for the second function). So, they're one the one hand far more general than their names try to tell, and on the other hand IMO they do "too much" by doing two unrelated things: one, feeding values from the parser to a custom function. Two, opening a file. Thus, I'd probably try to make a function that passes all values from the parser on to a custom function, and then either handle the file opening in the custom function(s) (probably not a good idea, DRY) or make a wrapper function that takes care of it. 
+
+It's relatively simple. I'll let you figure out how to unlink a node (when removing it), if done wrong you could leak memory. Also, a final parting remark to get your brain churning, there are two issues with this implementation: 
+
+We are relying on the compiler to inline the necessary bits. This means that the definition of the helper methods should be in the header file, to avoid the overhead of function calls. 
+
+And then, this class can easily implement safe copy! Last note: may not be as costly as you think it is, if you are avoiding it for performance reason, measure first... A rough example (untested!) of a safer alternative to C-String: 
+
+It might be more efficient to start from the highest primes, as it reduces the size of the list to iterate further. I'm not quite sure about it; you can test it using on the iterators to reverse them. 
+
+Do note the consistency in the naming; both times the argument is named instead of being once and once . Consistency may be the hobgobelin of little minds, but it does help readers. 
+
+1. Header Names I recommend using for purely C++ header files, and reserving to C-compatible header files. 2. Header Guards As mentioned, you should rather than . If you really wish to use the error prone header guards; then I recommend following the Boost convention for naming: which helps prevent clashes in header guard names. It's significantly more work, of course... 3. Namespace By defining symbols in the global namespace, you open your code up to conflicts with C libraries, or other uncouth C++ libraries. Instead, decide on a namespace, generally the project name, and wrap any single item you define in this namespace. 4. Use , and pick an underlying type. Any new should really be , which introduces a scope for the enumerators rather than injecting them in the surrounding scope. Since you are no longer polluting the surrounding namespace, you can without fear pull out at namespace level, making it easier for people to name the type. I also encourage you to pick a type. By default the compiler will use , which is... 3 bytes too wide in your case. You can easily use instead, it is large enough. Also, you might as well dispense with pointless abbreviations. This gives: 
+
+What if is read as ? If you have a fixed size buffer, then at least protect against overflow! Also use the instead of a magic number! Tests Add unit tests to ensure functions you wrote (the search function, the substring test, ...) work the way you intended. Use golden files ("golden tests") to ensure your input / output works as expected. Minor flushes the stream Using means: Write a and flush the stream. The later is a potentially costly operation. So when writing text(*) to a stream, use literal for all newlines except the last. (*) Unless you write lots of text and need it to be refreshed on "screen" repeatedly. Think of "following" logging output. 
+
+naming isn't really a suitable name for a function that compares the lengths of two strings. comments 
+
+I cannot provide an answer for this, as I'm not sure myself, but instead I leave a comment on two regarding your code: Don't break encapsulation 
+
+gives you a , then. Calculating a winner Instead of winding yourself up in some s I'd suggest a more data-driven approach: 
+
+This isn't facebook, don't share that much ;) This is just a guess, but I'd assume that you misuse . Think carefully about who owns (for example) a . Who controls its lifetime? If it's the , then you are far better of using . The s are useless That said, putting s inside a (with the default compare) means that its is used by the set to prevent duplicates. But, from above link (emphasis mine): 
+
+Note that we can make this change with confidence of not breaking existing requirements due to the previous tests we wrote. Finally, let's include the known values for a leap year: 
+
+...? DRY All these , etc can be implemented using the corresponding "self-assign" operator. This could be automated with a macro. Just as an example: 
+
+This function will work no matter the endianness of the host, even on the crazy middle-endians ones. Oh, and it optimizes well in general, in case you were wondering: 
+
+That is, the value is bubbling up toward the front until it finds its spot. This is suboptimal in terms of comparisons: the optimal algorithm to find the position to insert is using a binary search rather than a linear search, for O(log N) complexity rather than O(N) one. In terms of number of moves, well, you may have to move all elements, so it could only be improved by a constant factor anyway. Standing on the shoulders of giants, we can improve the code by separating the search and the move, and use pre-existing algorithms to do so: 
+
+Your remove method does not provide the Strong Exception Guarantee, if the assignment of throws you are in trouble. It's also slightly weird that it does not mirror (which does not let one specify the index). I would simplify it: 
+
+Here, the caller will automatically invoke the copy constructor or move constructor of as appropriate, and you then inside move the item (if possible) or copy it (if necessary). It is slightly less efficient if the item is not movable, but this is an edge case not worth suffering for. It is also a good occasion for getting rid of the unnecessary method: just use when you need to, the additional check is not worth worrying about. 
+
+Note: ideally, a variant or would be the most expressive return, in a pinch just mimicks your current interface, and if not including boost matters, just returning an empty on failure should work just fine... also then you lose the distinction between empty and failure. Note: the type-freak in me would like to point out that using a different type for a raw buffer and the validated buffer would not be amiss either; a simple wrapper containing a for a result would help here. It would ensure that business logic supposed to be executed on a validated file cannot accidentally take a raw one instead.

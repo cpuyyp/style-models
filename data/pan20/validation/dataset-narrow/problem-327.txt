@@ -1,0 +1,87 @@
+I'm looking at moving my production systems from to , but in my testing I am finding it very difficult to locate problems in the binary logs. For example. I run a query like: 
+
+After setting it to 0, it will prevent everything in your current session being written to the Binary logs. Setting it back to 1 will resume writing to be binary logs. Everything else continues as per normal. 
+
+Most likely problem: there is an error in the relay log. Usually this is the result of a sudden database shutdown (e.g. server crashed). The fix for this is to simply tell the database to discard the current relay logs, and start again. To do this: 
+
+I am testing out MySQL Delayed Replication. But it's not working. I have a Master DB (5.5) and a Slave DB (5.6) both set up as a normal master/slave setup with statement based replication. On the Slave I then do: 
+
+I checked the Slave databases, and it was on present on there as you'd expect. I have a monitoring system which records (amongst other things) the processlist, and it shows that for that query it was perpetually stuck at . I also checked the to see if it was in there, and it wasn't. My understanding was that a query couldn't be written to the until it was on the master, so can anyone explain what has happenned here? There was a knock on affect in that once out test system tried to connect at 8:38 this morning, the first query also got stuck, and then it refused all connetions. So I was forced to restart the database. At which point it ran crash recovery, and carried on as if nothing had happenned. It is MySQL 5.5.47 and using Statement Based Replication. 
+
+I do something similar on my side, and I use a MySQL Stored Procedure / Cursor. You loop through each line of the table and record the current datetime entry and plant_status into variables, and then move on to the next line. At which point you compare the current datetime and plant_status with the last ones. If it matches a set condition (in your case != ) you add an entry to a temporary table. And then at the end you simply select * from temporary_table_name to show you all the rows where the status changed. You could easily convert this to check the datetime as well (changing the old_datetime variable each time the status changes), and comparing that to the current one to find out if there is a two hour difference). (this probably should be a comment rather than an answer but I don't yet have enough points to comment - sorry) 
+
+Have I missed Something here? I am installing the Percona Audit Log Plugin (MySQL 5.5). I can install it fine using: 
+
+The only way for a 'slave' (e.g DB1) to update the 'master' (DB0) is if the 'slave1' (DB1) is also acting as a master to the 'master' (DB0). (commonly known as Replication) You can check if this is the case by connecting to your 'master' (DB0) database and running The result 'should' be blank, most likely it isn't. Look for the fields: and - this is the database from which it is receiving data. It will probably relate to one of your 'slaves' (DB1). and - if these are both 'Yes' then replication is up and running, and any changes made to the database above will appear on your 'master' The quickest way to stop it is to then issue on your 'master' (DB0). Depending on what version of MySQL you are running there are then some things you can do to erase the settings. $URL$ (I recomend making a note of the settings in before issuing any kind of RESET, just in case) Also you may want to add: to your my.cnf file on your master, which will prevent the database starting replication again if the server is restarted. As @ypercube mentions above, you should avoid writing to a 'slave' database, unless you have specifically configured it as part of a master to master setup. 
+
+1 & 2) You should look at and variables. This prevents the two masters from creating the same Primary Key (assuming you are using Values). 3) Not Natively, for this you would need to look at moving to one of the Galera Cluster variants. As it stands I wouldn't recommend an Active Active environment because you will almost certainly run into problems when the network drops out / replication stops on one or both sides. 
+
+I'm just testing MySQL CLuster 7.3.8. According to the documentation, after adding new Data Nodes I need to ALTER my tables to spread the data to the new Data Nodes. So, I run: 
+
+Bear in mind that there is apx 1000 entries in the first section, and apx 1000 entries in the second section, how do I identify which row was missing? Is there perhaps a better tool than mysqlbinlog to help in these situations? 
+
+But this keeps telling me If I type the filename in manually it works fine. But I have 50 such files, and this will be a frequent process which I need to automate. If I do it works and I get the 'filename'. I tried concatenating it with but that didn't work. I tried creating a stored procedure, but that 'isn't supported'. I tried using a prepared statement, but that 'isn't supported'. Is there a way of doing this, am I missing something? 
+
+Is there a way to do this? as I really need the datetime field in the database, so I don't have to do the every time I run a query. I was also looking to partition the table by date, as there will be a lot of data produced, and so I only want to keep the minimum amount of data, and then drop the oldest partitions once I am done. 
+
+However, there is no sign of in the folder. Trying to run it simply gives me I can see all the applications in there suggesting the installation worked ok. I then tried 
+
+will that fail to execute as is the default, or will it succeed as it is that has been changed? All the examples I can find refer to statements, and are quite clear on what will and wont work. But I can't find any examples that refer to DDL statements using . (n.b. I'm currently using MySQL 5.5 in case that makes a difference - upgrading is not an option any time soon) 
+
+is a global variable that is set at runtime. It determines if binary logging should take place, and (if set) the basename of the binary logs. It cannot be changed without restarting the database. $URL$ is a global OR session variable that can be set after the server is running. It's main use is as a SESSION variable to prevent statements from the current session being written to the binary log. Use as a GLOBAL variable is not recomended. $URL$ 
+
+I'm trying to install a Plugin on my MySQL database, but each time I try I get a Duplicate Entry error: 
+
+I figure I could put it into a MySQL Stored Procedure, and use a cursor to loop through the data and do the comparison. Or I could simply break it up and put each customers data into temporary tables, and run each comparison as a separate query to build another temp table with the result. But if there's a way to do it in a single Query it would be far better. 
+
+But if something happens, and the doesn't run (and the session remains open), that row will, in essence, be locked from any further updates. Hence the reason I presumed the timeout was there? 
+
+I've been looking to experiment with Perconas Audit Plugin, as it sounds like it could be potentially very useful. However it appears that it is a very blunt (ALL or NOTHING) tool. From my perspective, I am simply interested in DDL statements (, , etc). Is there an way to limit what it logs, or is it really just ALL or NOTHING. I fear I already know the answer, as I can't see any mention in the documentation. 
+
+Looking at you config, it seems you are missing in your my.cnf files. You will need to add this in to both masters files and restart them. This tells the slave database to take anything it receives from it's master, and copy from the relay log to the binary log so it can be replicated onwards. e.g. Master 1 Updates a table. It gets written to the binary log on Master1 This is replicated to Master 1's slaves (which are slave 1 and Master2) In order for it to proceed to slave 2, master 2 has to be told to add it to it's binary log. This is what does. 
+
+If you're storing it into the same database you're measuring you could use a MySQL Scheduled Event to run the query at a certain time. an example being: 
+
+They all use the same table. The s are identical queries, and have a couple of joins to little used tables. The is a simple with no joins. THE is a simple . The top one () should have started about 48 hours earlier. The about two minutes before the . I can understand why the would block the , but can't see why the would block the . And if it really had been running that long, it should have blocked previous (we about 250 times a minute on average). So I'm just trying to figure out what had happenned. 
+
+I don't have experience of your exact situation, but could you use: auto_increment_increment=3 auto_increment_offset=1 [then 2 and then 3] on your different masters, so that each one generates a different set of id's. e.g. server 1: 1, 4, 7 server 2: 2, 5, 8 server 3: 3, 6, 9 
+
+I had a similar problem a while back, and etc refused to fix it. In the end I simply took the table structure from a 'good' database and compared it to the 'broken' one. Then made the necessary adjustments. In my case I found that one column had changed slightly. 
+
+If I understand correctly: You have two DB's in a Master <-> Master setup, but one of them has the replicate-do-db rules meaning they are now (potentially) out of sync? At present the DB with the replicate-do-db options is only replicating (processing) statements where the database concerned is in the list (the precise rules vary depending on whether you are using Statement Based or Row Based Replication). $URL$ Unfortunately the option has only just been introduced in MySQL 5.7, prior to that you will need to find the set of entries in the my.cnf file for your database with the statements. You will need to remove / hash (#) these out, and then restart MySQL. After that the DB will replicate all statements that are passed across from the other master. The final thing you will probably want to do is run something like to check the consistency of the two DB's. If needs be you may need to dump/recreate the second DB to make it consistent with the first one. 
+
+I have a Database which is a Slave and a Master. e.g. it replicates data from our main site, and then onwards to a set of slave databases. (this is mainly a test facility so not monitored out of hours). On Sunday morning at 7:55 it started executing an query. This is a standard query that executes thousands of times a day. Its a single query, not part of a transaction. There are no triggers on that table. This table (and all others) are . But, on this occasion it got stuck. When I came in the office today it had been running for 24 hours (apparently). And replication was a day behind. However, when I looked in the Binary logs it showed as ed. 
+
+The main errors I saw were: and - no need to use - no need for I included the line as this caused an error on my side otherwise. I believe this is related to replication, so depending on your set up you may not need it. 
+
+This works OK. However I need to specify a Default value for the field. But it needs to be specified at the time I load the file, and will be different for each file. (for the sake of argument let's use the filename, ) How can I add a default value for this row during the XML Import? I looked at using something like: 
+
+Bearing in mind I'm far from an expert on Linux (and ignoring the discussions around , , etc etc), you could do something along the lines of: 
+
+But from what I can tell, max_binlog_cache_size is and the maximum for a BIGINT is so it should fit, right? But it gets stranger. 
+
+I have this awkward query I'm trying to figure out. Basically it checks a table for matching / non-matching entries (data1, data2). My Table is: 
+
+for all of your tables. Restarting the loading process will simply start from the beginning of the file and carry out the actions accordingly. (I assume that the import has actually died - its not uncommon (in my experience) to lose connection to MySQL during the import due to the time taken, but the process continues in the background. You can use to check this). 
+
+I'm trying to get to grips with Foreign Keys in MySQL (5.6), and can't figure out why the below doesn't work: 
+
+Is it possible for a query to block / queries? I have the following (taken from ) on my slave database: 
+
+But they all result in a Syntax error. I've checked the official documentation, but this isn't helpful. It tells you it's deprecated, but then continues to give examples using the 'old' (ONLINE) style. I've searched high and low,but can't find any examples using the ALGORITHM=INPLACE. Can anyone tell me the correct syntax? It's not an issue really, I just like to know, so I can use the correct syntax now, and avoid having to change things later. 
+
+I checked the permissions are the same as all the other files in that directory. Does anyone know if I need a different version for MySQL 5.5.47, I assumed the Percona versions matched the MySQL versions, or any ideas on it why it wont install? 
+
+This works, but as soon as I alter the Event on Master A, Master B goes back to and I have to repeat this process. So not perfect by any means, as it relies on us remembering to do this for each event, if we them. 
+
+Making changes to binlog-do-db will require a restart I'm afraid. Personally I would remove all the binlog-db-db from the Masters my.cnf, and just use replicate-do-db on the slave to filter what you want to be processed. In this way you can addd more databases to the master in future without needing to restart. 
+
+If you are using replication to 'replicate' data between the different data centers then you can use something like: auto_increment_increment=3 auto_increment_offset=1 #data center 1 auto_increment_offset=2 #data center 2 auto_increment_offset=3 #data center 3 which will then offset the auto increment accordingly. e.g. data center1 - 1, 4, 7 data center2 - 2, 5, 8 data center3 - 3, 6, 9 
+
+I have an application which produces log files. These log files include a field in the format . (there will be apx 60 logs produced at 0.25 GB per day). I need to import these log files into MySQL for analysis. But I have a problem converting the to . example: 
+
+I'm guessing I'm doing something that's prohibited by MySQL, but can't see what. Basically, I have a set of tables that hold lists of things (, , etc.), and I need to create a joining table to hold each of the ID's (e.g. , , ). At present there is no real relationship between the various lists. This table needs to be automatically populated each time I add a new . To get the matching entry, I need to use a statement to match the first letters of the , and get the relevant entry from the other table(s). My plan is to have a set of Procedures (one for each table I need to join): 
+
+I'm trying to find a way of comparing two tables in two databases (master and slave), as I have applied some slightly different settings to one, and need to see what affect it has (if any) on the data etc. Ordinarily I would use which has worked well in the past, but this doesn't seem to have the option for a single table, and is too limited. So I downloaded to my Debian Server (the slave) and am looking at . But the Page on the Percona website is very little help, instead filled with all manner of options, but seemingly no examples. I set up a schema, with one table, and diffent data. So far I have got as far as: 
+
+(n.b. I've never used AWS or RDS so there may be some differences). But as a general rule a MySQL DUMP file is just a series of and statements, that when combined create your database. Ultimately it depends on what options were chosen as to what does and doesn't get included. But I think that by default it includes the option. So if you open the file (which is basically a text file) you should see:

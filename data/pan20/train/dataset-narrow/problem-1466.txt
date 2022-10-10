@@ -1,0 +1,105 @@
+Java's naming convention for variables are in , so I will suggest writing that as . With that said, the fact that Java being an OOP language doesn't mean that everything must be done object-style. For this relatively trivial exercise, all you need is just a random number: 
+
+Step 1 Going on a hunch here, but may I suppose that you have something similar to the following to determine which method to call? 
+
+Here, we use to create our of tokens, each of them to our desired type before collecting them . Both your methods can then be refactored as such: 
+
+Tip: If Java 8 is available for you, you should instead implement . This will be useful if you're dealing with . 
+
+Will provide a fuller review if I can later, but anyways here are some quick starters... See major edit for point 3. 
+
+Instead of dealing with array indices, you then deal with values, which depending on your perspective may look a little better. 
+
+Same advice for . Depending on the pooling manager's implementation, some handle the calling of the method as an indication to recycle the connection within its pool. Even if you are not pooling JDBC connections at this point in time, you shouldn't require a 'magic' method to handle the termination of the connection. The point is, either ways you should be calling directly to also make it explicit when the connection is no longer required. 
+
+Exception handling Avoid catching on a generic as it can cause confusion in the long run. For starters, it adversely affects logic control the moment you encounter any kind of exception - checked or runtime, minor or major. It also potentially hides newer errors when you change your code: maybe you need to be concerned about a new checked exception that you can safely resume processing the remaining results, but because of this broad condition, you'll be left wondering why you sometimes/always end up with an empty . Also, the declaration is for checked exceptions, so you are still able throw runtime exceptions, if it's severe enough. early If you invert your condition check on and to early, you can reduce one level of nesting. Style 
+
+In addition to @TimothyTruckle's answer... Whitespacing Your code has too much vertical whitespaces (i.e. blank lines), and yet I feel can do with more hornizontal whitespace (i.e. spaces between variables and operators) instead. For example, I might format this block as such: 
+
+Here, we are mapping the values into s, and the number of occurrences. Following the same idea, you can call , i.e. to stream on 's entries, to: 
+
+You should sanity check your inputs too, for negative values or being larger than . This is how I might roll: 
+
+Validation and unit testing Thought it might still be helpful to point this out, even though you're hand-waving it away. :) 
+
+This should be declared as a , so that users of simply know that it adheres to a , instead of knowing its underlying implementation. Names You can do with a rename of the method argument , since you aren't checking a prime number, but checking a number to see if it is prime. is incorrectly labelled too, as you are taking the square root of every time. Looping conditions Even in your current code, you can use the standard loop so that you can introduce loop terminal conditions, instead of having to manually within the loop: 
+
+If by 'clunky', you are referring to how you are doing the looping in your method, then you can extract that into its own method too, something like: 
+
+If my understanding of how the pipelining done by the object is correct (wells, this being OS-dependent and what-not), I think the end of is reached when the native process is disconnected. In most scenarios, said process would have completed too, unless we are talking about starting daemon processes. In other words, the timeout check becomes a dummy step when it is reached, and will most likely return , always. Second, since you are already on Java 7 at least, you should be relying on a combination of and implementations to achieve your goal as they arguably have better semantics for performing timeout checks. For example, since all you need is to run one background thread, you can use : 
+
+The Java convention for method names starting with suggests that they should return a value. You may want to consider renaming them as such: 
+
+A suggestion regarding the implementation: the Javadoc API suggests that it can be called only once per call to . Since your implementation of is already quite different, you may want to re-consider whether your implementation can be as simple as calling on the underlying iterator. In your example, is it expected to be removing only one 'C' or all 'C's when is called? 
+
+It's safe to compare s by . Have a method in so that the toggling is done within : callers only need to supply the value. 
+
+Java 8 You can also use a number of methods, starting with , to replace the in-line lambda you are using to sort your : 
+
+lets us easily specify an of random integers with a given size and values range (), and the summation is done by calling . 
+
+Going on a limb here, but do you want to consider using a wrapper class to encapsulate the fact that you have three similar generated classes, and provide a common way of accessing/modifying them? This assumes: 
+
+You can consider using types for your various ingredients, if you are fine with defining the 'universe' of ingredients first. 
+
+First, the slight benefit of doing a is that it does the error handling for you. Second, it removes the need for indices, which depending on the implementation, may be more optimal (see: ). The additional check on is to ensure that we do not compare with values. Here, they will simply be skipped, but you may want to consider a more stringent version that rejects the outright by throwing an at this point. Readability Whether one does a or is just down to one's interpretation (and thus readability). Since the task is to find the maximal element, I will tend to think in terms of 'great-ness', and thus prefer your version that uses the greater-than sign. Alternative (Java 8) As usual, if you happen to be on Java 8, stream-based processing saves the day with less verbosity: 
+
+And the same goes for asking the number to remove from the pile. These can be done to eliminate the need to from the loop. Modeling Using an array is perfectly fine, but you may also want to explore other forms of modeling, such as using an : 
+
+Group by the entries' values now, into a , by mapping the entries' keys into a , Get the 's , and from that entry's value, find any value to return as the result. 
+
+Here, is used as a method reference. HTML output and OS-dependent newlines You can also consider using some sort of a HTML output library so that you do not have to manually specify (for example). You are currently hard-coding your newlines to be , so you may want to create a helper method that writes the OS-dependent newlines for you, after every call to . Other observations As you can see from above, it's recommended that your method takes in the output path as well, instead of assuming . 
+
+Think of as the entry point to your Java class, so handling user inputs is usually done within this method and not in the constructor. This encourages you to either use your class as an "utility class" or a "model class". The former usually implies the class will have a private constructor and some methods to only perform the conversion you require, while the latter usually implies that it will have some internal fields to be set upon its construction, for example. The current approach you have is creating an instance of your class to handle inputs and also do the formatting, which is not recommended. In either ways, it will also cut down on the code duplication you experienced in the first point, since you no longer need a method. 
+
+Instead, it will be more beneficial to give a more descriptive message. Borrowing your original code... 
+
+Use a better class name can imply lots of types checking. You can easily rename it as . :) Consider a for your ? I am a little unsure of this suggestion (I have to do some reading for myself as well), but maybe you can consider a for your ? 
+
+Java 8 When you get the chance to upgrade to Java 8, it's relatively simple to 'upgrade' the method signature to the Java 8 types of , and : 
+
+Isn't that meaningful - is or the sorted one? You may want to specify that. Same goes for and , it's not possible to identify which contains the previous/current iterative element from the or stack. Future considerations If you don't want to restrict to sorting objects, you can generic-fy it as such: 
+
+You should insert a once you have determined is . This terminates the loop immediately since you know can't possibly revert to again for subsequent iterations. You may also want to look into the algorithm used in the Sieve of Eratosthenes, which filters out non-prime numbers from a sequence. Sounds good for your usage. For other Java-related suggestions: 
+
+Part 1 solution is in the method , and part 2 solution is . Any optimizations that I have missed out for my solution to part 2, specifically in ? I feel like I keep having to compute the current layer and the maximum of the current layer every time I call to derive what is the value for the neighbours. How can I make my strategic (ahem) use of the values in the computation easier to understand, or it is fine as it-is? 
+
+If is invalid, return . on our key and values by -enating them and test if -es the predicate . If so, we return the key aka name, else we return as specified by the method's Javadoc. 
+
+Using the method reference to group objects by, with a dash of to combine two streams together, we can combine the processing on both the repository and service results with relative ease: 
+
+Calling mutable operations such as and may throw if the underlying does not return a mutable implementation. As such, in these scenarios, you should be creating your own given the resulting elements, and then do the necessary removal/addition calls on the new instance. and usage Interestingly, it looks like and themselves aren't used in the processing, after kind of using them as 'keys' for grouping. The nested s looks too peculiar, which brings us to the next point... Grouping your objects 
+
+The problem here is that you will simply have a cascading chain of calling on the method call stack, which may result in if it gets too deep. You should consider doing the retrying within itself as such: 
+
+Since your three conditions are mutually exclusive, you can also consider putting them together in one ladder, e.g. 
+
+Since Java 7, you should use on your for safe and efficient handling of the underlying I/O resource: 
+
+You don't need the temporary variable. However, similar to the previous point, you may consider having a temporary variable to store the results of doing the . Do you really want to throw an for existing data? How about simply returning the unmodified? 
+
+This looks like a good use case for a supplementary 'key' class that will allow us to grouping objects with the same account, product and data source. For example: 
+
+Actually, you can also eliminate the flag entirely, and by packaging the method as one that actually returns a usable output instead of assigning variables, you will get something like: 
+
+When it comes to serializing the contents of your instances into a file, you can also consider using one of the many third-party libraries to write it out as JSON, XML, or CSV, so that you don't have to roll your own implementation/format. Other observations 
+
+Java 8 Java 8's stream-based processing can simplify some of your implementation in . For brevity, here's two suggestions to get you started, and they will also let you refactor some of the existing methods to use largely the same code by passing different method arguments. 
+
+The only assumption I made is that the will not return , so I can eliminate the -check when assigning . Once I got to this golfed version three minor improvements become clearer: 
+
+Java 8 or Joda-Time If you are on Java 8, there's the APIs that you can use to model these times into nicer classes to work on. If you are not, you can still rely on Joda-Time for its selection of chronology-related classes. For example, on Java 8, you can have a simple model class like: 
+
+Unit testing Last but not least, I'll suggest doing proper unit testing for your utility method to assert its correctness. :) 
+
+Naming can be renamed as to follow the naming convention. can probably be renamed to better reflect what it actually refer to... is it just ? Types are usually given in the singular form, so looks a bit out-of-place too. What does it contain to represent multiple messages anyways? Interfaces over implementations If possible, it's suggested to change the return type of to the interface, instead of the implementation. This is because callers on this method should not need to know they are using the implementation, just that they have an object adhering to the interface. Java 8 Since your methods are , the 'mapping' between and them can be expressed nicely in Java 8 as method references. Assuming 's type is a simple /: 
+
+Ok, here's a quick shot. Consider starting from the number 3 and increment your loops by 2? Example: 
+
+It's largely fine by me. :) Just one glaring point: your implementation would not return the first line, as will not return . 
+
+Define a 'duration description' (DD) as a start time, an optional separator, and an end time. The separator is required when both times are present. Construct a DD for the AM session. If there are DDs for both AM and PM sessions, insert the newline. Construct a DD for the PM session. Concatenate the DDs for both sessions with the optional newline in between. 
+
+Some of your statements have enclosing but some do not, please standardize and use them throughout. :) 
+
+For starters, using Java s will likely save you a lot of the boilerplate-like template code you have for and . Your constructors seem to be over-engineered too... what you have are just permutations of s, s and objects arguments... I suggest you pick one and stick with that, preferably just and . If your objects are meant to be immutable, I'll suggest saving its representation (used, naturally, in ) as an instance field first. In fact, you should probably go a step further and override the and methods too to simplify/standardize such usage for the class. This will be helpful if you are using them in most, if not all, classes. Unfortunately, your implementation for doesn't seem too good... First, I'm not sure what it's meant by 'fully' capitalizing a . I thought you meant converting a to uppercase. Turns out you are just capitalizing the first letter. So why not call that then?

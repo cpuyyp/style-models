@@ -1,0 +1,99 @@
+It looks like your ACCEPT prompt includes quotation marks. But quotation marks are also used to delimit the prompt string, so if you want to include those characters into the prompt, you need to double them: 
+
+If is already defined to be a reference to , feel free to remove that constraint from each table as no longer necessary. 
+
+Another way would be to insert the input values into an actual table and use that table in the query. Whatever way you represent the input, the next step will be to anti-join the to the input table. There are various ways of implementing an anti-join. One very common method is using NOT EXISTS: 
+
+In this case, and are aggregated before they are joined to . As a result of grouping by , neither derived table has duplicate entries at the time of joining. That prevents the joins from producing mini-Cartesian products – the effect you were experiencing with your original query. 
+
+Effectively this is the same as the previous query: eliminating the repetitive join pattern in the code most likely will not prevent the repetitions in the actual plan. However, the code is arguably clearer to understand this way. 
+
+Here is how the expression works. If the current row's is equal to , the condition evaluates to and the other, , of course, to . In the context of an arithmetical operation (), is implicitly converted to 1 and to 0. So, the expression becomes equivalent to this: 
+
+You can certainly avoid a conditional here, but you also do not need either or conversion to to get the total number of pages if both and are integers (and it seems safe to assume that they are). The following formula will give you the number of pages to accommodate rows given the page size of : 
+
+The result of this query is in minutes, as determined by the first argument of the TIMESTAMPDIFF function. Other than simply changing the argument to return the value in different units, you can also return it as using the SEC_TO_TIME function like this: 
+
+Rewriting these will require more than just and outer join in order to preserve the same output format. First of all, this join 
+
+Missing ORDER BY in GROUP_CONCAT. If you omit an ORDER BY, you are simply saying that you do not care if one time the query returns the string as and the other as and later as . If you want your results to be predictable, always specify an ORDER BY and always use enough criteria to avoid ties. In the above queries the lines were simply very long already and I purposefully omitted the ORDER BYs for presentability's sake. The issue can be easily fixed with an ORDER BY like this: 
+
+The first DELIMITER command tells MySQL to parse the input text until is encountered from that point on. Your CREATE TRIGGER should, therefore, end with the symbol so that MySQL can consume it in its entirety and send the whole statement to the server. Finally, the second DELIMITER command restores the standard delimiter for MySQL to resume normal processing of your commands. There is also a simpler solution, but it works only in cases similar to yours. The trigger body in your case consists of a single statement. That allows you to omit the keywords BEGIN and END from your statement and, as a result, avoid using the DELIMITER command at all: 
+
+Logically, this simpler looking query prescribes the server to first create a cartesian product of the two tables and then filter the result set by the condition in the WHERE clause. If that was indeed how the server would execute the query, it would probably not work very fast. However, it is likely that MySQL can figure out the possibility to push down the conditions in such a simple case, thus effectively changing the logical order of execution, and come up with an efficient execution plan. I invite you to test and compare both solutions. 
+
+then you need to include the apostrophes into the query you are building. Since the apostrophes also delimit the dynamic query itself, you need to escape them inside the string in order for them to be treated as part of the string. A common way to do that is to double the apostrophe – that way each pair of them is treated as a single character: 
+
+Therefore, the lock could be acquired either by Tx 1 or by Tx 2, because one is updating rows and the other is deleting rows. Moreover, as pointed out by ypercubeᵀᴹ in a comment, your update statements are not restricted by a filter, thus each running on the entire table. When run in parallel with a delete, even a filtered one, such an update can naturally be expected to cause collisions acquiring exclusive locks. 
+
+The derived table returns only the departments with a single semester. Basically, it is the original table without the departments having more than one semester. Once you have that data set, it only remains for you to join it to the table to get the final output. One could, of course, further simplify the above query like this: 
+
+This problem can also be solved in a very MySQL-specific way, using a variable. The variable will store a unique CSV list of values found in and . The value of each column will first be tested against the list (if found, a null will be returned, otherwise the value), then added to the list (if absent from it). This is my implementation of the above logic: 
+
+Since each row's values are aggregated twice, you could also try duplicating each row in a manner that would allow you to perform both level's aggregations in one pass. The query below uses LATERAL for that purpose: 
+
+I don't think you question is really about running totals. In this case you could just use an outer join between your "reference table of sequential dates" (called in the query below) and the table, group the result set by and count matching rows: 
+
+That may look like redundant coding, which it probably is, and there are ways to eliminate the redundancy in this case – for instance by using a derived table: 
+
+Additionally, you could make the query return the smallest matching set (i.e. first try to return the first set of exactly three consecutive numbers if it exists, otherwise four, five etc.), like this: 
+
+Note that, in addition to fixing the syntax in general, I have moved the column assignment to the top, so that the result of could be re-used in the expression for . You can keep your order of assignments, of course. Note, however, that in the last assignment 
+
+Both would work equally well and result in all nulls replaced with corresponding values, i.e. from this: 
+
+Of course, if the table is referenced by other tables, you cannot simply remove all data – you will probably need to disable or remove the foreign keys before re-populating the table and enable or recreate them afterwards. (That is an entirely different problem that would need to be addressed separately, in case you need help with it.) 
+
+Get the maximum for a given from each table, combine the results into one row set and then get the maximum from it 
+
+In the derived table you are correctly grouping by but retrieving instead. That is a mistake because when there is no match, it is null. And it is because one value is returned as null that the outer query omits the corresponding empty group. Replacing with fixes the issue. 
+
+If the four digits you need to extract are either exactly at the end of the string or are followed only by spaces, it would probably be easiest to extract them using the function after removing the trailing spaces using the function: 
+
+Alternatively you could be returning just the word and just a single row (using ) in each case, substituting a for a possible null result with IFNULL or COALESCE: 
+
+I am assuming that the ID column is either the PK or otherwise declared as unique in all three tables. Now, if each of these scenarios is equally possible: 
+
+When a date is represented as 8 numerals without any delimiters, SQL Server will always try to interpret it as . That format has deliberately been chosen as locale- or culture-independent (being also one of ISO 8601 standard date formats, as a matter of fact), and there is no way to have the server interpret it as or in any other way. So, either rearrange the date parts of your string to make it : 
+
+Or you could list and alias each table's columns. That would make your statement more verbose but the resulting table's column names would probably be clearer that way: 
+
+This rewrite can have implications for performance, because unlike a derived table, a CTE is materialised in PostgreSQL. Testing should reveal if there is a difference and, if so, which option is better for you. 
+
+I have managed to successfully use variables and sorting to solve your problem. This is my test set-up: 
+
+Those are the result of the server's attempts to execute SQL statements issued by your application. They cannot possibly be caused by problems with Visual Studio or SQL Server Management Studio. SSMS is essentially just another application that, like yours, can connect to the database server. Your being unable to run it cannot possibly affect how SQL queries sent to the server by your application are executed. 
+
+Now use the above as a derived table and join it, using an outer join this time, to , additionally filtering the results on : 
+
+Depending on the current value of , will cancel out either or , leaving the other code to be transformed by the function back to the corresponding character. I am leaving this just for comparison, though. While this option may have a pretence of elegance to it, a solution using a expression would arguably be more readable and thus easier to maintain, and it would definitely be easier to expand to more than two values. 
+
+As you can see, in order to match the third table's ID to that of either of the other two tables when only one of them has a match, you can use the COALESCE function. COALESCE will pick a non-empty (non-null) ID of the two specified, thus making sure that the third ID will be matched with an existing row in either table. The same condition will work correctly if the match is present in both tables. The WHERE condition uses a similar technique for filtering the result set. Since each table's ID in every row of the joined set is supposed to be either the same value or a null, the COALESCE function will necessarily pick one that is not null to compare to the specified argument (101). Thus, only the row that has the matching data from all or any of the three tables will be selected. You could also take a slightly different approach: separately select the row matching the condition from each table, use the results as derived tables and then join them: 
+
+I assumed that in this situation it would be more natural to take the difference between the greatest last value and the least first one. You, however, should know better what rule to apply here, so you'll just change the query accordingly. You can test both solutions at SQL Fiddle: 
+
+and you want the requested data from every table that has a match – then you need to use only full joins. This is one way how you could implement the request: 
+
+When either country or region is not set, the composite foreign key will not be checked because of the NULL(s) – similarly to how a single-column foreign key is not checked if it is null. If both columns are set, however, all three foreign keys will work, preventing the discrepancy in the regions between tUsers and tCountries. 
+
+What you are trying to do can be resolved using two operations: an unpivot followed by a pivot. The table that is most principal to the query you are looking for, , is document-centric. It stores data in this form: 
+
+The only thing that both stood out for me and was something I knew what to suggest about is your use of ORDER BYs without LIMITs in derived tables. You are using them on two occasions, once in the derived table that is inside inside , and again inside . Those ORDER BYs are unnecessary and they are not optimised away, if I am reading the execution plan correctly. Not sure if removing them will have much of an impact but it is something you could start with. There are other places where I think you might be doing something in a suboptimal way, but I have no idea what to suggest as a replacement/rewrite without knowing much (or indeed anything) about what you are trying to do there. And I would rather not ask you for more details because, in the end, the query is too big for this question to be of much help to other people. Please do not make any mistake: this site is about helping people with their problems, but the idea is that each contribution builds towards a knowledge base that can be used on many occasions without asking. Thus questions should, as much as possible, be useful not just to the original poster and whoever took the exercise of answering them but to the wider audience as well. Therefore, I think, instead of asking people entirely unfamiliar with the schema, data or business logic to help you with a wall of code, you should consider a different approach. Try starting with a minimal subset of your query that is both working and fast. From that point on, gradually add other parts – like, one derived table at a time – until the query is no longer efficient enough for you. That way you would be hitting a specific problem, which would let you come up with a specific question to the community. Not only would such a question be easier to analyse and answer, it would also have more chances to be generic enough for other people to find the answers useful for them as well, which would be fulfilling the goal of this site. 
+
+Since the FIRST_VALUE function would return the result for every row of your table, it would return identical values for entries created in the same hour, thus giving you a lot of duplicates. It is to suppress those duplicates that the above query is using DISTINCT. 
+
+A table is much more flexible in that you are not tied to just one syntactic structure. Although you could still use the temporary table in an IN predicate, as in your example: 
+
+I would only like to recommend that you do that for the output only rather than in the CASE expression calculating . Keep the CASE results numeric so that you can use them for sorting, and format them at as high a level as possible (preferably in the client, but if you must do it in SQL, let it be the topmost level). 
+
+causes SQL Server to stop executing the subsequent statements until the end of the script or until is encountered, the latter setting the execution back on. 
+
+If you want random rows per , your inner ORDER BY should arrange rows in a way that same rows are grouped together. So, instead of 
+
+That way the intent might be clearer. But it will probably be even clearer if you add the interval directly to CURTIME: 
+
+It is also possible to avoid having the nearly duplicate code in the CASE's multiple branches and have a single expression instead. This is one way of doing that: 
+
+Or, perhaps, like this, if we wanted to make it look slightly less cumbersome by eliminating repetition of some code: 
+
+means that the table has a 1:1 relationship with the table. Consequently, since is the primary key of , the same column should be unique in too, otherwise the 1:1 relationship would be violated. If the above is correct, the problem in your query is that you are using in as a grouping criterion. You are essentially calculating distinct version counts per and , while you should likely be calculating them per only. So, the simplest fix to your query would probably be to remove from the subquery (specifically, from and ) and the corresponding condition from the main query's :

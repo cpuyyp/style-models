@@ -1,0 +1,33 @@
+This will order all rows with first since the case returns if . All other rows will have a returned by the case. The clause makes the query return all rows that is a "tie" for the last place in the rows returned. Using in combination with will then return all rows that has the same value as the first row in expression used in the order by clause. Note, as Martin Smith pointed out in a comment, it will return all rows if you ask for a town that does not exist in the table. If you don't fear the XML things of databases you could make use of a predicate in the nodes() function. Borrowing the setup from Paul White. 
+
+Well, the answer is that SQL Server query plan optimizer does something bad and that is introducing a spool operator. I don't know why but the good news is that it is not there anymore with the new cardinalty estimator in SQL Server 2014. With no indexes in place the query takes about 7 seconds no matter what cardinality estimator is used. With the index it takes 15 seconds with the old estimator (SQL Server 2012) and about 2 seconds with the new estimator (SQL Server 2014). Note: The findings above are valid with your test data. There can be a whole different story to tell if you change the size, shape or form of the XML. No way to know for sure without testing with the data you actually have in the tables. How the XML indexes work XML indexes in SQL Server are implemented as internal tables. The primary XML index creates the table with the primary key of the base table plus node id column, in total 12 columns. It will have one row per so that table can of course get really big depending on the size of the XML stored. With a primary XML index in place SQL Server can use the primary key of the internal table to locate XML nodes and values for each row in the base table. Secondary XML indexes come in three types. When you create a secondary XML index, there is a non-clustered index created on the internal table and, depending on what type of secondary index you create, it will have different columns and column orders. From CREATE XML INDEX (Transact-SQL): 
+
+The syntax you have is correct from SQL Server 2005 and up. You are using SQL Server 2008 so it should work just fine unless you have compatibility level for your database set to "SQL Server 2000 (80)". Make sure you have compatibility level set to at least "SQL Server 2005 (90)". Right-click on your database - Properties - Options 
+
+Use a numbers table to split your string and a case statement to figure out what the values your characters should have and to rebuild the string. Put the logic in a function so it can be reused for multiple columns. 
+
+So when you create a PATH index, the first column in that index is the path expression and the second column is the value in that node. Actually, the path is stored in a kind of compressed format and reversed. That it is stored reversed is what makes it useful in searches using short path expressions. In your short path case you searched for , and . Since the path is stored reversed in the column, SQL Server can use a range seek with where is the path reversed. When you use a full path, there is no reason to use since the entire path is encoded in the column and the value can also be used in the seek predicate. Your questions: 
+
+Right click on the procedure. Select Modify. Edit the procedure code. List item Press F5 to execute the modification of the procedure. Close the tab. Go to 1. 
+
+That requires rewrite to your main query a bit because the function now returns a table instead of scalar value.. I'm not sure I grasp exactly what your query does but this could be a rewrite you can try. 
+
+What you want to do is to use nodes() Method (xml Data Type) in a cross apply to shred on nodes so you then can use value() Method (xml Data Type) to get the property values you are looking for. You are specifically looking for the nodes that have a node so you should use that in a predicate in the XQuery parameter to the function. 
+
+You obviously need to parameterize what column and value you want to use as well if the table name is a parameter. The dynamically generated query: 
+
+Create a mapping between the old value and the new value in a table value constructor and use stuff to replace the character. 
+
+The plan for the query is not so nice. It does a clustered index scan of with a nested loops join against a seek on the internal table to get the value from the sparse column and finally filters on the value. 
+
+You can use the Table Value Constructor in a cross apply to generate two rows for each row in the source table. 
+
+Here is a SQL Fiddle with some code that moves the posts using a stored procedure where you pass in the of the post to be moved and of the post you want to end up behind. SQL Fiddle MySQL 5.5.30 Schema Setup: 
+
+Because it does not always improve your query and if your data changes so the plan has to be adjusted accordingly you have basically limited the optimizers possibilities. 
+
+It defines a single element with the attributes , and where is restricted to 80 characters. A valid XML document according to that schema would contain only one element as the root node. What you have here is a XML fragment and SQL Server can handle those just fine. Actually, the default behaviour for the XML datatype is that it will allow XML fragments. Create the schema: 
+
+Switch to the message tab and evaluate execution time and required reads. Presumably you have better data in your database to test on. The performance characteristic will change depending on the actual structure of the XML you have to deal with in the real world. A side note is that your queries are not equivalent. The first is easily adapted to longer element names. The second query changes the content of the elements, not just the element names. The third query does not really deal with case insensitive element names, it just enumerate all possible element names that in this case happens to be different in cases only. If you wanted to deal with lets say a 3 letter element name with your third solution you would have 8 (I think) different permutations to deal with. I added a fourth solution, mostly because it is short and pretty, that has the same limitations as your third solution. It is in my measurements slightly faster than using FLWOR. 
+
+Your queries are not equivalent. The first will give you rows where both node names and values match where your second query only check the node values. SQL Fiddle The extra cost for the second query comes from using a table valued function to shred the XML. First query:

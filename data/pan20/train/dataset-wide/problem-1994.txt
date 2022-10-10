@@ -1,0 +1,111 @@
+This is your issue. Increase to 5.5 or 6 GB for sql server since you have 8GB installed RAM. From BOL : 4GB is minimum requirement for all editions except express. 
+
+This MS KB article has details about the error message and you can use PowerShell script to send you email based on specific events. Apart from the windows event log, you can look at Cluster Diagnostic Extended Event Log with a format that resembles - 
+
+@RemusRusanu has best explained the native and character mode for bcp. +1 for that from me. To deal with your situation, you can take either of the 2 different approaches. The first one is to Initialize the subscription from a backup. Refer to How to: Initialize a Transactional Subscriber from a Backup (Replication Transact-SQL Programming). This is self explanatory and BOL has a good write up on this. Kendal Van Dyke blogged about the second approach at Reduce Transactional Replication Synchronization Time By Applying Snapshots Manually which is excellent and is a time and life saver. Its a bit of manual process, but I have dealt with it and its a win-win approach. 
+
+Replication normally works and I have not encountered any issues where I have to create an additional index on the distribution database. (In my company we use replication a lot for doing data movement from one region to another) If you are not having problems with Replication, then avoid creating those indexes. Index creation is not FREE, since SQL Server has to maintain any DDL changes that means you will have to do a proper maintenance for those indexes. There is tuning that you can do. For e.g. if is set to for your Publication then that will cause the transactions to be held in rather than deleting them when distributed. So setting to will help the distribution clean up job do clean up much faster. 
+
+The script even batches your import into 50K rows so that during import, it does not hog the memory. Edit: ON SQL Server side - 
+
+Creating a view with locks the underlying tables and prevents any changes that may change the table schema. To change the base table you need to remove the option from the objects or drop and recreate these objects once the table has been altered. To find out if the view is schema bound use below tsql: 
+
+I would advise to just recreate logshipping from scratch using the wizard. Also, if your database is huge, then compress the backup (depending on what version you are using) and then initialize the secondary from backup. 
+
+No, you should not provide the password for Virtual accounts. The should be left blank. The reason for that is that the Virtual account is auto-managed and can access the n/w in a domain environment. From BOL : 
+
+if you are not on Enterprise edition - as Partitioning - switching in and out is only supported in Enterprise edition, I would suggest you to create and ordered view on the top of table that you are deleting data from. This will incur less I/O and generate minimal T-Log. Founded the link written by SQL CAT team about Fast ordered delete technique of using a view or a CTE. e.g. 
+
+You wont be able to bring the database that is involved in mirroring OFFLINE. It will throw an error message saying that - the database is involved in mirroring and it cannot be offline. In order to bring the database offline, you have to break mirroring. If the principal database server becomes unreachable and you have witness configured to perform automatic failover, then it will initiate a failover. HTH 
+
+Also, Unless you're using Enterprise-only features, you should be able to use detach and attach method from Enterprise to Standard. Refer to answer by Jonathan here. Also, refer to this approach with scripts... BUT WITH EXTREME CAUTION !! ... it uses detach/attach method and if you are using any enterprise features (which wont work in Standard edition) then the attach wont work. Also, refer to Version and Edition Upgrades Matrix. 
+
+Check this KB: Database does not follow simple recovery model behavior in SQL Server 2012 after you set the recovery model of the "model" database to "Simple" 
+
+Below is one variation that will print the statements for you to analyze and then you can run them : 
+
+So, there is no alert mechanism like Mirroring to actually be able to know the oldest unsent transaction. The only way to know is using DMVs. and possibly Extended Events. As a side note, you can use Policy Based Management to monitor your AlwaysON health. Below is the query that I am using to monitor my AlwaysON environment : 
+
+Depending on how much RAM is on your server, below is a good starting point (given you have SSAS ONLY running on the server) : click to enlarge: 
+
+You should not use T-SQL to do filesystem tasks like move files, copy files, etc. Instead use PowerShell. SQL Server has support of PowerShell and you can schedule it using SQL Agent job as well. You should look into or cmdlets of PowerShell. There are plenty of scripts that will help you. 
+
+Another variation that tells you the database size limit based on the version (note that -1 means unlimited) 
+
+Dont use GUI .. instead use TSQL so you have better flexibility. If you have mdf (data) and ldf (log) files then (change paths as per your environment) 
+
+You have to have sql agent log output to a file as below or use T-SQL to find out from jobhistory table: 
+
+Make sure to check max memory as I have encountered that due to memory pressure, the AG redo thread dies leaving AGs not syncing causing all sort of issues. Doing Index rebuilds, should not cause AG failover unless you are running out of worker threads or hitting an unknown bug in sql server. I agree with Brent that doing Index rebuilds daily tells you to look into adjusting fill factor and investigate if it is really necessary to do it ? Ref: Recommendations for Index Maintenance with AlwaysOn Availability Groups 
+
+Script out the database SCHEMA_ONLY and recreate an empty database on the destination server. Use BCP OUT and BULK INSERT to insert data. 
+
+Ask your boss to get you a pluralsight subscription. Additionally, read answers from people like Paul White, Aaron Bertrand, Remus, etc and try to answer questions on this site. Read blogs from sqlskills.com, brentozar.com, mssqltips.com, sqlperformance.com. Also folks from sqlskills and brentozar are giving inperson training in LD. Sqlbits event in UK and the videos on it are extremely helpful and don't forget virtual academy from Microsoft. 
+
+Yes you can just replicate the tables (articles) that you want along with its subset of data. e.g. --> You need to use static row filter as it uses a WHERE clause to select the appropriate data to be published. selecting specific articles (tables) : 
+
+If you regularly have UAT in sync with PROD, best is to use that dataset to restore PROD - unless you are masking PROD data in UAT. 
+
+Automate and Improve Your Database Maintenance Using Ola Hallengren's Free Script will give you a good start. 
+
+As you can see above that there are essentially 3 main phases of restore - data copy, undo and redo phase along with other sub-phases where in it opens and loads the backup set as well. 
+
+Alternatively, you can wrap below in a transaction with TABLE_LOCK so that no one can insert/update/delete while the change is occurring -- 
+
+No, tempdb is recreated when SQL server restarts. If your tempdb is large, Make sure to enable instant file initialization for data files only. The instructions are fine and follow the comment that I put in.(will add it in answer later) 
+
+Complementing to both Max and Kenneth's answers .. I would suggest you to apply SQL Server 2016 CU1 as there is a known bug with property - 
+
+Thats why I use SQL Sentry's FREE Plan Explorer (I invested in Pro version and its worth the money). 
+
+You can use group managed service account - which are new in Windows Server 2012. The only requirement is you need at least one Windows 2012 domain controller, and use 2012 or 2012 R2 member servers. 
+
+These files are always kept in \\unc\folder with a timestamp value for the folder name. The folder name is the publication name. So, everytime a snapshot is generated, a new timestamp value is used for the folder name and then the snapshot files are written to that folder. Also, if you see that your distribution agent is not cleaning up the files, you can delete the older snapshot folders. But I would still troubleshoot - why distribution agent is not cleaning it up !! 
+
+There is no need to delete all the users. What you can do is use sp_help_revlogin to move all the logins that you are interested or your applicaiton/s need to the new server. Once you move your database/s to the new server, you even dont have to sync up the users as the logins that you created from above script will be created with the from the old server. As a side note, below script will help you fix the orphaned users: 
+
+What is the backup and restore method? It is called Piece Meal Restore and unrestored filegroups can be restored at a later time. Is it possible to restore only the lamb filegroup? Yes it is possible to restore only the lamb filegroup. Below will show you - how you can do it. 
+
+You should use powershell for automation and backup restore for a guranteed way of migrating your databases. For powershell, use dbatools --> or for migrating entire server with logins, jobs etc use 
+
+However, if you configure an instance of SQL Server to use dynamic port allocation, and you restart the instance of SQL Server, the registry values are set as follows: 
+
+Secondary replicas get the query store data from PRIMARY ONLY. You cant do force plans,etc on secondary. Since data is written in Async fashion, there will be data loss. 
+
+Microsoft does not support making any changes to the system tables (replication, logshipping) except you are told by CSS. This does not mean that you cannot create those indexes, it just means that if you open a case with Microsoft they wont support unless you remove the indexes that you have created by yourself. Check this connect as won't fix - Add index on [distribution].[dbo].[MSrepl_commands] So my recommendation would be, baseline your server instance. Get data for a longer duration and if you are facing problems then address them by creating appropriate indexes. Test, test and test all your changes first and always be on the supported side when you work on a vendor software. You can file a connect item and if Microsoft addresses it, then it will be included as hotfix or in future versions. 
+
+For your replication to work, the and should be on same version. The subscriber can be on lower version. From BOL : 
+
+You can use Dynamic sql to set it for all tables described here. If the db is large, then I would suggest you to script out schema and create the shell / skeleton DB and then use bcp out and bulk insert data into it. You can automate this using powershell or sql agent job. ALternatively, you can just kick off a copy_only backup and use copy-dbadatabase (part of dbatools - powershell based) to backup and restore the db from source to destination. 
+
+Read Step by Step Guide to Setup a Dedicated SQL Database Mirroring(DBM on dedicated Nic card) It shows you how to configure Mirroring on Dedicated NIC card. Network configuration plays an important role in the performance and safety provided by database mirroring. Also, worth reading Database Mirroring Best Practices and Performance Considerations whitepaper. 
+
+I would suggest you to create a server side trace or enable SQL Audit to track down activity from users that you dont trust. Remember that DMV data gets reset if the DMV is cleared out, sql server is restarted, etc. The closest you can get is using below query: 
+
+I have written a sort of similar answer Which is better: one database per application, or just one database? 
+
+Since you dont need replication, you can delete the associated jobs as well on the distribution server. 
+
+I would suggest you to suspend data movement prior to the move (and resume it once the secondary server is up). This will have a side-effect of primary database accumulating the unsent transaction log records in the send queue. This means that for your maintenance time, transaction log on primary database cannot be truncated. Remember that primary database is exposed - if it goes down, there will be data loss. Make sure you have a good tested full backup + T-log backups. 
+
+What you can do is to have below script stored on your server or make it as a stored procedure : use below with sqlcmd 
+
+Unused Index information is not exposed in sql 2000 as SQL 2000 and lower versions did not have DMV's. The only possible way (in sql 2000) is to use a server side trace to see what tables and indexes are used by your queries for the entire business cycle or workload period. You should plan for an upgrade to higher versions like 2008R2 or 2012 as SQL Server 2000 is now officially unsupported. 
+
+Using SSMS : To do so, open SQL Server Management Studio (SSMS) > Right click Server in Object Explorer > Properties > Advanced > Check the ‘Default Language’ property and make sure it is set to the one you want. 
+
+From SQL Server 2014, there are good amount of enhancements for native backups. Note: There is only a slight difference in compression between Redgate and SQL Server backup taken with COMPRESSION. For larger database backups, you can play with and and enable Instant file initialization. 
+
+Yes, only if there is NO gap in the Log Sequence Numbers of the log backups. Below will explain you in more detail. 
+
+Have a look at Importing Data Into SQLServer on Amazon RDS. Also, from codeplex SQL Database Migration Wizard with a reference video as well. 
+
+To simplify a bit further, you can use roles to do the job that you are looking for. Once you assign permissions to the role, you can just add users to the role. This way you dont have to manage permissions for individual users. The users inherit permissions granted to role. Below is an example to get you started : 
+
+dbcc dbinfo --> dbi_dbbackupLSN is still having value of 0:0:0(0x00000000:00000000:0000). This means the database is still in pseudo-simple recovery mode. What you need to do to resolve the above error ? You need to take a full backup + one transaction log backup on primary and then restore it on secondary database and then join the database in AG group or Mirroring. As a side note and for completeness, for your script telling , read this blog post by Gail Shaw. 
+
+The answers above suggest to use query hint or switch. Since you know a specific query that you are running and you dont want to cache the plan (we will come to missing index DMV detail later), you can use 
+
+Also, you should understand that there is a cost to reinventing the wheel, why not use existing - well tested worldwide Solution Ola's - SQL Server Index and Statistics Maintenance Your script has a major drawback, since it will rebuild all the indexes - irrespective of their fragmentation level, page count, etc. This will lead to a huge transaction log that can impact your mirroring (Disaster recovery). The above solution is much more mature as it is customizable - e.g. rebuilds indexes which have more than 30% fragmentation, between 10% and 30% does a index reorganize and less than 10% - does nothing. There are many more benefits of using Ola's solution that you can read on the link above. 
+
+I agree with Martin on running to make sure that you do not have corruption. Relying on does not tell you the full truth if was ran clean on the database. For VLDB, people just run . This will update the along with . From SQLSkill's blog - Note that will :

@@ -1,0 +1,77 @@
+No , Etcher alone cannot accomplish this. The following will , though (listed in ascending order of complexity/flexibility) : 
+
+The Raspberry Pi foundation uses a set of bash scripts automating QEMU to generate their images. You should still look into the "industry standards" buildroot and Yocto too. $URL$ $URL$ 
+
+The moment you add an HDMI input device to a Raspberry Pi the complete setup becomes very expensive. Using off-the-shelf HDMI-over-IP devices is a better solution. 
+
+Generally you can only connect official camera modules to any Raspberry Pi. No other modules will work. This is both due to the fact that the camera is under direct control of the GPU firmware which only supports two different camera boards and that the camera port is configured for the Camera Serial Interface (CSI). If you know the MIPI CSI-2 standard (legally available to paying members only) by heart and are an advanced C hacker, there might be an option of reading data of other CSI sensors. This approach means that you must run all mandatory image processing algorithms on the CPU which will likely impact performance, before you even get something resembling raw RGB or YUV data (not JPEG, not PNG and not h.264 either). 
+
+If you did NOT use NOOBS , the boot partition is the only partition that MacOS can access and display. It will be automatically visible. Just create an empty file named "ssh" there and SSH will be enabled on the next boot of a Pi from this card. By the way , there are 2 types of partitions : Primary and extended. 30 years ago , you could only have 4 primary partitions. Somebody invented extended partitions , which are implemented as special primary partition record. That is why extended partitions start at 5 on unixoid systems. 
+
+Try to hide boring startup times with a "splashcreen" like plymouth. Electron can only be started quite late in the boot process since it depends on X , you can only mask the delay. Another method to consider might to display a screenshot of your app until everything is loaded and then killing plymouth , revealing Electron. 
+
+Please don't forget that overclocking is a gamble , your Pi might not be overclockable , crash and corrupt SD cards. Active cooling is highly advisable while overclocking the Pi3 : 
+
+You need a program which copies the hardware-accelerated preview from the HDMI/Composite output to a Linux Framebuffer. $URL$ would be a good choice. 
+
+Windows 10 Desktop does only run on ARM devices where the manufacturer has a close cooperation with Microsoft and is willing to invest resources into porting and customizing. Raspberry Pi has neither cooperation nor resources for that. They are heavily invested and interested in Raspbian and the Linux kernel only. Please have a look at the partly open-sourced Raspberry Pi BSP of IoT Core to get an idea what Microsoft is willing and able to do without explicit cooperation from OEMs. 
+
+Did you consider 2D Game engines/libraries ? Because OpenGL/OpenVG are low-level the added "belt and suspenders" of those libs will make your life much easier - especially considering input handling , too : $URL$ $URL$ On the Raspberry Pi technologies incorporating hardware accelleration are preferable (look for OpenGL ES support !) - software rendering might give results which are unbearable. 
+
+If your OS doesn't support flattened device trees, you must add the support from scratch. DTB files are specific to a board and describe the CPU, memory map, on-board peripherals and in the case of the Pi things connected via GPIO too. DTB files are compiled from DTS files via dtc, the device tree compiler. The dtc project also maintains libfdt , which can parse DTB files. The most experience on ATAG parsing on the Pi is probably concentrated in the bare metal forum on raspberrypi.org , along with people versed in OS development for the Raspberry Pi. Most documentation on device tree will be for Linux. 
+
+Recent versions of QEMU aim to directly emulate the Raspberry Pi 1 , 2 and even 3 instead of "Versatile PB". You should especially keep an eye on QEMUs "user mode" emulation feature which sadly only works on Linux. You can directly modify SD card images "from the inside" (apt-get etc.) this way ! To get an idea of the power of this approach in combination with chroot-ing read this blogpost : $URL$ 
+
+Isn't the Eclipse RCP written in and for Java ? The big selling point of Java was the "compile once , run anywhere" paradigm which should hold true as long your targets have a JVM available. Raspbian supports several JVMs , the official Oracle JVM is even shipped by default. TL,DR : You don't recompile Java apps and Raspbian supports Java apps already - your app should work as-is. 
+
+I suggest to take a look into WiFiBroadcast instead. It uses COTS Wifi dongles , uses error correction and has many advantages if you only need to send : $URL$ 
+
+I suggest using Minimal Kiosk Browser ("kweb" and "kweb3") . It has extra helper scripts to play youtube in 1080@30 fps , which sets it apart from all browsers which use gstreamer on the Pi Zero or on RPi1 models. It also includes a GUI for omxplayer , which is very useful. It is a bit unorthodox and highly customizable , so don't forget to read the manual ! 
+
+Use the following guide to set up a streaming server: $URL$ Create an account on no-ip.com and install their client software: $URL$ Memorise your No-IP domainname and the IceCast port number Open the IceCast port (normally 8000) on your Router ("port forwarding") Setup MPD on the client Pi : $URL$ Use any smartphone or commandline client to add your No-IP address to the MPD playlist You are now streaming music or audio over the internet ! 
+
+This powers on explicitly with "DMT mode 35" which is 60 HZ at 1280x1024 pixels. There is also if you've want to turn the output off completely. For more information try both and looking here for a tabular listing of modes. 
+
+Don't forget that foundation images also include closed-source software (esp. the mandatory bootloader , Oracles JVM etc.) ! 
+
+The data USB port on the Raspberry Pi Zero can only act in USB host or USB device mode. It cannot be reconfigured to provide I2C or PWM signals at all. In USB Host mode, you can use most USB Soundcards. How that soundcard works internally is completely irrelevant as long the drivers are included in Raspbian. Your best bet if the soundcard driver is already inside the official Linux kernel from kernel.org too. 
+
+You can now use dd to only backup the parts of the SD card that matter. Any sensible compression program will automatically detect free space and collapse it efficiently. 
+
+SSH has been designed for Shells , for arbitary serial data use Ser2Net instead ! Here is a tutorial on how to use Ser2net to replace serial cables with an IP network : $URL$ Note: The Python program controlling the serial port has to run on your Linux desktop now ! 
+
+A third party has already done a lot of work related to Android on the Raspberry Pi 3 here. Since the official forums dicourage discussion about Android , most communication happens through Google Groups : $URL$ 
+
+The SD card copier was designed for running Raspbian systems. In fact, it couldn't work otherwise since it copies files from the ext4 rootfs instead of raw sectors. Linux does not lock files against multiple concurrent reads by default, so this is not a problem. 
+
+You might need to buy a MPEG-2 license since the Zero is too weak to software decode such videos. Interestingly software decoding with unlicensed software is legal in France , for example. 
+
+Enable the experimental 3D driver via raspi-config , it will improve performance. Note that this driver does not support video acceleration yet (which was added to Chromium for Raspbian in 2017). 
+
+The Raspberry Pi foundation has been endorsing GPGPU on the Pi since 2014 , shortly after Broadcom released documentation for the QPU units inside the GPU. An experimental OpenCL compiler was created by Simon J. Hall (the winner of the tightly related 2014 10,000 $ competition to make Quake run acceptably without using the GPU BLOB) : see here. 
+
+Only the Raspberry Pi 3 can boot from USB pendrives and harddisks. This is not always faster , but might be more stable since consumer harddisks are not worn down as much by many small random writes as consumer SD cards. You need to insert an SD card once to enable USB Boot ! Check the official USB Boot instructions here. 
+
+If you use Etcher you don't need to do anything. Just use Etcher to burn the image file (.img) to the SD card. The old partition table and formatting will be completely overwritten and the SD card can be directly plugged into the Pi , where you can complete the setup on the first boot. $URL$ 
+
+Did you try info-beamer ? On a Pi Zero , dedicated digital signage software will be necessary to achieve fluid transitions. Regular browsers will not cut it. 
+
+You can run qemu-system (without KVM !) inside Virtualbox - this works fine across architectures. The real problem is that the board emulation "Versatile" can not run "Raspbery Pi" operating systems properly. Build QEMU from source , it supports the "Raspberry Pi" board. 
+
+Why don't you use 3G dongles ? If Linux drivers exist for your device , it will be faster (no serial protocol overhead) and much easier since the full TCP/IP stack "just works". 
+
+QEMU is 50% slower than even the oldest Raspberry Pis from 2012. Suffice to say , if your code works fluently inside QEMU , it should perform better on a real Pi. 
+
+A simple program in any programming language could solve this. Python , C , C++ , Java , C# and Fortran run all on the Pi. Please note that you don't "read WiFi data" but operate on a abstract level : TCP/IP ("sockets") or even more abstract : HTTP. You will need programming knowledge. It is essential , the language itself is not that important ( i suggest Python , use anything you're competent with). 
+
+Please note that raspbian.org and raspberrypi.org are different entities. The image files available on raspberrypi.org are only legal to use with official Raspberry Pi. You can use everything from raspbian.org and the Linux kernel which everybody must distribute under GPLv2 to create your "pure" variant of Raspbian, as many companies do. Secondly it is very difficult to get hold of the Raspberry Pi SoCs. For this reason the compute module was invented. This also circumvents some software licensing issues (mentioned above), especially regarding essential Raspberry Pi firmware files. For very serious projects, consider the element14 Customization Service. Minimum Order seems to be 5000 units (175 000 $?) but it seems very flexible and has endorsment of the Raspberry Pi founders. 
+
+You need a so-called FXS adaptor. You also need PBX software to go with it. Cheap USB FXS adaptors can be had online for 50-60 $. There are several dedicated Raspberry Pi PBX distributions available , the most popular being the aptly named RaspPBX which is based on the open-source Asterisk system. 
+
+Raspbian images do resize themselves after boot , so that the second partition including filesystem take up all space on the card. You would need a GParted live CD and an SD card reader to reverse that. Don't forget that Windows refuses to autodetect multiple partitions on removable drives and does not support Raspbian Linux' ext4 format at all. 
+
+Raspbian releases downloaded from the foundation website have an unique file special to foundation-released builds. Check it : 
+
+This sounds like an perfect application for MQTT. You can connect all your devices to a cloud broker , and the devices can publish and subcribe to message feeds. This is different from one-to-one client-server relationships and more powerful. $URL$ If you wish , you can install a private broker on your own Pi inside your home network instead. 
+
+You need to use an USB framegrabber. Note that not all models work well on the Pi , especially "Easycap" has problems since they contain wildly different chipsets. Even the vendors do not know which chipsets they sell.

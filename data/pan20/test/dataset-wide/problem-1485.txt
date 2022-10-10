@@ -1,0 +1,61 @@
+I know this is a little bit late but I figured that code reviews never go out of style. Below I have rewritten this class to be slightly more idomatic Java - here are some of the highlights: 
+
+As a side note, in Java you are not guaranteed the order of the array that is produced to by toArray so the so the 0 index may be different each time you run this. There are ordered sets in Java like TreeSet which can give you better predictability here. Overall this was a nice simple class and I liked it, your methods are nice and short, and so this class is fairly testable. You may consider whether or not it is worth passing the possible values into the constructor so as to avoid hardcoding them if you decide to change the range. Also, in the inform_groups method you are passing two pieces of state to the group, including the cell itself, which begs the question: why not just pass the cell and have a method called getSolvedValue which will return the solved value perhaps then you could get away with implementing a simpler interface? Finally, it looks like the only use for the group is to call cellSolved and what you really have here is a listener/observer pattern. To avoid passing too much responsibility around in the form of a whole CellGroup, consider having the CellGroup implement an interface like CellSolveListener with exactly one method: cellSolved(Cell cell). And your registration method looks like registerSolveListener(CellSolvedListener listener). This documents clearly the contract between the two Objects, makes sure you are only passing around the responsibility you need and as a bonus Objects other than the CellGroup can now listen for changes. 
+
+test corner cases Does your function work well with an empty string? A string with only vowels or consonants? A string with only punctuation? 
+
+How often do you need to mutate the initial value? Not a single time, of course! There's only one element which should take the initial value. Is this a real issue? I think so. Consider this example to generate all powers of two which can be stored in an : 
+
+Of course you can also make an (template) member function of a class containing a named and drop the parameter. Your is then: 
+
+Live example. Note that this may destructively modify the list argument. The helper function is defined as follows: 
+
+Be as precise as necessary when describing things. Generalize ("containers") when it helps to make things more clear. But don't say wrong things. These are no arrays, these are sets. Accessing the sets based on their content type. 
+
+When you start at the first of each of those, at how many s do you need to look to determine which string is longer? 
+
+Now we only check whether is smaller than if it wasn't aleady greater than . An error in disguise Now we come to the part where your code is actually wrong. Sorry. Let's say your user inputs the following numbers: 
+
+Your code is fine, but I would suggest some small changes. Instead of , I would use . This captures your intend to take the first (and therefore largest) number from each . Next, I would use instead of , since is smaller than . Why? Because by default, will be used for types, if they were note specified. Therefore, you end up with handled as a , which is slower than . And last, but not least, I would stop at , since is a palindrome. We end up with: 
+
+Always use braces Note that the code above contains a bug. will be set to regardless whether . The indentation is misleading here. You probably added later and forgot the add the braces, so we should always use braces to make sure that bugs like this cannot happen. If you don't want to use braces, use a code formatter. The indentation on the automatically formatted code will hint possible errors. Prefer late C99 declarations if possible That way we can keep the scope of our variables short, e.g. 
+
+Always prefer final variables, hence the set and list being changed to final Don't need to use the 'this' keyword as this is the implied scope. Though you should use it if it you have another variable in scope with the same name, as often is the case with setters. Because I edit Java in an IDE and the syntax colorer highlights fields different from other items I find 'this' to be too noisy. Camel Cased names that have a noun-verb arrangement. Typically java class methods are of the form verbNoun like setValue. Java does have a for-each looping construct so I made use of it in the list traversal in informGroups as it didn't appear that 'i' was used for anything other than list access. The only tricky thing I saw was in the inform_groups method which may have indeterminate behavior. Toda you are assuming that in this method that the list size is exactly one. In fact this is a necessary condition for this behavior of this method to be correct. Unfortunately, you call this method from two different places and will undoubtedly come back to this class one day and make a change that will call inform_groups when the possibles set size is > 1. Therefore I would add an assertion at the beginning of the method to document and verify this important precondition. 
+
+Exercise: write . Note that there is a function that might help you in the process. We end up with the following : 
+
+If you parse your program into a , there's no way you can accidentally end up with a superfluous , since your type does not allow that. That's a big promise, so I repeat it: if we have a , we can be certain that it's well-formed. By the way, your in can be heavily simplified: 
+
+If the repeated digits may also not span hyphens/groups it gets a little bit more complicated, but not too much. This is left as an exercise, though. That being said: make sure to handle multiple numbers, not a single one. That way you will be able to check your code easier. But that depends. If it's a single use script, you probably don't have a need for a function. 
+
+That being said, 's name is misleading. is a linked list, not an array. We should probably rename it, but we won't use it in the final variant of . Next, we don't need the in : 
+
+This code lies directly on the (most) critical path, and felt very inelegant (and wrong?) to me, so I tried to improve it. Note that I don't intend to replicate the exact same behavior as the legacy code. 
+
+Note: Untested, it may be necessary to have the token concatenation () in a helper macro. Using it as such: 
+
+Ok, we can go on with these .. but this starts to look like a lookup table to me, so better implement that instead: 
+
+performance related comments still under construction ;) Ok, I got a bit hooked up here, and I think I've got something usable out of it. I'm though not yet posting the code as it's late here and currently really a mess, so I'll tidy up tomorrow and post it then. Teaser (ignore the x-axis label): 
+
+This also shows one thing I'd consider an error in your code ... off by one Yes, it will do one superfluous mutation. Consider this example: 
+
+This hard codes as the function to use for swapping. C++ also has a powerful (and sometimes confusing) mechanism to allow multiple namespaces to be searched for a function: argument dependent lookup (ADL). To make use of it call swap unqualified, which performs ADL to find functions in the namespaces of the arguments, but also add as a "fallback": 
+
+Note that I return because I think you've wanted to return the number of created files, but I'm not sure. If you didn't want to return anything at all, change return type to . 
+
+The choice is yours, but exception handling and stack unwinding is often a hassle. The compiler can use some optimizations if it knows that a certain part of your code will never throw. However, since we're using , we're already using at least one function that can possibly throw. Also note that you slightly violate the DRY principle in your and lines, but another layer of indirection would make things slightly more confusing (for the reader). Other than that, well done. Your code doesn't fall into other pitfalls that usually happen, e.g. 
+
+which clearly states what we're checking: the difference between the previous computation, and the following one. Note that you can still use your string-based comparison in , if you want to, but at that point it makes your code easier to read (and the check takes only 80% of the time your string-based check took). 
+
+I think you do this to clearly separate between local variables / function parameters / global variables and the data members of the class. I've done this, too. But I think it's a reasonable assumption to make that somebody reading your code knows that data members can be accessed without , and to know (at least roughly) the rules regarding name resolution. And, moreover, you already have something in place to distinguish between data members and "the rest": That prefix. I read that as ember, or alternatively as atrix. Having both just means more to type and more to read. And the long lines suffer somewhat from that "more". Compare: 
+
+test your code You really should! Every (in an ideal world) piece of code that you write should be tested. You might want to look into TDD (test driven development) and build up good habits from the start. making it faster Do you really need to obtain the length of both strings? Take these two strings as example: 
+
+Handling of special values Ignoring for now, that the choice of returning a special value instead of throwing an exception (or using some other means of indicating error) when ing from an empty queue isn't that great. Then, if you have a special value ("magic value") like which will be returned on an empty queue, then it's crucial that you cannot push this value into the queue. So check for that in and . Useful testing 
+
+As soon as we use we get undefined behaviour. This holds for all that have more entries than the container. You can put that risk on your user, but you then there should be at least some comment. Even better, add some documentation. As long as you're the only user, you might want to skip documentation, but even after as little as three months you'll be glad to find some lines that explain how to use . I concur with Frank, by the way. I don't think that a copy of the container is necessary. I don't think that a container is necessary at all. We can make a lot more powerful if we simply strip its container: 
+
+Haskell is lazy, therefore isn't evaluated until it's actually needed. Therefore we allocate \$\mathcal O(\log_2 p)\$ additional terms. This isn't necessary. We can provide a small fix to make sure that has been fully evaluated: 
+
+We went from 16.14ms to 14.77ms (0.89 of original time), or if we extrapolate this to your 110s to 98s, which is closer to Mathematica's time.

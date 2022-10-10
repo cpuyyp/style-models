@@ -1,0 +1,85 @@
+Since the best-case runtime complexity did not change, we only see minor performance improvements. The runtime is dominated by parsing speed. Worst case - input queries repeated 
+
+See also Is JavaScript a pass-by-reference or pass-by-value language? Now, if we look again at your implementation, we note that you already perform a regex test. We could perform a regex matching instead and get rid of all those redundant calls. I wrapped this new implementation in a documented function and ended up with: 
+
+You currently don't prune the forward history when clicking on 'goto'. I assume this is a flaw. Instead of splitting the history into a backward and forward array, I propose using a single array and keeping track of the currently active index. This allows you to simplify your logic, i.e. you can replace and with a simple . I also suggest separating and encapsulating the logic and datastructures needed to keep track of and browsing through a history. A dedicated history module or class is simpler to understand, easier to test and can be reused. The same can be applied to the view navigation logic. Depending on your view/controller logic, you might want to apply the observer pattern to your navigation module or class and listen to navigation events which would then lead to a rendering of the new view. Here is an implementation of the history and navigation as separate classes (without the observer pattern): 
+
+Now, we re-introduce the matches against team wherever a team would have to play against itself (the red squares). We also have to fix the opponents of team to reflect these changes. This practically means that for each round we swap with where denotes the self-matched team (the red square): 
+
+returns an array. So don't bind the result to a variable called . Or better, since you can't have multiple array entries with the same name, replace with : 
+
+Back when using .NET 2.0, I wrote a class which inherited from , and a which inherited from . For legacy reasons we still use it, but I'm pretty sure it could be rewritten in half the code as a few extension methods. Here's a small sample: 
+
+Each grouping of numbers is an instance of a object, and we test if two are equal based on the items in each . 
+
+You don't provide any example of how would differ from , so I can't be more specific, but here's the gist of what you should do: 
+
+LINQ has extension methods for any which will help with this. There's , which will return the first elements, and which will skip elements, then return the rest. Of course, these don't actually change the they're operating on - they just return a new one. But that's a safer pattern to use - it means you have the option of keeping the untrimmed version around if you need to. 
+
+You're right that all the casting is a sign that there's better way. Rather than using the value of an as the index to an array, you should use a structure that's designed to store two values in the first place. There's a couple of alternatives here. My first instinct is to use a . That most explicitly matches the concept of what you're trying to do (each has a value ), but it's not actually the best option. You're not going to be looking up the value based on the key, the order of the keys may change which could lead to hard-to-reproduce bugs, and it's less memory-efficient. Instead, I'd use a , , or (in C# 7) . They're all effectively the same thing in this case, and best convey the concept "here is a pair of related values" without implying the A->B relationship of the Dictionary. (Note that you can also use arrays instead of , like I do below). To make handle this, you would need to make it generic, so that you can pass any arbitrary type in and get that same type out. Here's what the code would look like using C# 7's ValueTuples: 
+
+Also, it is not clear how strong the given assumptions are and whether or not violations of those assumptions can occur and should be dealt with. 
+
+In addition to the remarks given by Blindman67, I'd like to suggest the following: Passing options: The first few lines of your function are some kind of configuration block: 
+
+Style Instead of I suggest the more self-documenting as the length can never be negative. Also, don't needlessly mix vs. for strings. Specification Right now you are returning a distance of when there is no path and a distance of if equals . I suggest following the common definition of path length and return and instead. You might also want to pass the alphabet as a parameter instead of having a hard-coded 'magic' constant in your function. It can easily be computed from your dictionary as . Also, you currently allow any word for while must be part of the dictionary. I recommend allowing non-dictionary words in both cases for consistency. Performance Your main performance bottleneck is the function. If you keep track of a set of open words which you haven't visited yet, you can replace that function call with a simple . Set lookup time is constant and thus much faster than iterating the whole array. You then have to pass the set to . The map is no longer needed. Another performance drain is performing string splitting via in the inner loop of . You can push that to the outer loop. Also, you currently treat as a special 'shortcut' case. You could generalize this to . Sample code Applying all those modifications to your code yields: 
+
+I recommend separating your logic from UI by introducing a function and assigning the or even better later on: 
+
+As already pointed out, you need a more sophisticated approach to testing runtime performance of runtime-optimized code produced by modern JavaScript engines. I compared the performance of your datastructure against the built-in as well as plain objects on the well-known performance testing playground jsperf.com based on the benchmark.js library and got the following results on Firefox 53 / Ubuntu: 
+
+Edit: Stole the idea from Jesse C. Slicer's answer, but didn't modify the function signature. You can also return if that is more useful to you, or you can go with his idea of returning , in which case you don't need that at all. 
+
+This will kick off a new solver run each time the prior one displays, up to the limits of what your computer can handle. 
+
+There are other improvements that can be made here, too, depending on how much you simplified for this question, and how far you want to go. For a few examples: 
+
+This removes the need to worry about casing, lets IntelliSense prompt you for valid values, and throwing an exception on an unexpected value ensures that you catch it during testing the moment it occurs, instead of the subtle "hey, this just keeps failing to validate" of always returning . 
+
+Another possibility would be to store the words in a dictionary of nested dictionaries. The key would be a letter, and the value is another dictionary of every letter that can follow that. Repeat until you've reached the maximum depth. For the sample case, this would look like 
+
+Heslacher is correct in that you should split this into two separate methods. That said, sometimes doing that isn't an option, so I want to point out an alternative to passing the "magic values" of and into your function. When you have a function argument that only takes a very limited number of values, you're usually better off replacing it with an . That enforces the limitation when you're writing code, and helps avoid typos and other subtle gotchas. 
+
+Both methods can be made , because they don't depend on anything specific to whatever class they're in. Rather than redefining the odds each time that is called, you can create a and populate it once. This also lets you do that right next to where your enum is defined, so that when you add a new enum value, the odds are right there. If you have other properties associated with an , you may want to consider a class to consolidate them all, rather than let each place they're used keep track. 
+
+You asked what happens when you don't initialize in the loop body? Initially you create a single array instance . Then, during each loop iteration, you modify the content of this array and push it onto . So in the end, each index of contains a reference to the same array, similar to this: 
+
+Now, it is much easier to see that the inner loop is actually just checking the existence of an element within an array. You can use the faster built-in method instead: 
+
+I recommend building the filter in steps, starting with an empty object . You then add attributes according to the selected city, category and date. And finally, you convert it to a JSON string via : 
+
+Your solution is a bit wasteful by generating and testing all integers in the desired range while you actually only need a handful of them. A big improvement in terms of performance is to avoid modulo arithmetic and increase the step-size tenfold whenever you finished iterating a sub-range 1-9, 10-99, 100-999 and so on: 
+
+4. Invert the negative condition: You can get rid of the explicit comparison to zero by switching your and statements: 
+
+to mitigate timing attacks. Reason: The public function should only return one information - whether the password and the hash match or not. But right now, it leaks more information to an attacker who observes the time this function takes to complete. Whether or not that information can and will be used to the advantage of the attacker is dependent on many factors (e.g. preimage attacks) and unless you have taken all those possible factors and scenarios into account, you better use the safe and simple . 
+
+If you modify your function to increment frequencies for string and decrement frequencies for string , you can simply sum the absolute frequencies to get the number of required deletions. If you combine that with a more descriptive approach by replacing for-loops with and , you get a simpler implementation: 
+
+If is your slowdown, you're not going to be able to get a huge improvement, but you can get some by parallelizing all the calls to it. Replace your loops with this version: 
+
+I find this much more readable than trying to do conversions to an Enum, and more straightforward than a decision grid. That being said, it doesn't scale as well as either option. 
+
+The first method is an all-purpose "Add"-type method which will either add it or update it depending on whether or not it exists. The second is specifically for dictionaries where the value is a . It'll let you add an element to the , creating the key if neccesary. 
+
+Everything in your code should either require the interface or the interface. If the former, it can accept any of the four classes. If the latter, it requires the plus four bit. Since a plus four can always be downgraded to a pure zipcode, this set of inheritance will let you pass a +4 wherever you are looking for a . Also, by always requiring the interface, rather than the concrete type, you can trivially implement the null object pattern you asked about. 
+
+Then you can use LINQ to find matches by recursively building up a query which looks like: (ab)(bc)(ca) 
+
+Just to build on what @svick said, this is definitely not a good way to handle things. If you want to catch all exceptions, simply . If you don't want to catch everything, then only catch the specific types you want. There's also the block which you can use to do any cleanup which is necessary, regardless of whether or not you've handled the exception. 
+
+You could use instead of the in the second case, but I seem to remember reading that it's faster to do as an array than with LINQ. 
+
+However, this function is inefficient for larger inputs as it iterates the array for each element. It's time complexity is in O(mn) where m and n are the lengths of and . You can improve on that by using a and come up with a linear time solution. Using rest parameters allows us to get rid of the slicing: 
+
+Remarks on the provided implementation: The code is already well structured and easy to follow along, even though it is not immediately clear what you are actually trying to accomplish. 
+
+First of all, your given sample features zero-padded 2-digit months and milliseconds which you currently don't reproduce. The mentioned 'smell' is probably caused by 
+
+The native is fast, but comes with a certain constant setup cost that makes it slower than your implementation for very small strings. As soon as the input strings get longer however the built-in outperforms any other solution: Small strings: 
+
+Let's build a schedule for 10 teams. I intuitively came up with the following circulant 10x10 matrix with entry denoting the opponent of team in round : 
+
+Unfortunately, if you e.g. desire to change just the number of total pages, this argument order still requires you to specify all arguments preceding the argument. Therefore, you might want to consider using default parameters in combination with destructuring assignment: 
+
+Notes Declaring some of your variables as can protect you against erroneous reassignment or rebinding, as any assignment to variables will throw a at runtime instead of silently continuing execution. Instead of I recommend using the unary plus operator which is "the fastest and preferred way of converting something into a number" according to MDN. Parsing I like your separation of input parsing and the actual program logic. However, you create a lot of temporary copies by first splitting and then mapping the array. If you like, you can use iterators or generator functions to parse input with only constant additional required space:

@@ -1,0 +1,47 @@
+Remove unneeded attributes You don't need to use the attribute. Marking individual methods with or one of the attributes is sufficient. Also, using when is present is redundant. Here's an excerpt from the refactored, and somewhat reformatted, tests: 
+
+This avoids the higher coupling (inheritance) between the dictionary and its subclass, which is there only to help with initializing the dictionary. 
+
+The above interface hides the details while allowing polymorphism; you could e.g. keep the "vtable" implementation (but hidden) and provide different init-functions. I really don't follow all that macro voodoo but having a mutable shared state - the "pointer to current class" - seems susceptible to race conditions. 
+
+Maybe it could be better to put the asynchronous function loader.load() at file's ending part, because as it is could confuse those who read it and think that it is being a synchronous call. I mean, despite the fact that it is before renderer, renderer will execute before, because of loader.load() takes time to resolve the file loading. Could be better if we encapsulate into a variable that explains why it is used, however I took that line from the official threejs github repo and I still not understanding why it is needed. Maybe we should handle the case when the NRRD model does not load. Would be better with an asynchronous call or with a Promise, the error handling? Then, we have logic.js whose responsability is to bootstrap both canvas and make them to animate and respond to user clicks: 
+
+The function has different implementations with different behaviors: it may create a module in the global scope, in a private scope, synchronously or asynchronously after loading dependencies. When the function is synchronous, it returns the module just created, which allows to use as a direct replacement of the Immediately Invoked Function Expression pattern typically used to declare modules in JavaScript: 
+
+The last two parameters and are optional. The name of a module is a string which identifies the module and allows to reference it in the list of needs of other modules: 
+
+I would like some help to improve my existing code. First I will show it file by file, and then I will tell you how I think it could be improved. We have a class InitCanvas.js which has the responsability to inicialize a Threejs scene, with its NRRD model, into a HTML div: 
+
+It could be improved if we group the HTML tags, body and canvas on the top part, then the css classes and finally the css ids. Finally, having a look to the architecture: 
+
+I think it could be better to aisolate project's source javascript and put it into a different folder than the external javascript. What do you think? 
+
+I would actually recommend you to use the (Constructor) Builder pattern if you are only doing this for easier object initialization: 
+
+Declare the calculator instance as a field in the fixture instead, and initialize in a method. There's also the duplication of . In this specific case I might go as far as to get rid of entirely: 
+
+The main reason for this reordering of the parts is readability of the test names; I think it reads more naturally when in this order. Try comparing these two variations of naming the same test by reading their names out loud: 
+
+I am now considering ways to separate these concerns into several functions and even several independent libraries. For example, could be restricted to a single argument, to cover only the first concern: 
+
+To use the function, you can write your own or build it from building blocks available in the scope or not project. The building blocks are sorted in levels. The level 1 provides the bootstrap, it must be loaded first. One building block may be picked from each level. Building blocks from lower levels are expected to be loaded first, but they are all optional. Building blocks in higher levels use the function of the bootstrap to define a replacement function "scope", declared as a module. For example: 
+
+Try reading the code out loud for yourself for each of the samples above. Further adding a few line breaks to the latest version makes it a bit easier to visually separate what you're testing from the expected result, but that's a very personal opinion. See refactored example below. Don't use SUT literally As others have already said, don't use as a variable name. Sure, you might know the context and be familiar with the acronym but I still consider to be more expressive than . One circumstance where you could use e.g. as a variable name is where you have a very generic test suite that can be reused for many implementations. However, even then I would strongly suggest that you name the variable referring to the SUT according to what kind of capabilities being tested within that specific suite. A short example: 
+
+instead of defining it first, and then calling it through the InitCanvas alias. It would be better to put the div and canvas size in the CSS if it is static, as it currently is. It could be better to name the parameters which PerspectiveCamera receives as: 
+
+I think there should be getters and setters for class' properties, to avoid accessing them with dot notation directly. It could be better to put the constructor function directly as: 
+
+I think it is better to aisolate libraries scripts and those in the project, so then I put the first in head and the second in body, is it correct? In addition we have styles.css 
+
+Apart from what's already been said you should consider your test suite a bit more (I'm assuming you're using NUnit in pretty recent version). Apply DRY to the tests You have two more or less identical lines in all tests: 
+
+There nothing wrong with the code per se. I'd still prefer to have the error return statement inside the catch block to keep it close to where the condition is detected. I would also move the success return statement to the end of the method: 
+
+I would actually avoid the attempt to mimic C++ syntax. It makes things more complex and exposes unnecessary details. For me it would be equally object-oriented with the following C interface: 
+
+Stick to shared conventions for the naming of variables. Do not use all-uppercase for regular variables, only when you wish to indicate a constant value. Use a name specific to your appliation/website, organization or company instead of GLOBAL for the global variable referencing the root of your library, if any: it is no longer needed using Asynchronous Module Definition with requireJS. 
+
+I checked the code with latest JSLint; it is a useful tool once you know what to expect from it, e.g. by reading "JavaScript: The Good Parts" from its author Douglas Crockford. It would definitely help you to spot the missing semicolons, which can cause unexpected issues when you minify your code. 
+
+Start with writing unit and/or feature tests that capture the current behaviour. Then begin refactoring while making sure that the tests pass all the time. If you are not an experienced developer "refactoring" might be a bit vague; I'd then suggest to simply start with removing duplication in whatever form there is. Aleksi had a couple of examples of extracting methods. Start there. As you move stuff to methods you will soon see that there are different categories of methods that are used together. This is an indication that these should be moved to a separate classes to encapsulate that behaviour. Then read about the SOLID principles and continue from there. Practice, practice, practice and think about what you are doing at all times. Good luck!

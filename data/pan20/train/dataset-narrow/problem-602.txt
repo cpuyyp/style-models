@@ -1,0 +1,71 @@
+If id is defined as the primary key, you can omit grouping by all the foo columns you want for the output as long as you are grouping by the id. This special case of grouping is in accordance with the current SQL standard and has also been covered in the PostgreSQL manual, starting from version 9.1: 
+
+Now all the category names in the imported dataset can be mapped to their IDs using the tbCategories table. And that is what the trigger should do when inserting the subcategories: 
+
+This means you will need to calculate both the beginning and the end for each gap: take the latest between and as the beginning and the earliest between and as the end: 
+
+I have managed to successfully use variables and sorting to solve your problem. This is my test set-up: 
+
+The maximum values of RowAddedDate per X, Y are returned alongside non-aggregated values. You just filter on the max values to get the rows you want. 
+
+I would try grouping by the year of decreased by 3 months. The final formatting of could be done on the grouped result set: 
+
+Approach 2. Using system loophole This method is completely different in that it relies on a built-in peculiarity of the DATEDIFF function. As you probably know, setting DATEFIRST affects the results of such functions as and . Unlike them, does not respect the DATEFIRST setting. It always calculates the difference as if DATEFIRST were set to 7, that is always treating weeks as Sunday-based. Knowing that, you can calculate the difference in weeks between January 1 and any date of the same year, add 1 and use that as the Sunday-based week number: 
+
+The outer-level ORDER BY will probably cause the entire combined row set to be sorted – at least to the extent that will enable the server to find the last 100 entries starting from the penultimate one. Sorting a million entries cannot be cheap, of course. I would try reducing the combined set by applying a LIMIT to each leg of the UNION ALL query. Note that an ORDER BY cannot be applied directly to an individual SELECT that is a UNION leg. You will have to use more nesting – either a derived table or a CTE – to apply the ORDER BY and then select from that derived table/CTE. Here is a derived table solution: 
+
+The row constructor represents your pattern list as a table, additionally supplying each pattern with the number of rows to retrieve for that pattern. The CROSS APPLY operator applies your query to every row of the pattern list, i.e. to every pattern, limiting the number of rows for each pattern to the corresponding value from the pattern list. As a side note, please let me take this opportunity to suggest that you always qualify your columns with the table alias in a query that is reading from two or more tables. That makes your query easier to read/understand. You can always use short aliases to avoid repeating potentially long table names. For instance: 
+
+In cases where both operands of a division operation are integers, the result is also an integer, and a rounded down one at that. So, = 1 will give you 1, because 
+
+Depending on how many other tables could use this method, there might be multiple such tables – or there could be just one but with either a row or a column per table. 
+
+A demo of this query is available at SQL Fiddle. (It borrows the test setup created by Jehad Keriaki for his own answer.) 
+
+where IDs that need to be grouped have the same GroupID. Once that CSV is imported, it will be very easy to group your rows using a join to the imported data: 
+
+Now, as you can see, the query merely returns the flag indicating if a file has a single version or not. You, however, probably want to filter on that flag. To filter on it, use the above query as a derived table, e.g. as a CTE: 
+
+As you can see, in order to match the third table's ID to that of either of the other two tables when only one of them has a match, you can use the COALESCE function. COALESCE will pick a non-empty (non-null) ID of the two specified, thus making sure that the third ID will be matched with an existing row in either table. The same condition will work correctly if the match is present in both tables. The WHERE condition uses a similar technique for filtering the result set. Since each table's ID in every row of the joined set is supposed to be either the same value or a null, the COALESCE function will necessarily pick one that is not null to compare to the specified argument (101). Thus, only the row that has the matching data from all or any of the three tables will be selected. You could also take a slightly different approach: separately select the row matching the condition from each table, use the results as derived tables and then join them: 
+
+means that the table has a 1:1 relationship with the table. Consequently, since is the primary key of , the same column should be unique in too, otherwise the 1:1 relationship would be violated. If the above is correct, the problem in your query is that you are using in as a grouping criterion. You are essentially calculating distinct version counts per and , while you should likely be calculating them per only. So, the simplest fix to your query would probably be to remove from the subquery (specifically, from and ) and the corresponding condition from the main query's : 
+
+Your own method of looking the value up in the table works as well, only it means an extra table hit, which may affect performance. 
+
+In this case it will not matter whether you use MIN or MAX over and later (in the main SELECT): each column will have exactly the same value (first or last accordingly) across all rows of the same group, and so and would return identical results in each case. In fact, you can get directly in the CTE and then, in the main query, just either aggregate it using MIN/MAX or add it to GROUP BY and reference it without aggregation, like this: 
+
+Either should get you going. Note, though, that filtering your data like that can give you duplicates in the output. The issue is, the function turns the specified value into a row set, repeating the source row's columns for each transposed item. So, for your example the FROM clause effectively produces the following row set: 
+
+Instead of specifying the same IN list for both and , specify it only for and make the subquery correlate with on , like this: 
+
+If is already defined to be a reference to , feel free to remove that constraint from each table as no longer necessary. 
+
+The task is quite a challenge because of the way your subquery appears to be correlated with the main query. If I understand it correctly, the logic goes like this: 
+
+As can be seen, the final touch would need to go to the SELECT part, where the simple of the new query would be replaced with 
+
+Or you could list and alias each table's columns. That would make your statement more verbose but the resulting table's column names would probably be clearer that way: 
+
+This is a classic case of a pivot operation in SQL. The method working in, probably, most (if not all) SQL products, including SQL Server, is conditional aggregation: 
+
+I am assuming that a document that has not been modified will have a null in . Filtering out the entries with a null user ID is what the WHERE clause in the above query for. Now you could simply group the results by and count the rows in each group. That would give you the output values in this form: 
+
+Note that the query does not specify an order in which the rows are read or returned. The solution will still work regardless of the row order but absence of an explicit ORDER BY ultimately means that the output might be different between different runs of the query. The issue is actually twofold. Because the rows are read without an explicit order, the query might produce different rows for the output, and the other problem is that they may also be returned in different order with each run of the query. To resolve this and make the output completely repeatable, you probably need to supply an ORDER BY both at the nested level and at the outer level, something like this: 
+
+I have rearranged the original joins slightly to make it more obvious that you need to join repeatedly both and . Note, however, that you can avoid repetition of the pattern with the help of a "local view", more widely known as common table expression (CTE), or WITH clause. You can implement the join in the CTE and then join repeatedly just the CTE: 
+
+The derived table is actually your view. Therefore, if you are planning on keeping the view, you can use it instead of the derived table: 
+
+This rewrite can have implications for performance, because unlike a derived table, a CTE is materialised in PostgreSQL. Testing should reveal if there is a difference and, if so, which option is better for you. 
+
+To retrieve data from Form_Element_Groups and Element_Answer_text, you can complete your query with outer joins to those tables in this manner: 
+
+I am not 100% sure but it seems likely to me that the above query would require less temporary disk space than the original one. 
+
+You want to filter out groups of rows rather than individual rows. That is, you want to keep only the groups that have . Therefore use HAVING, rather than WHERE or ON, to add that condition, because HAVING is used for group filtering: 
+
+The join to in the main SELECT would then be redundant. Alternatively, you could outer-join the result of and check for presence of a match in the WHERE clause, like this: 
+
+Obviously, you could now also get rid of the table as no longer needed in the SP. One last note concerns the specific script you are planning to run against each database. Instead of 
+
+What is happening there is you are matching the two column sets as rows using FROM-less SELECTs and the INTERSECT operator, rather than matching separately each column against its counterpart using the operator. The difference is that in this case two nulls are considered to be equal to each other. (When comparing them using , they are not.) So, as I said, if you consistently store the rows as in both tables, the simple rewrite above will let you match those rows when both tables have them.

@@ -1,0 +1,67 @@
+Having the methods above renders almost useless. Even if it kept, it can be safely implemented in the class, as it is expected to look almost the same for all repositories. Also, I would not force s in the repository itself. Maybe the service only wants some ids and not the whole data, so you should leave it the change to include or not data as needed. I would remove from the repository and allow it only in the UnitOfWork. While it might be useful there, in most of the times you must be certain that persistence is transactional, so repositories cannot persist data in their own transactions. 3) DBContet injection in the repository Since you are using DI, even the context can be injected (i.e. MyDbContext : IMyDbContext). 4) Unit of work can be extended with some useful functions, as well. Also, database context can be injected. 
+
+Not the greatest benefit in terms of typing, but other cross-service functionality might get in (I usually have a also in the ). 
+
+If I understood correctly what you are trying to achieve (concatenating objects for owners), I think one way is to actually process all the data on SQL Server. Setup: 
+
+Your C# code looks fine, but using non-cached sequences instead of IDENTITY (which would be much easier to implement in Entity Framework) does not ensure a gapless incrementing identifier. According to this Microsoft article, sequences can generate gaps in some scenarios: 
+
+5) Easier date arithmetic You have a case for spring and fall that performs some ad-hoc computation, that can be simplified. Also, since @Year is computed before the cycle, all those boundaries can be precomputed. You did not specify version, so I hope for the best (): 
+
+4. Simpler and more natural iteration Your logic is fine, however a chess board is 8 x 8 and a natural way to iterate is by rows and columns, rather than tile by tile. 
+
+Defense and CrackShot logic can be separated, to have separate Defense concern from attack concern. Also, all assignments have been contracted (++, --, +=) and reduced number of accolades. It is a matter of taste, but I think that accolades can be missed when if statement is very short and of course, the logic is a single instruction. All the code (not really tested): 
+
+Can this code be improved? As already mentioned, performance is not an issue, so I am asking mostly for an architectural perspective. 
+
+One of the projects I am currently involved in requires to have a view that is similar to one in the Excel, except that most of the cells are read-only and the area is much more limited (the maximum size is about 300 rows x 10 columns). Based on some parameters, some aggregated values are fetched from the database (or cube), the user is able to change some data and some figures are automatically computed (just like in Excel). One solution is to work client side only (Angular), but I will have to deal with chained evaluation of formulas. An alternative I have tried is to have a virtual Excel document (using EPPlus) on the server side. Server receives changes from the client side (usually one cell is changed), changes the virtual Excel document, gets the changes and reports them to the client. To achieve this I have defined the following classes: 1) Dirty tracking for a single cell 
+
+where contains definitions for all public methods in the class above, thus allowing the repository to be injected. So, your service layer should not work directly with EF data context, but rather using the appropriate repository: 
+
+So, as you can see, the view model hold the properties required by the view, which are aggregated from multiple data models. Getting data model extra data One method I found convenient (although not exactly orthodox, since it pollutes data models) is to extend the data model with properties that provide extra needed data, like this: 
+
+3) Put clauses on separate lines for better readability First statements could be rewritten like this: 
+
+So, error on saving changes will have consumed the sequence numbers and thus you obtain gaps. On the database side, this thread approaches the generation of gapless incrementing identifier, but I am also thinking about generating identifiers within the application layer and restoring the value on save failure: 
+
+In order to optimize your distance converter, you should consider using a "common denominator". Since I am from Europe (not UK), I am biased towards International System of Units, so I would choose 1 meter (1m), although the presence of light years may lead to at least 1km. Personally, I like to store data in database, since they can be easily read and changed even by back-end developers, so the structure could be like this (I use MSSQL style, but it should be almost identical to any other SQL flavor). 
+
+I have considered a simple back-off where I start with a certain period and multiply by a factor. 3. Simple test 
+
+Also, table is not required anymore and the whole block is slimier. 7) Proper data types suggests that Sales_Closing_Date is not a DATE (maybe a or ). If possible, use the most appropriate data type to avoid explicit or implicit (silently occurring in queries) casts. 8) Comments It's a matter of taste, but I like comments written as normal text, not using CAPS 
+
+Usage in markup: It is very concise, as I want notification to look homogeneously across the entire application. Customization is possible through methods exposed by the factory: 
+
+Your code is very small for a good review, but a few things can be mentioned: 1) naming - it is better to name your variables by what they represent. E.g. , , should can be named something like , etc. Also, can be adjusted to Pascal/Camel notation used in C# (they look to have C++ naming style) 2) passing parameters to instances - providing many parameters to a constructor works, but it may render maintainability problems in the future: 
+
+Just what pops in my mind seeing the code: 1. Variable names should be or simply an (small context allow simple variable names) the same for yPositions 2. Constants Some things are constants so they can be declared at class level: 
+
+5) The service that allows the consumer to define document ranges to be tracked, to push and get changes after formula computation 
+
+A possible approach is to put all the repositories in a UnitOfWork class, so that multiple changes can be done in a single unit of work (transaction). Something like this: 
+
+Some things that just pop out when seeing your code: 1) Classes/POCOs definition They do not seem properly written, probably reproduced from memory. A better version would be: 
+
+There are several issues with your program, some of them rendering it non-functional. As it is a very simple one, it does not take much time to fix it, but as already specified by Edward, you should submit only working code that requires reviewing. 1) Code aspect You should try to keep you code as organized and homogeneous as possible. Usually, it is not required for homework, but it is good in a programmer's life: 
+
+4) Separation of concerns It is better to separate data connection setup from your data fetch, as setup can also be used for other operations in the future. Also, methods should have meaningful names (e.g. -> ) 
+
+2) avoiding repetation - see DRY principle - as you have already notices, some things are repeating. One way to model your characters actions is to use abilities. E.g. normal attack and howl attack are using the same logic, so they can be unified: 
+
+Besides 's suggestion and based on 's comment, it makes sense to log more detailed information. This can be provided using a formatted exception string or using a logging library. The second option has the advantage that can be customized to log only some levels (e.g. one usually wants less verbosity on production). The code using NLog (but this can be replaced with any other library or a custom one) would look like this: 
+
+[later edit] It is recommended to catch exception and also log the detailed information somewhere. Ideally, end user should receive a friendly message and context details should be logged in a file, database etc. Context details may include username, IP, hostname, call stack. For .NET, one of the most used libraries is NLog, which is quite easy to setup and use. e.g. may have the fail for two main reasons that have different exception types: 
+
+However, keep in mind that your function will be called for each row returned from (clearly visible in profiler, estimated/actual plan does not show function calls, if I remember correctly), so performance might be affected. Also, * should be avoided since it can lead to performance problems (selecting all columns may inhibit indexes usage) and also may also lead to unexpected results (changing table structure without procedure recompilation, means that * does not actually brings you all the columns). If possible, please provide code from - maybe it can be rewritten to be more set based. 
+
+This allows for future types of attacks. E.g. magic attacks Here, the are already some refactoring done, as explained in the steps: 3) Avoid hardcoding values, especially when they meaning is hard to guess. So your comparisons should be made against meaningful constants (I tried to guess their meaning): 
+
+3) getLine requires a before, as it will catch a newline for a previously entered phone (at least when testing manually) Finally, a version of your program with all improvements made: 
+
+One way to make it easier to follow is to construct your merged documents result separately from your input (above code is not tested). Construct a dictionary to easily get the document to append to, based on type. It also ensures a fast operation. For each document from the input, append its pages in the dictionary: 
+
+3. Colors can be declared in a separate array Although, chess classic colors are black and white, this does not mean that you will always display them as pure Black & White, so it would make sense to define them in a place to be easily changed (maybe configurable in the future): 
+
+1. Function name seems to be misleading. It returns true if no repeating character is found, so I find to be more appropriate. 2. Basic input checks - when I began trying your function, I set up a few tests (included in the final code) and some of them crashed. Your code should handle at least basic input values such as null, empty string, string with spaces. 
+
+It has been a while after toying with the notification factory and directive. Now I had to actually use it in several dozens places in a real Web Application. Doing so, I realized how much code must be replicated in controllers and markup. In order to avoid this, I tried to keep markup and controller code as simple as possible: The factory: A factory creates a "class" that takes care of the dirty details of setting visibility, type, text and so on.

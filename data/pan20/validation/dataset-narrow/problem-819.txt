@@ -1,0 +1,39 @@
+What do you mean by local? If you have access to the file system of the server hosting the wordpress install through some other method(console, smb, ssh, RDP, etc) then you may not need FTP. FTP is just one common method gaining access to put files on the server. In my opinion SFTP is better than FTP or FTPS because it uses the SSH protocol, but it serves the same purpose. EDIT: Ok, if I follow what is going on, wordpress.org is going to use the FTP to do the update. So it's not you locally accessing the site, it's a remote 3rd party. This might answer some of your questions: $URL$ 
+
+It wouldn't really be a different virtual host. But using something like mod_rewrite or mod_alias you can serve content out of any folder for which you have set the appropriate permissions. There's only one docroot, but you can effectively change that on the fly. One way to do it might be: 
+
+It's easy to add extra headers to the request with curl. If the other side can modify their script they could just append the information you need. Since you're building an API just make the extra header part of the specification. 
+
+Considering that DNS is how all those subdomains get pointed to the correct IP address then yes switching your DNS provider for the main domain will affect them. However as long as you put all the appropriate settings for them on the new DNS servers then they shouldn't really notice the change. 
+
+This might be of interest: $URL$ Also, .htaccess files would allow you to make changes without reloading the entire config. 
+
+As mentioned in the comments, without another IP address you can't do this at the DNS/router/firewall level. You can do this at the http server level. You set this up using a reverse proxy. To do this using Apache you use mod_proxy. 
+
+What you want to look into is mod_rewrite for Apache (often part of the default install). You will then rewrite your URLs. For example: 
+
+I'm running Mod_Security and I'm using the SecServerSignature to customize the header that Apache returns. This part works fine, however I'm also running mod_fcgid which appends "mod_fcgid/2.3.5" to the header. Is there any way I can turn this off? Setting doesn't do anything. I was able to get it to go away by changing the but that removed the customization I had added. 
+
+If all the first host is doing is email sending, then setting and to the second host is no problem. If the first host is also receiving email then this is what you use MX records for. The record will take care of routing the email while you point the main record to the web server. If the first host also has webservices or something for checking your email then I'd probably use a sub-domain for that such as . If you have different webservices on each server and want both under the namespace then you probably want to setup a reverse proxy on one of the hosts. Also it's no problem to create an record with both IP addresses. However this is probably not what you want for this situation. You would do that to do simple load balancing. 
+
+See the Apache Documentation for descriptions of the flags and for the full list of server variables. 
+
+EDIT After doing some quick testing on my server I was able get these rules work but not in a per-directory context (ie. not in a .htaccess or inside a ). I didn't test this but you might be able to work around this by setting an evironrnment variable with the second rule and then testing for it on the first. 
+
+You need to set the DNS for www.domain.com to point to your second IP address. Be aware that doing so will cause $URL$ to also answer on that IP address. I don't fully follow the description of your problem. Unless you're hosting more than one SSL domain you probably don't really need the second IP address. 
+
+To add to what dunxd said, you also do the A record because that's what directs requests for that (sub)domain to be handled by the service providers servers without the service provider having to take full control of the customers DNS. Once the request come into the service provider, there are several different ways that they can determine which customers data to display. The first is Virtual Hosts which allow you to set different configurations for each domain you're servicing. The second is Rewrite Rules which let you determine which data to return based on the requested URL. The third is to use Server Variables and then use what ever language you're coding the application in to processes requests based on the the http_host value. These aren't mutually exclusive you can use some combination of them to do what you want. I'm not sure what you mean by: 
+
+It'll likely be easier to use an external SMTP server such as the one provided by your ISP. See the Zend Framework Manual for instructions on using the smtp transport. 
+
+It sounds like you want to setup a reverse proxy on the VM (or wherever). Then you will point all your domains to the reverse proxy which will then send the requests to their final destination. I linked to the Apache way of doing this, but nginx is also popular as a reverse proxy. Another option is any of the dedicated proxy software that will do this. 
+
+This will block everyone except 192.168.1.1 unless they enter a password. If you only want to make the one IP enter the password and allow everyone else with no restrictions then it would be: 
+
+No it's not possible to do that with DNS. You must pick the one you want to be primary and that's where the mail will go. In DNS, you can have one server act as a backup for the other, but it would only actually deliver to one or the other. You could however have the primary mailserver forward the message to the secondary server. One other option is you may be able to have gmail act as a pop/imap client and connect to the outlook server to retrieve the messages. 
+
+I'm not sure why you're using the RewriteConds. It seems to me that you could put everything directly in the RewriteRules. It looks like your problem stems from the fact that you're redirecting everything that matches the Request_URI. If you do the matching in the RewriteRule itself the rewritten rule will no longer match the next rule. You might want to try something like: 
+
+Finally when you "install" your module you could just copy the public files into the document root. You can still keep the separated. Something like this: 
+
+Does the URL acctually change in address bar when you visit the domain? If so, you're probably doing an http 301 redirect somewhere. You can still do that, but you would need to have the server rewrite the URL first so that you can still pass the account information. EDIT: I don't use nginx but I added some links that might be helpful.

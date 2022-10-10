@@ -1,0 +1,35 @@
+The fact that you are using the syntax indicates that you're using automatic storage (or DMS) tablespaces. Knowing that, truncating a table only frees up the space that the table occupies within a tablespace. (i.e., Db2 releases the extents that are assigned to the table.) The reason Db2 can't just give back the space that was freed in the tablespace automatically is because there is no guarantee that the extents that were allocated to the table were located contiguously at the "end" of the tablespace. Therefore, when you deallocate space in the tablespace (via ), Db2 must first "fill in the holes" by moving other in-use extents into the unused extents that were freed when you truncated the table. See the documentation for reclaimable storage for more details and some pictures of this. 
+
+In DB2, a tablespace is the object that serves as a layer of abstraction between tables (and indexes) and disk. It is similar to a file group in MS SQL Server. In DB2, a database is roughly equivalent to a SQL Server instance – a database contains multiple tablespaces, transaction logs, one or more bufferpools and other memory areas. A "database" in SQL server is much closer to a schema in DB2. 
+
+This is the classic question / fight over whether monitoring should have a monitoring agent installed on each server, or if it should be "agentless". With an agent installed on each server, a process/script/etc. wakes up every so often, collects data, and reports it back to a central location (i.e. monitoring server). With an agentless solution, the central server polls each monitored server/database/etc on a schedule to collect the information. Cacti and Nagios typically use this solution. There are pros and cons to each method. There is not necessarily a best practice for which method to use, discussion usually just results in a holy war (similar to Emacs vs. vi, DB2 vs Oracle, ...). 
+
+Online backups require that the database be enabled for rollforward recovery. However, this is not the default when you create a database. In order to do this, you need to set the database configuration parameter. Once you have done this, you'll need to take one offline backup (i.e., no users can be connected). Once you've completed these steps, you'll be able to run online backups as you wish. You may want to spend some time reading the Data Recovery section of the DB2 Database Administration guide to help familiarize yourself with DB2 Backup/Recovery. 
+
+I've searched to no avail for an option to silence this. My understanding is that this kind of output is necessary so that the script can successfully recreate the schema in what may be another version of mysql server. For my scenario with a closed system of installations, I know that the version will be the same as the source of the dump. Again, I need to be able to make edits (manual or scripted) in the dump, and these outputs make the task quite a bit more daunting. Elsewhere at SO, I saw a couple of questions on this, but folks have concentrated on preaching about why the tokens should be left alone. Kinder people recommended parsing the output on the command line to filter them out. Note that when I dump with phpMyAdmin, these tokens are not there. Yak! So, there really isn't a neater option to skip this kind of output? I work on Windows and with PowerShell. 
+
+Now, using the 2 previous queries, we can obtain any tables having a column named "mycolumn" but in which "mycolumn" is NOT A FOREIGN KEY. Note that this filtering will not respect a PRIMARY KEY, and will also return any table where "mycolumn" is a PRIMARY KEY. 
+
+I have a mysql database running with binary log enabled. Unfortunately, a statement was executed by the client, which turned out erroneous. Since a number of records have been "affected", I want to begin by parsing the bin-log for data-changing statements from that time period. Then we might be able to begin picking up the pieces. I have used: 
+
+Get all tables that have ANY COLUMN named "mycolumn". The subquery in the WHERE clause is necessary, otherwise it would return also any VIEW having a column named "mycolumn" 
+
+Here's what I eventually came up with. Of course, I'm open to input/refinements from the DBA grandfathers around here! But for now, this approach is giving me the info I need. 
+
+The output is quite intimidating. What I would appreciate is a strategy for parsing out any INSERT, UPDATE or DELETE statements. Keep in mind I'm on MIXED MODE. Thank you. 
+
+Using and from the main section of the output, you can calculate the total space. (You can ignore the sections that give details for each container in the tablespace). If you have SMS tablespaces that store table data (i.e. not just system- or user-temporary tablespaces), you'll see tablespaces in this output that show . To calculate the amount of data used by these SMS tablespaces, you will need to dump out all of the information from the backup image using . You will get lines like this: 
+
+I'm also not quite sure why you are posting this without just attempting it, but yes, this will work without problem. The only issues you might have are: 
+
+You are correct in your assumption – there is nothing done at the database level that would track the source of a row. You would need to modify your history table definition and trigger logic to add this kind of tracking. 
+
+There's a table that shows the minimum explicit inline length for various LOB lengths, and for CLOB(2G), the maximum LOB Locator size is 312 bytes. Therefore, for your table, the inline length must be at least 312 bytes to ensure that the largest possible LOB Locator can be stored. 
+
+If the database manager configuration parameter is small enough that you can't activate both databases at the same time (in addition to whatever other databases are activated within the DB2 instance). If you use the option for with some silly default values so you exhaust system memory System resource contention (disk, CPU) slowing the process down. 
+
+If you are asking if you can determine if the table in question has any triggers defined, then yes - you can either 
+
+For the second problem you may want to look at using the function so you can calculate the delta in the log record: 
+
+There is an API called that you can use to read transaction logs and collect information about deleted records. IBM also sells a product called Recovery Expert that will help you do this and generate undo SQL statements.

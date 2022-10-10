@@ -1,0 +1,95 @@
+That handles all the word swapping in one go, without having to write the iteration code yourself. Now all we need to do is change the first word from to , if appropriate: 
+
+Unnecessary floating point Triangular numbers are always integers. is always even because either or is. Thus you don't need to do floating point math here: 
+
+does the right thing here - it gives you all the references, so the type of that expression is . But that isn't what you're returning! So rather than yielding references, you're yielding values. This means you're copying every element on every iteration, and you're not allowing any kind of modification. But the lack of modification is hidden. Your original example compiles fine: 
+
+Don't use non-member / You're using standard containers. They have member /. It's a natural thing to use and long predates the non-member functions. The non-members only make sense to be used in generic code, or on types that don't have the members. As-is, you're neither adding more functionality (w.r.t. generic code) nor adding to readability (it's longer to type, and the important part - the container - now comes last). So this: 
+
+You're adding a declaration to namespace which does not fall into any of the "otherwise specified" categories (e.g. you're not specializing a template based with a user-defined type). What you are doing is undefined behavior. 
+
+But then for the other special member functions, you should either default all of them or omit all of them: 
+
+You don't even need the constructor - you could make your class an aggregate by making public. This is what does. 
+
+What is our total width? If is odd, the max width is . If lines is even, we stop one less. So let's save that off: 
+
+That's confusing. The extra typedef adds no value. You could've just written . It's not worth it. Also, you agree, since you don't actually use it anywhere yourself! 
+
+Keeping a Count You implemented to keep a count which you use for equality comparisons. This works, but involves a really awkward formula for getting the count right. Instead, it would be simpler to just round to be one past the last one, so that sets to and to . This would make only require two members, and to just compare the 's. Wrong Type dereferences to , but should be . Usage This is awkward: 
+
+Recursive Code Should Be Recursive Making recursive makes perfect sense. After all, pretty much everything you're going to do with trees is recursive, and this algorithm definitely lends itself well to recursion. However, your function isn't recursive. It calls a recursive function, and takes a - which obfusticates the algorithm. It would be much easier to understand if you just made it recursive - this goes a long way "to reduce the cognitive overload." Let's start with the base case - if we have no ordering, we have no tree: 
+
+You move it into , but then you copy it into the constructor anyway! Make sure you delay construction as far as possible. should just take whatever: 
+
+Swap your template parameter ordering The doesn't really matter - but the does, so I would put it first: 
+
+And then topo-sort can be written by directly translating the algorithm. I'll leave the rest as an exercise. I time it at about 2x faster. 
+
+Yeah, that's pretty dramatic right? Everybody knows what and means. Nobody knows what is. Checking lots of conditions When you find yourself writing: 
+
+then checks for the length being 3, which we know will never happen. But really, why are these different cases at all? On top of that, you're copying your objects at every point instead of taking by reference to const. I find it very hard to follow your and functions. I am not sure if they're correct. I think the best code review I could give you is... 
+
+This will additionally allow everybody to use the standard library algorithms with your class. You will want a as well, to allow for iteration over a . Use References Right now takes a and returns a . For something like , the former is OK, but the latter is still questionable. What if you want to modify the list elements? That seems like a useful operation. To that end, you should add: 
+
+You will want to make sure that you write the copy constructor to actually do a deep copy of so that this doesn't happen. Alternatively, make the class noncopyable by either. Even better, just use internally and let the compiler do all the work for you. 
+
+There is an abstraction that will automatically have any config updates when injected, so you don't need . I believe it is scoped per request, so changes to the config will not affect in-flight requests (you may want to double check this). To deal with updating the , you can write a small, thread safe that will always return the same client for a particular base URL. This would be registered as a singleton, and could be reused for all the clients in your app. 
+
+Assuming that you do indeed want a mutable triangle class, then you could extract validation into a method and re-use it from your constructor and property setters like so. 
+
+The equivalent C# then becomes . Equation Depending on what you are doing, you might want to consider creating an class with a method and override . Failing that, you can at least pull the equation logic out into separate methods. 
+
+Generating Permutations In the Haskell snippet you referenced, is generating the a list of all the possible permutations of the numbers 1 through 9. I'm not aware of any nice way of doing this in C# other than hand rolling it. You can write a pretty short generic recursive function to do this. 
+
+Another thing is that you are performing blocking IO when you call , and you may want to consider using an equivalent instead, freeing up more threads as you are reading. Also can be used instead of creating a . The TPL Dataflow library could be used to achieve something similar, or for a simpler approach that kicks off parallel tasks for each file, you could use something like this: 
+
+There is a lot of room for improvement here, both in terms of performance and readability. You should start to worry when you see code forming an arrow shape - there is almost always a nicer way. The solution below is one way of tackling this, and also offers a large performance improvement (around 19.4s to 3.2s on my machine). 
+
+Streams implement IDisposable, and should always be disposed of when used. Typically this is done with block. 
+
+Cool question! In addition to t3chb0t's great comments, I would suggest using a instead of a . It has additional support for blocking and bounding so you don't need to poll the queue manually, and you can limit the number of "in-flight" files. This could be used to make sure you don't read too many files into memory at once. 
+
+You have implemented dependency injection correctly. is injected into . In terms of the correctness of your example however, pretty much everything else is completely wrong! Don't worry though, we all have to start somewhere, so I will offer some tips. These tips might help you with this example, but if you want to improve, you should probably do some personal training/studying. Pluralsight is a really nice place to start. They have some beginner C# courses that you can do with a free trial. Anyway, on with the code review! 
+
+EDIT What I think Mat is getting at, is that this solution is localised to this usage, and may not be suitable in an application that frequently needs to generate parallel lines. If this is the only place in your app that you create parallel lines, then keep using it (YAGNI). If however you need to create parallel lines a lot, you could make your implementation a little more general. One way of achieving this could be through extension methods. Consider the following 
+
+should almost always be avoided. Try to return from async methods so they can be awaited by the caller. A should be returned from and have it's method called. 
+
+Once you have finished adding all the files to the collection, call , and from the other thread, your while loop becomes: 
+
+is not a builder, it is a factory. It's job is to create instances of . This shouldn't be done in it's constructor because then you need a new factory, each time you want a new . 
+
+Results Using the above short helper methods, you can rewrite your method to be much shorter and more readable. 
+
+Note that I have assumed you are wrapping inside a here, however you could choose to make behave similarly to your and return an if that is what your application needs. 
+
+The point of an interface is to abstract away the implementation details from the client. has the method which publicises exactly what the implementation is. This is called a leaky abstraction. When writing an interface, think about what other implementations might look like. One thing that you do know about all implementations is that they are going to need a file path. An alternative interface might then look something like this 
+
+Okay, that's pretty simple. We just have a double loop looking for . That just leaves . That's a function that takes the starting point and returns the largest possible product starting from there. Once you reduce the problem to just one source point, then it's not so bad: 
+
+Note that now that we separated out the original idea into "generate the numbers" and "get the nth one" as separate, we can just play around with the generating functions. Runtime Your algorithm is deceptively easy to analyse. For each number we check, we do at most 4 modulo operations, at most 1 dictionary lookup, and 1 dictionary insertion. That's all reasonable and obviously super cheap. But, are we doing one cheap operation per \$n\$? NO, we're not, but it's easy to fall into that trap. Because we're not iterating up to \$n\$... we're iterating up to the \$n\$th humble number. Thus, the runtime is really \$O(H(n))\$. And humble numbers get really sparse. Here's an unnecessarily prettified table for what the growth rate looks like: 
+
+namespace is reserved. Don't add stuff to it. Especially since there's no reason to in this case. Just put it in your own namespace. unnecessary string usage There isn't actually any reason to take the prompt as a . You could have kept it as a character literal. Really, anything streamable is good enough, so this could just be: 
+
+Moving all the logic you had in the loop into its own function. Picking a door The logic for picking a door is a little hard to follow. Let's simplify it. We start with all of our doors: 
+
+You don't provide a copy constructor, so the default just is a simple copy of all your raw pointers. Which will then get d twice! Also, what if you never called ? Now you're leaking memory. I don't know if should be copyable or not - but right now it is and that's broken. So at the very least, we can easily fix it by using a smart pointer: 
+
+And then, I'm pretty much copying your logic for with just one real change (and renaming some variables): 
+
+Redoing tons of work Consider a number like . By the time gets to 100, we will have already done the work for == 50 (which has a length of 25). So rather than simply seeing that the result for was 25, and adding 1 (since we're one step away from that) -- we have to recalculate all 26 steps from scratch. For that matter, we'd've already done as 33, so just by having gotten to 100, we should already know that it's at 26 without doing any work. Save your state as you go along - this is known as memoization. Given that the resulting longest chain is of length 525, that's a lot of work that we'll end up saving. Just that one chain will end up with 525 operations instead of 138,075... 
+
+This is wrong for several reasons: (1) you don't need the initial (2) The ending is meaningless (3) is the wrong construct (4) you reference at the end of the loop when you really want . Prefer the following: 
+
+You do two things: first you default-construct a objects, and then you copy-assign them. This is both inefficient and reduces the usability of your class. What if is not default constructible? Now I can't have a of it! Prefer to use the global operator new to just give you uninitialized data, and then placement new into each slot: 
+
+Your breadth-first search function is named . That is confusing. "I know the getchar_unlocked, puts and printf aren't good for I/O. But they are faster than cin/cout" I would worry about the performance of your algorithm way before I would worry about the performance of your just receiving input... 
+
+C++, not C You tagged this question C++, but you're not really taking advantage of what C++ has to offer when it comes to this problem. Specifically: the containers. Strongly prefer to use containers over raw arrays (and even then, is better). As a first go then, we can have: 
+
+Even if you want to allow temporarily invalid , namedtuple is the way to go since it makes so many other things easier. For instance, since a is just like a with benefits, you could count your s directly: 
+
+And secondly, consider using a proxy object. Add an that takes your three dimensions and returns a proxy that is readable and writeable. What I mean is, support the following syntax: 
+
+This is a lot more direct. No extra template arguments. Also on return type is best reserved for those cases where you need it. This is a random engine generating s, so it really had better return a . Single-value? Consider the difference between our distributions. is closed:

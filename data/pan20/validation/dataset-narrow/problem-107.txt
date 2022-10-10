@@ -1,0 +1,43 @@
+You would need to ask the ISP, we can only guess. I guess most ISPs consider it best practice to use public IP addresses for public links. Private IP address might break stuff like PMTUD as ICMP from the 2 PPP endpoints would probably get dropped in a lot of places. But as @RonMaupin mentioned, they could have used a public /31 instead to save some address space. 
+
+Choose Configuration > Remote Access VPN > AAA/Local Users > Local Users. Select the user you want to configure and click Edit. In the left-hand pane, click VPN Policy. Specify the number of simultaneous logins by the user as 0 (zero). 
+
+Your system has defined localhost as both ::1 (ipv6) and 127.0.0.1 (ipv4), so telnet first tries ipv6 and if this fails it tries ipv4. The first packet is a SYN to ::1 but because no process is listening on that address and port, the system responds with a RST (packet 2). Packet 3 is then the SYN to 127.0.0.1 and packet 4 is the SYN+ACK etc. 
+
+Edit after Update 1 & 2 As already mentioned in the comments, I don't think that the server send 8 segments and then paused, I think it sent 10 segments (frames 31-32,34-35,37-38,40-41,43-44), then it paused until it received frame 33 ( the ACK to the first 2 segments); after it received this ACK it then sent frame 47 & 48 etc. Again this is an assumption and a server-side capture would be required to confirm, but this seems quite normal expected behaviour to me. As for what happens later on in the connection, without looking at actual captures it seems reasonable to assume that because of TCP Slow Start, the cwin will increase in size, so the server can send more segments before waiting for an ACK, and at some point the cwin is large enough for the server to keep sending data without waiting for ACKs (as long as the ACKs keep being received at a relatively steady rate). 
+
+is used on layer-3 switches, not 'real' routers. It depends on what your customer wants to achieve exactly and how the link between the router and the rest of the network is configured. If they they gave you this: 
+
+Yes this will work if you use IKEv1. IKEv2 with multiple peers in the same crypto map entry is currently not supported on ASA. Note that this scenario will not create 2 simultaneous tunnels. The ASA will attempt to set up a tunnel to the primary peer, and if that fails, will try to set up a tunnel to the secondary peer. Also note that the remote ASAs will have to do RRI (reverse route injection) to make sure that the return traffic flows through the ASA with the active tunnel. 
+
+(copying from the comments as it was confirmed to be the solution) If 10.10.2.4 can ping 10.10.1.2 successfully then L2 and L3 connectivity appear to be ok and so 10.10.1.2 should also be able to ping 10.10.2.4. If not, then the most likely explanation is that a host-based firewall on 10.10.2.4 is dropping the pings. 
+
+And the links are labeled with where the number differs per color. Unfortunately the text in the green box is too small to read at this resolution. Now the more interesting question would be: what does the author mean with "isolated" and "security zones". It looks like all vlans are connected to the core L3 switch, so if that switch routes between all these vlans then there is only isolation at L2 and so this use of vlans does not offer any security at all. If the L3 switch does not route between all vlans, then the non-routed vlans are indeed isolated but then they also don't have connectivity. The only way this diagram would make sense (talking about security) is if the L3 Switch would be replaced with a firewall IMHO. The Core L3 switch could be e.g. a Cisco 6500 with an ASA module but then I would expect it to be labeled as to make that clear. 
+
+But note that since this is a relatively recent bugfix, not all of the above versions are available yet at this time. 
+
+Now, when either A or B receives a packets destined for 192.168.x.x the packet will loop between A and B until the TTL expires. 
+
+I don't see any asymmetric routing here (traffic enters and leaves the correct FW interfaces); is there any other problem here? 
+
+Assuming that you mean that vlan X and Y both need access to the Internet (with NAT) but X is not allowed to communicate with Y (and vice versa) then you cannot "disable" the routing between X and Y so the simplest solution would be to use an ACL to filter that traffic. 
+
+1) To allow traffic from the Anyconnect client (which is on the outside) to go to the Internet (also outside) you need to enable: 
+
+Yes. To be more precise, the openflow protocol defines the set-field action, but it depends on the switch implementation whether or not it supports this, and which fields can be modified if it does. E.g. this doc mentions that the openflow agent on Cisco NXOS switches support (among others) following actions: 
+
+No. The primary reason to use a router is to forward packets. Additionally it can, but certainly doesn't always, perform additional operations on the packets such as address or port translation (NAT/PAT) or encryption (VPN). You could just as well have public ip addresses on your vlan X so in that case, no NAT is required for it to connect to the Internet. Or, as @RonTrunk mentions, if you do use private IP addresses then the NAT can also be done elsewhere, e.g. on a firewall between the router and the Internet. 
+
+And if we can somehow compare them, which one is more secure? I don't believe (but anyone please correct me) that there are scenarios where you can choose between one or the other. It may make miore sense to compare Radius and EAP, to some extent. Some things to consider: 
+
+In other words, it is a mechanism used in (mostly) switches and wireless access-points to allow or block devices to access the network (or granularly allow access to parts of it). For example if you have a network port in a meeting room, you can enable 802.1x on the switchport and configure it in such a way that when an employee connects she has access to the entire network but if a guest connects (with a temporary password) he can only reach the Internet and if a passer-by is tempted to try his luck, he cannot access anything at all. Doesn't it also use RADIUS as it's underlying authentication mechanism? Yes and no. 802.1x uses Extensible Authentication Protocol (EAP), and the wikipedia article about 802.1x has this nice drawing that shows that for wired 802.1x: 
+
+For wireless it is similar in the sense that there is also no Radius between the supplicant and the authenticator, only between the authenticator and the auth server (to tunnel the EAP). Now the Extensible in EAP's name is very true, there are dozens of EAP protocols that you can choose from, some will use passwords, others certificates or both, etc. etc. What are their differences? Well, it's a bit like comparing apples and oranges. Dot1x is not really a protocol but more a framework in which protocols like EAPoL and Radius are used. Simplified (maybe over-simplified?) you could say: 
+
+How about giving them a demo? "Look how slow this is... now I change the DNS on this PC to xx.x.x.x and I download the same content again, look how fast it is now". That, or raise your prices with 2% and give a 2% discount to those who use your DNS. Or a free T-shirt. Whatever works. 
+
+Before 2 hosts start using AH with each other, they need to agree on a common set of parameters, a security association or SA. This is typically achieved using the IKE protocol (IKEv1 or IKEv2). As part of this negotiation they also derive a session key or "secret", i.e. a random value that only these 2 hosts know. This secret is then also fed into the hashing function (which can be MD5 or some other algorithm) that is used to calculate the ICV (Integrity Check Value) in the AH header. Hence, if an attacker wants to spoof a packet (or modify a packet sent by the real sender) he cannot generate the correct ICV because he does not know the secret. The payload that is protected by the ICV is always that of the current packet. 
+
+Don't do it - see my comment. ;-) But if you really really must, I think this is possible by using a combination of PBR and NAT, i.e. a variation on NAT on a stick but with a local policy (cfr Policy Based Routing) since the unreachables are locally generated. As you said it is an odd question so forgive me for not being 100% sure this will work, please consider this just as food for thought/experimentation. One particular thing I'm not sure of is where to put the "nat inside" and "nat outside": 
+
+You are hitting the following bug: CSCva87160 OTP authentication is not working for clientless ssl vpn (Cisco login required) If you want to stay on 9.1, you can go to 9.1(7.11), otherwise you have a choice of fixed releases:

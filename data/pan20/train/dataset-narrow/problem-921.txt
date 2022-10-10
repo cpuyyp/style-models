@@ -1,0 +1,39 @@
+Apparently passing in for the release action is not valid so in your constructor you should check and throw an if that is the case. I might be missing something, but shouldn't this be called the other way round: 
+
+Update: I don't know how it is in Java but in .NET is meant to return a short helpful description about the object largely for debugging and diagnostics. Dumping the entire list content is probably not very wise - imagine the list contains tens of thousands of entries. 
+
+You should avoid interspersing a general algorithm implementation with statements. Use the python logging framework instead. There are several checks in the implementation which would warrant to raise an exception instead of printing a message and just returning a default value or or worse simply continuing. These would probably warrant raising a : 
+
+I don't really see any benefit into introducing the local variable. Don't throw generic . In your case I'd use . Using specific exceptions gives more meaning to the error and also potentially allows the caller to catch some exceptions but not others. 
+
+I think you might run into some design ugliness with the in the future because you are now coupling the knowledge that an entity could be filtered by a certain property to each entity. Imagine a requirement comes in to filter by - what would that look like in your design? Are you going to add a property to your - but then what if an entity currently implementing doesn't have a ? So you then might need to add another interface like an and another method to go with it. And then if you want to filter on another entity ... seems quite cumbersome and involved to me. I think the simplest and most flexible way forward is to actually move the matching responsibility into the . So instead of having a you rename it to and give it a method to match a particular employee: 
+
+There are several variables used in your method which are not declared in your method but look like they are local variables such as , , . If these are in fact class members then the two common C# conventions are to either access them with or to prefix the names with - this way it will be easy to see by the reader that these variables are in fact class members. This is especially important as your method is very long and introduces a fair amount of local variables. Increases readability significantly for someone unfamiliar with your code (or for yourself when you come back to this in 12 month time trying to fix some obscure bug). As mentioned the method is quite long and it's not easy to at least get a basic understanding of what all the different blocks do. I think it would help to possibly break out the different blocks into individual methods with descriptive names. Alternatively leave a descriptive comment before each block denoting what the next step is doing. There is some code duplication in this block: 
+
+I strongly dislike the class. There is an implicit dependency from the view model to it via the , , etc. magic strings which is not easily visible and makes the code brittle. It would be better to create an interfacelike an which can be queried for the different menus. This will make unit testing the code easier as well. 
+
+has a bit of a design smell on it. All this type checking seems not quite right but without knowing a bit more about the design it's a bit hard to suggest something better. I can't see where and how is actually called but I do start to get the impression that you are overloading the class with too many responsibilities. I don't see any reason why it could not be extracted. Most things it relies on could be passed into it or are public properties of the . 
+
+First of: I like the iterator approach. We use the FizzBuzz problem as part of our interview process and to this date nobody went down that route. The main points I have: 
+
+Standard C# naming convention is to use for public / members. It's a matter of consistency which makes your code easier to read for others. 
+
+This implementation has 30% less code than yours and the code which is there is considerably less complex. So your spin lock better stack up some nice performance. Let's write some quick benchmark: 
+
+Consider making a configurable property so you don't have to change the code if when someone asks to have a different name takes a array so there is no need to do the , you can just pass in all the trim characters directly like this: 
+
+Your methods take parameters but it seems like you only have really thought about positive numbers. This yields some inconsistencies. For example: 
+
+Note that with the tagging approach you can't have multiple traversals running in parallel (although you could parallelize the tagging traversal itself) 
+
+you repeat the term several times. However this only changes with the outer loop so I'd consider extracting it into a variable like this: 
+
+Your functions and variables not always very well named. The name of a variable or function should convey its purpose in a concise manner so that when reading the code it is immediately obvious what the intended purpose is. So for example: 
+
+Consider overloading , . You could probably also overload , , and . Although you might have to consider questions like: Is 359 degrees greater or smaller than 5 degrees? Override and is you overload (check Microsoft guidelines). Overloading and (, , , ) as well as and (, ) makes for nicer calculations. 
+
+But actually what you meant is "units". So the entity you are trying to measure is an angle. And code using it should, for most parts, not care what unit it represents - just that it represents a specific angle. Expressing it as a value in a specific unit is only really necessary for calculations in algorithms which require the angle to be of a specific unit, serialization, display, etc. Therefore I suggest a different design: You have an type which represents a specific angle. Choose whichever unit you like best as internal representation of it. The type then exposes methods to create an from various value in specific units and convert them to such. Something along these lines: 
+
+- Seriously? I think I've mentioned it in a previous review, but I'll repeat it again: You have call chains 3 or 4 items deep on a regular basis - this indicates that the abstractions are probably not quite right. 
+
+The method returns a string representation of the found entries which is generally not very useful to a program using your class. You should simply return the result, or if you want to pass back the indices of the found entries as well then return a dictionary with the indices being the keys and the todo items being the values. Pretty sure is simply meant to return the human readable string but you are also printing things out which is probably unexpected to the caller.

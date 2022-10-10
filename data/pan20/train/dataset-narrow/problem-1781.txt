@@ -1,0 +1,79 @@
+First, there's no such thing as a "gb", so you clearly have problems distinguishing upper and lower case, and it's thus unclear whether your client has 10Gb or 10GB of bandwidth -- and it makes a significant difference. However, even with 10GB, it's nowhere near enough. A minimal bitrate for well compressed HD video would be around 2Mbit/sec. That's 15MB per minute, so 10GB would let your client's users download about 11 hours of video. Except that if his data rate is for the aggregate of inbound and outbound traffic, rather than the higher of the two, we have to allow for the download from Amazon as well, so that's 5.5 hours. Basically, he can have two users download one movie each, and that's it for the month. How to solve it: serve the video directly from Amazon, and pay them for the bandwidth. Bandwidth from Amazon costs 15 cents per GB, (less for high volumes), so that 10GB-worth of bandwidth would only cost $1.50 from Amazon. You'd end up paying around 40 cents a time for a movie to be downloaded. If he puts the links on his website, but they link to content hosted on Amazon, then the downloads won't go through his website. 
+
+The domain name doesn't need any particular configuration -- anyone can create a CNAME for any domain they own, pointing to any other domain name. The server will presumably need to be configured to do the short URL expansion for bit.ly Pro paying customers, and block all other domain names that may be CNAMEd to cname.bit.ly by non-customers. 
+
+In addition to the other answers, note that if your server is handling SSL/TLS for many different domains, you will either need to have a single certificate covering all of the domains or have Server Name Indication (SNI) configured on the server to enable it to use different certificates for different domains. The client also needs to support SNI, but all modern web browsers do, though note that most browsers on Windows XP do not. (In theory there's a third option, which is to have a multi-homed server using a different IP address for each domain, but I think that's unlikely to be feasible for you.) 
+
+Yes, high latency on a network connection can certainly impact on download speed (there will be a lower impact if the TCP window is reasonably large, so that the source can send several packets without having to wait for each one to be ACKed). And any significant packet loss will have a catastrophic effect on performance, as every time a packet is lost the download will effectively stop for the duration of the TCP retransmission timeout. 
+
+Try connecting the eth1 ports on the two servers directly to each other with a crossover cable, to rule out other problems on the network. If it still doesn't work, you may have faulty hardware somewhere. 
+
+No, it's not possible and not necessary to point a domain name at a specific port, in or out of EC2. Just create a CNAME pointing the domain name at the instance, and you'll be able to load $URL$ (assuming that your security groups allow it). 
+
+Garbage collection would be my guess -- it can cause bottlenecks on loaded Java servers. Have you studied your garbage collection logs to get an idea of the delays involved? What are your garbage collection settings 
+
+You'll also lose everything on the m3.medium's instance-store volume, unless you copy it to an EBS volume first. 
+
+You have to set it up as a ring -- A is the master for B, B is the master for C, and C is the master for A. And don't forget to set the option so that they will pass on upstream changes, and set to 0 so that the updates won't go round and round the ring for ever. Read this article -- the ring configuration is described on page 2. 
+
+You can have as many volumes as you want within the free tier, as long as you don't go over 30GB in total. And you don't need to use any snapshot when creating a blank volume -- just create it, attach it to your instance and build a filesystem on it as you would for a physical disk. 
+
+Your sendmail is misconfigured. It's using the internal EC2 domain name, ip-10-48-213-66.eu-west-1.compute.internal, as the sender domain, and since this can't be looked up and checked, the emails are being rejected. You need to put an actual real Internet domain name in there that has a reverse DNS lookup to the IP address you're sending from -- you have to apply to Amazon for permission to send email from EC2 in order to get them to configure the reverse DNS for you. Sending email from EC2 servers can be tricky in any case, as lots of EC2 IP addresses are in blacklists. You're probably better off looking into the new Simple Email Service that Amazon have just launched. 
+
+To answer question 2 first, the <IfModule> wrapper is there so that your config will still work (albeit without the bits that set headers) on an Apache instance that doesn't include mod_headers. Without the wrapper, an Apache instance without mod_headers would fail on startup. For question 3, web servers set both Expires and Cache-Control headers because the history of caching headers is long and muddled, and covering both of them is your best bet for getting as many end users as possible to respect your cache lifetimes. 99% of the time, either one will be enough (in which case you might as well use max-age, and push the CPU workload of determining what is 7200 minutes from now off to the user's browser rather than your server). For question 1, if your .htm and .php pages are really dynamic (contents depend on who the user is or what they're doing), then you shouldn't be allowing them to be cached at all. .xml files are often generated by your code, and if so then they should probably be included in the dynamic rather than static content. And it's only OK to give your "static" files a such a long lifetime if you've taken steps to ensure that they really are static, and you can never change the contents of a file while keeping the same filename. In particular, if you change your JavaScript or CSS files, then users will see unexpected results depending on what they've got cached and what they don't. 
+
+An Elastic IP address is the correct answer. It will be deallocated when you stop the instance, but you can allocate it back to the instance after you have restarted it. If necessary, you can write a startup script on the instance that will automatically allocate the Elastic IP address. 
+
+Yes, it's allowed and will work, but it's not considered good practice. The multiple lookups use more resources, and there's a risk of accidentally creating a loop. 
+
+You're looking at two different caches. tells you how much memory the operating system is using for the disk cache, not how much MySQL is using for the database cache. And the operating system should be using as much memory as it can for the disk cache -- why wouldn't you want as big a cache as possible? That memory is always available to be used if an application needs it. See here for a good discussion of Linux memory usage for caching. 
+
+You can't run PHP code from S3 at all -- it's just a storage service and a web server, it doesn't include a PHP application server. As the other answer states, you can set up an instance in EC2 and run a web application there, but EC2 and S3 are two different services. 
+
+The public key doesn't matter. There's no need to keep it secure, it should be widely distributed, and if you lose it you can always recreate it from the private key. It's only the private key that you should be worrying about. And yes, for that key it's a reasonable plan to put it on two or three USB sticks and keep them in separate places. 
+
+As TomTom said, before scaling out, you need to identify your current bottleneck. The commonest bottlenecks are network bandwidth, RAM, disk performance and CPU. You need to do some more monitoring to find out which of these (or possibly something else) is causing your current performance problem. 
+
+You could set up another server with a different ISP and write your own version of whatismyip.com, running on hardware that you control. 
+
+It's not actually five different websites using your service, it's one server which happens to host five different websites. Your service is used by servers, not by websites. To differentiate between them, you would have to require the websites to provide their names in a custom HTTP header, or make them all authenticate themselves with user names and passwords (or in some other way) in order to use your service. 
+
+This is tricky to do without control of the main Apache config, since Name-based Virtual Hosts are the proper way to do it. You could probably improve your rewrite solution thus: 
+
+The subnet mask is mostly used to work out whether another IP address can be accessed on the local network, or if it needs to go through a router. Your workstations with the old /24 subnet mask will have been able to access everything else that was inside the old /24 network, because the wrong mask will still give the right answer for those addresses. They won't have been able to communicate with IP addresses in the new /20 network that were not also in the old /24 network, which is why we say that the old mask doesn't work in the new network. In your second scenario, since the router's mask remained at /24 it won't have been able to access devices with IP addresses outside the old network, and so those devices won't have had router access. 
+
+There's no free space left on your /var filesystem. You'll need to delete or move some files. And I would suggest setting up some automated monitoring so that you get notified if any filesystem falls below 20% free space. 
+
+You get 750 hours a month of micro instances on a free account. Since there are between 672 and 745 hours in a month, that means you can run one instance 24x7. You can run more instances for less time, if you want, but be sure not to go over 750 instance-hours in a month, or you will be charged. You can confirm this and check other free tier allowances here. 
+
+I have a MySQL instance containing a number of databases, one of which is an archive database (although using the INNODB rather than ARCHIVE storage engine) that is not queried or written to in normal operation. The data filesystem is filling up and I'd like to move the archive database's data directory to a different filesystem (and then symlink it back, obviously). If there are no SQL statements attempting to query or update the data during the move, can I safely do this while the MySQL instance and the other databases stay online and in use? I plan to rsync the database directory to the new filesystem, then rename the old one on the original filesystem to something different and create the new symlink. lsof reports that MySQL does have the .ibd files open, so presumably it would have to reopen them. 
+
+There aren't any monthly costs for reserved instances, so the question doesn't arise. You pay an up-front payment for a one or three year period, and then a payment calculated hourly for instance usage. It's billed monthly, but it's charged per hour. 
+
+Looks like your domain registration has expired -- cleangreenpgh.com is on Client Hold status. The expiry date is showing as 2015 because they temporarily add a year to an expired domain to give you a chance to renew before it becomes generally available. See the relevant help page here. 
+
+Change "stable" to "lenny" (or "oldstable") in your sources.list -- "stable" is now squeeze, not lenny, so you're trying to install the squeeze version of php5-cli which has dependencies on lots of other squeeze packages. 
+
+It depends on the Linux image you're running, but generally you can sudo from the initial login user account to gain root privileges. 
+
+Connect to the console and change the MTU back. If you've not got console access, then reboot the server. 
+
+You'll find that this kind of filter is a lot easier to set up in procmail than in Spamassassin, and procmail will co-exist happily with Spamassassin. 
+
+The authoritative name servers for the domain are ns1.netsonic.net and ns2.netsonic.net, and they're refusing requests for that domain name. Either your registrar is pointing at the wrong authoritative name servers, or your DNS provider has screwed up. 
+
+Yes, if the servers in your private subnet really never need to talk to the outside world (they don't download software updates? Don't use public NTP servers?), then you don't need a NAT gateway for them. And the servers in your public subnet don't need a NAT box, they will route through an EC2 Internet gateway. 
+
+Assuming that your crashed table is in a DB called current, your restored backup is in a DB called backup, and there's a primary key called id: 
+
+What will you do if your main data centre suffers an outage, which happens at all data centres from time to time? You might accept the downtime, you might fail over to another data centre, you might be running in active-active mode in multiple data centres all the time, or you might have some other plan. Whichever one of those it is, do it when you do releases, and then you can take your main data centre down during a release. If you're prepared to have downtime when your data centre has an outage, then you're prepared to have downtime, so it shouldn't be a problem during a release. 
+
+The most obvious application is split horizon DNS, as the document says. Suppose you have some service on the hostname service.example.com, running in AWS, that is accessed both by your own AWS instances and also by external users. You want DNS calls for service.example.com from inside your AWS environment to return its private IP address while DNS calls from outside your environment for the same hostname should return its public IP address. 
+
+The reason for setting the header to vary by user agent is that Apache's recommended configuration for mod_deflate serves uncompressed versions of some content to Netscape 4 users. There are probably few enough Netscape 4 users now that you can just serve compressed content to all browsers that claim to support it, and not vary by user agent. So instead of the recommended configuration: 
+
+You can't change an on-demand instance to a spot instance. You'll need to create an AMI from the current instance and then launch a new spot instance using the AMI. 
+
+Add your backup user to the wheel group, and it will have root privileges. Or add it to a less privileged group and give that group read access to the /root directory and all the files in it. 
+
+You can't do this through the console, as far as I know -- you need to use the API. The EBS storage won't be affected.

@@ -1,0 +1,91 @@
+The first line of the script is . This tells the session not to record in its binary logs. This prevents from running on the Master (the DB Server with the DBVIP). Once a month, you can just take down the DBVIP from one DB Server and bring up the DBVIP on the Other DB Server. When you do that, you must also setup the script to on the Other Machine. The key is to run this on the DB Server that does not have the DBVIP. Give it a Try !!! 
+
+SUGGESTION Please try to commit data in smaller chunks. If you cannot, then please store binary logs on fast HDDs (not on SSDs) for faster write performance. 
+
+PHP's mysql escape functions are probably not FULLTEXT aware. The MySQL Documentation says about the Double Quotes in Booelan Mode Fulltext Searching 
+
+is actually a little misleading. In the MySQL Documentation, the legal characters for wildcards are , and . (If you want to interpret a literal underscore). The asterisk character is not listed. The above filter is actually looking for a table called . Therefore, you have two options OPTION #1 Correct the filter in to have this 
+
+Given this statement, 4 would seem way too low. You should set it much higher or don't set it at all (letting MariaDB set it for you). 
+
+Only and have columns in the schema representing the EXECUTE privilege. Therefore, these commands would work 
+
+CAVEAT : For you InnoDB people, same doc has that include metadata locking within the system tables. You could write a script to lock every MyISAM table in a database, sleep that DB Connection, do your OS copy, and release the lock. This is what I do now because I work with a MyISAM table that has 4019 partitions. This forces the flush of everything for . Issuing a lock like this and sleeping the connection, I can then FTP MYDs and MYI to other data centers. If you use Percona Server 5.6, I have better news. Percona just invented LOCK TABLES FOR BACKUP. This takes the guess work and grunt work out of locking tables with a measure of confidence in the tables' consistency. $URL$ YOUR ACTUAL QUESTION You should make the effort to script the locking of MyISAM per database. Here is the script I use to create a lock on every MyISAM table in a database before the backup 
+
+The resulting table has no indexes. I have something you might find helpful to bypass the locking issue. It involves making the table first as a separate query, then populating it. There are two options for making your temp table: OPTION #1 : Try creating the table with the same layout 
+
+If you expect your InnoDB data to grow, you should prepare for it by having a larger InnoDB Buffer Pool. Where does the idea of having additional 10% extra space for the Buffer Pool come from ??? Please note the following diagram of the InnoDB Architecture 
+
+Once the TokuDB storage engine was defined, it becomes responsible for updating the INFORMATION_SCHEMA database. The first thing you should do it test TokuDB's INFORMATION_SCHEMA functionality. First, run this query at a mysql client prompt: 
+
+Based on this, the internal bus speed for AMD (TEST) is at least 2 times more that Intel (PROD). YOUR INDEX STATISTICS Since you loaded TEST with the same data, one thing might have been overlooked. I am thinking of the index statistics. For TEST, the index statistics would be fairly new. For PROD, it may be stale if the indexed tables have experienced lots of INSERTs, UPDATEs, and DELETEs. Running a SELECT on two different machines with identical mysql version, identical mysql configs, identical datasets, and even identical hardware, could be affected by index statistics on the table involved. I would run ANALYZE TABLE across all tables on PROD and TEST and then try comparing performance. 
+
+This might be a bug. In essence, it sounds like the definition must be using the structure of the first member of the clause as the basis for the rest the tables in the list. Before you report the bug, try reversing the order of the clause so that all the compressed tables are first and the uncompressed one is last 
+
+GOTCHA #5 : No High Availability or Data Redundancy Scenario #1 : If the Master goes down, point your writes at the Slave and work on reconfiguring everything ASAP. That's a lot of manual labor. Make sure you have a good runbook for this situation. SUGGESTION: Setup the following 
+
+How does this apply? You should err on the side of caution. You should always check the charset beforehand because you do not know the neighborhood (client program, internet browser) the PHP connection will be entering and if there is a risk of a carjacking (putting invalid data into the database, requesting too much data for retrieval). QUESTION #3 
+
+LOCK TABLES will hold up any transaction-based row locks that are trying to be acquired. Since the tables are locked independently, you must just need to increase the size of your InnoDB Buffer Pool (innodb_buffer_pool_size) to make more room for row locks across all InnoDB tables. 
+
+Whenever an InnoDB table experiences DDL, DML, or being used in a Transaction, all four of these types of entries are either read or written. Meanwhile, if innodb_file_per_table is disabled, all these entry types live in ibdata1. If it is enabled, only the Table MetaData and the MVCC Data would reside in ibdata1 while the Table Data Pages and Index Data Pages would reside in the database subfolder as a .ibd file. That being considered, what would happen if ibdata1 were placed in another volume and symlinked ? For starters, how does MySQL represent a table regardless of the storage engine ? As a .frm file. Where do .frm files live ? In the datadir. What's wrong with that ? Here is an example: Using the default datadir of /var/lib/mysql, let's use an InnoDB table called mydb.mytable. With innodb_file_per_table disabled, everything would sit in ibdata1 (which you are proposing to symlink and send off to another data volume). For the table mydb.mytable, this is what you would have: 
+
+The only thing I can suggest is this Check the timestamps on the files. If there are very old, delete them. If this is in Windows, deleting will not work if the are use. 
+
+log_bin_trust_function_creators This is simply an ace in the hole when migrating Stored Procedures. The DETERMINISTIC property was added to to two things: 
+
+Due to the warning, you would have to restart mysql to make sure the warning does not come back. Give it a Try !!! 
+
+control mysql connections on a per-(web-application-)user level There is already a built-in feature of controlling mysql authentication in terms of the number of queries that can be done per hour. Please note them in the description of mysql.user in MySQL 5.5.12: 
+
+The InnoDB plugin came into existence in MySQL 5.1 since version 5.1.38. Many new features in the plugin allow you to 
+
+A couple of months ago, I briefly mentioned using mysqlpump (See my second post to Any option for mysqldump to ignore databases for backup?) which now has --exclude-databases. 
+
+STEP 05 : Decision Time If is big in terms of hours, minutes, and seconds and you feel making join_buffer_size bigger would improve the run time, loop back to . Keep doing this until is . GIVE IT A TRY !!! 
+
+This will allow you to have the same for the data set of a unit test. If you change the data set of a unit and it needs a different , just update the in by the . GIVE IT A TRY !!! 
+
+The problem here is MySQL will not merge them. For the sake of continuity, you should avoid using wildcards at the database level if your want to manage the grants of a single user. In that instance, you will have to manage the grants of every single user the same way. 
+
+Now call sp_FlushBinaryLogs in an event that goes off every hour (or you can set it to whatever schedule you want): 
+
+Just a quick observation: you using MySQL 5.1 Driver against MySQl 5.0.92 I recommend you should either 
+
+The solution lies in organizing a set of user variables to monitor that change. Please forgive you are about to see: First, let's load your data in the test database in a table called : 
+
+That's it !!! If other accounts are messed up in the same way, set , and then execute the code. Here is That Code Formatted: 
+
+If you issue this on the Slave at midnight, the data is frozen in time. That way, when you restore the mysqldump, all the tables are from the same timeframe. SIDENOTE : You are not obligated to convert all the tables on the Slave to InnoDB. If all tables were InnoDB, using would create point-in-time backups also againsa a master. Since you have MyISAM tables, then Master-Slave is the ideal solution, not necessarily the ultimate. There are still other methods out there, but for the sake of simplicity: GO WITH MASTER-SLAVE !!! 
+
+From my standpoint, you may have potentially introduced data drift into replication. Baron Schwartz presented this as a puzzle in his blog. You may have to reload and with fresh data. At the very least, you should use pt-table-checksum to see if 
+
+which is about 15 queries per second, you may need to spend some time tuning InnoDB. Since InnoDB does fuzzy checkpointing, InnoDB will reveal a bottleneck in writes if you see constant writes that never abate. That could be due to the OS or VM. It could also be due to an undersized InnoDB Buffer Pool (I see it's 100% full). Lots of reads will bring in data and index pages into the Buffer Pool. New or updated data and index pages from the INSERTs and UPDATEs need to squeeze into the Buffer Pool as well. Perhaps a bigger Buffer Pool is in order. From another angle, look at the number of rows accessed 
+
+Based on this, values other than 1 put InnoDB at risk of losing 1 second's worth of transactions, or a transaction commit's worth of data. The documentation also says use . According to the MySQL Documentation on sync_binlog 
+
+Under the hood, these are the steps that are executed. I trust that MySQL will perform your ALTER TABLE in like manner. 
+
+With innodb_file_per_table configured, the table will exist in a physical file under the DB folder. For example, let's say your table has the following attributes: 
+
+as this may skip real data the Slave should have. UPDATE 2014-06-16 20:51 EDT Please look at the query you are replicating 
+
+If you look at the code, there is nothing monitoring the tree height or any particular level. To compensate, I have a revised version of this code 
+
+STEP05) After this, all temp table that become MyISAM are written to the RAM Disk. This should speed disk-based temp table creation. Give it a Try !!! 
+
+Here is what you do STEP01 : Activate Binary Logging on the Old Server Step01-a) Add this to /etc/my.cnf on the Master 
+
+It takes time to allocate and deallocate these buffers when a connection comes into being. Don't forget to multiple the sum of those values by max_connections. As a side note, please refrain from using mysql_pconnect as PHP and MySQL's persistent connections do not get along well. Here are two informative links on this topic: 
+
+Give it a Try !!! UPDATE 2012-01-06 14:55 EDT Here is something interesting you may not have realized: Only those SUPER privilege can set one's own session to disable binary logging. According to the MySQL Documentation on SUPER: 
+
+This script is designed to check the timestamp of every table. The only parameter the table needs is the database. 
+
+This directive forces are VARCHARs to have the fixed amount of space allocate like that of a CHAR. I did this at my previous job back in 2007 and took a 300GB table and sped up index lookups by 20%. Of course, by changing the ROW_FORMAT to FIXED, you will be double the MyISAM table's size in the worst case scenario. If you choose to do this, make sure you have sufficient diskspace. PERSPECTIVE #3 : Limits on the Number of Open Files from mysqld's vantage point. Whenever you startup mysqld, many variables are set based on /etc/my.cnf. The rare exception is the option open_files_limit. If my.cnf does not have this setting, mysqld will attempt to compute the best number for this option such that mysqld can still operate and leave whatever files handles available to the OS. You can set this number higher strictly at your own risk. PERSPECTIVE #4 : Disk Considerations Since your storage engine of choice is MyISAM, you must have fast reading disks since data pages are never cached. Please use RAID10 sets. They are easier to do disk maintenances on than other setups. You can could also go with SSD drives. Whatever you choose, prepare for aging disks and periodic disk maintenances. Make sure your RAID cards have the latest firmware upgrades. SUMMARY All the information you supplied must be examined from these 4 perspectives. You must strike a good balance and may have to make concessions on your choices based on either budget, available hardware, amount of diskspace, and overall limitations of MyISAM that you have not anticipated. 
+
+Even though you have data in RAM, mysqld will always hit the .frm file to check for the table existing as a reference point, thus always incurring a little disk I/O. Proportionally, heavy access to a MEMORY storage engine table will have noticeable disk I/O. 
+
+If you are comfortable with a maintenance window, here is what you can do: Step 01) You need to add this line to my.cnf on Server1 
+
+The following is just insane ranting and raving... If you leave all data in one table (no partitioning), you will have O(log n) search times using a key. Let's take the worst index in the world, the binary tree. Each tree node has exactly one key. A perfectly balanced binary tree with 268,435,455 (2^28 - 1) tree nodes would be a height of 28. If you split up this binary tree into 16 separate trees, you get 16 binary trees each with 16,777,215 (2^24 - 1) tree nodes for a height of 24. The search path is reduced by 4 nodes, a 14.2857 % height reduction. If the search time is in microseconds, a 14.2857 % reduction in search time is nil-to-negligible. Now in the real world, a BTREE index would have treenodes with multiple keys. Each BTREE search would perform binary searching within the page with a possible decent into another page. For example, if each BTREE page contained 1024 keys, a tree height of 3 or 4 would be the norm, a short tree height indeed. Notice that a partitiioning of a table does not reduce the height of the BTREE which is already small. Given a partitioning of 260 milliion rows, there is even the strong likelihood of having multiple BTREEs with the same height. Searching for a key may pass through all root BTREE pages every time. Only one will fulfill the path of the needed search range. Now expand on this. All the partitions exist on the same machine. If you do not have separate disks for each partition, you will have disk I/O and spindle rotations as an automatic bottleneck outside of partition search performance. In this case, paritioning by database does not buy you anything either if id is the only search key being utitlized. Partitioning of data should serve to group data that are logically and cohesively in the same class. Performance of searching each partition need not be the main consideration as long as the data is correctly grouped. Once you have achieved the logical partitioning, then concentrate on search time. If you are just separating data by id only, it is possible that many rows of data may never be accessed for reads or writes. Now, that should be a major consideration: Locate all ids most frequently accessed and partition by that. All less frequently accessed ids should reside in one big archive table that is still accessible by index lookup for that 'once in a blue moon' query. The overall impact should be to have at least two partitions: One for frequently accessed ids, and the other paritiion for the rest of the ids. If the frequently accessed ids is fairly large, you could optionally partition that.

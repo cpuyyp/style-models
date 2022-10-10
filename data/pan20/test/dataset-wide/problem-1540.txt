@@ -1,0 +1,87 @@
+This is a horrendously long line of code. You should strive to keep character count on a line under 80. Break this query up across lines, making it much easier to read. Example: 
+
+Where the singleton just instantiates and vends a particular type of class, in essence holding the authoritative dependency. But, the concrete objects (Database, Config, etc.) themselves have no singleton in their inheritance chain. 
+
+From a purely MySQL perspective, I would comment that your schema does not seem appropriate. Why reference both username AND user id for permissioning? Should user id be the authoritative identifier? Why store users with given permission in a comma-separated list as opposed to using an actual many-to-many join table between permissions and users which would be a typically normalized approach? The way you have it now, you will have inefficient queries when looking up permissions for a given user id. The same concern might be true about ranks_allowed, though it is unclear how this is used in your application. Just generally your approach seems odd here in looking at your code. Normally, one might model permissions as being attached to a user object. That is when you marshall a user object for use in your system, you would also attach the permissions that user has within the system. These truly are properties of the user in a real-world sense. So it would seem to me that, if that were correctly modeled, all your permissions management code would need to do is to match those user permissions against the permissions required to perform some functionality. The way you are doing it now is sort of the inverse. You look at the permission, and then determine if permission is appropriate for a given user, which just seems an odd way to model this, unless your primary use case was not to determine what an individual user has access to, but rather determining all users who have a permission as one might in the admin portion of an application. My best advice, is to try to model your classes (and related database tables) in as close to a real world sense as you can. This typically helps simplify your code, and put the proper functionality in the proper classes. 
+
+All your "factory" is doing is acting like a constructor for . Factories can be very useful for helping you to collect all dependencies needed for the class(es) it will instantiate in order to ensure the returned object is set up in a proper state. Here you are not doing that at all, in that you are allowing pretty much any value (or no value at all) to be passed to the factory and doing no validation whatsoever against the passed data. What if this factory gets passed an array, object, numeric primitive, empty string, etc. for one of your parameters? Do you truly want to allow the object to be instantiated into this state? If you are truly OK with the values on person being set to arbitrary values (i.e. this is simple app and you are not worried about class re-use), and you are OK with the use case where not all parameters are set, then I would say just go for your first form, as there should be no problem in setting a value to an already property. I think the second form might imply some level of validation or state control that simply doesn't exist. If this is your preferred approach, I would just ditch the factory class and make the constructor behave like this factory method is doing now. 
+
+See note above about whether this is even needed here. Even if you keep it, there is no reason for the as the condition already returns. Speaking of returns, I agree with comments in the other answers about not returning these integer values in favor of something more meaningful to caller. 
+
+What you are finding here is that one data structure does not fit all use cases. While it certainly makes sense to utilize an array to perform the sort (since you end up having to compare all the values anyway), an array certainly does not make sense for performing a lookup against any given layer name. I would suggest that rather than using an array for your store of layer objects, that you build a key-value store - a hashmap - to allow for O(1) lookup of any given layer. In javascript this would be modeled using an object that might look like this: 
+
+You are leaking implementation details outside this class. Why would you be returning objects to the caller like in your method. If this class wants to be a mapper, it should ONLY be a mapper, not a general purposes class for preparing statements. 
+
+I don't understand why you imposed a single day boundary here when this is not something that is presented in the question. You can really only schedule one day at a time? Your current methodology which doesn't allow you to cross day boundaries will not let you schedule any flights between and , which seems problematic. At a minimum, if you didn't want to schedule flights before this means you should absolutely be able to schedule flights up to (since you automatically give yourself the 10 minute buffer after midnight). 
+
+This could give you \$O(1)\$ access to an array of alternate names. So you code might be changes to look like: 
+
+You have a lot of hard-coded "configuration" values (the colors as noted before, image size thresholds, font size, file name string length, etc.) that are simply hard-coded into your script. Personally, I would look to do all of this in a class context, so you have means to store default /overridden configuration as well as to get your main logic out of the main script path and provide you greater re-use down the line (like when you want to do this same thing on another site). By the way, your variable only seems to be defined on one half of a conditional which could be problematic (though perhaps it is doe that is not shown). 
+
+Consider working with a more reliable mailer than PHP's function, which is notoriously bad in terms of generating useful errors and in terms of configuration. As it stands right now, you are not even handling the error path if fails. 
+
+The same can be said for the data structure around the alternative needles. There is no reason to perform an \$O(n)$\ iteration on the alt needle array to see if an item has a lookup value. Imagine an associative array like: 
+
+Also, if you are not using eTags, you might consider it such that, even if a cached item has passed expiry, the browser still may not need to download the item if the eTags haven't changed. 
+
+I am guessing all of these properties should be protected/private as they should only be modified using the methods exposed by the class. This means you might need to specify getters for these. 
+
+Consider explicitly specifying abstract constructor in class (or again a simple default constructor (i.e. just setting position to O)). You should explicitly set position to 0 in constructor in some manner. 
+
+Your code is very fragile in that you are doing no validation of inputs passed to your public methods. You should validate that you are getting the proper objects, strings, floats, integers, etc. passed to your parameters (both expected type and expected range of value) and throw exceptions when these conditions aren't met. Your mantra should be "Fail early. Fail loudly." This meaning that you want to interrupt code operation as soon as you are getting unexpected input such that you are not later operating against objects that are not set up in a proper state. Not doing this will make your code much harder to maintain and debug. 
+
+First, let's start with the way your query is formatted. I would strongly recommend you get in the habit of breaking your query across lines when they get long like this. I oftentimes use heredoc/nowdoc synteax for this. For example: 
+
+This approach is actually similar to your current approach, using rather than combination of and inside the outer call. Perhaps try it both ways (as well as your original approach) and see where you get best performance, based on the typical data you are working with. 
+
+You need to think about inverting your happy path vs. error path. Take for example your main conditional. Instead of: 
+
+Does your class know that it is handling user input? Do you need to sanitize before passing this information to this class method? 
+
+Glad to see you are using an adaptive encryption approach in PBKDF2. You might consider Argon2 library as a more specific use password encryption tool as Argon2 is now the OWASP-recommended password encryption algorithm for new implementations. 
+
+But, I find it best practice to keep animations related to a certain set of functionality within their own queues so as to minimize potential conflicts with effects you might add in the future. Like say you added some functionality in the future to change some of other property/class on , if the effects were in their own queue, they could be applied to the element simultaneously with the icon loading effect without causing undesirable interactions (obviously other than if they impact the same CSS properties in the class). 
+
+Many of the method names are confusing and don't really seem to reflect what the methods do. Here's how I might suggest naming them without consideration to any suggestions I have made on refactoring: 
+
+By passing in callbacks, you give yourself flexibility to define different DOM interactions all triggered by hooks on steps in the ajax request process. You can define the hooks in your class for different parts in the process - request initiation, request failed, request success, DOM insertion, etc. You would have the constructor potentially fully replace or extend default configurations that are stored on the class statically. The constructor could also store all the callbacks on the object instance. Since you are using jQuery, you might consider for this purpose. 
+
+You show nothing that indicates you can handle session ID forwarding for cases where session ID regeneration has taken place. When request comes in asynchronously after a session id regeneration event, can you gracefully forward it? 
+
+I frankly don't see what value this class adds. Typically, one may implement a database wrapper class to do things like: 
+
+Not sure that you are getting any value for storing duplicate copies of this information in this scope. You are only using app.activeDocument.layers a single time, in your function. Why not have first line of that function simply be ? 
+
+Why require the caller to call this method? The caller is not passing any information to the router class at all, so I don't see why all the activity is just not happening in the constructor when the class is instantiated. 3) All of your code is very "happy path" oriented. You just assume everything is going to work and you do a generally poor job of dealing with executional failures in your code. For example: 
+
+Much cleaner. Much less work on the part of the caller to understand that it needs to be initialized, or to hard-code in options (options could easily be derived from configuration). 
+
+It is hard to understand exactly what this class is intended to be used for. Overall, it seems like the class is doing a lot, including: - instantiating object - performing user/application authentication via oAuth - generating objects - instantiating Guzzle client - managing access tokens - exposing constants form other classes As such, I think this class could certainly be refactored to better manage only some narrow set of responsibilities. Some specific notes 
+
+Agree with comment in other answer about templating out at least using HEREDOC as rudimentary templating. 
+
+Your code really only considers happy path. What if prepared statements fail? What if select queries return zero rows? 
+
+Where are you just ing objects in you ajax responses? Should you be wrapping in HTML (since you are directly ing into DOM, or use are something similar to give you an actual formatted response? 
+
+This also gives you the possible side benefit of being able to type hint against an object in method signatures as you are passing this data around or injecting it as dependency. 
+
+And when iterating the map after writing the string to it, you would need to iterate the entire map like: 
+
+You repeat this code: in several methods. Perhaps your class needs a method that can be used in your functions, or this should be part of . 
+
+I like that you are using PhpDoc, but you seem be be using improperly in some cases. The here should probably be: 
+
+This makes no sense. is not an array suitable for use with . Why would you use (an output function) here at all? If you want to use the second form of the cart data shown above, this is how you would extract pid values from it: 
+
+From a logic standpoint, I don't think it makes sense for you to delete the existing avatar file until after you sucessfully format and write the new one. What happens if something fails during the process of transforming and writing the new image file? You have now destroyed the existing file without a valid replacement. 
+
+It seems that what you are trying to implement is visual filtering of elements based on the selected values of various controls. Each control could filter on one possible filtering "dimension" for the elements - family, expertise, other things possibly in future. For this reason, I do not understand the parent-child paradigm you are trying to apply here. I would think about the problem as being one of how to introduce an arbitrary control that will filter a set of elements on any number of filtering dimensions. To achieve this, what may be the common code pieces that you need to have in place? 
+
+This obviously would be a bad approach. So how should you approach this? Each class should have it's own mechanism for instantiation, whether that be a static method on the class itself, or whether it be a wholly separate factory or provider class. To address the use case in your usage example. That might look like this: 
+
+I think the answer from @Siegen does good job of giving you guidance with regards to validation vs. SQL injection mitigation. I however want to point out a concern with your design. Any time to find yourself trying to make a text search in the format of you should understand that this search will require a full table scan as the wildcard character at the beginning of the definition will disallow use of typical BTREE index on the field. In these cases, you should strongly consider using a index on your field(s) in question and use a natural language search against it using . Here is MySQL Documentation for further reading. 
+
+If you know your API is going to give you redirect, just set curl to follow. Don't write a bunch of nested code to handle these redirects. What if there are two redirects here? Your code fails. 
+
+Note here that I also skip the unnecessary call to , as will already be applied against every element in the jQuery collection. Your other function against also seems odd in that you are just moving one set of items in DOM to different positions, something that would unnecessarily cause document reflow. Again, this is something that should probably be fixed in source.

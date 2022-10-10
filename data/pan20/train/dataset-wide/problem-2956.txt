@@ -1,0 +1,87 @@
+I was about to add more things to my answer on your previous post and noticed meanwhile that your already asked a following question (that's almost too fast! :o). I have done some additional reading about C++14 and integer sequences. And I have found some things in the standard that could help to improve your code again. I realized at some point that you were using as the of . However, you initialize your with the result of and returns a , not an . Then I remembered that, along with , there is a for which is called and which has been made to solve the kind of problem that your are trying to solve. Therefore, you should every occurrence of by and of by . 
+
+Technically, it is rather odd to just compare for equality with one big number where there could be numbers even bigger. Didn't you mean: 
+
+Well, otherwise, I don't think there are obvious errors in the design. There are probably some other things that can be improved, but generally speaking it's not bad :) 
+
+Unless the value of the being passed through the future — or — is meaningful, it shouldn't be part of your program. In this case you could (and therefore should) be using instead of . 
+
+That'll cut out all those virtual function calls and stateful stream operations in favor of just doing what you want: print a single integer in hex. 
+
+Are you planning to add any more members to the class? Because if not, I would strongly consider getting rid of the class altogether! Don't you just want a plain old function? 
+
+There's more elegant ways, although not necessarily more efficient. The common idiom for fiddling with this kind of linked list in C is to add one more layer of indirection and fiddle with pointers-to-node-pointers, like this: 
+
+I don't immediately see any improvements. I had various ideas, such as trying to incrementally rotate by repetitions of 
+
+Next: Since is just an implementation detail, you probably don't need to define a convenience alias for it. You could just use in the couple of places you need it. This would kill off three more lines. 
+
+Counting sort is an excellent tool when you know that you will be sorting integer values in a tight range, so I would keep it as is with its « problems » instead of trying to turn it into a more generic algorithm. If you want a more flexible integer sorting algorithm, radix sort would be the way to go :) However, while keeping the spirit and simplicity of counting sort, there are still several small things you can do to make it better: 
+
+When is an iterator, it is first incremented by , then decremented by . Considering that and are not trivial for iterators, computing then incrementing is likely more efficient. We can thus avoid this small albeit gratuitous pessimization by transforming the statement as follows: 
+
+The code above generated the same assembly than the hand-rolled version when I gave it five integers to rotate in the compiler explorer, with both GCC and Clang. I wanted to make a companion function, but repeatedly finding the last element of a template parameter pack is not as easy, so the easiest solution for a programmer is to pass the variables to rotate to in reverse order. Do you see any way to improve this simple algorithm? Anything that I might be missing? 
+
+Anyway, if you don't want people touching your type at all, a common convention is to name it (by analogy with ). And if you do foresee people wanting to use both types, the best names are probably and , or just and . (That's right — I would avoid baking C's into your exported typedef! I would create a new for export. This allows you to change the implementation details of , such as whether it uses C or C++ or non-standard atomics, or whether it uses a mutex, without bothering the user too much.) 
+
+However, your bitflag identifiers , , , etc., are pretty much unreadable, especially given that you already have English names for them right there in the source file! If I were you, I'd replace the entire function with simply 
+
+Regardless of your concerns about mmapped files, in a loop isn't going to overwrite the file multiple times, not even in memory. Check the assembly output with ; I think you'll find that the compiler has hoisted the test outside the loop and duplicated the loop body, and then replaced with the equivalent of . 
+
+I have a few tidbits that could help. Nothing big, but things that you can improve as you code without having to overthink them: 
+
+Instead of checking whether the list is sorted in ascending or descending order, you could simply offer to the user the ability to choose whether the list is sorted according to a predicate and make the predicate default to . Then your function would be as simple as: 
+
+Once again, I am assuming some implementation details that are not shown though. Anyway, try check whether coud be used to do what you want it to do. Standard algorithms can often do much more things than thought. 
+
+is great Instead of using SFINAE for , you should use since your function does not have any overload. It will allow you to give a meaningful error message instead of a somewhat obscure SFINAE error message: 
+
+But overall, your code seems pretty good: the style is good (indentation, variable names, redability, proper use of to prevent surprises, etc...) and the internal logic also seems good (type erasure, use of to cache values, efficient use of iterators, etc...). Therefore, I don't think that you have to worry :) 
+
+Not sure what kind of feedback you're looking for here. What you've implemented is not equivalent to what's usually called . The usual semantics of allow you to do things like 
+
+This strikes me as a recipe for disaster. Do you really need these two functions (one lock-free and one not) to have the same exact name? Also, if the latter is not lock-free, then it should not be taking as a ; it should be taking a plain old . Which sounds a lot like the first function. So basically, kill off this second function. 
+
+My strategy for writing it was just to write the very simplest code possible — the body of the main loop is just 
+
+The macro leaks out of this header file, which is unfortunate because it has a very short and possibly contended name. If the user has their own macro, your header will break for no obvious reason. recommend renaming it to , and ing it at the end of the header file. 
+
+Being able to call (or ) depends on being default-constructible, which might not be the case: it might be moveable but not default-constructible nor even copyable. Does the "natural merge sort" algorithm really require that the type be copyable, or could you refactor this code to work with moves alone? 
+
+Here is the template utility I wrote to detect whether a template has a specialization for a given type, for SFINAE purpose: 
+
+Order of the headers You often want to add/remove headers from your code and/or check whether some header is already included. It's really easier to check whether a header has already been included or not if you keep your directives in alphabetical ordering: 
+
+You would like to store and instances in a colleciton as if they inherited from a common base class. With our solution, you only have to write a new class: , and then feed it to the : 
+
+Note that I am not sure whether the is needed or not, I coudn't find anything about it in less than 10 minutes. You can also create an equivalent deleter/pointer pair for and replace the raw pointers for and in by instances of and . Here, using function objects instead of function pointers for the custom deleter of has two advantages (besides all the benefits of automatic destruction thanks to RAII): 
+
+I don't think the code is so "unpleasant" to read as CodeGorilla suggested; but it could definitely be improved by some minor reformatting. I strongly suggest putting a blank line between each pair of member function definitions: that is, not 
+
+The online generator, written by Jasper Neumann, comes with C++ source code; click the link to at the bottom of that page. Using Jasper Neumann's generator, I found the best rotation code so far. It uses this primitive: 
+
+@LokiAstari hit pretty much all the points I'd have made, but I'd like to expand on one point and then make one philosophical point: 
+
+No comment on the theoretical correctness of the floating-point stuff; because, as I said, I wouldn't have used floating-point to print integers in the first place. I have tested your code on all 4 billion 32-bit integers, though, and can report that it works fine in practice. 
+
+With the above suggestions and a bit of trivial whitespace formatting (e.g., in place of ), we get this: 
+
+Notice also that I've dropped the from your , which means I can also get rid of your typedef — several lines of code saved, with no loss of performance or expressiveness. (And on top of all that: if somebody does accidentally pass to this function, they'll get a nice assertion failure instead of a segfault.) The built-in types are nice; use them, wherever possible. Similarly, for the "concentric boxes" pattern, what you're doing is coloring each pixel according to its distance from the edge of the grid. Pixels at distance 1 get red; pixels at distance 2 get yellow; pixels at distance 3 get red again; and so on, all the way to the middle. 
+
+NOTE: I wrote this answer before realizing that you used Python 2 and not Python 3. I don't think that anything in your code prevents you from using Python 3 instead; you only have some small changes to make and you could benefit from the latest cool features. Use If you can use Python 3.4, then you may want to use the new module instead of the old . provides a class that achieves the same things as but in an object-oriented manner. Here is the beginning of your script rewritten with (I skipped the irrelevant parts for clarity): 
+
+I don't provide , and their friends in this question since their implementation is trivial and mimicks this of . Are there functions lacking in the interface or things to be improved in the implementation? Also, do you have any idea of a more suitable name for such an iterator adaptor? 
+
+You may also want to find a suitable name for the expression \$ ((x-1)/2)*2+1 \$. Currently, it is not really readable, but it feels like an operation common enough in the wild to need a proper name. Instead of having a special case for exponent, wouldn't it be better to have a as well? It would be a first step to some more generic handling of operators. Also, it would be more generic if operators could be instances instead of instances to handle multi-character operators. To answer your question: while I don't have a full understanding of lexers and parsers, what your code does is clear to me. The only thing I had a problem with at first was the / whose naming can be a little bit ambiguous. But once you know visitors, regex and lambdas, you quickly have a good understanding of what is happening. 
+
+Here we're assigning (an ) to (a ). This isn't going to do what we wanted! ...Or rather, it is, but only via a very bizarre path. Here means , which because of the elsewhere in the function, means "do only 1 iteration". So this semantically means ! The ultimate effect of all this spaghetti code is to make it so that if the user accidentally passes in a null pointer — 
+
+and if you give that method a more descriptive name, like , then you could also implement several different kinds of views, e.g. a class template that provides . 
+
+This function will likely be fine in practice... until it matters! The problem is that you're modifying in thread A while, simultaneously, you might be reading from thread B (within ). This is a data race and invalidates your program. 
+
+I would expect the standard library's (which is basically ) to already take care of this optimization behind the scenes, the same way these days I would expect the standard library's to maintain its own thread-local arenas instead of taking a lock on every call. Have you benchmarked the difference between what you wrote above and 
+
+I created a user defined literal to convert an "integer" literal into an . Basically, the goal is to allow users to write instances without the usual boilerplate. Here is the implementation: 
+
+There is an error There is actually an error in your code, a hard one, a compilation error: you use without including . In some implementations, this header may be included by or , but this is no guaranteed by the C++ standard. Including whenever you use a standard exception is good practice. Stream operations It is not cear from your code which header is incuded for and which one is included for the stack implementation. Note that for the stack alone, including is enough. Also, as @Loki said in a previous iteration of the review, please provide an overload of to actually print your stack to a stream, this is the standard way of doing things. It's kind of strange to print things when you do operations. Containers are supposed to be reusable enough to have some requirements about efficiency. Printing things while doing the operations may slow down a program if the stack is used often (and produce unreadable diagnostic when you don't actually care about the stack). Growth factor Not even the standard data structures (e.g. ) do that, but it would be handy to allow users to control the growth factor of the stack. Some vector implementations have a factor growth of 2 (e.g. libstdc++'s one) while some other implementations have a different growth factor (e.g. folly's one) and argue that the growth factor can be directly related to performance. It could be a good idea to let users change the growth factor when they feel it might generate faster code.

@@ -1,0 +1,51 @@
+It depends on your business case, Temporal tables and change data capture offer different functionality. Temporal tables are used to provide a version of your table at a point in time. A use case might be a slowly changing dimension where you want to track the changes in dimension attributes and report them from any moment in time. Change data capture might be used on an OLTP table, to allow you to easily facilitate the export to a data mart. It logs all changes to a separate table, so you can easily view changed rows since your last export LSN point. 
+
+If a stored procedure is maxing out your CPU, you really need to tune that query to fix the root cause rather than working around it. Analyse the query plan using native SSMS or SQL Sentry Plan Explorer. Some things to look out for to improve the query plan from $URL$ are 
+
+Lastly, you could use sp_executesql to perform the updates. You are not introducing a SQL injection risk as the update values are not parameterised. 
+
+I would use the free Ola Hallengren maintenance solution to update statistics. See Example C from the above link, where you can update the statistics in all user databases via: - C. Update statistics on all user databases 
+
+Do you have the option to create the new columns outside of this stored procedure via change control? Alternatively, you could use default constraints if your business requirements allow the columns to be not null: 
+
+If my assumption is incorrect and each table can have multiple entries per tournament, then you would need to use outer apply (top 1) rather than outer join. 
+
+Logging occurs in all recovery models. The log is retained in bulk logged and full recovery models until the log is backed up. Bulk logged only minimally logs certain actions e.g. an index rebuild, meaning you can't do point in time restores when using bulk logged. As you are using simple recovery model, changing to bulk logged will be of no benefit to reducing log size. It would make your setup more complex actually as you would have to start taking regular log backups. If you have a large transaction in simple recovery model, this transaction will still be logged and cause your log file to grow. This is what allows you to rollback the transaction in any recovery model. If you left that transaction open (don't commit or rollback) your log would grow and grow. Once committed (or rolled back) that logging information no longer has to be retained in simple recovery model and SQL server will reuse the log in a cyclic nature. Your solution would be to minimise the size of your ETL insert transactions. You could perform smaller inserts in batches and commit those (if that is appropriate for data consistency). You could also look at transaction handling in your ETL tool. SSIS for example allows all inserts in a package to be part of the same transaction, you could change this behaviour so each transformation has it's own transaction. 
+
+Does your standard maintenance plan also rebuild all indexes? This can generate lots of transaction log writes. I would: 
+
+Your configuration is fine. 24GB total RAM, 19GB for SQL Server leaving 5GB for the OS. SQL Server is memory hungry and will consume all the 19GB available, that is perfectly normal. You could lower the max server memory from 19GB. I wouldn't do that however, if you were experiencing memory pressure with 12GB of memory. The question would be what other roles is that server performing that would use the memory you would potentially deallocate from SQL Server? Can those roles (maybe SSIS, SSRS, SSAS etc) be moved to an alternative server? 
+
+That makes your life easier, negating the triple hop from 7-2000-2008-2014. Still not a great solution however. I would invest the time in writing a PowerShell script to automate this process. 
+
+This answer assumes you can only have one entry per tournament in each of the Winner1Test, Winner2Test, RunnerUp1 and RunnerUp2 tables. You should contrain this with a unique constraint. 
+
+I would start with looking at wait stats to try and see what SQL Server is waiting on. With that information you can diagnose the root cause and implement a solution. This will help with looking at your wait stats $URL$ You can use a query from the SQL Server Diagnostic Information Queries to look at disk latency, such as: - 
+
+I am using SQL Server 2012 (11.0.5058.0) extended events, and wish to know the network protocol used by each connection (TCP/IP, shared memory etc). Event session created for the login event via: - 
+
+In short, you can't do this unless you configure some logon auditing in advance. Your options to do that are: 
+
+Found the answer. The login event is correct and the network protocol is exposed via the options_text action. options_text was always blank for me previously and this needs to be set on via SET collect_options_text=(1). An example session might be: - 
+
+Those permissions are specific to an individual database. What that login doesn't have, is permissions in other databases (unless granted separately) or server level permissions. Server level permissions would be granted by adding the login to a server level role or by granting specific server level permissions. 
+
+You can create a partitioned table to horizontally partition you data. Partitioned tables is an Enterprise edition feature, if you are on a lesser edition you could alternatively create a partitioned view, see this link for an example $URL$ If you are using SQL Server 2016, you could also put all the data in one table and use Row-Level Security to expose the correct data to the relevant customers. 
+
+Also, this should return 1 if you have configured the user to be a member of the db_owner role correctly: - 
+
+Will return 1 if the guest user is a member of the db_datareader database role and will return 0 otherwise. 
+
+At the top of your script, then you don't get a result. You do get a result as you describe if you specify . The reason for the different behaviour is the second example "replacing with " contains a syntax error i.e. the EXEC batch is parsed, syntax error discovered and the batch is not run. The EXEC is a separate batch (this is the reason you cannot define variables outside of EXEC and reference them inside) and processing continues with the rest of the transaction. For the first example "", this is valid syntax, so the batch parses correctly. The error is only found at run time and processing continues if but stops if . 
+
+No, you can run a two node Always On failover cluster instance using Standard Edition. See the "RDBMS High Availability" section of $URL$ 
+
+Do you have budget for a third party monitoring tool such as SQL Sentry? This will monitor your SQL Server instance for you, far easier than attempting to create your own solution. You can also create additional Advisory Conditions to alert you for any changes you choose. 
+
+This code sample will get you part way there (apologies for any syntax errors but I am writing free-hand without a schema to query). You would then need to PIVOT the output to achieve the result-set in your required format. See PIVOT on Technet for an example. 
+
+You can create a For Loop Container. For an example, see the mssqltips article Configure the SQL Server Integration Services For Loop Container. 
+
+Download and install the dbo.sp_WhoIsActive stored procedure from $URL$ Run this procedure and it will tell you what is currently running. It will also tell you a host of further information such as what the current sessions are waiting on and where they originate from. To answer the title of your question. To reduce the number of VLF, you need to shrink your log file using DBCC SHRINKFILE, then grow your log file back to 64GB in 16GB increments to give you 64 VLF. 
+
+There is no setting to force SqlClient to always set ARITHABORT on, you have to set this as you describe. Interestingly from the Microsoft documentation for SET ARITHABORT: -

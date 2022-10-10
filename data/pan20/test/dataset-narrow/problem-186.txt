@@ -1,0 +1,87 @@
+There are many free tools - native and opensource available for comparing schema and data between 2 databases (on same or different servers): 
+
+Whereas for sys.database_files just requires membership in the public role. Update : As highlighted, you can use your existing script with a way to loop all the databases and store that result in a table and then create a view (if you want). You can use below script : 
+
+Depending on what build you are using .. if you are getting an error then it might be a bug that you need to report to Microsoft. You can still give the undocumented - a try but it is just a wrapper as Brent says in his answer : 
+
+Also, it should be noted that changing the will flush the entire plan cache resulting in generating a new plan afterwards. 
+
+The above will indicate that your maintenance especially, backups will always happen on PRIMARY replica. Since we are talking about maintenance, its worth mentioning the Recommendations for Index Maintenance with AlwaysOn Availability Groups 
+
+To simplify a bit further, you can use roles to do the job that you are looking for. Once you assign permissions to the role, you can just add users to the role. This way you dont have to manage permissions for individual users. The users inherit permissions granted to role. Below is an example to get you started : 
+
+For SQL Server 2005, you only have the option of using TRIGGER based solution for INSERT/UPDATE/DELETE operations which is nicely described here. Note: Remember the overhead of using triggers as if you perform large deletes on table, then everything will be logged. For 2008 and up, you can use CDC (Change Data Capture) as described here. 
+
+Refer to : Why does replication add a column to replicated tables; will it be removed if the table isn't published? If a transactional publication supports queued updating subscriptions, replication adds the column msrepl_tran_version to every table. If the table is dropped from the publication, the msrepl_tran_version column is not removed. you can drop the columns after you restore the database (if you want). Nothing harm in keeping them as well. 
+
+Seems like you dont have permissions on msdb database - so you cant create jobs. One way would be to use SQLCMD : 
+
+You should follow - Backup and restore best practices in SharePoint 2013. Also, to me your VM having 2 CPU seems to be underspec for running a 70GB database (Not sure if there is only one database or multiple databases). 
+
+Certain changes in a database can cause an execution plan to be either inefficient or invalid, based on the new state of the database. SQL Server detects the changes that invalidate an execution plan and marks the plan as not valid. A new plan must then be recompiled for the next connection that executes the query. From BOL - Recompiling Execution Plans : 
+
+Completely shutdown the server you are going to clone. Copy it over, make relevant .cnf changes (especially server-id), start up the new instance. If you're using LVMs you can take an LVM snapshot while the server is running and then copy that snapshot over. 
+
+in your shell. This will have what ever percona toolkit tool you run dump copious amounts of debug data to help you track down where exactly things are going wrong (including the exact connect strings they end up trying to use to connect). To account for different tables between different slaves I believe you will have to use a dsn for the recursion-method argument. The DSN will point to a simple table that gives a list of slaves to connect to (instead of detecting from the processlist, for example). Have two different runs pointing to a different recursion-method table and their appropriate --tables arguments. A few notes about finding differences. Since this is a live process, it is very possible some data will change between runs in a multi master setup for a given run. Even in a simple master slave setup it will only tell you there was some difference in a given chunk; could be 1 row, could be 1,000 or more. In either case a simple way to find exactly what is different is to use the min/max bounds for the chunk and just select into outfile on both servers then run a simple commandline diff. pt-table-sync can also be uses to use the table created by pt-table-checksum to find the exact differences and output replace statements to be run on the master to get them in sync. Note this tool does have an --execute option to go ahead and run those replace statements for you, but I've yet to full trust that and will always just do a --print to first manually inspect what it's doing to ensure it's the correct thing. 
+
+I was going through compressing a bunch of archival myisam tables using myisampack It was making decent progress until it got to the most recent tables. The overall database is a set of archives for a single production table. Each archive version represents 1 quarter of a year going back several years. Nothing has drastically changed in the data being stored or the average row length. The individual archives have been growing with time as there simply are more on more rows each quarter over the previous one. Up until the most recent 4 quarters the rate of compressing/rebuilding the index (which is only a single int PK) was around 14-16k rows/seconds. The last ones were crawling along only doing about 1k rows/second. Even right from the start; it wasn't like it started of as fast as the others and then suddenly slowed down after getting so far into it. There wasn't any spike in general system load or i/o contention from other processes when it started slowing down. Has anyone experienced this? Is there something myisampack where it's overall rate of progress it should be expected to tank when compressing a table over a certain size? Edit: Since these are myisam tables I should point out they are all in the same datadir and all stored on the same physical array. 
+
+You can find that out using table. To automate that, you can use RestoreGene - TSQL or PowerShell version 
+
+Based on your above comment, with a mere 3.5GB RAM, you are running dbs totaling the size of 65+ GB. There will be resource starvation on the database server. Increase the RAM close enough to the size of db and change the power plan to high performance. Then monitor your db server with sp_whoisactive or SQL-Server-First-Responder-Kit and start tuning when you have data. 
+
+You can use powershell dbatools to calculate for you. The dbatools has to set the max memory for you across all your servers. I would go with to check the recommendations first and once you are comfortable, use set to set it across all your servers. 
+
+The method is minimally logged. If you use regular statement, it would result in overwriting the entire string using . This would become inefficient when dealing with large updates. To support update for large value data types, the syntax supports method. This will result in less Transaction log due to its nature of minimal logging - including insert or appending new data. Note : The using method will fail if the target is . Below is a quick and dirty repro showing the transaction log generated using and using method. 
+
+Open DBDiff ==> This is on Codeplex and works great. SQL Admin Studio ==> This is now a free tool. Hidden Gem from SQL 2005 and up : tablediff.exe (you can find this in the COM directory of your SQL Server install folder) Compare schemas: Regular or Strict Powershell - You have to write your own code or build up on existing ones Since you are using SQL Server 2012, SSDT is also an option. 
+
+You can use Ola Hallengren's SQL Server Backup Solution. Especially the will help you to delete the old backups (FULL / Diff or Transaction log backups). 
+
+Ideally, you should not be restarting the server instance, just manual checkpoint and offline/online of the database will clear the files. e.g. Repro : 
+
+As Jason Pointed out, that to send email using SSIS, you have to use Script Task. Below links with scripts will help you out. 
+
+The and will correspond to the table itself that you have enabled CDC ON. I dont see a need where you have to do a table search based on LSN to find out the table name - unless I am not comprehending your question. You can even look up in the system tables 
+
+You can create linked server and use . This is what I am doing in my current scripts when I have to refresh AG env in Dev / QA from PROD. You can use powershell, etc .. but just works fine for my needs. 
+
+setup logshipping or mirroring from 2014 to 2016. On the day of cutover, if using logshipping, take the tail log backup and restore on 2016 with recovery. if using mirroring, change to sync mode and failover. Follow the post steps listed in step 1. Ask the app team to test/sign off the application. 
+
+Having a main table and a child table in a Microsoft SQL Server database (2005+), I want to show the user a single table in a grid view which includes rows from the main table and rows from the child table, with the latter one being shown as additional columns. Please see the following example. Main table: 
+
+Just read about the release of SQL Server CE 4 and then searched all through their product website, I still cannot find a feature overview. Previous versions of SQL Server CE didn't support views, I was hoping that they removed the limitations. My question is: Is there a page which lists the features and limitations of SQL Server CE 4? (Edit: I found this feature comparison for 3.5, but not for 4.0) 
+
+I.e. I'm using Oracle's with a second argument, specifying the characters to trim from the left side of the string. Unfortunately, the T-SQL version of doesn't allow me to specify the characters to trim. Currently, I'm rather clueless how to migrate that . I'm even thinking about processing the results in my hosting C# application, after I read the . This looks rather inelegant to me. My question: Is there any meaningful way of getting an -like functionality for T-SQL to pass the characters to trim away? Edit 1: I need to replace , and from the beginning of the string. E.g.: 
+
+Using "SQLCMD.EXE" to back up my SQL Server Express databases for years I just discovered that after installing the 2014 version, I found no SQLCMD.EXE anymore. In previous versions it was located at 
+
+to query for a list of tables, I'm currently finding no way to retrieve a list of non-system tables only. I.e. the above query also lists me system tables like "sysdiagrams" or "dtproperties". So my question is: How to query a database for existance of any user tables? 
+
+Edit 2: I strongly hope this isn't an XY problem. Maybe rewriting my whole query would remove the need for altogether, although I would rather focus on porting it as 1:1 as possible and later question the usefulness of the . 
+
+I.e. the child rows are transformed as additional columns. My question is: Is there a way to achieve this with standard SQL, i.e. without using the statement or some statements? (because I want to use the query against a VistaDB database, too). Update 1 Then number of detail keys is variable and not limited to 3 or to "X", "Y" and "Z" as names. 
+
+Running Microsoft SQL Server Profiler every now and then, it suggests me with a bunch of new indexes and statistics to create ("...97% estimated improvement..."). From my understanding every added index can make an SQL query faster but also an or query slower since the indexes have to be adjusted. What I wonder is, when do I have "too many" indexes/statistics? Maybe there is no clear answer on this but some rule-of-thumb. 
+
+You can't use null checks like that with indexes. Further individual single column indexes will cannot be "combined" with your type of query (e.g. a bunch of ANDs; there is some merge optimization that can be done for ORs though). Instead of null could that be represented by either a 0 or empty string as appropriate. (This of course requires those not be possible values for various columns). Creating a composite index like 
+
+The client stats table has an "empty queries" column. What does that mean? Simple googling just tells me "The number of times this client's connections sent empty queries to the server." /facepalm 
+
+If it's showing in your processlist then it's still running. In the future, for situations like this we're you're pruning 90%+ of the table consider this approach: 
+
+So tables will be created as Antelope even if you allow Barracuda. The mixing is unavoidable unless you specify every table as row_format dynamic or a compressed table. There is no indication you should do a complete dump and reload when introducing your first Barracuda table (such as is recommended when upgrading major versions of mysql) 
+
+If you're using Nagios there's a build in plugin to monitor all you want and more $URL$ If you're currently implementing your monitoring in general as a bunch of one off scripts you should probably look toward moving to a more centralized tool such as Nagios to manage the checks, threshold and paging policies. Edit: Nagios and the plugins are free, plus you can write your own plugins to suit specific needs that aren't already addressed by the community. 
+
+You can tweak this value in your cnf to be a bit lower. Changes to this will require a server restart. In a perfect world, though, you'd want your buffer pool size to be large enough to hold all your innodb tables in memory for fast performance. Of course this isn't always feasible. 
+
+Since the semicolons need to be part of the trigger definition you need to change your delimiter first. From the prompt first run 
+
+I'm guessing the answer is no, but I was wondering if there was anyway to tell innodb to not store fetched pages in the buffer pool? The reason for looking at doing this is check summing tables. I'd like to minimize the effects of trashing the useful cached data. 
+
+I feel my answer may lack what you are looking for but with out more context here are a couple options: 
+
+Before any percona script it will give you TONS of debug info that can help point you in the direction of what's going wrong. Also remember these are all perl script so you can inspect the source yourself to (maybe) see what's going wrong. 
+
+I'm wondering if anyone knows of a good way to track down queries causing max_allowed_packet errors. Even if you turn on general query logging the query isn't logged as the connections aborted before it gets that far. I'm trying to give something to the development team to help track this down. All I know is a general application account that causes it periodically. It's not like clockwork so it seems to be because of some kind of user generated interaction (versus a cronjob for example). I had thought about bumping the limit on the master with out adjusting the value on the slave to let replication break but this is coming from a read only account, meaning it has to be a select of some kind. The current value is set to 8M and there's not an expected use case dev would expect to generate much so just upping the limit to sweep it under the rug isn't really addressing the problem. I'd like involved parties to know what exactly is causing it so an informed decision can be made on whether bumping the limit is the right course of action (versus fixing some bug that shouldn't be generating queries that large). I'm trying to get buy in to get app changes to either inspect query size before lobbing it over the fence, or at least catch those specific exceptions in a manner that provides sufficient information to find out what's generating it. They have other priorities so it would be nice if I could just say "this is exactly it" Edit: Turning on general query logging with an upped max allowed size to let the selects goes through is prohibitive since the pattern is not predictable and just 'letting it run for a couple days' isn't possible with the space available.

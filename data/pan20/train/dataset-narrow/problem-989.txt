@@ -1,0 +1,69 @@
+To answer the question which was asked, no. The best method of document protection will be found in a technology designed with document protection in mind. HTML is not that technology. As others have pointed out, there are plenty of methods for copying the text both by disabling or modifying browser features such as javascript, as well as just requesting the document directly. There are, however, technologies available to protect documents. While nothing is foolproof, using something like an encrypted PDF document with the appropriate permissions set will likely be the "next best thing" that can be done in a digital form. 
+
+I will comment on the JavaScript only. Each of your change handlers are doing essentially the same thing: check if the field is null, a single space, or the empty string and add a message to a notification panel. The textbox text attribute will not return a null -- only empty string. I assume in checking for a single space you are invalidating whitespace values. As written however, a double space (" ") would validate. I'm not familiar with the YUI library, but given its prevalence would be quite surprised if it did not contain dim sort of utility method. The same notification area appears to be updated each time, but is looked up each time. Only the message is different. I would suggest the following factory method: 
+
+The method should be encapsulated in it's own class which has an interface. This can be injected into the controller which will make unit testing easier. Something along these lines: 
+
+As mentioned in my comment I think in general is expected to be synchronous hence it should block until finished which is easy enough to achieve: 
+
+That being said: It adds additional code which needs to be maintained and unit tested (instead of two states you now have to test four states to make sure it behaves as expected) so don't go blindly around adding a negated version of very boolean property to your models. I'd do it when testing for both the negated and non-negated version is common. 
+
+Then you can make your controller take an object as parameter to query the endpoint. This will allow you to re-use it across multiple projects. In addition to that you probably don't want to return the raw string from the query but the deserialized Json object instead. A popular library is Json.NET but .NET has one baked in as well. 
+
+Which seems weird. There should only be one upload with the given id anyway and I'd consider it an error to have multiple rows with the same upload id. So why do you loop here? 
+
+You create a lot of objects which is unnecessary. Just create one variable. Especially since it's used in multiple places. This makes changing the timeout later easier. Otherwise you are bound to forget one place. Prefer methods. They makes it more obvious for what period you create a . Consider moving the mail sending code into its own function which just accepts a single message and sends it. It might make sense to iterate over the message queue directly instead of buffering them all up: 
+
+I've created the following implementation of a trie in F# as an effort to learn the language. I would like to know what could be done to make it more idiomatic. Any other pointers are welcome as well. Of particular interest are: 
+
+This can be further modified to support your use case: checking if removing a single character will make the string a palindrome. Instead of failing when a character doesn't mirror the opposite position in the string, look ahead and behind to see if the next character will match. If so, increment a counter and continue. If the counter is equal to the number of occurrences expected (1) then the result is true. 
+
+Your code is well formatted and easy to read. Congratulations. With regards to SRP, I believe your code complies just fine. Each dependency: the cart, rentals, and loyalty points is retrieved with a single call. The mapping for those DTO are isolated in a small single purpose anonymous method. The single responsibility for the method matches its name . If your uncomfortable with the idea of anonymous methods being separate from the method where they are defined, consider creating private static named methods in this method's class and referencing them. The only SRP violation I'm concerned with is the invoice DTO. I would recommend using the raw cart id and letting your presentation code format the title. Here's an example of how I may clean it up: 
+
+This can't be guaranteed because the passed in is not aligned at all as it is purely dependent on what was allocated by the user. However I suspect it "simply works" because the first call to unmaps the entire space mapped in originally with because that's what the first of is. Nevertheless the implementation is incorrect and works by pure coincidence. You should check the return values of and as well. Multiple calls to will leak memory. While it would certainly count as user error detecting this and notifying the user is good defensive programming. 
+
+You have tremendous amounts of code repetition. Programming is about efficiently solving a problem in an automated way and you should also try to apply this to the code your write. One of the most important principles is: DRY - Don't Repeat Yourself. 
+
+If you want to make it faster instead you could try reading the entire file into memory in one go and then calculate the . Something along these lines: 
+
+If all your presenters have a base class your could also add a clause to restrict the types. This would at least remove the dependency out of the presenter class. 
+
+Your caller very like doesn't care of the exact internal workings of a course - it should just dispatch the notifications and see if it succeeded. So a should probably get a method like . When you use expressions like in several places then it is usually better to put it in a local variable which expresses the meaning of it and also makes the code shorter, for example like this: If you don't actually need the index then will usually suffice and is shorter. 
+
+I would recommend an interface with read-only properties (getters, no setters) and have your final class implement that interface and return its constant values. I'm also not a fan of your Log class. 
+
+A common quiz question is to check if a string is a palindrome without using in-built reverse functions. In Java, this can be done as follows: 
+
+Idiomacy Idiomatic c# expects PascalCase class names and public members. Member names should be a description of their function. Consider , , , etc. OOP Dependency Inversion Your constructor is hard-coding the values needed for your connectionString. If this is simply demo code, either hardcode the entire string or do it right and have the values passed in. Scope 
+
+That still leaves a lot of duplicate code. We will want to clean that up. Finally The truthy nature of javascript allows us to do this as well: 
+
+I would join both and in recommending to guard your implementation and throw an appropriate error as well as exposing an external status check method such as or . Also I agree the card should be popped from the end of the list when using an as the backing collection. Finally, you have a very well formed class with clear and concise public members. Be sure to add just enough javadoc comments to allow a the class to be consumed without needing to open the code. 
+
+is just a hint to the compiler which is free to ignore it anyway. Typically you should only use it in specific circumstances when you know if and why it is required. Otherwise it's just adding noise. 
+
+On initialization we load the current configuration values synchronously. After that a background monitoring job gets kicked off which executes a callback whenever a key changes. 
+
+Your naming smells like hungarian notation (like or ) - prefixing the variable with the type name has little benefits. Again in consistent naming of function parameters like should be . Use white spaces around operators (e.g. ) Use consistent bracing. Instead of using all those s for and etc. you should use the types from like , etc. which will make the code way more readable. can probably be made (only visible to local C file) which would probably make it easier for the compiler to inline it. There are a whole lot of local variables in which can be made : 
+
+Implementation for the automatic age based eviction cache A background thread is spawned which evicts all entries older than a certain age in regular intervals. 
+
+Alternatively to the you can use and ignore the line if it returns for any of the 3 entries. Update: Version with . 
+
+The following class implements a buffer which captures fast changing datapoints or frequently raised events and dispatches them in batches. It will asynchronously call a processing function for the buffered items under any of the following conditions: 
+
+Casting p as a less derived object will NOT invoke the less derived implementation of the method. I've tried to make the recursive .Equals call obvious enough to illustrate what is a more subtle common problem when people override it. In this answer, I am focusing on the point that casting the object does not change the method implementation which is used. Unless casting to an interface type which is implemented explicitly in the Class's hierarchy, this will invoke the most derived definition. To not work this way would violate polymorphism principles. This will work for operator overloads in .NET as you are doing. Until I started researching this answer, I was not aware that operator overloads do NOT actually use the most derived implementation. I personally find this result surprising. 
+
+Yes, your while loop is suboptimal leading to increased loops and increased time for larger values. The problem can be solved mathematically. Consider this: $$ s = \mathtt{startingTotalItems}\\ n = \mathtt{newItemInterval}\\ $$ $$ f(s, n) = \begin{cases} \emptyset, &\text{when $n\lt0$}\\ s, &\text{when $n=0$}\\ \infty, &\text{when $n=1$}\\ s + f(s\ \mathbf{div}\ n + s\ \mathbf{rem}\ n, n), &\text{when $n\gt1$}\\ \end{cases} $$ Using a little algebra the last equation can be factored into a single operation. 
+
+TheJSON schema and data class attributes are unlikely to change. Consider implementing the class to encapsulate the JSON hash, adapting it to the ruby idioms and whatever other custom operations you've added. This should greatly decrease the cost and complexity of deserialization. 
+
+should probably be an interface so you can inject it through the repository constructor. For unit testing you can mock out the interface. If the repository is a transient entity (i.e. constructed per web-request for example) then injecting the context through the constructor is probably the most straight forward way. If the repository is longer lived (like a singleton lifestyle) then you might want to consider the unit of work pattern in order to limit the lifetime of your context. 
+
+Also in you use a which seems to be a class member (property or field) and hence by convention should be or - is traditionally used for local variable or method parameters. This: 
+
+Then your function could fill in the structure passed in and also return error code in case the reading failed (i.e. source is too short): 
+
+Since is local to just the implementation file, it could be shortened to - this will make a few lines somewhat shorter. As mentioned in a comment: You already have a for in your header - don't put one in your implementation. In the variable to hold the return value is badly named as - it's returning the heap so the best way to name it is . returns in a whole range of scenarios. 
+
+This might have been mentioned before but here it is anyway: You should format your code. Badly formatted code is hard to read - it might be the most efficient code in the world but it's still hard to read and maintain and easy to miss bugs or easy to add bugs. It also shows a lack of attention to detail and programming is all about attention to detail. It basically demonstrates that not much care has been put into. Whenever you write some code imagine you'd have to show it as an example of your work for your next job interview. You should name your classes and variables better. While is acceptable for a loop variable , , , and should be renamed to reflect what their meaning is. It is especially confusing since suggests to have a similar meaning to and while it actually is completely different (it represents a form of input rather than a number). You should use an rather than a fixed size array to store the divisors. If someone inputs then your program would try to allocate an array with 2,147,483,647 elements - approx. 8GB of memory even though it's a prime number. If you change this then your check for the common divisors need to check the common subset s of both lists instead. Your two loops do the exact same thing except on different inputs. They should be refactored into one common method which performs the calculation and gets the number to check as input. Your algorithm is buggy. For example if you check and you will not find as a common divisor.

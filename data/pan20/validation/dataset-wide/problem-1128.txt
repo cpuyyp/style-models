@@ -1,0 +1,87 @@
+The rollback time is highly dependent on how busy the server is but will take at least the same time as the elapsed time, safe bet is elapsed time x 1.5 
+
+Just add it as you would normally do on the primary node. Make sure that all the nodes have the same disk configuration and enough disk space. 
+
+You are running SQL Server build 9.00.5294.00 that is more current than SP4 which is 9.00.5000. Your server has already been updated. ($URL$ (Build 7601: Service Pack 1) is the version of the operating system. 
+
+And then you can export that certificate from your personal store and import that to the store for the SQL Server account. When you have a certificate installed you can enable encryption in the SQL Server Configuration manager. It's recommended to only use TLS 1.2 but then you need make sure you have updated the SQL Server native client and your SQL Server to the latest update. This is all well explained by SentryOne and in the release announcement 
+
+Set up a small script in SQL Server agent or Windows task scheduler that copies a backup file to a secondary folder where you keep it longer than the others or do a mirrored backup to a secondary folder every six months. A small powershell script or xcopy command that runs every six months and copies the last backup file will do just fine will make a log backup to the windows equivalent of /dev/null, no disk writes or space wasted. Nogood to restore from though. 
+
+You need to check the actual size of the database files which you can check by running This will give you information about the files contained in the backup and their sizes in bytes You need the same space available on the server as the database file size, the backups can be compressed. Now you need to free up more space on c: on the server but I would recommend that you add drives to your server and that you would look at storage best practies 
+
+You are running into a known bug - There is a fix for it but update to SP2 rather than installing the hotfix. The errorlog contains and you are using availability groups. The memory leak is in the MEMORYCLERK_SQLLOGPOOL which is used for transaction log activity. 
+
+The user account that is running the SQL Server agent might not have permissions to use the database mail profile you can check that with EXECUTE msdb.dbo.sysmail_help_profileaccount_sp; But you are having some issues with the agent account security, please try the following steps. 
+
+Stop the applications, make certain that all the users are disconnected and make a tail_of_the_log backup of the database Change the recovery model to simple Upgrade Change recovery model to full and do a new full backup 
+
+As you have found out the SQL Server Service runs the backup but not the user giving the backup command. Changing the service user should be done using the SQL Server configuration manager which in the background sets correct permissions for the service account, all of which are documented on MSDN, giving the user running the service Administrative rights on the computer will make it possible to run the service but is not a good security practice. You have to be sure to run the correct version of the Configuration manager so try running MMC.exe and adding the correct snapin for your version of SQLServer so check that first and if it failes reregister the snapin by running in a command prompt the following command 
+
+No ambiguity there. If you set 'Auto Update Statistics' to 'False' statistics will not be updated automatically. If you set 'Auto Update Statistics' to 'True' they will be updated according synchronously or asynchronously according to to the 'Auto Update Statistics Asynchronously' settings. 
+
+So in your case. Do a Partitial backup of of the Primary filegroup and the Read/Write filegroup and restore that with recovery. The RO file will be recovery pending and then you can restore that filegroup with recovery to get the database up to date and then reload the data. 
+
+Just making sure - Is the log file set to a fixed size? If so, try adding a secondary log file to the database and then do a checkpoint. If all else fails rebuild the log. 
+
+The software installer is reading the or environment variables to create the user database, you will have to change the installation script or temporary change the environment variables while running the installer. This has nothing to do with Express itself as it is creating the databases where it's asked to do so by the installation script. Now if you want to have the database in the home directory you are better off by using SQL Server Express LocalDB. I would consider this software a failure. 
+
+You can create a client alias on the application server. You will have to run CLICONFG.EXE on the client, click add on the alias tab, click TCP/IP add the server alias B and set the connection paramters to be FC\SQLSRV after this all connections to server B from that client/application server will be forwarded to FC\SQLSRV If your application is 32bit you will also have to do the same for the 32bit registry and run %systemroot%\syswow64\cliconfg.exe 
+
+You will have to setup a linked server forwarding the user credentials between the instances. There are step by step instructions here: It boils down to running this on DB_INSTANCE1\DB1 
+
+But for this to work you will have to make sure that you made a backup of the original certificate with the private key. 
+
+I cant offer you to dump this to the errorlog. For that you need to do some serious research and both these options are lightweight and can leave you with a simple file to look at. In SQL Server 2005 you need to create a server side trace on transaction filtering on eventsubclass 2. In SQL Server 2008R2 and later you are better off creating an extended event session on the SQLSERVER.SQL.TRANSACTION event filtering on transaction_state = 2 But since you are using SQL Server 2005 you need a trace, here is a script that will create a server side trace capturing all rollback events: 
+
+Both of these are user processes and are part of an application, you can check the outer query for the cursor with the following 
+
+The answer is no, you cant speed this up. This is not a good way of dealing with importing data as there is quite a lot of code running in background creating insert scripts for the lines on the clipboard. If you don't want to write the code: Then you are IMHO better of inserting the data into SQL server through a linked table in Access than via the clipboard in SSMS. 
+
+Use a loop to delete and make frequent transaction log backups while doing so. That way people can use the table and you will keep the transaction log at a responsible size 
+
+Changing CPU affinity was never a common practice but did have it's uses on WindowsNT and later on Windows Server 2000/3, The main issue was that processor load could be misaligned on multiprocessor systems and this allowed for freeing up resources. This could also be helpful on systems that where not dedicated to running SQL Server. So yes this could be beneficial in some edge cases. Old Small Business Servers come to mind. On later versions of Windows the OS is more likely to distribute load between processor so for performance reasons this will not help but can be beneficial on servers running multiple instances if you want to limit those to specific CPU or NUMA node 
+
+Try running SSMS on the server with 'Run As Admin' to check if you added builtin\administrators during install. If you cant find any user with enough rights then you have to add a login to the server and give it sysadmin rights. Start the server in single user mode by starting cmd.exe on the server with administrative rights and running and then then in the same window run and type the following. 
+
+The destination path for the LSCopy job has to be an UNC Path for all practical purposes, to make things simpler to debug I would reccomend not to use the default \d$ shares as you will have to change the permissions on them but connecting to \localhost\c$ is a network connection. Now the error 
+
+There are so many factors in place here as you can have multiple failover paths defined both in VMWare and the failover cluster. So the answers are almost as many as there are configuration options. But in general if a single EXI host stops. VMWare will migrate it's VM's to another and as all the virtual machines will have shut down the second windows failover cluster node will become the primary node. 
+
+Install the Oracle Instant client - both the 32 and 64 bit versions find orasql12.dll and register it with and for the 32 bit version. and add the oracle bin directory the the path environment variable Make sure that you can see the oracle driver in ODBC both 32bit and 64bit and under data providers in the management studio. Check allow "Allow Inprocess" in the driver properties or run 
+
+I would prefer having a history schema or a second historical database over a linked server any day. It saves license costs is easier to manage and query. You can then also use simpler schema and drop some of the indexes making the database smaller But since you have the enterprise edition you have the third option which is to partition your tables which, when put in place makes it easier to archive the data and querying the old data is transparent to your users and you will not need to make application changes. 
+
+In this case, if you cant serialize this in the application code you can use try/catch or an applock 
+
+The SQL Server 2014 Upgrade Techincal Guide states that you need the following as the minimal version for an in-place upgrade 
+
+As you rightfully state the engine will do a table scan to locate the record and will at least cache the page containing the row where ContractID = 2000. How long the rest of the table will stay in memory will depend on other queries and the size of the buffer cache. You can query the buffer cache to see how much memory this table will take in cache. Here is a treasure chest of queries to monitor your server. This one here for instance will break down the buffer cache for your current database showing how much space each object takes in memory: 
+
+Do a partial restore of the primary and filegroup A from a partial backup. At this point the primary filegroup and filegroup A are online. Files in filegroups B and C are recovery pending, and the filegroups are offline. Online recovery of filegroup C. Filegroup C is consistent because the partial backup that was restored above was taken after filegroup C became read-only Restore of filegroup B. Files in filegroup B must be restored. The database administrator restores the backup of filegroup B taken after filegroup B became read-only and before the partial backup. 
+
+If you are using Windows Authentication in the linked server setup it will not work using the SQL Server agent even if you have Kerberos correctly setup. You can configure the linked server to use SQL authentication for those connections but I would recommend to create a SSIS package for this as the authentication will be easier to configure. Can you please post the linked server configuration for further information? 
+
+Not as it stands, you will have to add an index for it and that will never be able to scan only the 2011 column from the pivoted view - adding index onto that view is not possible and will give an error . Then you need to create an index for the underlying data to get the Pivot operator to run faster. Let's look at if the Optimizer has something to say. Your sample data is really small so run your query like this. 
+
+No. You can setup a two node failover cluster with the standard edition of SQL Server. Any more than that and you need the enterprise edition. $URL$ 
+
+The Always on logs are written in the same location as the errorlog. By moving the errorlog you can change this location. You will need to change the service startup parameter by opening the SQL Server configuration manager and changing the -e parameter and restarting the service. 
+
+To be able to check all jobs you would need go add the user to the SQLAgentReaderRole in the msdb database which also gives that user permission to create jobs. To minimize the access granted you can also grant the user select permission on the tables used by the sql server agent 
+
+It is not stated if this is for the log file or the database files but lets start by trying the log files and if not then try setting the database files to fixed growth: 
+
+You can skip the filecopy step and just insert the data directly to SQL Server. (use EPEL repository) and then use freebcp to insert the data into SQL Server from the linux box. 
+
+You have to remember that the leaf nodes of a Nonclustered Index consists of Index pages which contain Clustering Key or RID to locate Data Row. In your where clause you state Since there is a Non clustered index on VeryRandomText (create index will create non clustered index unless you explicitly tell it to create a clustered) the cheapest way to find the data is to scan the index to find the rowid and then fetch the data for the row. If you would create a clustered index 
+
+Now also make sure that the tempdb files are created such that you don't need auto growth and that they are all the same size with the same growth parameters not in percentiles. Your tempdb is now ~140 GB so that is about the size you need to provision for. Create 8x15-20 GB datafiles and a single log file (as transaction logs are used sequentially) set all the files with exactly the same growth parameters, something that makes sense on your storage 512mb is fine if you have instant file allocation. As your transaction log is just about 5GB create a single 6-8GB file for the transaction log and set autogrowth to be in MB. Log growth is not affected by instant file allocations so make that parameter smaller than the one on the database files. If you still see contention then go for 16x 8-10 GB files and dont change the transaction log parameters 
+
+If you want to be able to view the exact backup history for longer time than those four weeks that you keep the backup files on disk, make sure that you set the cleanup task not to delete the backup history from the msdb database, you can then run the backup report from SSMS (right click database, select reports, standard reports, backup and restore events) or run the following to view the backup history: First create this function - I'll just have it in msdb - which is not a good idea. 
+
+Yes there is a need for it, but you can help without creating the index at least in SQL Server You are joining on invoice..cust_code which is not indexed so that the Database engine will have to do a hash lookup on the table finding all invoices with the correct customer code and then filtering on the invoice id. By creating and enforcing a foreign key the join will be faster, as the optimizer can safely assume that invoice_id '123' exists for this single customer, but having the suggested index can help the optimizer to find the optimal query plan, a singleton lookup to both the tables, faster. 
+
+The most efficient way to connect to a server is to use it's hostname and not an IP address. The local DHCP should be updating the DNS records so connecting to a hostname should always work, if not talk to the people configuring your network. 
+
+Recent expensive queries in the Activity Monitor in SSMS should be your first stop. For more information grab SP_Whoisactive and find Glenn Berry's diagnostic queries which will help you a lot. The exact query depends on the version of SQLServer but this should be a start.

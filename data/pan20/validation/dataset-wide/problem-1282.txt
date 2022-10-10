@@ -1,0 +1,95 @@
+These are hard to read when doing maintenance. At first glance it looks like you accidentally did not indent the code correctly you need to study the code to understand it is correct. I find it best to put an empty body (maybe even with a comment /* Deliberately Empty */ 
+
+You usually find that if you are getting values from an object doing stuff with it there is usally a member function (or member of the public API) that can do that. In this case you are only using the value to print. So why not just create a function that knows how to print the value. 
+
+ServerInfo Object that controls all threads. Keeps a map of QueInfo objects. Each one represents a running thread. Only the main thread sees this data so no locking needed. 
+
+Have a working version of MySQL implementation of ThorsSQL library done. If you want to check it out you can find the whole thing on github ThorsSQL. This is a follow on to previous code Reviews: Part 3: Layer 4 Part 3: Layer 3 Part 3: Layer 2 Part 3: Layer 1 Part 2 Part 1 The documentation for these classes is here: Part 3 (Layer 5): Request/Response Interaction with the SQL server is normally done via a / cycle. The client makes a request to the server and the server responds with a response packages. So I abstracted these two different types of package. The base class has the abstract method . This is called by the object to write the object onto the stream. So each specific child instance of must understand how to write itself to the stream. When we look on the stream for a response the first byte indicates the type of response message. Unfortunately some messages have the same first byte and we have to know what message was sent to understad that first byte. This is why the method takes an action map as a second parameter. When you call you pass a map of valid byte codes to functors; these functors create the correct child object from the stream. Note: Default response object are automatically handled. Example: 
+
+Iterate over the stream: There is an iterator that acts on a stream (treating the stream like a container). So you don't need to read the data into a container and then parse the container. Replace: 
+
+Because the cells are no longer pointers you will need to replace with (a dot). But other than than no difference. Part 2 of memory management Take this a step further. You don't need to manually manage the memory for the array of . We have classes that do that for you. 
+
+Index Both the consumer and producer use to access the queue. If these are distinct values unique to consumer/producer then it will work but it is definately a bad naming scheme. Maybe better is and to indicate the read/write position. Semaphore Simplification. I don't think you need three semaphores. You should be able to use two (one for the producers one for the consumers). You only need the if there are multiple producers or multiple consumers. 
+
+This does nothing. This object is going to be destroyed. Therefore these variables do not exist after the destructor exists. So little point in playing with their values just before destruction. Don't manually call the destructor 
+
+You should get the code to work that out for you. If you change the size of then you should not need to modify . 
+
+For symmetry and to make sure that the first element aligns to the beginning f the class you should probably do the same here. 
+
+Technically both functions exhibit undefined behavior (in C++ not sure about C). There is no return on successful completion. 
+
+Also smart pointers are very hard to get perfectly correct. The standard ones took years and thousands of people looking at them to get correct. So It is usually preferable to use one of the standard smart pointers rather than a home grown one (especially one that is not being reviewed). So who owns this pointer? 
+
+Bad Loop construct Your while loop is not correct. Note the last succesfule read will read upto but not past the eof. So the stream will be good even though there is no dat on the stream. The first attempt to read it will cause it to become bad: 
+
+The point of capacity. Is that it tracks the number of uninitialized members of the vector. You only construct these members as you use them (thus they can be constructed with parameters) and you don't pay for their construction if you don't need them. 
+
+A pointer is totally useless in this situation as you have no idea if the ownership is being retained by the factory (and it will destroy it) or if ownership is being returned to the caller so he can destroy it. Here you have two options: 
+
+So here both key and value are copied once only. So in C++11 we added move semantics to try and avoid copies 
+
+When retrieving the key you return by value. This means you are going to make a copy of the key to return. I assume you don't want people modiying the key so you should return by const reference. 
+
+Here I would have used std::endl just to force a flush. Because the std::cin and std::cout are bound together with magic it does not really matter though. Initializing the random number generator should be done once in the application. So do it just after main() starts. There is no need to cast the result to unsigned. A lot of people think 0 is good here I still like using the macro NULL (the problem with NULL is that on crappy compilers it is not defined correctly for C++). To me the NULL conveys more information in that it is supposed to be a pointer not the number 0. Though with C++11 I am trying to use nullptr. Using this technique for generating a random value will get a lot of fanatics complaining. 
+
+Yes but you have to also understand when to apply these principles. Some ideas contradict other ideas if you just use them bluntly. You need to understand each idea but also when to apply it. The concept of is an important concept when used in the correct situation (no argument there). The problem is that iterators are not the correct situation and it plays no part. But we have two competing concepts at play here. One: is symmetry is good. Two: auto conversion of types by the compiler is bad. You have to balance the two concepts. In terms of iterators auto converting iterators is a very bad idea. You want to make the user of the iterator be explicit about any conversions (as the STL designers did (see below)). As a result the symmetry concept can not be used (as it requires auto conversion). Why it makes no sense for auto conversion 
+
+Though it makes no difference for POD types. It gets you in the habit of always using the pre-increment version. This will help you out when the type is not an integer type as generally speaking the pre-increment is more efficient. Also if you change the type from integer (to say iterator) it will automatically be the most efficient version. You are returning the wrong value: 
+
+Here you are locking your function to searching only one list. It should search any list for the key. This global variable does not seem to be used anywhere: 
+
+If and are equal there is nothing to check. You have gone beyond the range. So You need to do a test here. If these two are equal then you failed to find the data. Note: That is one beyond the end of the range you are checking. For the very right hand end of the vector this means beyond the end of the which means that accessing it is undefined behavior and likely to cause a crash. This value is always false. 
+
+Use the for assignment operators. This is suseptable to failure if one of the operations fails and throws an exception (you will be left in a non consistent state and thus have not provided the ) 
+
+As you have no range specific functions applied in the clause I don't understand why you need the clause. The expression is way to simple to be optimized (its hard to see how you can go wrong). For any optimization advice you will need to provide the table definitions and an explanation of the the data has been decomposed to. Optimization of SQL queries usually lies in the table structure and not decomposing the data to full actualized third . 
+
+Review of code OK. I assume there is a function wrapper here that defines !! What is the type of ? I am going to assume as you seem to be coding using C (rather than real C++). Types are super important in C++ please make sure we know all the types of all identifiers. Why split up the declaration from the initialization? 
+
+But you should also make the destructor virtual. It is quite probable that these objects will be destroyed via a pointer to the base class. Without a virtual destructor this is undefined behavior. You have the basics of subject correct. 
+
+You should probably put this in its own function. So when people come to port your code to another platform they just need to provide an alternative implementation to a couple of specific functions and the rest of the code can stay the same. 
+
+Nothing wrong with this. But if you lay out your type with the chars first then you may not get the best packing arrangement. Always order them from largest to smallest (if you care about layout (usually it is not a big thing but if you have large space requirements and can become an issue)). 
+
+begin is a bad name for the looping variable as you increment it and then it will not be the beginning anymore. There is no need to call end outside the loop. Most standard implementations this is so fast you will not notice it (if internally it is a problem then the implementers have already optimized the call the end() to cash the iterator so you are not saving anything by calling it outside the loop. 
+
+atoi() is fast but non standard and not always available. An easier way is to just use the stream operators. This will always work and 99% of the time will be sufficiently fast. Only optimize out when you know it makes a difference. Also this code is so dense it is nearly unreadable. White space is your friend. 
+
+Another Dry situation These two look identical. I am sure you can factor out the identical parts into their own function. 
+
+Is initialization from a function less effecient. No. Not really. All modern C++ compilers have RVO and NRVO optimization as standard. This means if a function returns by value the compiler will more than likely elide the copy of the value out of the function, ie it effectively builds the value in place and no intermediate copies are used (this works through multiple levels of copying). 
+
+Swap as member and friend. You should define swap as a member (that is noexcept). You can then call this from the friend version. This allows for easier calling from your noexcept move operators. 
+
+Overall that's very good. I did not find any issues with the code. All the comments are very minor. Design At a design level there is one change I would make. Note yours works. But you can put all three members (size/ptr/ref) into a shared object. The advantage to this is that the (size/ptr) are in the sample place. This reduces the chance for them to accidentally go out of sync because of a small error. There is also the advantage that your object is reduced in size. From to simply . Free standing Vs member functions 
+
+Currently they all print to std::cout. But I can see the processes of haveing multuple of these running with different streams connected to different standard points. Looks like these should be normal members rather than static members. Hard code std::cout 
+
+Your code should express intent. Neither of these express intent. They look more like optimizations. 
+
+Algorithms: You should be looking at using a standard algorithm with a lambda (or at least the new range based for). 
+
+The specialization is broadly considered a mistake. It is optimized for size (unlike nearly everything else in C++ which is optimized for speed). Because it optimized for size it has several drawbacks and does not act like a normal (which is why it is normally avoided). Now if you think you need to optimize for size then fair enough but normally people prefer to use Simpler Issues Sure. 
+
+There is a very expensive call to that you may not need to do. Just swap the content to the other object. The semantics of a move put the moved object in an unknown but valid state. If you provide methods that allow you to reset the state to a known value then you can re-use the already allocated memory. If the other object is going out of scope it will call delete its own destructor. But if it is not going out of scope then you can re-use the already allocated block sometimes. Also some situations the call to is not exception safe. If your pointer is to an unknown type you can not assume that the destructor of is exception safe (it should be but it is not required). As a result you would not be able to mark your move operator as which will then cause performance degradation when you use your object with a standard container. Move Constructor Yes this works perfectly: 
+
+You can make a different choice on how to split the sets but they should be mutually exclusive sets objects should either be on the right or left there should not be objects that can appear on both. No need to do a continue/swap if they are equal! 
+
+Then don't add it to your class; the compiler generated version works fine. Hate Getters/Setters. Its bad design. You are exposing the internals of your class. Use only as a last resort. The members of your class should do the operations required. 
+
+Since you don't modify the values it can be made simpler by passing a const reference of each parameter. Thus having no copy. 
+
+Yes BUT. The std::array itself is not moveable. But it is still optized for move semantics when its content type is moveable. So it will move each of its internal elements rather than copy them. But your function limits the type of to which is only defined for built-in integers and floats. Moving integers and floats is the same as copying them. So you get no real benefit. But lets take this a step further. If you remove the so it can be used by any type that supports the etc.. then you have a usability issue. When you do a multiplication like this you destroy the original array (Its content has been moved so there is no way to know what the elements are or if they are usable. About the only thing you can do is reset them to a specific state). 
+
+Technique used. I would not have bothered to read the data into its own buffer (then tokenize it). The C library has a perfectly good stream reading library in scanf(). The same functionality can be achieved using: 
+
+Return true if the file exists. Actually: If the file exists and is readable (but misleading name). OR Return true if the File can be created as writable. Note: Subtle difference between one and two (readable/writable) If not readable and writable but not deletable Otherwise return false. 
+
+It is very old school to use here in the template (though there is nothing wrong with it). But normally I would use . The argument I have heard (that I think it is weak) is that Item does not need to be a class what happens if I specialize with (that's not a class). 
+
+All things that are less than or equal go on the left. All things greater go on the right. Thus this statement does not work: 
+
+Personally I like to align the function names (this makes it easier to read). This is purely personal. Some like it some don't.

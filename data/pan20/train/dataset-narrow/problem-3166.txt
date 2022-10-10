@@ -1,0 +1,69 @@
+You can efficiently implement e.g. Euclidean distance or Cosine on sparse data (iterate over nonzero values only!). Then you can use e.g. Hierarchical clustering. But also consider frequent itemset mining. Usually, on sparse binary data, frequent itemsets are better than clusters. 
+
+Clearly, 2 standard deviations beyond Omega is not the same as twice the mean. Apparently, their process is this: 
+
+compute the distance matrix compute the mean compute the standard deviation compute hierarchical clustering with maximum linkage cut the tree at mu+2*sigma 
+
+I have never heard of NEO-k-means. So I wouldn't call it "state of the art": which tools does include it? Plenty of methods are published every week and have zero impact because they are redundant, badly written, only work on a single data set, hard to parameterize, or outright irreproducible (As I have not read NEO-k-Means, I'm not claiming any of this applies to this particular algorithm!) Nevertheless, it is not the first to do non-overlapping clustering. 
+
+Because complete linkage is in O(n^3), this approach will not scale to longer videos or higher frame rates. 
+
+On L2 normalized data it is an easy and good exercise to prove that they are equivalent. So you should try to solve the math yourself. Hint: use squared Euclidean. Note that it is common with tfidf to not have normalized data because of various technical reasons, e.g., when using inverted indexes in text search. Furthermore, cosine is faster on very sparse data. 
+
+as we can clearly see, the MI result of sklearn is scaled using natural logarithms instead of log2. This is an unfortunate choice, as explained above. Kullback-Leibler divergence is fragile, unfortunately. On above example it is not well-defined: causes a division by zero, and tends to infinity. It is also asymmetric. 
+
+The shuffle step is actually the most important step. That is where the MapReduce system takes over and you get all the performance if it is well implemented. Mappers and reducers run in parallel, and independent of each other. They usually do really stupid operations, such as in the word-count example. The shuffle phase is where all the heavy lifting occurs. All the data is rearranged for the next step to run in parallel again. The key contribution of MapReduce is that surprisingly many programs can be factored into a mapper, the predefined shuffle, and a reducer; and they will run fast as long as you optimize the shuffle. That's why you can extend with custom map and reduce functions, but not with a custom shuffle - that part needs to be written by experts, you can only modify the keys used by it. You can live with a "just ok" map, you can live with a "just ok" reduce, but you cannot have a "just ok" shuffle, it needs to be top notch. It's also where people fail in writing good mapreduce. For example by producing too many copies before shuffling, or putting everything into the same key (shuffle does not make a lot of sense then anymore). 
+
+Leader clustering is so simple, the weight does not make a difference. It assigns points to a cluster if the distance is less than a threshold. It does not matter whether the point has 1 weight or is a "square" of 100. 
+
+Don't forget about MLlib (the hot kid on the block), cloudera-ml, cloudera oryx, cloudera oryx2, and a myriad of other efforts to make old algorithms like k-means solve nonexistant problems on wannabe big data... There is no one size fits all. Thus, there is no answer to your question, in particular no concise answer. 
+
+There is one class classification. In particular OC-SVM. Or you could simply anaylze the distance to the nearest sample. 
+
+Use the function to have Python recommend a book for you. Probably none is objectively best. And I don't see any training data to predict this. 
+
+Option 1: Keep and access the original data (e.g. by index) - recompute the means. Option 2: Apply the inverse transformation. StandardScaler is a linear transformation, so its reversible up to some loss of precision. 
+
+You need much more data. Deep NN shines when you have excessive amounts of data. With only a little bit if data it can easily overfit. The big difference between training and test performance shows that your network is overfitting badly. This is likely also because your network model has too much capacity (variables, nodes) compared to the amount of training data. A smaller network (fewer nodes) may overfit less. 
+
+They will often give the same preferences. Do not forget that these are largely heuristics. They won't have much advantages over one another. That is why there are so many. As a guideline, look at the definitions. Choose that index, whose equation is most relevant for your problem. (Yes, you do need to understand what they do. Clustering is hard, it is easy to get meaningless results by just looking at the code and scores and forgetting the underlying math.) 
+
+If you know your approach is working, you can try to implement it more efficiently. Identify the crucial points, try to vectorize them better, for example. The R interpreter isn't the fastest. There are some efforts underway, but they are not yet ready. Vectorization (which means less interpreter, more low-level code) often yields a factor of 2x-5x, but you can sometimes get a factor of 100x by implementing it e.g. in C. (And the R advocates are going to hate me for saying this...) Once you know that your approach is working, this may be worth the effort. 
+
+k-means is not a good choice, because it is designed for continuous variables. It is a least-squares problem definition - a deviation of 2.0 is 4x as bad as a deviation of 1.0. On binary data (such as one-hot encoded categorical data), this notion of squared deviations is not very appropriate. In particular, the cluster centroids are not binary vectors anymore! The question you should ask first is: "what is a cluster". Don't just hope an algorithm works. Choose (or build!) and algorithm that solves your problem, not someone else's! On categorical data, frequent itemsets are usually the much better concept of a cluster than the centroid concept of k-means. 
+
+Define "shared". Don't assume cluster 1 in A is cluster 1 in B. The numbers are meaningless. So yes, you should use standard techniques like adjusted Rand index. 
+
+yields A=2.66, B=2.33 The reason that randomly choosing works just as good as the others is that usually, the majority decision in kNN will not be changed by contributions with a weight of less than 1; in particular when k is larger than say 10. 
+
+It is one of many heuristics. Don't use it for evaluating clustering results. Use it as a guide for which result (or parameter, e.g., k) to explore first. But there is no guarantee that the 'better' result by V measure is actually better. 
+
+Clustering is very difficult, expensive, and hard to parameterize. That means it won't be easy to automate in a useful way - it breaks all the time when data changes. Most good clustering (not kmeans) cannot predict the cluster label on new data. So using it will mean you first need to train a classifier to predict the cluster, then use this in another classifier to predict your class. 
+
+Split into train and test. Lock "test" in a safe. Use cross-validation on the train set only to tune parameters. Fix the hyperparameter to the best setting found. Write them in boldface as 'final parameters' into a stone plate on your wall. Train a new classifier on the entire training set using exactly these parameters Get the test set from the safe, and run the classifier on the test set exactly once to get a prediction of how well your classifier is going to work in the future If the results are substantially worse than those from 2.: panic. It's not going to work. Optional: If you are confident that hyperparameters do not depend on the data size but that you need every little bit of training data, you could train a classifier on train+test with the in-stone parameters. This is risky though, a you don't have a test set anymore. Deploy, but monitor that it really performs as good as predicted. 
+
+It will be faster to merge duplicates. But you can run k-means with duplicates, obviously. Don't forget preprocessing & result validation! 
+
+Clustering is not classification. It is not even trying to the Y you provided. So it's not obvious to me what you are trying to achieve. You have some unused variables in there (). Why would you want to use k-means here: you are doing supervised learning! If you want the labels of the points in the first cluster, that probably is just a 
+
+DBSCAN is O(n) times the cost of a neighbor search. If you use an index like LSH that could answer neighborhood search in O(1) (assuming a very even data distribution, with O(1) neighbors per point) then DBSCAN can run in O(n) plus the time needed to build such an index. Yes, minHash indexes could be used if they are appropriate for your data and distance. 
+
+Apply stemming during preprocessing to reduce words to their basic form. Porter stemmer is okay for English, and rather fast. 
+
+You should look into other estimators of location. What you want is a robust estimator, with a high break-down point. The extreme approach would be the median. But you may get more numerically interesting results with a trimmed mean. You define a threshold, say 2%. Then you remove the top 2% of votes, and the bottom 2% of votes, and take the mean only of the remaining entries. An app with 98% 5 stars will still get a 5.0 But to prevent manipulation, I would look into other signals. Such as clustered votes from a single region, for example. 
+
+Use a constraint optimizer instead. Define your objective - what is a good result. Then define your constraints (all points in exactly one group, no duplicate labels in any group) and run it. 
+
+Don't use machine-learning for this - you probably don't have millions of training examples. Instead, what you are looking for is a simple depth-first search. Begin at the root, then define a priority list, e.g. below-left, below, below-right, in which order to proceed. Don't visit nodes twice, but when first visiting them mark them as seen, and add them to your tree instead. Alternatively, define a priority pattern of how to define the parent node. Construct a tree based on this single "best parent" relationship,, but make sure you don't create cycles. 
+
+It's not Python, but ELKI allows customizing linkages easily. I used this tutorial: $URL$ The Lance-Williams-Uodate approach is very efficient. But I don't think you can easily add Minimax Linkage the same way. It may be much more expensive to do minimax linkage? 
+
+Word embeddings are trained by substitutability, not similarity. If you consider a sentence like "This food is unflavored." Then a good substitute word would be "flavored", and the sentence will still be "correct". In many cases, substitutability arises from similarity (crunchy, crispy) but it does also arise from opposites. You may consider "king" and "queen" to be opposites, too. You probably should use a supervised approach then. 
+
+First of all, implements mutual information for evaluating clustering results, not pure Kullback-Leibler divergence! 
+
+"Distance" in k-means is the sum of squares over all attributes. It does not matter how many attributes you have. 
+
+MapReduce is not used in searching. It was used a long time ago to build the index; but it is a batch processing framework, and most of the web does not change all the time, so the newer architectures are all incremental instead of batch oriented. Search in Google will largely work the same it works in Lucene and Elastic Search, except for a lot of fine tuned extra weighting and optimizations. But at the very heart, they will use some form of an inverted index. In other words, they do not search several terabytes when you enter a search query (even when it is not cached). They likely don't look at the actual documents at all. But they use a lookup table that lists which documents match your query term (with stemming, misspellings, synonyms etc. all preprocessed). They probably retrieve the list of the top 10000 documents for each word (10k integers - just a few kb!) and compute the best matches from that. Only if there aren't good matches in these lists, they expand to the next such blocks etc. Queries for common words can be easily cached; and via preprocessing you can build a list of the top 10k results and then rerank them according to the user profile. There is nothing to be gained by computing an "exact" answer, too. Looking at the top 10k results is likely enough; there is no correct answer; and if a better result somewhere at position 10001 is missed, nobody will know or notice (or care). It likely was already ranked down in preprocessing and would not have made it into the top 10 that is presented to the user at the end (or the top 3, the user actually looks at) Rare terms on the other hand aren't much of a challenge either - one of the lists only contains a few matching documents, and you can immediately discard all others. I recommend reading this article: 
+
+TF IDF as well as LDA are meant to work with much longer documents. All documents should have more than 100 tokens. With a median of 1, no clustering will be able to do much. Either they visited the same url, or they didn't. That is too little information for a statistical approach.

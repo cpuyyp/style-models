@@ -1,0 +1,41 @@
+Try that and let us know. Make sure there's a firewall rule allowing the RTSP traffic to the WAN Primary IP. 
+
+In general, no. Assuming you're using a single ethernet cable to connect the two. If you want to use multiple cables/ports, you'll need to configure a LAG. You'll also want to make sure that loops are prevented using STP or something similar. 
+
+You should be able to set the guaranteed bandwidth along with the maximum allowed bandwidth for each connection. So, for example, you can set your guaranteed bandwidth to 25% with a max of 75% on the Internal policy, while setting the Client policy to guarantee 50% with a max of 75%. This means that if the client policy isn't using all of the bandwidth allocated, the internal policy can utilize the available bandwidth. You didn't mention which device you're working with, but here's an overview of BWM policies from Sonicwall: $URL$ 
+
+If your test is working, it looks like the Sonicwall configuration is good. Verify the gateways on the PBX as you mentioned in the comments. 
+
+You end up having to do something called double NAT. You NAT each side to a different network, tricking the two endpoints to pass traffic. It's a bit complicated and not very elegant, but the only way to make it work. 
+
+No. Different latencies are not the problem here. Nor are window sizes since you are using 10 parallel connections. TCP handles different latencies and bandwidths all of the time. My guess is a layer 2 duplex mismatch problem - one radio is forced to full duplex and the the other is set to auto. 
+
+I guess there are a couple of ways to go about this. 1.Buy some Japaneese equipment and use channel 14 at low power - you may bleed onto ch. 11 a little bit, but they will have to be very close. -- not legal of course 
+
+Get some 4.8 GHz Public Safety WiFi equipment. -- not legal of course Go find some old FHSS adapters. -- 1 Mb/s isn't that bad. Use Bluetooth. Hardly anyone looks for that. Totally re-write the wifi-driver software to change the checksum method and everyone else will drop your packets. 
+
+The ACK bit means that the Acknowledgement number in this packet is valid. In the SYN packet there is no SEQ# from the other side yet so there is nothing to ACK. There is a zero in the ACKnowledgement field, but it is just a placeholder (some decoders show it some don't, but you can see it in the hex). Every packet after the first packet will have the ACK bit set. Every packet has a SEQ and ACK number, so there is always a valid ACK, even if the ACK was the same as the last ACK. 
+
+If you have a managed switch that supports VLANs, just separate the WAN and LAN ports onto separate VLANs and you're good. I would not recommend using one switch with all traffic on the same L2 broadcast domain - it causes multiple headaches, the most basic will be the sonicwall will report a bunch of spoofed traffic. 
+
+That should work. Try plugging a laptop using one of the static IPs into the switch. I suspect something's up there. 
+
+Your NAT policy has some problems. Currently you're translating source traffic to your WAN IP, and then translating any destination traffic to the camera. It kinda works, but it's not correct. This is what the setup should look like: 
+
+The sonicwall can point to one of your own internal DNS servers (running on another device in your network), but it doesn't include a DNS server itself. You can set your server up to do DNS and point the sonicwall at it, then all DHCP clients will use that server for name lookups. If you have multiple websites and multiple employee workstations, it's worth it to set up your own DNS server. It will save a lot of trouble, especially as you grow. 
+
+You had it up until 'thus'. Seperate Frequencies - think violin and tuba. They can play at the same time, their frequencies don't overlap, you can tell them apart. As far as rate goes, that is determined by the signal 'bandwidth' plus other added tricks like shifting the amplitude. 
+
+I'd try it with the RST bit set. Your SEQ/ACK shouldn't matter in that case. If that doesn't work it is probably because you messed up your checksum and the packet is getting dropped. 
+
+copy running-config startup-config could be your culprit.. I've seen lot's of tiny config changes go unsaved and rear their ugly heads years later after a reboot or a "I just need to move this wire for a second..." Here are my top guesses in order of probability. Not the Z1 - I see it get blamed all of the time for problems caused by operator. And I have seen 50 user offices use it so there is no set limitation, only a recommendation. Duplex mismatch - Auto + Full = big problems. Local Routing. If you made a recent routing change things might be bouncing off the wrong router or the Merkai. Heat. Stuff gets old, dust and bugs get in, glue and solder crack. Open it up and check your heatsinks, and check for anything that feels over 130F, because that's where things start throttling CPU. 
+
+I have two Cisco Catalyst 2960-24TC-L switches and would like to connect them using fibre over a distance of 200Meters. According to cisco, the switches has two SFP ports, which I can clearly see on them but my issue is I do not know where or how to proceed knowing that I am not into networking at all. All I want to do is to make sure I am on the same page with the network engineer I will be contracting so they wont be here telling me what they want and not what we need. Any help will be highly appreciated. 
+
+All I had to do was to negate the command and everything went back to normal. Thanks all for your support. 
+
+Everytime I try to connect to the any of the subinterfaces through telnet or the WAN address through telnet, I get the error message 
+
+I have a cisco 1941 router just configured but no matter how I go about configuring the telnet, it seems not to work. It has interfaces already set up and systems can browse through it in the office. It has two interfaces WAN and LAN configured with Ip Addresses and the LAN interface with other sub interfaces with IP address configured on them. I have tried setting up the terminal with the command as stated below but it is not working. 
+
+What you have here is TCP Slow-start. It's a normal and natural part of TCP. The sending station may know that it is plugged into a Gig port, but has no idea what the bandwidth along the way is, so it starts slow and ramps up if conditions permit, and slows down if packets get delayed or lost. There are two common ramp up methods I see: Fibbonacci and exponential. Most are Fibbonacci and start with three data packets and wait for an ACK, then 5, 8, 13... If you have 10Mb/s bandwidth it will take about 9 RTT to ramp up to that speed. But this can be limited by other factors like a congestion, a low receive TCP window (or one that doesn't get cleared out quickly), or a low server send window (sometimes the server sends 64k and waits for an ACK before sending the next block - double buffering helps with this). As you see, as soon as you get the ack you send a burst. This burst size is also called the Congestion Window or CWD. We can't see what it is in the packets, it is an internal counter that the sender uses. On a 100M its about 14 RTT, and Gig it's 19 RTT. To combat this Google developed and has been using IW10. It sets the Initial CWD to 10 and adjusts from there.

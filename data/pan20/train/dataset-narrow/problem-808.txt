@@ -1,0 +1,73 @@
+After discussions in the comments on the original question, it appears in this case the lost space is caused by the choice of clustered key, which has led to massive fragmentation. Always worth checking the state of fragmentation via sys.dm_db_index_physical_stats in these situations. Edit: Following update in comments The average page density (prior to rebuild of the clustered index) was 24%, which fits perfectly with the original question. The pages were only 1/4 full, so the total size was 4x the raw data size. 
+
+I have a stock of scripted trace definitions that I use for different levels of diagnostics, none of which filter by HostName. I needed to filter traffic by host today so: 
+
+Without any information on the nature of the system (see my comment on the question) or why you're upgrading, it's difficult to offer any specific and/or concise advice. As a starting point, there are plenty of excellent checklists for building a new server, Brent Ozar and Jonathan Kehayias are two good examples. From the many recommendations in those guides, there are a couple of items worth highlighting. These are those which I encounter mis-configured most often. 
+
+The use of FORCE ORDER isn't making estimates inaccurate, the deletion of rows did. Forcing an update of statistics on the table may improve the estimation accuracy. 
+
+For SQL Server, you would SET IMPLICIT_TRANSACTIONS ON. In implicit transaction mode, any DML ( etc) or DDL ( etc) will start a transaction and you must explicitly or . Alternatively an explicit transaction can be started with . 
+
+If you can't remove permissions from the base table, need to enforce integrity by other means and are using SQL2008, you could make use of a filtered unique index: 
+
+With an index defined on K1, an ORDERED BACKWARD scan of the index is chosen, which probably translates to 4 pages read from the non-leaf index pages plus 1 for the leaf level. 
+
+These are only added to the row when it is modified, subsequent to your enabling snapshot isolation. There is no blocking or additional load generated to add the 14 bytes to each row at the point you switch snapshot on. The only blocking action you may encounter at the point of enabling is due to the need to wait for all current transactions to commit, which is worth keeping in mind. Ideally make the change during a quiet period or preferably a moments downtime where you shut all activity out. If downtime isn't an option, avoid any period where long running transactions might occur (ETL for example). If you don't get a response within a few seconds, you can query to identify what's getting in the way. 
+
+It's stated in the documentation and is protected from a mistyped attempt by the error message and requirement to specify to force the change through. That was your warning that something bad could happen. 
+
+I'm going to skip past your questions and try to offer broader guidelines/advice instead. The definitive/canonical guide to dynamic SQL, the situations where it is applicable and where it can be avoided, is Erland Sommarskog's Dynamic Search Conditions in T-SQL. Read it, re-read, run through Erland's examples, make sure you understand the reasoning behind the recommendations. You're dealing with a fairly common scenario and the approach you've taken is not unusual. A couple of points worth highlighting: 
+
+Log != transaction log That said, if you were hell bent on torturing yourself or a development team with an arduous time consuming task that would yield minimal value, this would be an ideal project. The cheaper option (if viewing transaction log records is really what you need) would be a 3rd party tool like ApexSQL Log. Depending on what you're trying to achieve with this, the undocumented fn_dblog command might be of interest to you. Also see Tracking Transaction Log Activity in Denali for a neater way of handling this with extended events in the 2012. If you expand your question with a better description of why you want to look at log records, we can suggest alternative (less hacky) approaches. 
+
+A transaction is started for each statement that occurs outside of an explicit transaction block. Whether a commit is automatically issued following the statement is dependent on the RDBMS configuration. MySQL has the autocommit option, SQL Server has IMPLICIT_TRANSACTIONS, PostgreSQL is always auto commit. PostgreSQL: 
+
+You're trying to do this as a single (very large) transaction. Instead, do the update in smaller batches. 
+
+Any OLE/COM components loaded in SQL Server. Extended Stored Procedures (use sys.dm_os_loaded_modules to identify the module loaded in sqlserver process space). SQL Mail.. Prepared documents using sp_xml_preparedocument. Linked Server Providers. Large Plans stored in Procedure Cache. Very frequent Backups also may cause MTL area depletion. SQL CLR. 
+
+Query and quote courtesy of Erland Sommarskog's reference article on the topic, Dynamic Search Conditions. By coding specifically for the common cases you reduce the overhead of incurred on the less frequent cases. That said, I confess I'm getting good value from more liberal application of recently. In the era of more cores & hyper-threading, the recompilation overhead can (but certainly not always!) be preferable to one-size-fits-all execution plans. 
+
+However, I'm inclined to suggest that if you're getting the desired result by using a sub-query, stick with it. 
+
+I've lost enthusiasm for Idera SQLdm, having used it at one client for several years. SQL Monitor is excellent considering the price. SQL Sentry is what I'd recommend to a client currently, if they have the budget. If you've never heard of SQL Sentry, at the very least grab a free copy of Plan Explorer. 
+
+The second is the most interesting usually, buffer pool allocations by database. This is where the lions share will be used and it can be useful to understand which of your databases are the biggest consumers. 
+
+In a similar vain, if you were to suffer corruption to the database metadata (a rare occurance compared to corruption in data structures but not impossible), you would only need to restore the very small primary filegroup to get up and running. The availability benefits this can bring to a large database are so significant, I try design partial availability in from the outset on new projects. A 500GB database restoring at 50MB/s will result in at least 3 hours of explaining why it's taking so long to the non-techs. With forethought and planning, it could be a fraction of that to get the business up and running again. 
+
+The Format function argument is a .net format string, where is minutes and is months. You specified minutes, so minutes is what you got. There are example format strings at Standard Date and Time Format Strings. As an alternative to you can also use just which is the Short Date Format specifier (detailed on the linked page). 
+
+If you want to track usage over a period of time, consider collecting data with sp_whoisactive, as demonstrated by Kendra Little. 
+
+When restoring a sequence of backups (differential & logs) you specify . This leaves the database in a state that will accept further restores, rather than recover it ready for use. 
+
+11GB does not fit into 6GB, it really is that simple. A very rough estimate suggests the table will occupy ~1.5million 8KB pages which given 100 IOPS would take approximately 4 hours to read from disk (assuming worst case, 100% random read, no read-ahead etc). 
+
+It has to wait on the scheduler A runnable queue, there is no switching of tasks to alternative schedulers. The time accumulated waiting for the scheduler to be available is referred to as a signal wait. 
+
+According to @SqlKiwi... the change from creation_time to cached_time was just because procedures and triggers were added in 2008 and the opportunity was taken to choose a more descriptive name. The created/cached time reflects the last compilation, not the creation time of the original plan. 
+
+Addendum to @RemusRusanu's answer (wouldn't fit in a comment)... Given that the database engine will permit up to 5000 locks per object before escalating and taking into account Remus’s answer regarding the critical nature of the lock manager, the high reservation starts to look plausible: 5000 (locks) * 10 (tables or indexes) * 96 (bytes per lock) * 1000 (concurrent queries) = 4.47GB I would speculate the reservation is derived from a combination of the available RAM and the current workload but haven’t seen it documented or blogged about anywhere. Could also speculate that your 128GB memory would have been considered generous in 2008 and the 7GB reservation is indicative of expecting a heavy OLTP workload at that size. 
+
+Shot in the dark without any information on how the database is structured i.e. what tables are on what filegroups, is there an existing partition scheme?. How about rebuild the tables on the big filegroup to one of the other existing filegroups, or a new smaller one? 
+
+It isn't possible to calculate relevance with the LIKE predicate. For SQL Server (which from previous questions I believe is your platform?) you'll want to look at full-text search which supports scoring/ranking results by relevance. 
+
+Your intuition serves you well, they are indeed probably useless. You can confirm whether they are being used or not via the sys.dm_db_index_usage_stats DMV. Kimberly Tripp's 'Spring Clean Your Indexes' articles are as good a place as any to start. 
+
+Weigh up the pro's and con's for Filestream and see if it fits in your case. In our case, we've taken a different route and opted for partitioning the database so we can make use of partial availability/piecemeal restore. One option that wasn't available to us, which you may have, is to mark older/archive filegroups as read-only. The read-only filegroup(s) can then be backed up infrequently. If your stuck on 2005 Standard (partitioning is an Enterprise edition feature) and you have the option of read-only for history, you could tackle this the old fashioned way. 
+
+Use a server-side trace, not Profiler. Both have an impact on throughput, Profiler much more so. ClearTrace is a great tool for offline analysis of the trace files. To answer question 1), you connect to the instance not the node. Question 2), you obviously need to gather data from the node the instance is currently running on. 
+
+As described on Craig Freedman's blog the sequential read ahead mechanism tries to ensure that pages are in memory before they're requested by the query processor, which is why you see zero or a lower than expected physical read count reported. 
+
+2005+, default trace to the rescue. The default trace rolls over at 20mb but SQL retains the history of 5 traces. With access to the server you could retrieve the *.trc files from the MSSQL\Log directory. If you can't access the server, the following will give you the name of the current default trace file: 
+
+You can determine which port an instance is using from the error log but not whether its static or dynamic. 
+
+This is a big topic with plenty of material available with a spot of Googling. As a starting point, these are the counters I tend to look at first: Processor – % Processor Time System – Processor Queue Length You'll probably get a different target value for CPU usage from every DBA you ask. SQL Server licences are expensive, so on the one hand you want to maximise the usage of CPUs while on the other hand you don't want to compromise availability. In an ideal world with well understood workloads, you might target 70% usage, warn at 80-90%, alert at 90%+. Back in the real world with a workload that peaks and troughs, you might be more comfortable targeting 50-60% average. Memory – Available MBytes Paging File – % Usage With a dedicated SQL Server, depending on the RAM installed, less than 100-200mb of available memory may indicate starvation and a risk of the OS paging. In general, we don’t want to see much page file activity so I’d be investigating if % Usage was greater than 2% and concerned if it hit 5% Buffer Manager – Buffer cache hit ratio Buffer Manager – Page life expectancy Both of these counters are better considered against an established base line for a server. Ideally, we’d like cache hit ratio as close as possible to 100% and a PLE running in to thousands of seconds. Pay attention when they swing away from historic averages. SQL Statistics – Batch Requests/sec SQL Statistics – Compilations/sec SQL Statistics – Recompilations/sec Requests/sec is a great relative measure for how “busy” a server is. High compilation/recompilation values may indicate CPU cycles being wasted on query compilation. Physical Disk – Avg. Disk sec/Read Physical Disk – Avg. Disk sec/Write Physical Disk – Disk Reads/sec Physical Disk – Disk Writes/sec A rough guideline for a properly configured IO system is <5ms (ideally 1ms) for log drives, <20ms (ideally <10ms) for data. Reads/writes per second should be considered against the known limit for the drive(s) i.e. if you have capacity for 1000 IOPS, I’d be evaluating upgrade options when the average IOPS reached 750. 
+
+Security through obscurity is not security at all. Edit: then again, some say it is! Personally, I'll continue to adopt my original point. 
+
+Bear with me, this is a complicated question to clarify and we may go through a few rounds of edit and commenting to plug the gaps. From the way your question is phrased I'm guessing you're not differentiating the atomicity, isolation, consistency and durability elements of ACID.

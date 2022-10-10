@@ -1,0 +1,69 @@
+Here is an alternate construction that could obviate the need for all of the expensive normalization your version incurs. Writing the instance is pretty fun. 
+
+From the Typeclass Down This all depends on which tools you're most familiar with. If you're a fan and used to relying on newtypes you may recognize the pattern of condensing a list of values as . Then you just need to write or choose an appropriate instance, and of course if you're really on top of the ball you'll know that one already exists. 
+
+It's a small change, but users of can rely on the field names rather than a tuple ordering. And now , the piece that glues it all together. Our type is still correct, which is awesome! No changes there. The implementation though is doing a few different things we'll need to adjust. In an informational sense it's determining the genders of all of the clients, then accumulating a count of each . What it looks like though is some weird tuple math to produce a value from nowhere! We can rewrite it given our new implementations to be a little prettier, but first we're going to need a way to add two s together. 
+
+This will print a whole pile of text with various passing and failing cases until it gives up trying to shrink the test case. Run verboseCheck a couple of times and eyeball the output, you should be able to notice that it always reduces the failure to something like the following. 
+
+When calling , you should always include the module and function name so that users of your code know what function the error actually originated from. I.e, That way if someone calls your function with a negative number they see this 
+
+(It would be even better with "" in place of the range, given a top-level list of prime values by that name.) 
+
+Function application has the highest precedence of any operator in Haskell, so these parentheses are unnecessary. 
+
+The definition of is extremely long and not very semantic, rewrite it to be the composition of smaller, more compositional, more meaningful functions. 
+
+If you explore these examples manually in the repl or simulate them by hand (or imagination) you'll see that removes every instance of the elements from from instead of just the first as does. Now armed with the fact that the implementation is wrong, and knowing what's wrong with it we can head back to the drawing board to fix . For a full exploration of QuickCheck check out Real World Haskell's chapter on QuickCheck. 
+
+The next thing I'd recognize is that lazy evaluation helps simplify dealing with potentially infinite sequences of values. Instead of generating a finite number of states in , generate every state lazily and return the iteration requested. 
+
+What an utterly bizarre problem statement. For one thing bikes don't have check engine lights... I guess this boils down to “find the minimum value within a list subsequence” which you've got nailed. You have the right idea with but there's no need to flip the list turnways. The clue is in the name you picked, . 
+
+You should recognize the similarity to your function . There is no way around the fact that growing a list by elements takes cons operations. When you want to add one element to the front of a list, you use and that's it, you're done. When you want to add one element to the back of a list there's no constructor for that, you have to consider that element to be a new list of length one, and prepend your original list in front of it, causing you to have to walk down every single element of the original list. That is “slower” than the other case, but if the ordering of elements in your list is important you gotta do what you've gotta do, right? 
+
+It's a little dangerous to define a top-level constant like , the name isn't descriptive or distinctive and you end up shadowing it quite a bit. A compiling but incorrect typo is almost inevitable. Since you gave it a definitive comment, why not just give it that name instead? Try . I can see why you may have used a statement in (to save typing out repeatedly), but I have a strong preference in the other direction. All pattern-matching which can happen at the top-level generally should. 
+
+Now we could make this work as-is†, but there's an important optimization we can make by tightening our constraints further. By first sorting the list we are given we can then easily group together identical elements, improving our asymptotic performance to O(n log n). Thus— 
+
+Your function is a very imperative, monolithic implementation of those three components, but in Haskell-land composition is king. Let's try tackling each separately and see how they can be composed. Number one is easy since we already know the math we're going to be doing, just roll up the value into a function. 
+
+And if we look back at the documentation for , sure enough under the section heading "Searching with a predicate" looks like it does what we want, just note that it returns a value. This is of course because the predicate we provide might not match any element of the given list, which now obligates me to point out that you should always code defensively and consider the totality of your functions on any given input. I'll address some concerns in iterations on my solution but here's how we'd put it all together. 
+
+Note the use of , after you've done your computation in the monad, you get back out by specifying a "default" to use in the case that any value of cropped up, causing the whole -block to return . 
+
+Nice question! This is a little trickier than the usual “clean up a string of s” in that you want short-circuiting on the case, and continued computation on . There is—of course—a function for that. Skip to the bottom for the answer, or read through for how you might find or derive it. Finding the Answer Hoogle. Pretty much always Hoogle. Think about what you've got and what you need, then start testing types against Hoogle. In this case you've got a sequence of values that you want to reduce to a single value. The key insight is that the sequence must all be of the same type, so it's possible (and thus probably necessary) to create a list (an actual ) of them. Thus our candidate type signature— 
+
+Take some time to familiarize yourself with the functions available in and . There are many easier ways to write . As always, consider the types and use Hoogle. Looking at think about the type you would give that function on its own. is an , and is any type . So you'd have a type like . The first hit is for , which does exactly what you want. Next consider what easy intermediate values you can construct that get you closer to the result you want. The first step would be to replicate each element in the original list times. That sounds like a job for . 
+
+There's a bit of redundancy in your implementation. is effectively the same as . There's no need to “inject” pure values into a monadic context with , a pure value in scope is a pure value in scope so just use and in place of your and . The parentheses around are also technically redundant. Regardless of the ordering of the application of and you'll still end up with the same list. This is always the case for list cons and append, if you think about it you should see why. Note that the fixity precedence for both functions is . 
+
+Your usage of is redundant in . You can either just drop the word , or write it more idiomatically as— 
+
+In conclusion, Haskell is a land of contrasts. So, we learned today that there are many different ways to skin a cat. Depending on what you know about your problem domain many different complexity classes of algorithms may be available to you. And don't use linked lists for operations requiring constant time updating. 
+
+Definitely a good start, what's left to improve will come with familiarity and practice. Here are a couple of iterative improvements you might make to that show where your mental model might differ from a more experienced Haskeller's. The parentheses around are unnecessary. As are, e.g., the parentheses around in an argument to in your definition of . Excess parentheses while syntactically harmless are gratuitous line noise, and common Haskell style strongly favors concision and cleanliness. 
+
+Your Haskell code is quite a tangle. I think you may have jumped the gun a bit with all those mutable vectors. Before reaching for mutation and iterative solutions in a Haskell program, take a step back and look at the shape of the problem before you. In this case the execution of the algorithm doesn't actually depend on any intermediate values, that is, there aren't any conditionals or jumps predicated on the array itself right? There's a straight transform of input to output which is where functional lazy solutions can really shine. Here's my version. 
+
+Now all that's left to do is create a . We could accumulate values on our own, but really that's what is for. 
+
+200_success's answer is spot on, but we can more closely cleave to the problem specification by making it explicit that you're determining maxima-ness by inspecting triples. 
+
+Note that we can now find the head of the list through pattern matching instead of calling because we don't need to assume the list may be out of order. We do however have to remember to add that element back to the prefix of what we're returning! There's one more improvement we can make though! As it is, our function will walk the prefix of the list equal to the first element twice each recursive step (once for , and once for ). We can eliminate that inefficiency by using which returns the prefix matching the predicate and the remainder in one go. 
+
+Good Haskell style also involves using higher-level functions whenever other considerations don't require otherwise (e.g., performance, comprehensibility). Here's my version of , note that it looks much more like your version from before the edits. 
+
+I think there is probably an even more clever solution—and I suspect it uses the reader instance () and a lifted —but I sure can't tease it out. Comments and edits welcome. 
+
+A lot of repeated instances of in there, but that's not so bad given we can use this as a combinator. Now we can put our function together. 
+
+Notice that we've eliminated the predicates from our first list comprehension! I'll get back to that in a bit. Our next step is to lose the contrivance from the definition of , this bit of functionality would obviously be better expressed by mapping over the range instead of using a list comprehension (again I only did so to minimize the changes between steps). 
+
+That error case should be unnecessary, shouldn't return any empty sub-lists, but we include it so that if our understanding is incorrect or future changes to the function ever break things we get a better error than a pattern-match failure (and the compiler stops complaining if we compile with ). Now one thing to note is that if a letter isn't present at all in a given string, won't return a pair for it. In your original that's a problem since it relies on a list of length 26 being returned. Since we have which encodes letter value by position though we can write another version that is more flexible. 
+
+Intermediary representations of data can always slow down your code, but with aggressive inlining I don't think this would be too much of a performance hit. 
+
+This works! I've imported from here to account for our function sometimes returning ( drops all the s and returns a list of the values). We use a right fold to accumulate our values, and a starting value of for our accumulator. There are a few ways to go from here to clean things up further. You could get rid of the value by using , at the cost of adding another composition with into the mix. If you have sharp eyes and a working knowledge of the Typeclassopedia you'll note a striking similarity between the way we use with a right fold, and a . If you don't have a working knowledge of the Typeclassopedia, our motivation is that s allow us to specify an identity element and an associative reduction operation, revealing some higher level abstractions (and functions) we can use to wire our code together. Let's make a . 
+
+Note that the divisors now start at 1 and end at , so includes in its function composition pipeline. The inclusion of should be obvious, it causes 1 to be excluded from the list of divisors. is there in case is prime, that way itself isn't included in the list and we get back . Note also that in your original version using caused many evaluations of . Instead of testing the elements of the list of possible divisors an important optimization is to cap the list range to . Of course if we start getting mathematically rigorous in our optimizations there are many better ways to calculate prime factors (including starting with a list of actual primes), so let's not get lost in the weeds. An alternate way to implement that is closer to your original would be to use from . I think this version is important for two reasons. One, there really is a function for everything in ; learn it, love it, live it. And two, this implementation reads the most like prose to me, readable code is maintainable and beautiful.

@@ -1,0 +1,43 @@
+In reality, those three user accounts are actually quite dangerous. They pose a very great threat to test databases. Unfortunately, mysql comes with full access to test databases. How can you find them ? Run this query: 
+
+Since unique metadata is not in common_schema, you should be able to reimport it rather that risk backing up with mysqldump with the possibility of not reloading it. 
+
+The way mysqld creates a database is straightforward: It simply makes a subfolder under the current datadir. For example, the default datadir for Linux is . Whenever you execute: 
+
+You cannot prevent this issue of reordering once you begin inserting data. Notwithstanding, if you want to reorder the IDs sequentially, you have no choice but to rebuild the table. Here is the SQL to do that 
+
+Other than doing point-in-time restores, there are two additional reasons a Slave could have binary logging enabled. REASON #1 If a Slave is also a Master 
+
+sql_mode is not an option of the mysql client. That's why the error message is . Note how and do not appear in the mysql client options: 
+
+and restart mysql If you cannot set this, at least you should have some kind of alerting that does and check the value of (total bytes consumed by relay logs). MASTER As for the Master, you could set to 1, but there is a severe warning I have for you... If replication breaks, you have 1 day to fix it. Otherwise, a binary log on the Master may rotate away and you cannot run any CHANGE MASTER TO command to realign replication. I would leave at 3 on the Master. SUGGESTION #1 If you have any overnight bulk processing to do, maybe should run the bulk processes on on the Master with at the Start of the Session. This, of course, will not replicate to the Slave. You can perform the Same Bulk Load in Parallel to both Slaves. SUGGESTION #2 Another thing you could do to manage the Master binary logs accumulation is this. Run on both Slaves. Look at . That represents the binary log on the Master whose last command was executed on the Slave. 
+
+IMHO the best option would be to Convert First to InnoDB then perform the mysql upgrade. I prefer this because performing a mysql upgrade mostly involves alter the grant tables. (This especially includes the mysql.user table since MySQL 5.0's mysql.user tables has 37 columns while MySQL 5.5's mysql.user tables has 42 columns) I would not want to mess with connectivity or SQL Grants issues first. Given the following facts: 
+
+Now open mysql-workbench or phpmyadmin or whatever you browse data with and look through the DATA_ONE database. If you are satisfied with what is there, just do this: 
+
+You can set the RAMDISK_SIZE to your liking OPTION #2 : Use FUSION IO Mount on a FusionIO Disk (all memory, CPU aggressive). Have fun clearing this with your CFO. EPILOGUE Both of these options allow you to use MyISAM and InnoDB as you normally would. The goal is simply to place the entire in RAM. Give it a Try !!! 
+
+Perhaps you could just use the REPLACE command. It mechanically operates as either an INSERT or UPDATE via DELETE and INSERT. 
+
+I normally would not recommend this but here it goes... If the tables on the remote DB Server are MyISAM, try using the $URL$ Stroage Engine. First starters, find out if the FEDERATED Storage Engine is Enabled. This what I get running in MySQL 5.5.12 for Windows: 
+
+This is for all intents and purposes, a Cartesian Join. It is definitely out of the question to join every row and pass through the data a single time since you do not know the running time or the amount of temp table space needed. Perhaps you could do the following: 
+
+CAVEAT When running the download for MySQL 5.1.34, if the RPMs for the MySQL Binaries do not get retrieved, change this line 
+
+EPILOGUE Configuring log-slave-updates tells a Slave to take a binlog event from its relay logs, execute it, and record the event in its local binlogs (if log-bin is enabled on the Slave). Thus, not having log-slave-updates enabled in your MultiMaster setup is the root cause. Big thanks to @Michaelsqlbot for the hint. 
+
+IF you are going to use MySQL for this application, by all means STAY AWAY FROM MyISAM !!! All INSERTs, UPDATEs, and DELETEs on MyISAM tables will perform a full table lock before executing the update to the table, even if you are updating a single row. This makes using InnoDB a whole lot more conducive since it features row-level locking and InnoDB buffer both data and index pages. If you use a large InnoDB buffer pool and users are consistently hammering updates, the users will be cached already and data will systematically flushed to disk at regular intervals. Once you have data loaded, you can run this formula to estimate (or guesstimate) how big an InnoDB buffer pool you are going to need: 
+
+CAVEAT #1 If methods 2 or 3 fail, this indicates that there may be a problem with the file . It keeps a text file with the list of the bin logs. If the file is out of sync, use . It will recreate . CAVEAT #2 Do not erase the binlogs from the Linux command line with or from the Windows Explorer. Doing so will throw the out of sync. If you do that, just do METHOD #1 and mysqld will clean it all up. CAVEAT #3 If you set in your (or ), it will automatically run this 
+
+I have seen your problem before Problem #1 You have and the line is not being read Problem #2 Chances are exists and has the following line 
+
+CAVEAT #1 In your DB Session, you may need to extend the length of [GROUP_CONCAT} output because its default limit is 1024. Run this before each connection to set limit to 1M: 
+
+Thus, 2.6K per query result. Again, this gives you more reason to focus on reducing fragmentation. UPDATE 2014-10-28 12:53 EDT I just remembered something that I needed to correct. The size of a block is not 1K. I believe that the size of a query cache block is actually set by query_alloc_block_size. If this is the case, then 2.6 blocks is not 2.6K as I thought before. Given the default value for query_alloc_block_size is 8K, then 2.6 blocks would be 20.8K. In light of this, let's look at the numbers again. TOTAL BLOCKS 18381 (number of total blocks) X 8192 (8K default block size) rounded up 
+
+It only supports MyISAM DDL performed on the source table requires manually changing the FEDERATED table design on external services. Bulk operations against a FEDERATED table can become an instant mightmare !!! 
+
+You can set up a crontab job to do this every hour You can also schedule a nightly job to defrag the table with this:

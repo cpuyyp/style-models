@@ -1,0 +1,79 @@
+A output with the (custom) is not a SQL script, it's a compressed archive that only is able to handle. You may either pass the dump file to and pipe its output to (often done that way and close to what you tried): 
+
+However, this technique can't really be used for more complicated things like the mentioned, as it doesn't need the variable's value but another value based on it. Personally for that sort of thing, I would embed the SQL script inside a shell script and let the shell do the interpolating. Example: 
+
+This would append the results to the end of instead of overwriting the file. with older versions of PostgreSQL A named pipe can be used by a separate process to concatenate results. Example: 
+
+Possibly the option to csvsql may solve that problem simply. Otherwise has a clause that can pre-process the data. It receives the lines it on its standard input and must output the filtered result on its standard output. $URL$ 
+
+where is the more up-to-date rate with EUR for the money choosen by the user. The efficiency comes from the fact that the range of rates is supposed to be small, the values being close together. 
+
+It's not possible currently (and probably not documented well enough, or not clear enough in the error message: when it says invalid locale name, it means from the set of locales provided by ). This is discussed in this thread on the developers mailing list: Can ICU be used for a database's default sort order? 
+
+with as a placeholder for a numeric value (possibly with a fractional part). The syntax tried in the question is rejected because for the SQL grammar, the entire expression is a constant. It cannot be changed by injecting a placeholder into it, just like we couldn't write and pass as an external parameter to form the PI number. 
+
+As itself requires to be superuser, this function will also need to be validated and owned and checked as by a superuser. 
+
+Updating a row in a multiversion model like postgres means creating a second copy of that row with the new contents. Physically, there is no in-place update: UPDATE is similar to DELETE + INSERT the new contents. So in the above loop, the first chunk, instead of being written once, is written N times, the second chunk is written N-1 times, the third N-2 times and so on. To make it worse, all these writes have to go to the WAL files for journaling too, and all the intermediate versions of the rows will need be picked up by the autovacuum process to be eventually discarded. Assuming that these chunks cannot be assembled on the client and must be streamed, it might help to do something like this: 
+
+Note that is not used with this method. This target query could be generated as a dynamic statement with the following query, which is basically a cross product over the week numbers and (1,2,3) with some bits of SQL around: 
+
+To avoid the second issue, you may rename to instead of dropping it, and then drop it only later outside of the transaction, when these readers are done with it. So the sequence above would become: 
+
+Firstly PG 8.4 is no longer supported (since July 2014), you should move your databases to a supported version as soon as possible. The WAL configuration settings for the 8.4 version are documented here: $URL$ In particular control the number of WAL files. You must not delete WAL files, either manually or with a cron job or with . This would definitely corrupt your database. WAL files may grow in number if is not working or lagging behind. 
+
+It's a case-sensitivity issue. including the quotes is a quoted identifier, which implies that it retains its case (as opposed to an unquoted identifier which is implicitly converted to lower case). Quoted identifiers allows other columns of the same table named for instance or or other variants that differ only by case (not that it would be a good idea). The drawback is that every subsequent SQL instruction refering to that column must use too, with the double quotes and the exact same case. In your UPDATE, the double quotes are lacking, which is why it errors out saying that does not exist (note how it differs from ). In practice, an identifier should be either always double-quoted, or never. A mix and match is not allowed. When an identifier is not quoted, it can be written in camel case if you fancy that style: the SQL parser will ignore the case. See Identifiers and keywords in PostgreSQL documentation for more. 
+
+Per comments, is set to for that role so it needs to be increased a bit to allow for several simultaneous connections. Choose a more reasonable value, say (or for unlimited) and issue as superuser: 
+
+psql client-side version (mildly inefficient) When all you have at your disposal is a client-side interpreter, binary contents cannot be extracted directly (it boils down to psql being adverse to the '\0' byte), but an intermediate representation in hex or base64 can easily be obtained and post-processed outside of psql. Example in shell, assuming existence of the command from GNU coreutils: 
+
+It must be executed by another superuser. The question says there are two accounts that are superuser and you do have their passwords, so you should be able to log in with one of them and just issue that SQL command. If you didn't know these passwords, you could still log in bypassing the password by temporarily changing . How to do that is a frequently asked question, see for instance: remove password requirement for user postgres . 
+
+With , values have to be between and . If that's too narrow, consider the 8-byte , which goes from to . Postgres sequences () use that range. is equivalent to declaring an column tied to a sequence. 
+
+where is the size of the query. Be aware that a query just below might require large amounts of memory to be parsed, planned or executed, in addition to that buffer. If you need to push a large series of literals into a query, consider the alternative of creating a temporary table, rows into it and have the main query refer to that temporary table. 
+
+A deadlock is a situation where multiple transactions conflict which each other in the locks they have cross-acquired. That situation is impossible to solve without aborting one of the transactions. The engine aborts such a transaction with as the error. The is not primarily related to deadlocks, it's meant to alert about the situation that some queries are stuck waiting for locks, meaning that other transactions keep locks for too long. I think what the documentation says is, if you're trying to debug a deadlock problem, and you want some log before the deadlock occurs, must be smaller than , otherwise the deadlock situation will blow up as an error before the log wait information has a chance to get logged. 
+
+Tabular data can be easily unpivoted with the help of JSON functions. The query below will work, assuming is replaced by your table name, and is the name of the pivot column. The other columns don't have to be specified, they're obtained automatically by applied to applied to all rows. 
+
+First, the real fix would be for the code to always use the sequence instead of the inconsistent mix of and . That being said, as a band-aid solution before a real fix, you could have a trigger on INSERT for each row that always calls on the sequence, so that you're sure that the sequence never lags behind, even when the INSERT itself is missing a call. If the column has a (either set manually or through a declaration), and a trigger calls in addition to the of the , that will just advance the sequence by two instead of one. That should not be a problem for your app because sequences can have holes anyway, due to rollback or caching. Calling with also works, but only when there aren't other transactions using the sequence concurrently. So doing that in a trigger doesn't sound like a good idea. Typically this sort of adjustement is only ever done after a bulk load (in fact, that's what produces when the sequence is owned by the table). 
+
+(and recompiling) Besides the need to recompile that might give pause, increasing by a large margin is not very good idea, because every single identifier stored in the catalog will consume that size, no matter its length. To me, the only reasonable way to show arbitrary long column names would be to implement it in the client-side presentation layer. Storing the names themselves could be done in the SQL column comments as you suggest, or in your own custom metadata table. The presentation layer could retrieve that data at the start of the session and cache it so that it would be essentially transparent for the rest of the SQL. 
+
+Uninstalling software will solve the problem for good only if that software was responsible for consuming too many simultaneous connections in the first place. Otherwise, getting back some of these resources may happen as a side-effect of say, rebooting, or just waiting a bit so that TCP connections in state disappear, or individually terminating programs that held these connections open. 
+
+Presumably this will lead to the same error message: which is the root cause, the other error from postgres being the consequence of the abrupt end of the data stream. If the file is a copy resulting from a transfer, you want to compare its size against the size of the original, and transfer it again if it's incomplete. If that's the only copy or if the original itself is incomplete, completing the restore will not be possible. 
+
+Maybe you want to limit the clients to those which present a given certificate, as described in Using client certificates: 
+
+The query whose plan is shown is complex and requires several levels of hashing, so you're clearly in the case the doc is warning against. The default is conservative, but I wouldn't raise above for a instance. on the other hand could be set to : this one is allocated only once and kept for the entire instance's lifetime. 
+
+This outputs only one line and column at a time. Extracting another column at the same time (like an ID) would be significantly more difficult for the post-processing, so this simple example assumes some kind of outer loop going through the IDs that would have been obtained previously. 
+
+They're listed here: $URL$ and a more general description of the protocol is at: $URL$ The type of the message is given by the first byte. For example, if a client issues a "Bind", the first byte is the ASCII code for '', or . The value from the error message would be , but according to the doc this message type is not used for anything in any version of the protocol, so the client or middleware sending it must be misbehaving. If the traffic is not encrypted, a packet inspection tool like Wireshark might help to look into these packets. Wireshark knows about the PGSQL protocol. On the postgres server side, I don't think you can get more information beyond the mentioned error, because the backend gives up on the message at the first byte. As far as it's concerned, it's not correlated to any query. 
+
+Although populates with a list of pre-defined collations, a complete list would be subject to combinatorial explosion, as ICU collation names are formed by assembling tags, as listed here: $URL$ Currently the doc does not mention explicitly that you can do: 
+
+I don't know if that applies to Amazon RDS, but a possible reason for getting an empty list of queries with is when using a version older than 3.7.0 (released in August 2013) against a 9.2 or newer PostgreSQL instance. I just noticed this with the ptop 3.6.2 package that currently ships with Ubuntu 12.04 LTS. I guess this may be also not fixed in other distributions. The empty list problem occurs with older versions of because they expect the postgres process ID in , and this column was renamed to in PG 9.2. This is combined with being unhelpful by not reporting any error when its SQL command fails. Instead it just displays a blank list of processes. The problematic query can be spotted in the server's log. 
+
+This shows that the same locale orders differently the two strings and (even though they do not even contain any character outside the US-ASCII set...) Here's a test that I suggest you try on your own dataset: On the master: 
+
+I think that you don't want or need CSV in your case. Just take the output of SELECT, with the format of psql 
+
+DDL queries, including CREATE statements, cannot be prepared. Moreover, even in DML queries that can be prepared, parameters cannot be used for identifiers. They're allowed at places in the query where a literal would be allowed. As an alternative, you can safely inject column names into a query with the dedicated function that PL/Python provides for dynamic SQL: : $URL$ 
+
+If we look at the entry for this session while is running, will be and will be , with , the difference being essentially the duration of . helps discovering long running transactions, which is useful when troubleshooting or tuning a live database. 
+
+As @hypercube suggests in the comments, add a column with a fixed value and a table-level foreign key: 
+
+If all the export can happen through a single database connection, or even better, through a single transaction, it would be simpler and more efficient to just use a server-side CURSOR instead of a pagination based on successive queries with LIMIT/OFFSET. For instance: 
+
+It seems that the source and destination of this are reversed. Compare yours to the example from the doc in Continuous archiving: 
+
+where contains the EUR/USD exchange rate at the time of the last update. The idea is to increase the interval to take into account the maximum variation of every currency. The increase factors for both ends of the interval are constant between rates updates, so they could be pre-computed. Since the rates change only slightly over short periods of time, the above query is likely to give a close approximation of the final result. To get the final result, let's filter out the products for which the prices have slipped out of the bounds due to the changes in rates since the last update of : 
+
+It's not clear what is the point in doing that, but if you're an admin you can do to let a non-admin read it. There are two ways in pgAdmin3 to access those files: 
+
+These 595 milliseconds are not an estimate, it's actual time. Besides, when postgres shows estimates, they're expressed in units of "cost", not in units of time. When it's finished, EXPLAIN ANALYZE sends back the result of the analyze to the client, and discards the rows of the actual result. That differs from a real SELECT which has to send back the rows to the client. For this reason, the big difference between both operations in your case could/should be accounted by the slowness in receiving the results, either because the network is slow, or because the client is slow, or both. Maybe the client is swapping like crazy if the resultset is too big to fit in the available RAM. I'd look at the and outputs (or even ) on server and client during these 2 minutes to check what's doing what.

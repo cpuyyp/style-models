@@ -1,0 +1,67 @@
+I'm not 100% sure there is a particularly elegant way to write this. If the code did not have a different body for each statement, one could rewrite it like this 
+
+Instead of using a global and variable, I'm returning the non-global and variables. This means that I have a lot more flexibility in calling the function: 
+
+I'll give some general comments now Application You currently hard code your urls, which could lead to a very brittle structure, and make extensibility a pain. Have you considered using class decorators to register route handlers? They'd look something like this: 
+
+MainHandler The name tells me nothing. Due to your routes being defined in a different place, maybe naming it something like would be better (though I still don't like that). An oft advised idiom on this site is the use of guard clauses. I'd recommend using that here; instead of 
+
+Overall not bad code. I don't agree with your comments on how would be inappropriate there, but it's far from the end of the world. In general, I'd try and be more careful to validate user input, but it may be that you do not need to worry about that. 
+
+Q0Handler Numbers in class names make me feel slightly sick, and I have no idea what means; question 0? Because this view seems to handle all questions, not just question 0. We've already discussed the bug. There are a couple of other bugs; if I delete my cookie, I'll end up causing a bug when you try to do ; (same problem exists for ). When you do to increment the score, I think you could be vulnerable to a race condition, but that's not too big a problem (I think Mongo supports an atomic increment, use that instead). Python convention when passing named parameters is to use spacing not , but that's just stylistic. 
+
+With that said, I would praise you for your style. For every problem your code may have semantically, it is formatted very well (hooray for PEP8) 
+
+Note that this does not explicitly address the lack of an inductive variable, though it does limit any damage done. Another thing to note is that you have a race condition on the . Should the method be called concurrently, say by process A and B, then the call to could return the same set of bobs to each. They would then attempt to delete the elements twice, which would raise an error on the call, leading to fewer blob deletions than expected. This problem gets a lot worse when we consider more processes and things like unspecified ordering. The correct way to handle this is to treat any exceptions thrown by the in a more nuanced way than you are currently, and accommodate multiple attempted deletes without prejudice. Your current code will work fine at the moment, the problems will manifest themselves when things get more complicated. While I am sure Google's infrastructure can handle these upsets, your bottom line may be less flexible. 
+
+This is known as a guard statement, and they are very nice. Avoid using without specifying the type of the exception you wish to catch. In this case, it's particularly bad as you are not even logging the error; someone could come along, shoot a bullet through the hard drive of the machine you were running this on, and your service wouldn't note that anything of interest had happened. I'd suggest that when a request fails, you return a non-200 status code; at the moment, your bullet ridden hard drive will not cause a single non-200 status code. Download If the file exists in Mongo, but not in the FS, currently you say . However, due to the statement which doesn't specify exception types, your code also says that no matter what else goes wrong (recall the hard drive with a gun wound). I'd find out what class of errors come under the file not found category, and then treat them differently to others. Currently, if the user looks up a file that doesn't exist, you return , which I think bottle will complain about. It'd probably be better to add a guard clause along the lines of 
+
+I think that covers it from me. There will probably be someone out there who will turn up shortly to shout at me for talking about security without a PhD, but I think you should be OK (Hash your passwords, kids!). 
+
+These strings are all constants and should be defined at the beginning of your class. They should look like this: 
+
+It seems all these variables are only used in this class, in which case they should be made private. You are also mixing naming conventions. Pick one and stick to it. The regular Java convention for variables is camelCase, so I suggest using that one. onEnable 
+
+This comment doesn't add much and can be removed (after all the code says the same thing). Perhaps it is worth mentioning why you are saving the configuration when the plugin gets enabled. loadConfig 
+
+I'm not really sure why you have both a perm_nfbm_disabled and nfbm_enabled flag. Try to use only one. Or if they don't mean the same thing, give them names that make that fact clear. 
+
+But honestly, using stream/filter doesn't make it much clearer. Why not stick with the standard approach? 
+
+But we're still stuck with quite a big nested if-statement. To get rid of this nesting we can use something called a guard clause. Which basically means we're checking things as early as possible so we can return quickly. So in this case we can do this: 
+
+We can now use this method in the onNfbmCommand method and we don't have to worry about the difference between player and sender anymore. Hurray, that's one less if-statement to worry about! 
+
+Notice how all it is doing is passing the call on the the other methods when it is appropriate. onNfbmCommand Let's look at the onNfbmCommand Method. This part is difficult because it contains a very large nested if statement. This makes it hard to think about, so let's see what we can simplify. It seems both branches are actually almost the same, except for the specific message they are sending. In other words, it doesn't matter whether the sender is a player or not. We can use that to our advantage! First lets create a method that sends a message to the sender with a color if it's a Player and without a color if it's not: 
+
+Something I didn't fix, but you definitely should, is the use of a single list as both a black- and white-list. It is much easier to create two different lists, and check each of them seperately. because now you have to keep thinking 'is this list a white-list or a black-list?'. Conclusion Methods should focus on one thing as much as possible. By seperating code into methods we reduce duplication and increase clarity. Lastly, by preferring early returns we prevent deep nested if-statements, again reducing duplication and increasing clarity. 
+
+Notice how it doesn't have to care anymore about whether the block is blacklisted, or the current lightlevel, or any of that stuff, we moved all that to the isMinable method. This allows the onBlockBreak method to focus on one thing, and makes it much easier to read! The isMinable method looks like this: 
+
+The implementation seems fine. I would change the return type of the method to be a bit more general. Callers don't care about whether the duplicates are stored in a Set or not. 
+
+Here you are giving a warning that the configuration is wrong, but are still continuing with the invalid value. Why not set the value to its default value? 
+
+Overriding the incorrect configuration with the default value would save you from having to keep track of the temp_disabled flag. onCommand 
+
+Again, we're determining whether a block is minable as early as possible. This prevent deep nesting if-statements and prevents repetition. This is the list of checks: 
+
+Defining them early and making them static gives you less stuff to think about, which is always nice (especially when you're reading this code in six months). The next piece of code is too long and contains too much stuff so lets start breaking it up. First let's create separate methods for both of the commands you're accepting. 
+
+Just printing the string returns the morse, but asString returns the normal text? This is pretty confusing and someone will have to dig into the code to see what prints which version. I don't think someone will have to use both the toString and asString methods, since they already have access to the original string/morse. So why not make the whole thing static and have two public utility methods: 
+
+If the sender doesn't have permission we send a message and return quickly. We don't have to worry about permission for the rest of the method! Let's do the rest too. It looks something like this: 
+
+If you anything with a then the result will always be . Here and . So the expression will be Using this algorithm you are not actually checking the numbers which are divisible by both 3 and 5. Still it gets you the correct answer. The reason behind is you are just traversing throw the numbers and moving forward. There is no chance of any repetition here. The accepted answer is all good :) 
+
+At first I apologize for bringing this off topic matter here. I heard of this website about one and a half year ago and I immediately fell in love with it. At first I tried to dive in with my programming knowledge and soon it drove me crazy as I failed in solving almost every problem except the simple arithmetic ones like the one mentioned here. The I finally figured out that these problems can't be solved with just developing algorithm without sufficient mathematical knowledge and of course without seeing the problem in a different angle. Let me explain. 
+
+Of course we can use the modulo for each number below 1000 to determine which are divisible by 3 and 5. But isn't it a brute attack on these numbers? Why don't think it in a different way? 
+
+We need to get all the numbers below 1000 those are divisible by 3 We need to get all the numbers below 1000 those are divisible by 5 There will be repetition of numbers as there are a lot of numbers which are divisible by both 3 and 5. 
+
+We need to take their summations- this is the formula for getting the some of a linear arithmetic progression, n is total number of elements in the series. 
+
+This would be the finishing of the discussing. But WAIT as I mentioned earlier I have solved this problem and that solution is not matched with this one!! WHY !! Finally I figured I out, this is the result of not reading the question properly. They asked for the number below , but what I have done here? for and it was okay, but for ? 1000 is divisible by 5! We can't include it in the set!! So the actual summation would be , less than what we got here. People might argue why I have posted the whole solution here. But thing is that, anyone with a little knowledge of programming and the basic understanding of modulo can solve this problem like the questioner. Is this the right way of solving these problems? Was it the intention behind developing this problem bank? Of course not, at least I believe. They certainly want us to look at problems in a different angle. Look things those are hidden in the plain sight. Sketch the idea before painting actually. This post is for future reference only, intended to them those are interested solving the problems in this website. But also for others to show there could be some other perspective to any problem. Thanks for reading. EDIT As per suggestion by @200_success I am rewording here. As per the original question I agree with @Simon André Forsberg there is certainly nothing wrong with the modulo operation. And also it can be broke down to a simpler version as he already mentioned. I want to add with it that the condition writing is very easy with the basic understanding of . I am just breaking down the idea. In digital logic design is represented as and is as (and there are some more). So the condition becomes . Now you can have as many times as you like as its just an operation, so we can rewrite 
+
+You can see there are two circles A and B and they are overlapping with each other. In our problem we have two sets of numbers- those are divisible by 3 and those are divisible by 5. See these two sets have a common or intersecting set- those are divisible by both 3 and 5 (or 15 to be precise). Now the questing arises how would we get all those unique numbers from set A and B? Thats pretty simple as you might already understand. That is , pretty simple, right? This expression takes care of all repetitive elements in those sets and produces a set with unique elements form both sets. Now how do we get ? The formula is- = + - That means we need to subtract the set of numbers those are divisible by both 3 and 5. Lets find out which numbers belong to these sets- , and We have set our limit to 1000. Lets get the numbers those are divisible by 3 in the first place.

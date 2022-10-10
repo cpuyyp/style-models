@@ -1,0 +1,47 @@
+I'm not sure Oracle JDK is properly packaged in Raspbian (it may not be possible to do so legally). Run to see what JRE/JDK package you have installed. If no package is listed, simply doesn't know you have Java, that's why it tries to pull a suitable dependency when you ask it to install Eclipse. As a short term solution, you cat tell to ignore the dependency you don't want to install: 
+
+Most 12V LED lights I've seen start to visibly glow somewhere between 7V and 9V. So anything below 7V is likely to be case 1, and anything above 9V is likely to be case 2. Of course, if you have some data about your LED strip in particular, this estimation is irrelevant. 
+
+The first thing I would to is to run to see if the laptop discovered the RPi and what kind of address (IPv4 or IPv6) it has. I assume that it is IPv6, in that case you have to specify the right network interface when running the SSH client: 
+
+I salvaged the laptop's adapter to power the LCD, and added a buck converter to get 12V. I've also kept the audio speakers which I have put inside the lid case, and connected to the converter with an appropriate cable. The rest (LVDS cable, CFL module and the remote control) were bought with the LCD controller. A few remarks 
+
+Try running and set Wifi Country to Germany. Channel 12 is disabled in the US which is probably the setting you use. 
+
+Another option is to install and expose SSH via Tor hidden service. On your RPi, you will need to run and configure as follows: 
+
+Plausible theory: HDMI/VGA converters need power, and RPi might fail to provide enough. Once the converter shuts down because of lack of power, the RPi sees there's nothing connected to its HDMI port and disables the video. Try running with and in your The first setting specially should help, if my theory is correct. Edit: rainbow colours indicate power supply problems which result in all kinds of glitches, sometimes hard to reproduce or seemingly random. You'll need to find a better power supply for your RPi. Aim for something rated at 2A or more to be sure. 
+
+Scripts in are not expected to be just any bash code. You should implement commands like "start", "stop", "restart", etc, and it should terminate rather than running indefinitely. Check out other scripts in there to see how to write one. 
+
+If you're using your screen with X server (GUI), then you can simply find its ID in the output of and disable it with . Your touchscreen will still generate input events, but your X server will not forward those events to the applications. You will want to execute the command at startup to make the change permanent. 
+
+suggests that you're powering your GSM modem via your RPi. Don't do that! SIM800 can consume up to 2A during transmission, and your RPi doesn't have extra 2A lying around. Even if your power supply can provide 4.5A, your USB cable, micro USB plug and the over current protection circuit or the RPi are not designed to cope with such currents. Get a separate power supply for the modem, and only connect GND, TX and RX pins between the RPi and SIM800. 
+
+The part means "turn off screensaver", and prevents DPMS standby/suspend modes. The equivalent configuration can be done via using 
+
+Does your start with a correct shebang line? (i.e. )? That's how the system decides which interpreter to use when you're trying to execute the script. In any case, you can just specify the interpreter in the command itself: 
+
+You should keep not only the status () of the current command, but also the status of the previous one. Store it in a persistent place (e.g. in a file) or make a script which never exits, so you can use a variable. Based on two values (let's call these and ) you'll be able to decide when to refresh: 
+
+Mounting filesystem as read-only only prevents writes as long as the system is stable. You're telling the kernel not to write to a particular device, but in the case of a kernel crash or a brown-out (loss of electrical power) anything can happen - the code to write to the SD card is still there, and if it gets executed the contents of your card will likely be damaged. If you want to make sure your SD card is read-only, you should write protect it, e.g. using 
+
+I don't think you can get any simpler than : it's the tool many desktop managers use to display the wallpaper, and it can display images in a new window, full screen, or even load an image into an existing window. It does require X server to run, but so does . If you need a viewer which works without X, I suggest you look into which displays pictures on a framebuffer device directly. Unfortunately, Raspbian doesn't have it packaged, so you'll have to build it from sources. Note that there is an X version of called , which you can install with . 
+
+This will fetch your time from the network as usual, but will constantly readjust it to pulses form the PPS device. For a NMEA GPS, the config would be: 
+
+To tell Xorg which framebuffer to use, you have two options: If you start Xorg from command line, use variable: 
+
+You could buy a USB to UART converter and access it remotely using USB/IP. You won't be able to export the built-in UART this way, since USB/IP only works with USB devices. The advantage of this method is that you get complete control over the UART from the remote machine, including changing the baudrate and manipulating hardware flow control lines. If all you need is to access the UART in a terminal emulator, simply connecting to your RPi via SSH and running is enough. 
+
+If your network is fast enough for USB traffic, you can use USB/IP to access your USB camera remotely. Run the server on the RPi to export the webcam and client on your laptop to "attach" it. Note that RPi is quite limited in terms of data rates, so don't expect high framerates. 
+
+If you don't mind paying $10 for it, I would suggest to get Exagear for RPi, and then either install WINE and try out Win2000 driver, or configure your printer directly in x86 Debian guest system, without WINE. The project you refer to is indeed cool, but considering 12 minutes boot time for WinXP, I'd expect printing to be quite slow as well (if you ever get it working). PS. Another option (which probably won't work for your printer though) is to run 
+
+You should be fine connecting a GPIO pin directly to your amplifier. Given the spec (1mA, 3 to 30V), I'm pretty certain the relay you hear is not driven by this signal directly. A 3V relay would burn if you power it with 30V. Also, I've never seen a relay which works with only 1mA of current (typical value would be 50-100mA). So your amplifier already has a circuit which adapts the input signal to its needs and amplifies the current to drive the relay. There's no point in making another circuit of your own for the same purpose. I'm not sure how pulling out the connector can result in a shot circuit, but if you're concerned about that, consider adding a 200 Ohm resistor on the GPIO pin: this will limit the current to 16mA in case of a short, and will only drop 0.2V at 1mA of current (so you will be delivering 3.1V to the amplifier instead of 3.3V). 
+
+If this works, you'll have to find a way to execute this automatically every time your RPi connects to the network. My first guess would be to add this script to . 
+
+If ringing the bell puts ~3V over the speaker (and I assume there's ~0V when it's not ringing), that voltage could be detected by the GPIO directly. Assuming the RPi and your doorbell have separate GND, you can just connect the GND of your RPi to the negative terminal of the speaker and the the GPIO pin to the positive terminal. If the voltage is AC (or you're not sure which terminal is which), you can use a diode bridge to rectify. Adding a zener for overvoltage protection may also be a good idea. So: 
+
+Since your RPi boots to your home screen, there's a chance that it's possible to recover your system, but if you don't have much knowledge about Linux, reinstalling may be the easiest option. For starters, without a working keyboard you will not be able to run any commands people may suggest, so unless you have an SSH connection, you'll have to read your SD card on a PC running Linux to fix your system manually. won't work while you'll be doing this (not without some dark magic anyway), so in case a potential fix involves running again, you'll be stuck. If SSH does work, please login, and check and for errors. If you find something, add it to your question. I know late warnings won't help you, but is dangerous by design. The whole point of having releases like Wheezy and Jessie is that there's not 100% safe way to upgrade from one the another.

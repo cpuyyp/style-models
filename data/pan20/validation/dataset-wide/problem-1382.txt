@@ -1,0 +1,65 @@
+Yes, this is the way to do error handling in Go. By design, you can't let exceptions propagate to the callers "silently", you have to consider what makes sense at each step. I found that on large-scale projects, it makes it significantly easier to predict and test the error handling behavior of your code. It also forces you to put the error handling first, which (imho) results in more readable, less nested code. Truly global variables don't exist in Go — if a package exports a variable , other packages will have to call to access it. That being said, it pretty much never makes sense to do that. In the example you gave, cmd.go and project.go are in the same package, and all package-level variables are shared, so identifiers conflict. If you want this variable to be shared, it's more readable to put all functions that use it in the same file. When you want to mock some of your functions, it's the sign that there should probably be an associated interface. You can then "mock" an interface easily, by re-implementing your interface in your tests and making it do whatever you want. I find this more readable and idiomatic than using complex frameworks. 
+
+In short: your method should be two lines long, your method should be three lines long, you shouldn't have more than 2 global variables, and all errors should be caught on . 
+
+There's not much to add to @Imus excellent answer, apart from a little naming advice: your is in fact an edge in a graph. You even call the collection . So really should be renamed to to correctly grasp the business object behind it. (BTW: as an interviewer in a rush, that would probably the first point of criticism I came up with.) 
+
+... the same for min. As a general advice: Java is a very mature language, and chances are good that every "simple everyday task" is already solved in the library. (Also note that most books on Java are from the pre-java-8 era and may be considered somewhat outdated today.) 
+
+Or going back to principles: separation of concerns: load the window, return the controller is enough for a single method. Init data seems not to belong in there. 
+
+With this code, you filter your list over and over for each rule you encounter, which seems sub-optimal to say the least. I'd rather construct a single rule, which gets applied to the list once. Here, you can use the Predicate combination via "and" as this is basically what you do with chained filtering. Something along the lines of: 
+
+(Please have a look at the API docs, there are also variants to explicitly set the character set $URL$ 
+
+you could also write but it's not that important. Now, the rune/string/byte question is the interesting one. deals with only; and converting strings to bytes and back is expensive (new memory allocations each time). So I'd change your code to use instead of , and instead of . The function becomes faster: 
+
+It doesn't seem that the library has a query builder or a specific type. So building a query in an idiomatic and readable way should be done as you would do for a normal string, and that is using the package. This will allow you to get rid of many code smells: 
+
+In , you're needlessly allocating strings by modifying the variable. It would be a fairer benchmark to write it in the following way: 
+
+You client code is incompatible with the argument type of (I guess you meant to write instead of ?). But this is strange to have for an expiration time, most probably should just be renamed to and be an . The code could be more idiomatic. Your variables/functions have long names that aren't really useful. You could replace by , by , by , by , etc. Your function does many things (type conversions everywhere!) so that's confusing. You should probably refactor away a function like: 
+
+It depends. (As usual.) The recursive version is easier to read an maintain, and does the job fine for relatively small data sets. However, when the data set grows large, you create a new stack frame for each recursive call, which may lead to great stack memory usage up to stack overflow. Furthermore, this is comparatively slow. The second version uses constant stack size and puts all the real memory usage in the heap where it should be. Not using recursion, it is also bound to be faster (on a micro-level only). Thus, know the problem you solve: for small sets, write nice code and use your version, for big data sets, optimize by unrolling and use the second version. (BTW: in my university courses, it was generally recommended to use the second version for NP problems due to raw speed - albeit in C at that time.) 
+
+Furthermore, you can cut a bit of execution time by replacing the auto boxing and unboxing you do by using a mutable value class, something like this: 
+
+Hmm... the generalFizzBuzz method is a mix of business logic and output, I think this should rather be separeted. Thus, I'd rather have a business logic conversion number, which converts a given number to test to the output string: 
+
+And, no, there's no easy way to have something more dynamic that , unless you have a specific use case in mind (and then, you would use an interface, but this is out of scope for this question). See this for a detailed discussion on why Go doesn't have generics for now. 
+
+the line containing your query is long and not easily readable, maybe skip more lines you can write the skeleton to your query once, instead of using successive appends — this is also more efficient if you have many services the call to can be avoided using a simple condition in your template you can replace directly by its value, that you previously computed in your Go code and you can get rid of the variable that you pass to & , just do all the substitution logic in the go code. 
+
+Note that this benchmark is still pretty flawed: you're only testing it with a couple of values, so depending on which they are, the order of the if/else statements are going to matter. You should use much more values, picked among a reasonable distribution instead. 
+
+(That said, I'm not convinced it matters — the compiler should probably optimize this anyway.) I tried it and was very surprised to see that the benchmarks were still very poor. Turns out, you called the wrong function in your benchmark :-) calls insead of . Retrying it with this fixed leads to the expected result: 
+
+... if you need to pass a local tmp-map, this will be more BiConsumer-ish in your case, but the idea should be clear. 
+
+Reading the file: you declare the BufferedReader as an instance variable while it is only used locally. Don't do that: variables should always have the smallest scope possible. In addition, resources should normally be closed in the same scope that opens them (which brings me to the point that you never close the buffered reader.) Furthermore, you put the opening and reading in two different try-catch constructs. That makes no sense. If the first fails, you cannot expect the second to work. Thus, using "classic" code, you should put it together as a try-with-resources block, which automatically closes the opened resource, something like this: 
+
+By putting it into a method and naming this method, you document your business intention. Furthermore, by breaking up the long command chain with a new variable in between, the code gains much in readability. The additional line-breaks in the second part are what I consider best practices in streaming API: each new operation on a new line. 
+
+Definitely the second. It shows that you have got at least a general grip on datastructures (knowing the complexity of HashSet operations) and know a bit about the standard library. Regarding the fist one: this even uses a loop instead of - I'd immediatly show you to the door for that, if I were the interviewer... Second is definitely better, but not impressive eiher. Try getting a grip on the stream API and play around with - my own try-that-for-comparison-solution was 2 lines using this... You shouldn't. From my opinion, it is OK to explain in addition that there might be a possible solution using binary search over the stones string, which completes in \$O(n\times log(n))\$, but I would not to see an even longer solution for micro-optimizing a simple problem which takes milliseconds to execute. Simplicity, readability and clarity are the key attributes. 
+
+I put zeroes outside the func, to avoid converting it over and over. You still have a few conversions & allocations, but there's no way around them. The other functions can be modified easily to accommodate the type change. 
+
+Replace all by . When you're not using the second argument, you don't need to discard it explicitly. 
+
+and then, check directly whether the result is within your interval (without your auxiliary function, which just hinders readability). Now, the bad news: computing the number of days between two times, even assuming that they are in the same timezone, is hard. Your function only works if you are in UTC. To truncate to day for any timezone, use the solution in the accepted answer of this StackOverflow question instead. Once you have you correctly-truncated times, getting the difference in days between them is not as easy as you think: if you simply divide by (like you currently do, in a somewhat weird way), this will fail if the times are not on the same timezones. You say "that's not a problem", but you're probably wrong: most places in the world change timezones twice a year, for daylight saving time. So you have to take this into account… You have two options: 
+
+You're saying something similar here: "give me a and I give you a ". It's better if you want to have a concept of a variable that you'll later pass around or reuse. 
+
+Raw execution time for 1000 repetitions (with proper ramp-up) using 100000 chars and k = 150 went from 3308 ms for the original code to 3190 using both changes on my machine. And as you are on codereview, one additional remark: longer variable names (longest, subsequence, n?) do not hurt execution time, but have the potential to make the code more readable.... ;-) 
+
+And try to come up with code that operates on such a list. Note: Function is the standard function type with an integer as an input and a string as the output. No need to define your own interface. If you have achieved this, you can easily add another function to the list to check another value, and then you have achived something that might be considered dynamic. 
+
+Mutable double array in the interface. Yuck! This is unclear, hard to read and generally leaves a bad feeling. As you only use it to calculate a single value, try to refactor this to method return values and somehow combine the results. A single discount strategy. While this may solve the problem posted in part 2, you don't estimate the future development here. What if the shop wants to keep the discount on apples but cancel the discount on oranges? They'll have to call the software guy again. This should be split into single strategies to make them individually pluggable. Global price map: while it might be true that this is a singleton in your application, you create an unnecessary dependency from everywhere to the concrete implementation. Better: pass a map to the strategies (maybe as a constructor parameter) to honor the tell-don't-ask principle. 
+
+It's very simple; what you're saying here is "give me a , I can give you n random values from it". Option 2: 
+
+and not implement any other functions. will "implement" , calling will do what you expect, and trying to call on it will panic (nil pointer dereference). 
+
+Minor: don't panic. This is encapsulated in a function (that, indeed, does too many things) so the function should return an error if something bad is likely to happen; and you should let the caller deal with the error. Furthermore, is almost always what you want rather than . Major: don't use a regexp to parse HTML. Seriously, don't. Consider using the html Go library instead. 
+
+→ , same for . is more readable. You can also convert everything that represents a time into a or a , rather than deal with Unix timestamps. There are functions in the package that do what you want to do (, , etc.). About that, why does need to do complicated things with times, checking when was the last time it was called, etc.? Shouldn't the caller take care of this with a simple instead? It feels like this complexity shouldn't be there. is a weird name for an implementation. maybe? Your package isn't very idiomatic, which makes the callers do weird things to use it. For example, why do you have a struct that doesn't contain anything? Why not simply have as a package-level function? Same for the other empty structs of this package (…). It's more idiomatic to test for rather than . I'm not exactly sure what you're doing with (this is pretty complex). Maybe add a comment for the line or refactor this part? Talking about refactor, is way too long. Split it in sub-functions. No need for an after . Rather than:

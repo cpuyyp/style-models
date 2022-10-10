@@ -1,0 +1,89 @@
+Note that I did extract a method so we could name the filter. It makes it a bit more readable (and as an added bonus, reusable). You may be asking yourself why naming the predicate is better than using a variable. Other than reuse, the benefit is that there's no need to store any state. At its heart, Linq is a functional way to program, so it's good to embrace it. 
+
+In my mind, you shouldn't be able to change a point or a line after it's been created. That's because if you change it, it is effectively a different point. I would only allow the coordinates to be set via the constructor and change these from public fields to get-only properties. You should also consider whether or not a struct would be sufficient for your needs. I would also chain your constructors so that the parameter less one calls the other. 
+
+I don't have any advice on how to change it, but it's pretty obvious that the nested while loops are the source of the performance issue. If you can find a way to do it in a single loop, you'll get a pretty big boost. 
+
+There's a fair amount of setup and teardown code. I'd change many of the local variables into fields, and then add a and method. Extract as much of the test rig as you can into these methods. Always remember that test code is production code too. It's just code that we don't ship to users. It deserves to be written to a high level of Single Responsibility and DRYness as well. By moving all but what's different out of the tests, it's easier to highlight what it is that we're actually testing, rather than getting lost in a bunch of boiler plate setup code. 
+
+Notice how the consumer is the one responsible for decoding and using it? Also note that the unmanaged string is always released from memory before the method exits. My implementation is faced with many of the same issues. It still has to decode the string, but it never exposes a manage string to anyplace it could be copied. It gets sent to the external library with no room for anyone to ever make copies of the password. You should strive a little more towards that goal. To make things clear, there's no reason a developer couldn't do this with your implementation. 
+
+If you couple business rule validations to the domain object, you cannot apply different business rules to the same domain object. Never assume you will only have one set of business rules. By creating validators outside the domain object, you give yourself the flexibility of creating whole different swaths of business rules without touching the domain layer. Basically, by the time you go to save a domain object to a database or other repository it should be completely valid from a business rule AND storage perspective. This allows you to communicate problems to the user in a manor that allows them to correct their mistake. If you let a SQL error propagate up the call stack and result in a 500 Internal Server Error, you as a programmer have not done your due diligence when validating data. Now I could see a case for separating the storage validations from the business rules. Maybe you start out persisting your domain objects in a database, but later you move to a RESTfull web service. The web service may have different basic data validations, which you can then swap out for a different validator while keeping your existing business rule validations. I disagree that this solution doesn't scale. Quite the opposite actually. It scales very well. Mashing your validations into the domain object is what doesn't scale. Changing the storage mechanism or needing to apply different categories of business rules gets complicated when your domain objects validate themselves. Domain objects should be mere boxes containing data. The decision of whether that data is correct is wholly out of scope for the domain object, in my opinion. The storage manager should have absolutely no validations. It should accept a domain object, attempt to persist it and throw an exception if anything goes wrong. 
+
+Really, all of my objections are related to this tenet of software engineering, and especially object oriented programming: Do one thing, and do it well. Putting validations into your domain objects means they are serving a dual purpose: Hold data from a storage medium AND ensuring it is valid. Do one thing and do it well. The domain object should hold data. The validation layer should ensure things are valid. Putting validations into your storage manager means it is serving a dual purpose in the same manor. You should be able to swap out one layer for another with minimal refactoring. If you have to copy and paste of rewrite lots of code, then your application needs additional layers with looser coupling. 
+
+Which isn't really so much work, is it? However, to make this work cleanly, we'll need to define a simple data structre and populate it with appropriate values for high, medium, and low. I've used a here, but it might be worth creating a full blown class for down the road. 
+
+I'm not sure this will work for you, but consider replacing or duplicating the formulas in your "12" cells with an call. It's a little tricky to avoid runtime errors, so I suggest reading this. It might look something like this. 
+
+My biggest (only?) complaint about this code is that you've made it harder to understand than it needs to be by reusing the identifier for a number of different things. Here's an alternative that I think makes it a bit easier to read. 
+
+Finally, I don't want to import all of these classes into each project I'm working on. It will be a nightmare to keep them all synced as I make changes to the VBAUnit project. So I changed their instancing to "PublicNotCreatable". 
+
+This needs a comment saying what these es actually represent. Mr. Maintainer would have to go find the lookup table in order to find out. (And this query gives no hint that the lookup table even exists.) 
+
+In general, I think this is pretty good for a novice. Good names, more or less neat (minus the indentation that another answer has already mentioned). You copy pasted some code though. Don't do that. A wise Mug once said, "Anytime your fingers reach for Ctrl + C your brain should stop them and write a method instead." I might be paraphrasing a bit, but it's true. Don't repeat yourself. Both and have this code. 
+
+Now alarm bells start going off for me, and anytime we're talking about performance and we see a , they should be ringing inside your head. Particularly when it's buried in an statement. Full joins are expensive and slow. You should take a hard look at this subquery and figure out why you're using one here. You only need to return . I doubt you need to use a full join. Determine if an inner join is more appropriate. In your next query, I like the insert and select parts of your statements. You're spelling out exactly where you're inserting to. That's good. I'm also a fan of putting your commas in front like this. It makes it easier to comment things out if necessary. 
+
+Or if I want something to be read only, I'll use a combo of private variables and public getters (Example: Viewport on GitHub): 
+
+If using actual private variables in my class, create get/set properties for those I want accessible to the outside world: 
+
+Basically, the code just looks consistently written. That being said, it's not really organized. The Bad 
+
+There is absolutely no difference between and . The and properties created using are superfluous, and only serve to add weight to your JavaScript code. There is no logic behind the getting and setting of those values. On the contrary, consider a case where you do want some special logic around setting a value. In the code below, the property is a reference to a DOM node. When setting the DOM node we also want to set properties for the and to which the DOM node belongs: 
+
+If private variables aren't all that beneficial, or the property is meant to be public, I'll just declare that as part of the prototype: 
+
+Permissions are better handled by a service, so that you can more easily unit test that layer, plus the permissions logic becomes portable between presenters to promote DRYness of your code (Don't Repeat Yourself). 
+
+Since all the functions take the same arguments, create an object that references each function, then construct the method name based on the attribute: JsFiddle: $URL$ Basically, after all the *Rect functions: 
+
+The form would need to instantiate the user permissions service with the proper user object before the method gets called. 
+
+This seems pretty clean to me. It's very testable, which is a definite must-have. It also decouples the reformatting of user input from the view-model. Looser coupling between layers is a positive thing. The downside is that you'd need to create a service for each view model. I'm going back and forth in my head whether this approach is best, or if defining some custom class and property attributes might be more worth while, and then use the service to process any object in a generic manor by looking at the attributes associated with a view-model property. Some pseudo code: RegisterViewModel.cs 
+
+It seems that we're shooting for one fizzbuzz question for each language. I'm sick of FizzBuzz, so I'm killing two birds with one stone. This code works in both vb6 and vba. My goal here was to write a flexible Fizzbuzzer; one that could double as a Hello World program (of sorts). Is there anything left to say about it, or are we all FizzBuzzed out? FizzBuzzer (Standard Module): 
+
+I like that you didn't bother with the extra join, but if you're going to use integer key values in your statement, you should clarify what the value represents. Otherwise, the person looking at it will have to figure out which table the key is stored in and look it up to figure out what it represents. 
+
+But that's more code! Yes. It is, but we're not going to leave it this way. We're going to extract methods that take in the data reader and return new business objects. 
+
+This a good candidate for a temporary table. I don't know how to create and populate a table in MySQL, so you'll have to look it up. The query should flow something like this though. 
+
+At first glance, I want to tell you to use a string builder again, but I honestly don't have the foggiest idea why you just split the string apart, just to put it back together. Forget what I just said about splitting, and just . Don't split. It looks to be unecessary. 
+
+The first part of the if , so there's no real need for the . Like I said, that's pretty nit-picky and could be considered to be a matter of preference. I don't much care for the style here. 
+
+I've been looking at this question for a while and I don't see many opportunities to improve performance. Nested loops 6 levels deep is going to perform poorly. It doesn't seem that there is any case in which you can return early either. Not all hope is lost though. Have you considered using a ? From the documentation: 
+
+When you change anything with categories, you need to refresh the category list. Same thing with bookmarks. For this you can use events. Controllers would publish an event, say "category:updated". The would subscribe to "category:updated" and refresh the category list. Same idea with . Now the AJAX functionality is currently all global. I usually go for the Repository Pattern to encapsulate AJAX calls. For that you would have two more classes: 
+
+The name of your class is a generic name, yet it is used for a specific kind of request being that the and parameters are hard coded. I think what you want is a class that encapsulates specific AJAX calls. For this, the Repository Pattern would work well: 
+
+If the only purpose is to provide a simple wrapper around the body of the HTTP response, this isn't so bad. Things break down when you need to access things like the request and response headers. Error handling is another thing entirely. I would recommend catching all errors, and rethrowing the exceptions wrapped in your own exception classes to make error handling for client code easier: 
+
+As an added bonus, adding a new decoration/drawing style becomes trivial. Add a new value in a attribute, and then create a new function using as the name of the function. No need to update . 
+
+I know this is a lot to throw at a code review, but this does allow for loose coupling, plus all the functionality is componentized and reusable. Since each class has all of its dependencies as public properties (like the ) it becomes easy to mock up those dependencies for the purpose of unit testing. 
+
+The Ugly Nothing is really ugly here. For that you'd need a helluva lot more Clint Eastwood. Breaking Down Your Application Into Components To really organize your code, you need to break it down into components that focus on one specific task, for example, adding a category. Looking at your code, I can see the following tasks: 
+
+I think that overall you have a pretty elegant solution here though. I've been trying to think about how I would self-join the table for this query and I don't like what I've come up with. I'll be tucking your pattern into the back of my mind for future reference. 
+
+That's a lot to take in, so I'll stop for now. I really encourage you to come back with a follow up question after addressing these things. I didn't get to address your actual questions, but I feel it's important to address these issues first before tackling any performance related questions. Code review can (should?) be an iterative process. 
+
+There are probably a couple of other things that could be said, but I'll leave those to another reviewer. 
+
+Note that this function will take input of either a column name ("E") or integer index, so we could pass it the integer index if we so chose. This simplifies variable initialization a bit, and we have one less declaration. 
+
+That said, I do like that you're always ensuring that gets turned back on. (Well, you would be, if you set directly upon entering the subroutine.) 
+
+But like I said, it's non-standard. The standard is to use PascalCase for methods, camelCase for local vars, and _underscoredCamelCase for private fields. 
+
+Now this single model contains all the information you need to bind to the view. You no longer even need the . The controller would look something like this (untested, I'm typing in the browser): 
+
+I would recommend leaving a small comment alerting the unwary maintainer that it is a bitwise not a logical though. I don't imagine too many VBA Maintainers will understand this code at a glance. 
+
+Note how hard it is to tell where you're accessing the property and where you're accessing the private fields? Picking one of the two styles would make this code more clear.

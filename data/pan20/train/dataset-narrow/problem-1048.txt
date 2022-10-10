@@ -1,0 +1,99 @@
+Before answering your question, here is an important advice: name your selections. So, instead of this: 
+
+That way, you'll have a way shorter, DRY code, with individual elements, each one having how many s you want. Here is a very simple demo: 
+
+The methods accepts a data array in which each object is a datum; You cannot easily get the objects' keys; 
+
+Use an ordinal scale for the colors: instead of manipulating and using classes, as you're doing right now, just create a proper ordinal scale... 
+
+Don't use variables external to the function to define the behaviour of that function: it's hard to understand where the value comes from and harder to debug. Instead of that, pass those variables as arguments. In the case of your function, pass the value of the dropdown: 
+
+Therefore, you just need to sum all elements, then subtract the smaller one to get and subtract the biggest one to get . So, here is yet another solution, without any : 
+
+You have just 1 CSV file. Therefore, you can drop the , which is normally used to deal with several (that is, more than one) asynchronous tasks. Use a simple instead: 
+
+The , , and may seem a lot of repetition, but this is idiomatic D3. If it bothers you, just use an for DRY, like this: 
+
+Now, since all the points can be accessed using the same property name, we can easily write just one area generator. Also, since each object in corresponds to just one area, we can write a single enter selection! 
+
+I know some people don't like the double tilde (the bitwise NOT) to get the integer, because of readability, and they consider it an anti-pattern... anyway, even if it's not readable, it's simple and fast. Change for another method to get the integer (like ) if you want. Finally, knowing that half-hour has seconds, get the index of the array: 
+
+The coerces all the values, except for ; You call the drawing functions with the data and the teams; Since you know what values you're using for the first time, I just hardcoded them. If you don't like that just use another selection to get the selected option (again, hardcoded!) You use the listener to get the value of the select with , and call the update functions. 
+
+You'll have to re-select the bars, but that's not too complicated. Also, mind some minor details: there is no attribute for a SVG rectangle. Also, your data contain strings, not numbers. Change that (you can change the data itself or you can use an unary plus, like I used to merge the rates). Here is the refactored code: 
+
+While you can do it using d3.dispatch, as you just found out, it doesn't seem to be a good practice: 
+
+Now comes the important part, which is printing the city names. First, get rid of all that HTML and CSS regarding the elements. Also, remove the for the SVG. Have in mind that your layout has all the and positions you need. So, to print the city names, which have the , just do: 
+
+... and use it to fill your rectangles, with method. Don't call your scales and . Use more descriptive names, like and . Doing that, you avoid confusion with the and methods which are very common in D3, like in line generators or area generators, for instance. Use in your domain: 
+
+Before dealing with your main question here, which concerns the SVG rectangles, here are some advices: 
+
+Before dealing with the "enter", "update" and "exit" pattern, which is specific to D3, I'd like to address some general issues first. 
+
+Overall your code seems good, it's an idiomatic D3 and it doesn't have any major problem (like appending elements in a loop). I would put the two charts in a single SVG with different elements, but that's a matter of personal choice (having two SVGs can be an advantage if you want, for instance, rearrange them in the HTML). I'd suggest 3 changes, though: 
+
+Unfortunately, we cannot just add the to your code the way it is right now because, as you can see in the example above, the selection has just a single element. But the fix is simple: create your elements inside an "enter" selection, upon which you call the . 
+
+That being said, my proposed solution is: use regular functions. So, in your code, I put all the drawing parts inside a function... 
+
+Do not mix jQuery and D3: this mix is normally unnecessary. Not only that, it can make things fail silently. So, instead of: 
+
+Performance Regarding the performance, your code ( loop) is around 5% faster than mine (), have a look here: $URL$ I believe 5% is not a big value, but if you are ultra-concerned about performance, stick with the loop. Of course, the simple solution (just adding the elements of the array) is, as expected, faster than both: $URL$ Funnily enough, the "no sort" version doesn't seem to be that fast in the JSPerf test: $URL$ 
+
+PS: be careful with the names: in your snippet you have a parameter named , but there is no anywhere. 
+
+Inside the each you need two selections, one for the upper rectangles and other for the lower rectangles: 
+
+You're binding the data to the SVG in an enter selection, but you never use it. So, just append a single SVG, without binding any data to it. Drop the and the functions. If you want to create a single drawing function, which is a good approach (regarding DRY), pass just the changing data to it, avoiding repetitions (the scales are always the same, for instance). But in a chart like this one such pattern is unnecessary (have a look at the in my last snippet). You're binding a single array of numbers both to the lines and to the circles. Instead of that, just filter the array accordingly (or create two separate data arrays, as I'm doing here), and bind the whole array of objects to the circles and the path (which brings us to the next point). That way, each element has a datum with all properties in the object, that we can access easily. More importantly, that way you don't rely on the index of each element in the array as you're doing right now and which is an inadequate approach. Don't append a bunch of elements to create a line chart. D3 has line generators that you can easily use to create a element: the whole line will be a single SVG path. This is way more convenient, and on top of that you can use curves to smooth the path. You have time in the x axis. However, you're converting the date objects to strings and using a point scale with those strings as the domain, which is probably not the best practice. Treat time as time, using a time scale, unless you really want to treat each individual moment as a categorical variable (for instance, when the time span doesn't matter and you want the space between the ticks to be the same, regardless the actual time). 
+
+First of all, your code is working, which is a good thing. However... for any seasoned D3 developer your code is somewhat weird: it's not idiomatic and it has some strange patterns (which will make your life harder in the future). Here I'll deal with your 4 bullet-point questions together, since they are deeply interconnected. So, let's first see the major problems: 
+
+is asynchronous. That means that, every time you call it, it will load the CSV, parse it and run the code inside the callback (while the code outside it keeps running as the CSV is being loaded/parsed). You really should not use inside a function called by a change in a dropdown menu. Right now you're not seeing any performance issue because your CSV is not that big. However, if you had a big CSV, or a slow connection, the difference is noticeable. This is the most important reason: that CSV is the same! Why are you loading it again and again when the user changes the dropdown? It's just an unnecessary waste of resources, which can in certain situations cause a bad user experience. 
+
+It gets even more simple: no sort Using can greatly increase the time complexity. The good news is that there is a solution without . It's based on this simple logic, as described in this other answer: 
+
+Name all your selections. It's easier if you want to use them in the future. Give meaningful name to your variables, like , not just . You're mixing and , which may seem strange fome some people, as well as arrow functions with regular functions. Use lowercase for the properties: instead of , instead of etc... 
+
+Here, is just a boolean to check if the function is running for the first time. Finally, I'd remove the transitions from the x axis, they are quite distracting (because of the ). Here is your code with those changes: 
+
+Finally, have in mind that the stack generator, despite being complicated, is the best approach if you have several rectangles per column. In my solution, I have two selections inside the ... however, if you had 5 rectangles per column, we would have 5 selections inside the , and so on, which is a lot of duplicated code. 
+
+And simply use whenever you need. That's a good practice in a D3 code, so you can latter on refer to your selections without relying on classes or IDs. Also, remove the from the selection in the example above: you don't want to show it 4 times. Finally, you're using the listener of a transition selection to control other transitions. This is also not an idiomatic D3 approach, and things can quickly become complicated to control and understand. Instead of that, use a simple , or even a vanilla JS : 
+
+That way, you can be sure about the value of inside the function. The properties and in are already numbers. This... 
+
+My answer here will focus on refactoring the function. Right now that's an awkward function, with some unnecessary logic. Let's examine the it: 
+
+In the linked Plunker, which uses a real CSV, you get the result of the promise and pass it to the function. So far, so good. However, inside that function, you're calling another function, named , which gets the selected value of a element. Then, based on that option, you're coercing only some values of the data array to numbers, but keeping the whole structure of the data array (you're not filtering or anything like that). The inside is also strange: you don't need to return the object row. Also, the third argument, , is probably a reminiscent of the third parameter in the : in a method the third argument is not the array of headers. Continuing, you're using a variable (which is always after the user changes the select) to choose what functions to call, and finally setting a listener to the select that never listens to the value of the select! It just calls again... This is my proposition to simplify this function: 
+
+It's not necessary, you can do the same using regular functions (see below). The main reason why it is not needed is that, despite the fact that you have two events, and , you just need one, since you already have the necessary enter, update and exit selections, and their proper transitions. It's not idiomatic and adds needless complications to your code. Because it's not idiomatic, it will make harder to other D3 programmers trying to understand/maintain your code in the future. It creates a lot of duplications (in my solution below I saved you 100 lines of code, going from 379 to 279 lines). 
+
+Well, I am the answerer that gave you that advice on S.O. The reason, or reasons, are actually quite simple. Right now, every time you change the dropdown menu, you call the function: 
+
+As you can see, I'm selecting . I'm doing this because I suppose you don't have an update selection here. To read more about selecting , see my explanation in this answer at S.O. 
+
+All that being said, this is my version of your code. It's a major refactor (actually, I wrote it from scratch). 
+
+However, as the the challenge says that you'll always be given five integers, and as your very solution only accepts an array with 5 integers... 
+
+That's a pretty good code for a first attempt with D3. There are some considerations, though. First of all, if you have an condition testing the size of the input, it's a good idea writing the . For instance: 
+
+... you're open to completely different approaches. If that's correct, I reckon that there is a simpler way to do this. Just slice that array Actually, you almost get it when you did: 
+
+PS: setting a to run every second seems a bit resource-intensive to me (browsers are insanely fast today, though...). Therefore, you could use my and the fact that half-hour has seconds to easily schedule the to run the exact moment the speaker changes. 
+
+And, since you don't use them, just drop your and listeners. Here is the demo (click and drag the group around): 
+
+As already very well explained in the comments section, the treemap is not the best visual encoding to represent your data. However, suggesting how to better represent the data you have is arguably off topic even for Code Review. With that in mind, I'll address only a couple of topics in your code regarding best practices, specially that ugly positioning. As I said, the creation of HTML elements and their positioning in the CSS is not only strange and cumbersome, but it also will hider you in several ways. The common (and idiomatic) way to create the city names is using the very D3 layout you have, in the SVG itself. First of all, don't use magic numbers. Set explicitly the width and height... 
+
+As you'll see, sorting the array is the key here. If you stop to think, after sorting (in ascending order) your array: 
+
+Your code is certainly improvable, and several changes should be done. The main problem, that immediately comes to attention, is the repetition of the code. However, the problem here is not (only) the DRY issue itself... the problem is more fundamental, regarding D3 best practices: since you have two data arrays (which are almost the same), you're binding different data to different selections. Because of that, you're bending over backwards to do some simple tasks, like creating the tooltip (I'm the author of the answer to your previous question at S.O. regarding this). So, let's get rid of those repetitions not just because they are repetitions, but for having a single data set which we can bind to a single enter selection. Here are the steps: 
+
+And this brings us to the next point: Don't rely on variables external to the function to set the function's behaviour. Other part of your code or other codes can change that variable, which will be very hard to debug. Instead of that, use arguments: 
+
+After that, I removed all the parts that don't change and that you need to paint just once from , like the SVG and the axes selections. Last but not least, good on you for using the brand new D3 v5 and ! Here is the updated Plunker: $URL$ 
+
+Any seasoned D3 developer will frown upon this. It's normally not a good practice removing elements to repainting them: you should update them instead. However, as this involves a really big refactor in your code, I'll leave this just as an advice. The second issue that shows that your code is not an idiomatic D3 is the use of loops to append elements. Like this:

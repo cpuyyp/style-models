@@ -1,0 +1,53 @@
+This means you have logged in correctly to SQL Server, but the database in the connection string (or default database from CREATE LOGIN) is one of 
+
+You can also use plan guides and JOIN hints to make SQL Server use a hash join, but try to make it work normally first: a guide or a hint probably won't stand the test of time because they are only useful for the data and queries you run now, not in the future 
+
+Slightly orthogonal answer... Try and use local disks for tempdb and leave user DBs on the SAN/NAS. This doesn't address the issues you have with the "black box" of the SAN but it does allow you to decouple tempdb from the network. YMMV with clusters. One thing I've found too is that you have to have high volumes for it to matter too much assuming your SAN admins aren't complete muppets/cheapskates. 
+
+A restore will completely wipe the target database (if it exists, otherwise created of course). Any changes to tables, code security and data will be lost in the target database, which will be 100% identical to the source database at the time the backup happened 
+
+I would recommend using these free backup (and other) scripts from $URL$ These have full logging already and have lots of other useful options. Personally, these are what I use. Thoroughly tested and used by many, many folk. 
+
+You can query on the column to find open yet "sleeping" connections. From this, you can find out the last SQL executed 
+
+Is the table too small? Fragmentation figures are meaningless for small tables that span up only a few extents This is captured by in the script. The default is 8: meaning it will be skipped if one extent in size. 
+
+So running this in batches with a good index satisfies the last 2, but is slower. However, you don't need absolute speed if it is less intrusive to other operations Otherwise, I'm not sure what you want... 
+
+If you mean in the GUI, then this should be Windows locale dependent. If you mean the GUI designers, then frankly I don't know because I use raw SQL. If you mean the actual SQL language, then it is English Edit: Under Tools.. Options, you can select fonts. This may be what you want: 
+
+Start with "database design" on Wikipedia. I'd also recommend using Object Role Modelling to capture your conceptual model Otherwise, your question is far too broad. What you don't do is start knocking out some CREATE TABLE statements, or design as go along writing client side code 
+
+Correct, use SNAPSHOT isolation to get consistent, commited data from before the transaction started. The READ UNCOMMITTED isolation (aka NOLOCK hint) will read dirtz, inconsistent data When you enable SNAPSHOT isolation, then it takes effect for all SELECTs going forward. You run with READ_COMMITTED_SNAPSHOT in this case Edit: added link +quote of ALTER DATABASE (my bold) 
+
+If I understand you correctly, a better way is to use TABLOCK hint to force a table level lock in the query that needs it (example: delete from a heap) 
+
+This has been asked before on SO. Where you have common and very ambiguous names, then prefix with table name. That is, anything you're liable to have to alias in almost every query. So for an Employee table I'd have 
+
+Don't use a trigger. Use a stored procedure instead to decouple the logic from the INSERT. Personally, a trigger failing means some complex DRI has failed or I can't write to a history table. That is a bad thing... Edit: 
+
+"It depends" If you add a column that does require adding data to the rows, it can be quite quick. For example, adding an int or char requires physical row movements. Adding a nullable varchar with no default shouldn't (unless the NULL bitmap needs to expand) You need to try it on a restored copy of production to get an estimate Creating a new table, copying, renaming may take longer if you have to re-add indexes and keys on a billion row table. I have changed billion row tables that took a few second to add a nullable column. Did I say to take a backup first? 
+
+implies because the keyword is optional. So an index is created. However, the MySQL 5.5 docs show that the (or ) keyword is mandatory so should give an error does not mean : it means an index that does allow duplicate pairs 
+
+This means that database users have no matching server logins. That is, each database sys.database_principals has no match in sys.server_principals For Windows logins this is easy. This generates your missing CREATE LOGINS 
+
+Performance: Max types are LOB types = slower. Demonstratably so. Indexing: key length is 900 bytes = never able to have index or unique constraints Truncation: insert a Max value into, say, a 20 length field = error Datatype precedence: compare a 20 length field to Max variable = implicit conversion = no use of indexes etc 
+
+Edit, attempt 2: Check this. I've seen this at a previous company (I wasn't sysadmin there) and can't remember what teh DBAs had to do for us to get our linked server to work (also Sybase) $URL$ 
+
+SQL Rockstar's answer is how to fix it: I'll add an explanation. A stored procedure parameter can be either a constant or variable: not an expression. CAST is an expression. (This is different to udf parameters that can accept expressions) EXEC on MSDN states 
+
+"Their database" for the dbcreator means owner in the sys.databases.owner_sid sense Not members of db_owner. The actual rights needed are described under RESTORE (and my added bold) 
+
+Note: If value is not nullable then it is the same as semantically. But for SUM it need the actual value, not existence. As an example, if you change to without changing the index it should break the query again because it has to process value as a value, not as existence. The query needs 3 columns: added, fk, value. The first 2 are filtered/joined so are key columns. value is just used so can be included. Classic use of a covering index. 
+
+No. There is no flag or metadata about "UsesDynamicSQL" You have to search the definition... There are 2 ways to execute dynamic SQL 
+
+If you have 30 codes to lookup you will have 30 lookup tables: this is correct. If you insist on OTLT you'll have to add extra columns to store type in Assets and FK them to your OTLT. I wouldn't do this. 
+
+Why do you think this is a good idea? With simple recovery, the internal log entries are removed periodically (ready to be reused) but the file requires no more processing. The log file is the size it is because of your day to day activities. If you shrink the log file you'll end up with poor performance. 
+
+No. Collation is about alphabetical sorting, depending on code page, accent, case, width, kana. Numbers characters (0-9) have none of there properties. So is always after in any sort. You have to split it up as you noted or sort like this: 
+
+Best practice is always qualify schema for all object references. See this by Tibor Karaszi or this by Midnight DBA or just trust me or the MS SQL Server Best Practice Analyzer But you can run this if you choose to ignore best practice:

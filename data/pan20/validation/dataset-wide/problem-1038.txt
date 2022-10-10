@@ -1,0 +1,81 @@
+UPDATE 2013-02-02 22:44 EDT If changing the authentication style on the MySQL side has not worked for you at this point, I have some bad news for you. You stated earlier: 
+
+Using just alone would cause mysql to hang in the process without an open mechanism for you to key in the password. Even if you could key in the password, you still need a target database. Another way to express this is the following: 
+
+GIVE IT A TRY !!! SPECIAL NOTE If anyone has a with the attribute, you must remove the attribute first. Then, remove the , Then, convert the Storage Engine. For example, if was defined as , do the following: 
+
+SUGGESTION #2 : Use tail command (if expecting one row of output) Run the command to a text file. Use tail to print everything but the first line: 
+
+MySQL can also perform GRANTs and REVOKEs on column privileges. In fact, the mysql.columns_priv and information_schema.COLUMN_PRIVILEGES contain those privileges at that level. mysql> show create table mysql.columns_priv\G ************* 1. row ************* Table: columns_priv Create Table: CREATE TABLE ( char(60) COLLATE utf8_bin NOT NULL DEFAULT '', char(64) COLLATE utf8_bin NOT NULL DEFAULT '', char(16) COLLATE utf8_bin NOT NULL DEFAULT '', char(64) COLLATE utf8_bin NOT NULL DEFAULT '', char(64) COLLATE utf8_bin NOT NULL DEFAULT '', timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, set('Select','Insert','Update','References') CHARACTER SET utf8 NOT NULL DEFAULT '', PRIMARY KEY (,,,,) ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Column privileges' mysql> show create table information_schema.column_privileges\G ************* 1. row ************* Table: COLUMN_PRIVILEGES Create Table: CREATE TEMPORARY TABLE ( varchar(81) NOT NULL DEFAULT '', varchar(512) NOT NULL DEFAULT '', varchar(64) NOT NULL DEFAULT '', varchar(64) NOT NULL DEFAULT '', varchar(64) NOT NULL DEFAULT '', varchar(64) NOT NULL DEFAULT '', varchar(3) NOT NULL DEFAULT '' ) ENGINE=MEMORY DEFAULT CHARSET=utf8 
+
+If a Master has relay logs, then the Master must also be a Slave in the midst of some Replication topology (i.e., Master/Master, Daisy-Chained Replication) What could cause relay logs to grow like this? BROKEN REPLICATION MySQL Replication is broken when the IO Thread or SQL thread dies under these SCENARIOS: 
+
+You are welcome to get the source code, tweek it to check all characters in any potential Schema Object Identifier, and either allow or deny. The only thing I can suggest is never to use backquotes when creating databases and tables. 
+
+The way mysql works is this ... Performing INSERTs, UPDATEs, DELETEs explicitly names tables SQL Commands that do not explicitly name tables have Such commands that echo include 
+
+Now, picture yourself pushing 50 millions rows into one InnoDB table as a single transaction giving all the plumbing depicted in this elaborate illustration. To ensure data consistency in the event of a crash, your data has to be written in three places: 
+
+If all you are getting is the header of the mysqldump, an error must be posted somewhere. In order to make the errors show up on demand, please run the dump like this: 
+
+It is an attempt to store a 2-byte string into one byte Since the maximum length of TEXT is 65535, it can safely hold 32767 (65536/2 - 1) 2-byte characters without an error message. Any attempt to add 32768 2-byte characters will result in because the 32768th character does not have the room to be inserted into mycol. In reality, you do not get a malformed character. You really can a TEXT field whose 2-byte character count and length is 32767. The last character is simply lost and not considered . To make sure, run this 
+
+You must realize the tradeoffs of using CHAR vs VARCHAR With CHAR fields, what you allocate is exactly what you get. For example, CHAR(15) allocates and stores 15 bytes, no matter how characters you place in the field. String manipulation is simple and straightforward since the size of the data field is totally predictable. With VARCHAR fields, you get a completely different story. For example VARCHAR(15) actually allocates dynamically up to 16 bytes, up to 15 for data and, at least, 1 additional byte to store the the length of the data. If you have the string 'hello' to store that will take 6 bytes, not 5. String manipulation must always perform some form of length checking in all cases. The tradeoff is more evident when you do two things: 1. Storing millions or billions of rows 2. Indexing columns that are either CHAR or VARCHAR TRADEOFF #1 Obviously, VARCHAR holds the advantage since variable-length data would produce smaller rows and, thus, smaller physical files. TRADEOFF #2 Since CHAR fields require less string manipulation because of fixed field widths, index lookups against CHAR field are on average 20% faster than that of VARCHAR fields. This is not any conjecture on my part. The book MySQL Database Design and Tuning performed something marvelous on a MyISAM table to prove this. The example in the book did something like the following: 
+
+I used two values: 290.0 and 14.5 for this test. Before calling the NumTest stored procedure, I manually calculated 290.0 / 14.5 
+
+Assuming the table is MyISAM, you may also want to periodically shrink the table every month like this: 
+
+On the particular hardware I ran this on, your first expression is about 2.67 times faster. Give it a Try !!! 
+
+The third method is not possible because explicit DDL and DDL via Dynamic SQL are not allowed in MySQL Triggers. You may have to create a regular table using either the MyISAM or MEMORY storage engine. Then, you can have the trigger compile your data to a table that actually exists. MyISAM is better because should a server go down, the compiled data thus far is on disk. MEMORY tables are faster to write to, but are gone on system restart. DO NOT USE CREATE TEMPORARY TABLE AT ALL because such tables only last as long as the DB connection lives, and would be private unto the call of the trigger also. Even worse off, if you are using MySQL Replication and you run on the slave, any tables created via CREATE TEMPORARY TABLE disappears from the SQL Thread and replication breaks immediately when you run and those temp tables no longer exist. 
+
+From the look of the select query in the view SUGGESTION #1 : Don't use VIEWS Views are notorious for acting up with Query Optimization According to MySQL Documentation 
+
+You definitely have to script this via MySQL Stored Procedure Language Here is a Stored Function called to Retrieve a ParentID given an ID to Search For 
+
+are only visible from a textual viewpoint in You can learn more about it from the MySQL 5.1 Documentation MySQL 5.5+ offers some metadata for live transactions 
+
+Please perform this on a test server, look at the increased size of the new table and index. You can decide whether this table layout provides the data you want with tokens separated. Give it a Try !!! 
+
+The user permissions start getting shifted. Whenever you run , it is hardwired to expect columns in specfic places in mysql.user (given the fact that mysql.user is a MyISAM and its ROW_FORMAT is Dynamic (Default)). It is very easy to see a user suddenly lose permissions when you reload a MySQL 5.0 version of mysql.user into a MySQL 5.1 instance. In the future, should you ever decide to reload users into MySQL, try to dump the users to a text file using pt-show-grants rather than mysqldump. I actually wrote my own version of pt-show-grants as follows: 
+
+Step 03) Create a Stored Procedure to Copy all Slow Log entries whose db is areva into mysql.areva_log 
+
+CAVEAT If every table is InnoDB, MAS does not need to be shutdown at all. SL1 just needs a stable place to stop replication before copying to SL2. Give it a Try !!! UPDATE 2014-03-14 15:51 EDT If you are planning to use the Master (since you are moving the Master to another Data Center), here is some advice. 
+
+I find it interesting that Percona says that HandlerSocket is not that popular. In fact, it has bugs when writing operations interferes with open HANDLER structures. What I also find appalling is that the concept of the HandlerSocket (known back then as HANDLER goes way back to MySQL 4.0.3 for both MyISAM and InnoDB. There were only provisions for reading at that time. The basic usage of HANDLER is also in the book MySQL Reference Manual : Documentation From the Source, Section 6.4.2 Pages 512,513 (I have the book right here next to me) Question remains : What purpose does the HandlerSocket serve ??? Imagine Facebook engineers trying to read a value in a MyISAM table (Facebook hates MyISAM, BTW) that is heavily trafficked. We all know that MyISAM performs a full table lock for any DML or SELECT performed. What you wanted to do is adjust a single column in a specfic row in that table (via SQL) but you need to know that data right now before SELECT queries lock it down. Do you want to wade through the humongous number of DB Connections hitting the one table you need just to change a single value? You could bypass these waiting SELECTs with no locking using the HANDLER syntax. You can do the same to InnoDB tables and bypass MVCC (MultiVersioning Concurrecy Control) and row-level locks as well. Only in a high-traffic, high-read environment would you need to takes such a risk, especially if finding out data RIGHT NOW was the highest priority. If you really want to know what production environments actually use it, I would write Percona directly in the blogs begging for that answer. Since I have never seen coding examples with the HANDLER (today HandlerSocket) do things other than reading, it would only serve the purposes of big MySQL installations like Facebook. CAVEAT When you look at the syntax for opening tables, opening indexes and traversing rows, it resembles some programming languages I coded in back in the late 1980's. I am referring to the languages DBase, Clipper, FoxPro and Visual FoxPro. DBase was the grandfather of all these products. Now, before you start laughing and falling out of your chair, DBASE STILL EXISTS AND SO DOES VISUAL FOXPRO !!! I personally know one person that still codes in FoxPro and Visual FoxPro !!! OK, now you can fall out of your chair, crying in the fetal position. Still don't believe me ??? How about some sample code ??? Enough ranting on old data handling programming languages that resembles hierglyphics !!! 
+
+This will retrieve every column in the . You could then make this query generate the clauses for you as follows: 
+
+I will leave it to you to compare the PrefCount to your liking. I will also leave it to you to build the subquery for the Preferences you want. Give it a Try !!! 
+
+That's it !!! All the auto_increment stuff is handled for you !!! Please look over the sample code I mentioned. GIVE IT A TRY !!! 
+
+If would be a big mess to get MySQL to execute it as a query by giving MySQL the query with each column formulated. Perhaps you can get MySQL to concatenate the column values using GROUP_CONCAT. That function was designed for aggregation (or aggravation if you are the actual developer). You can take all the num values can display it as a column-separated listed of numbers like this: 
+
+The intervals for MySQL grants comes with different levels. You simply extract the grants from the mysql schema. Problem is: From which level do you need the extraction ??? You will need the following query to show you global, database, and table grants 
+
+I have found a clever way to do this query without a self join. I ran these commands in MySQL 5.5.8 for Windows and got the following results: 
+
+Please note what the MySQL Documentation on says about running on InnoDB tables, bulletpoint 7 under the heading CHECK TABLE Usage Notes for InnoDB Tables 
+
+is a reserved word, and so is You should surround reserved words with backquotes (`) if you use them as table or column names. Just to be on the safe side, surround all column names with backquotes 
+
+I performed a of this to the counts for a reason. Notice that the dataset has nothing in the range. Its count would not show up in the second query: 
+
+Since group_concat_max_len has a default of 1024, you may need do two more things to accommodate results longer that 1024 First, login to MySQL and run 
+
+Give it a Try !!! Caveat Please notice I call the COUNT once and subtract it from 456976 to speed up the count a little. 
+
+Based on these excerpts from the MySQL Documentation, I would like to suggest the following options: OPTION 1 Change your target table from MyISAM to InnoDB. This will eliminate the need to use INSERT DELAYED altogether. With InnoDB using MVCC for ACID compliance, the InnoDB log files will better protect data in the events of a crash via MySQL calling for InnoDB to do crash recovery. You will need to tune InnoDB accordingly. OPTION 2 If you cannot switch the table to InnoDB, you must go with extended INSERTs. However, you must adjust bulk_insert_buffer_size (its default is 8M) to a much larger to compensate using extended INSERT. Either way, you need to stop using like yesterday. 
+
+Running clears all relay logs and starts with a new one. You will be replicating from the Last Master BinLog Event (BinLog,Position) that executed on the Slave. Give it a Try !!! 
+
+There are two problems PROBLEM #1 The needs to be prefixed with PROBLEM #2 It needs to be a , not because you cannot change values in an trigger. Your code should read 
+
+Should any of these steps see the slightest intermittency, the RAID5 set enters a brief-but-annoying time warp. Multiply that by a huge number of writes and you will feel it in the database performance. Each of these steps could be a point of failure. Why? According to Wikipedia 
+
+STEP 02 : Configure InnoDB Settings for Multithreading and Caching If the DB Server has 8GB RAM, use the following settings in /etc/my.cnf 
+
+If, all of a sudden, you find yourself having to reverse the DB Server's roles (making the old Slave the new Master, and making the old Master the Slave), the requirement to define server-id and log-bin must also hold true. BTW a DB Server without server-id being set has a default value of 1. If server-id was define as 1 on the Master and the Slave did not have server-id defined, the Slave would also have had server-id being equal to 1. Activating the Slave as the new Master with any trace remnants of the old replication setup wmay have attempted to complete the processing of any remaining SQL entries in the relay logs. Those entries carried the server-id of 1. Bringing those entries over to a new machine without server-id define would have caused mysqld to complain about processing relay logs entries with the same server-id. Perhaps, someone forgot to define the server-id on the Slave before making it the new Master and trying to engage Replication afterwards. Adding server-id to my.cnf and a quick restart of mysqld would have eliminated this weird situation without giving it a second thought.

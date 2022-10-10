@@ -1,0 +1,69 @@
+Your question 2 is actually the correct answer, but doublecheck that you have: hosts: files dns in your /etc/nsswitch.conf just to be sure. generally external dns should be in your dns record, but in server1, files (which means /etc/hosts in this case) will take precedence and thus used to resolve the host to the internal ip, while the rest of internet will resolve the same hostname to the external ip. the usual practice though is to use an internal domain altogether if you have to use dns name (mydomain.local for example). 
+
+Are you concerned about the OS, the data, or both? If the only thing you change is data and data is in a separate data disk, say mounted on /home, then it would be the easiest. If the vmdk file is fairly small say only a few GB, you can just overwrite the older one with the new. For data, you can just power them up in the same subnet, and do an rsync with the update option. The upshot is it would depend on your detailed requirements. Actually I would also recommend simply put the vm in a usb stick and play it wherever you go. 
+
+Nowadays, I would not use too many separate mounts, but probably a few key ones would be helpful in system administration. Just 2 or 3, esp. with one that varies in size. This depends on what you are using. I would say just / (relatively stable) and /var (changing). Depending on the os and disk geometry, /boot may also be needed. /tmp is likely a tmpfs mount set up by the installer. The changing (/var mostly, but could be just /var/log and /var/lib/mysql etc.) volumes are usually what you need to worry about and plan for expansion. So if possible, use lvm etc. to make resizing easier. 
+
+it could be the poor connectivity. you might want to try mosh in this case. $URL$ not sure if there is an equivalent java ssh client, however, that will be more tolerant of lost packets, high jitter, etc. 
+
+which version of net-snmp you are using? you might have to upgrade your package. this MIB has inodes information: $URL$ 
+
+yes, by default nfs server has root_squash on which makes client access nobody:nogroup. you can turn that off (less security) if you want during the export. 
+
+if you root filesystem supports snapshot, you can take a snapshot, and copy the /bin files from the snapshot which should be copied to a partition (forgot you cannot mount it). otherwise, if you have a spare partition, you can use dd to copy the root partition there and get /bin files back that way. likely with an external usb drive. last, if you network works, you can just copy the command back from a similar system. 
+
+You can configure that either in the esxi console, or more likely using the vsphere client. Host -> Configuration -> Network, depending on whether it is for your host or for your vm network, or just add it to the network teaming. 
+
+install lshw in your system first. then sudo lshw and examine the output. look for the network sections. mac address is called serial: in the output. or you can look for Ethernet. the nics may not be called ethX (logical name) depending on your distribution, however. 
+
+Use tar instead of cat, and tar preserves mode as well if exec has x bit on. tar cf - ./exec | ssh user@server 'tar xf -; ./exec' 
+
+your configuration says: rotate 2 that means log files are rotated 2 times before being removed, so logrotate only cares about 2 files. my guess is that the configuration was changed at some point, because previously more log files were kept, maybe it was something like rotate 28. these older files you have to remove manually. 
+
+what eth device do you see? dmesg | grep eth will show you. was it renamed? if eth0 is available, sudo ethtool eth0 to see if it is really up. is the nic light on (most nics should have indicator lights) 
+
+use LOAD DATA INFILE is the complement of SELECT ... INTO OUTFILE. this should be much faster as there is no sql parsing involved. 
+
+different shells may have different syntaxes, but in bash we just do this: export TZ="/usr/share/zoneinfo/EST" go to that directory for a list of timezone names. 
+
+In that case, you are trying to access a raw disk (raw device, not raw device file), not a raw disk file as qemu calls it. Confusing terminology, I guess. Take a look at this: $URL$ Still it is not what you are looking for, most likely, but I am not sure esxi suports the actual raw disk file as used in kvm etc. You can try to convert these to vmdk with qemu-img however. 
+
+the limit is actually 127 or something like that so there is nothing to worry about that. however, if you are going to use them at the same time, you may run into some sort of limit elsewhere, such as your bus speed, etc., and you may not be able to sustain the throughput you are hoping for. i have use 4 at most in the past, so have no practical experience. 
+
+there is no universal way at all. using interactive/noninteractive shell detection or tty detection is not reliable either, as other cases than cron can have these characteristics. just add a variable in your cron entry. say you need to run test.sh, then use this instead. 
+
+to manage hundreds of servers you likely would be better off using some sort of configuration management tool such as puppet and chef, or ansible etc. you still would have to set it up once but you can do much more than just ssh later so it would likely be worthwhile, for instance when you want to update the ssh key, a single change in the puppet master (or equivalent in other CMs) would suffice. for security it is recommended that you change your key once in a while. 
+
+I think you are trying to delete f1 in sdcdir (what is its permissions?), not in testdir. That may be your problem. in this case f1 is owned by root and only has write permission set for the owner (root) and a user with uid not 0 will not be able to delete it. To delete a file, you must have both write and execute permission to its directory. 
+
+is your isp delegating your domain dns to you? to have your own server handling dns for your domain, they must delegate the dns for your domain to you. in that case, you have to give them the ip because your dns servers has not become resolvable yet before you set up your own dns servers at that point. otherwise there will be an infinite loop. these are called glue records and ips must be known to the party that delegates you the dns (your isp that is). either you or your isp have misunderstood something completely. in the latter case you should change the isp right away because they do not know what they are doing. in the former case, probably they are handling your domain in the first place and you don't need your dns servers in any case (though you can still set up forward or cache servers if you want). 
+
+Ubuntu by default does not use root so remote ssh login with root is disabled. You can set a root password and set PermitRootLogin to yes in sshd configuration to allow that, however, since ubuntu user has sudo All, it is really all you need. You must have a very good reason to make the change, really. 
+
+there is no known way of querying the config of a running sshd instance, i think, if you are referring the openssh server. depending on what you want to do, you could use the -t flag to test a configuration file to make sure that it is valid before restarting the server, so that you don't get kicked out, esp. if you do not have any out-of-band access to the server. 
+
+after you execute mount, the permission you see is the mounted directory, not the mounting point (directory) that you created. if you umount /mnt/foo successfully, you will see that the mounting point itself has not changed. therefore, if you want to preserve the same ownership after mounting the partition, you need to do a sudo chown desireduser /mnt/foo. 
+
+Grant FILE privilege to your mysql user that is importing the file, if the file is readable by the mysql user already. 
+
+uid is unix user id and if you do not specify, the system will generate one for you. User name actually is called full name, which is not used in login. Therefore only the login is required. The actual Esx or esxi server stores data like so jlogin:x:501:501:John Login:/home/jlogin:/bin/bash Here the first field is login, the third is uid, and the 5th is the user name. 
+
+that is cpu socket that you can put cpus in. so it means that you can have up to 4 cpus, though you can leave sockets empty and fewer. 
+
+You can set up some sort of software load balancer and put your actual server(s) behind the lb virtual ip. Then when the sites are down (if you have no redundancy), the vip can point to a downpage, which can be hosted by something really simple such a tiny instance of amazon ec2 spun up just for this purpose. This is much faster than dns change propagation. You can also automate the process. 
+
+if you have a windows ssh server installed, and the logged in user has administrator rights, yes you can: 
+
+iscsi itself does not support concurrent access to the same lun without causing corruption, unless you have a clustering filesystem. are you sure that your setup is even supported by freenas? since iscsi lun is a block device like a hard drive so you cannot realy have it in multiple client servers. nfs allows shared access, however. 
+
+As long as the user can write and create files in the directory with your log files, you can use another user. However, if your logrotate config is editable only by root, then I don't see much risk there. If someone can subvert that they can gain root and can cause far more harm than just messing up with log files, so the concerns, while certainly exist, do not really justify customizing a standard app such as logrotate. 
+
+this is the correct behavior indeed, as whatever comes after your page will be in PATH_INFO cgi variable used by server side scripting often. 
+
+would not that be the job of sudo? or you can look into jail or restricted/limited shell if sudo is not what you can use. 
+
+Likely the process is still holding the file space after the file is deleted. Trying to restart the suspected proceses. 
+
+df is file system usage which includes files, and other structures that support the files such as journal etc. du only shows the file size sum which will mostly be less. the difference will depend how long the filesystem has been in use, the filesystem itself, etc. 
+
+In centos, you can run this as root service httpd status it will tell you whether it is running, or even installed. if not installed, you need to install it yum install httpd configure and then service httpd start (chkconfig httpd on to make sure it starts automatically)

@@ -1,0 +1,75 @@
+should have a count of 6, and not 18. There are only 6 pairs with difference 0. The pair at index 0, and 1, is the same pair as index 1 and 0, so you can't double (or, for some reason triple) count them. This also applies to cases like: .... you have an input array of just a single element... but you have 1 pair with diff 0? Really??? There is one small performance improvement related to how far you need to iterate in the loop - you have: but that can be just since is always less than or equal to . This is particularly confusing if your input is negative. For some reason, and I can't explain it, I prefer and for those variable names too... seems not-quite-right, but I understand it anyway. Just a niggly thing. Additionally, there are a few places where I would do things in a more Java-8 way. Let's deal with the smaller items first... Small things Consider this code: 
+
+Note that all the methods are now static (there's no need for any instance data). The Coord class is static, and the row/col fields are final. I have put this all in to Ideone, and you can see the results there 
+
+When presented with problems like this it is common to decode/encode the input characters once, and store the decoded output in a structure that helps you on the presentation layer. First, though your control loops and input management... User Interaction I recommend you create a single class to encapsulate the Scanner instance that should only be created once, but which you create each time you need to get user input. A instance that allows you to query the user actions would be so much better. Consider: 
+
+Where does this function come from, what does it mean? As for the rest of the code, well done. (Oh, and I even quite like the Christmasy font!) 
+
+I am not sure there is a way to reduce the number of if-statements and nesting. What is possible though is to improve the performance of the conditions you have that check those conditions. The count(*) is inefficient. Consider adding a 'ROWNUM = 1' condition to your where clause in a way that makes the following conditions possible: 
+
+preserving input format is generally a good idea. it saves having to chomp every line it allows the data to be processed 1 line at a time, instead of batching it 
+
+I would normally return this as a raw array - I like arrays. It also makes it clear that it is a defensive copy of the data. If you want, though, you can wrap that array in a different format: 
+
+This is how I would do it (and I would use and not because having too many arguments is as bad as not having enough.... 
+
+In general I feel like you are trying to do too much in one class. There are two different parsing systems you have - parsing CSV to strings rows/fields, and then parsing some of them in to numbers. You should separate those two systems out in to discrete places - in the more complicated use-cases, you will guess wrong, and in the simpler cases, the programmer can easily implement the number parsing anyway. By conflating the two parse operations you have lost the value of the generic on the rows, and your API is a lot more complicated than it needs to be. This is a case-in-point, and illustrates all the bad things: 
+
+With the above you can enter up to 7 courses, and calculate the GPA. Note, all I did was extract repetitive code to a function, use a for-loop, and store the results in an array. 
+
+The above code only initializes the first position of the score 2D array, and the remaining cells in the array are left as null-characters. When those null-characters are printed in the : 
+
+Right, options gone... Filtering Let's look at the filtering now.... and, remember, in Go, functions are "first class" which means they can be a type, or variable. 
+
+Additionally, this is the only loop in your method. All the other code are simple array and pointer manipulations. This method can only be slow because of three reasons: 
+
+Conclusion Putting all the above together, I came up with a main method that inputs the solution constraints and handles a non-solution too: 
+
+I can't see a way to simplify the logic further, and easily keep it readable. The performance impact of the multiple boolean checks (even if the early ones set to false) will be small. There's no real reason to go to extraordinary lengths to prevent it. 
+
+In general, your locks follow the pattern (lock-try-finally-unlock) which is good, but, apart from that there is not enough context to determine whether it is right or not. There are some problems, like: 
+
+Now, I have tried to list why there are problems with this, but, it's easier to actually show you a different approach, and explain why it is better.... so, here's a different approach, which reverses the logic. First thing, we are going to make the interface a generic interface... why does it always have to return a String value for each URL? Also, why is it a ? It is not really a client, but it is a . This is not the full Client, but a part of what it does when it talks to the server.... so, let's rename the interface, and make it generic.... Also, while we are at it, you need to declare that you throw some form of exception... my preference is for a new checked exception type, but maybe you can borrow an existing exception. What you have is not best-practice. Here's a decent exception to throw: 
+
+Can't help but think that a trick with integer division and clever Card enum setup would help a lot: 
+
+Using a print in each loop will be slow. There's too many of them, and print's are inherently slow because they are IO bound, require locks and synchronization, etc. Additionally, looping for each possible factor is slow too. There are faster ways to identify the factors of a number, that's a whole other discussion though (Wikipedia has a great page). So, without altering your algorithm, I would still make changes. The first thing I would do is break out a function to compute an int-array of the factors. It would look something like: 
+
+OK, so, let's assume the person chooses an 8 char password you need to crack, and that it starts about half-way through your alphabet with a 'K'. That means you will have to calculate about... 3,000,000,000,000,000 passwords before you get to the right one.... Now, let's assume your browser is super fast (like in the scale of a super-computer), and can compute 1 billion passwords each second.... It will need 3,000,000 seconds to get to the right one.... which is.... about 5 weeks (not 2.5 years as originally stated). Now, your browser, if it is on an amazing PC, will be 1000 times slower.... so, the right way to crack this password this millennium, is to actually wait about 20 years, and then crack it then when computers are a few hundred times faster ;-) Note, I would not expect even the fastest PC to be able to get to 5char passwords using a single-threaded execution model, in the most optimal way, to check more than 1,000,000 passwords a second, which makes 5 char passwords more than 2 minutes away.... This is one of the joys about brute-force tactics, by the way, is that, in general, the fastest way to crack a brute-force password of reasonable length, is to do nothing.... and wait for technology to get faster... and then start later, and finish sooner. Alternate algorithm Using recursion would be a natural way to solve the general problem of checking all solutions, but it has the problem that it checks all solutions in the wrong order (typically it solves the longest passwords first.... which would be counter-intuitive to check a bunch of 8-char passwords before you check all 7 char passwords. So, you are left with just making the current system faster... and, that's a somewhat fruitless problem, because even halving the time would not be meaningful in most cases. This leads on to multi-threading, which is the fastest way to accelerate the problem, but I am not sure this is available on your browser. 
+
+Note how the IOException is still thrown out the main method, but also note that I am using the try-with-resource options for a try-block to ensure the files/streams are closed. The above code does not strip any line-terminators, and writes the output with the same termination as the input. 
+
+That's the safe way to create it in a way that's not going to have race conditions. Note that uses the value in (if set) as the location in which to create the folder, so it will use whatver value you have set in the code before running 
+
+and you can delete the sortTopImpl method entirely. Note that the bucket-constants are all based off the one size, and the rest is calculated from that. You should be able to easily change the bucket size by just changing that one constant. Additionally, just so long as the merge-sort threshold is larger than a bucket-size, then there is no need to check for the limit on the depth of recursion.... 
+
+There are a number of things to comment on here. Mostly related to style, not functionality. I don't see any obvious bugs, so that is good. The Iterator is poorly named. It is too close to , which is not what this is. I would recommend something simpler like . Speaking of the ListItr, it bugs me that you use the size of the List as the limiting factor in the . It should be a simple . You have what looks like a working implementation on the ListItr, but you don't seem to test it at all. I would recommend not implementing functionality you do not use, or do not test. A simple is appropriate. Back to the call. I am not fussed with the reverse() being 'in place'. I think that is fine. What I don't like is the poor support for the empty-list reverse(). Why is it OK to throw when: 
+
+you are throwing away all stack traces.... you do not report them! Why? you have different forms of exception naming in your handlers. Two of them call the exception . The third is called . Use meaningful names, or use consistent names. The mix is.... mixed up. Calling is ... poor. If you have the Log available, it should at least be a warning! Also, you should pass the full exception to the Log, and log the full trace. Finally, you do not have a space between the 'data' and the in the output... should be When there is an exception, you should help the user by indicating what data was causing the exception. In this case, the errors/dialogs should contain since that was the source of the problem. Since you have the log, not only should you be outputting the exception message for the URL formats to the Display, but also to the Log. 
+
+you initialize your class with an empty but then you throw it away and replace it with the from()'s argument. Any changes outside your class to that (bad name) will now also be reflected in your class. For example, you may sort your collection, but then someone can add stuff out of order..... You should be copying the collection content, not the actual reference: 
+
+There are a lot of things to cover here.... but, some forewarning, you have completely over-thought this problem.... and your algorithm is far from 'the right one'. Given that I am suggesting that the algorithm is overkill, there are two things I can do: 
+
+Reviewing this code is essentially meaningless without a ream of test data to compare against.... and it would be really nice to have a debugger! The REVERSE operations make keeping track of the data state quite complicated. In general though, the code is formatted well, though there are a couple of issues: 
+
+Note how the limit is not initialized here, but in the constructor. Hmm, why use when you can use the personality of ? It should be: 
+
+That produces the right results, but I recommend expressing the as to make the implicit conversions absolutely clear. I have seen too many times when bugs were introduced by integer arithmetic when floating-point was expected. Bottom line, I would expect your program to look like: 
+
+Bug You do not handle the condition where a duplicate value is inserted, you just ignore it. Forced Replace Each level of the recursion, you force the node to change children (normally to the child it was before. I would change that part of the recursion to .. oh, by making the change I would make, it simplifies much of the method.... 
+
+Now your algorithm becomes \$O(n \log m)\$ if there are lots of common values, or, at worst case, \$O(nm)\$... which is what you have, if each value is unique. The unique values in the input matrix will be the first values in Of course, a better solution would probably be a set, but since you can only use arrays..... 
+
+Then, if you have two hands, and they select a random 'hand' from the three options Rock, Scissors, Paper.... then, you can find the first index of the first hand's value in the size-4 array above.... then if the next value is the opponent's hand, you win. If it is the same as your hand, it's a draw. Otherwise it's a loss. 
+
+The above code still checks each letter, but only does it once. It is smart about the indices, so you only compare previous letters with the current, and it does half the comparisons. Also, by using a starting offset of 1, and a comparison on the loop, you never compare the character against itself. For smallish strings (less than 100 characters or so), this \$O(n^2)\$ algorithm, using no additional space (other than the variable), will be very fast still. 
+
+The above splits the input in to words based on punctuation and the _ character, then it takes each non-empty word, and splits it again at CamelCase transitions. It accumulates the results in a List, and returns that. 
+
+Note that you get a lot of duplication of values because you allow overlapping points. This appears to be a requirement of yours. Still, for example, by design, you will get 24 identical results each with the segments: If you want to reduce the results to unique solutions only, then it is a relatively trivial adjustment to the way the array is managed.... (relatively). So, with all those caveats, here is some working code: 
+
+A further vulnerability is that you leak the lock's monitor. Using synchronized methods is a problem, because someone can simply synchronize on your whole class, and deadlock the entire system.... Consider a thread that maliciously does: 
+
+You should not be manually counting references. Instead, you should be letting the garbage collector do the reference management for you, and then hook in to the garbage collection framework when the reference is cleared in Java. The right tool for the job is the method. This often-misused method, is actually purpose-designed for this exact case:

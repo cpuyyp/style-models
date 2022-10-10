@@ -1,0 +1,63 @@
+Personally I would move memory management from MyDS into the tree structure (disable the assignment and copy constructor just to remove the possibility of incorrect usage. Add a constructor that moves the data into the tree. 
+
+Though a lot of compilers support this as an extension, its not technically part of the standard and thus best avoided in preference of using . Memoization ie. storing the intermediate values. This is not really useful or efficient unless you plan on re-using the values. If you are simply using them to calculate the next value then you could potentially just use two variables (the previous two values. 
+
+There is currently no error checking to validate that this is valid UTF-8. If this is deliberate it should be documented. You are testing the 1's at the top of a UTF-8 encoded string. But not correctly validating the trailing 0. 
+
+Think of a 2 * 2 matrix. This is located at so one past the end is at but your function returns . device_matrix You break the rule of three. You have an owned memory resource. But you don't define the correct copy semantics. Thus you will have multiple calls to when copied objects go out of scope. You should use a shared pointer and define the destructor just like you did in . class device_matrix { private: std::shared_ptr _data_pointer; std::shared_ptr> _matrix; const size_t _width; const size_t _height; 
+
+This does not save you from overflow. I would rather keep the types the same for input and output. If I pass you a vector of int I expect the answer to be an int. Your current implementation violates the rule of least surprise. This is how I would do it: 
+
+This is where your class is horrible. It is basically the most unfriendly container class I have seen and can not be used with any of the standard algorithms, which makes it practically unusable. 
+
+You can see the type at the point where you are using the variable. When an object has a constructor/destructor they are only being run at the point where they need to. If you exit early then the constructor is not even run. 
+
+Use std::unique_ptr to encapsulate the pointer object so that it does correct memory management. If you are doing things correctly the resulting code optimizes to a no-op and if you don't do things correctly it saves your ass. In fact I would just throw away your string classes and use std::string. The copy construction from a return is nearly always elided by NRVO and thus is much more efficient than you seem to think. Same Again 
+
+Don't know what that gives you. Note: an named r-value reference is treated liked an r-value when passed as a parameter (because it is named). You would still need to call on it to make it bind to the r-value reference function. 
+
+Every time you call you create a new shared pointer using a RAW pointer. None of these shared pointers know about each other. When creating shared pointers you need (must) create them using another shared pointer (otherwise they each individually own the pointer). i.e. Once you put a RAW pointer into a shared_pointer you should never use that pointer again (it is owned by the shared pointer) you should only use it via the owning shared pointer (or another shared pointer created from the original shared pointer (as they all share ownership)). If you want to use shared pointers you need to do it more like this: 
+
+Why not just return ? I personally don't like interfaces that take pointers. There is no ownership semantics associated with the pointer and thus people can mistakenly provide the wrong type of pointer (ie a dynamically allocated one in this case). So I would change the interface to be this guarantees the correct semantics are used (and you can still use the string literal). This also jibes with the (and family) which all accept a for the constructor. 
+
+The more standard way is to use `iterators. Pass the begin and end of a section as the parameters. Remember that iterators behave like pointers so it is still relatively easy to write your code with them. You don't need to write everything from scratch: 
+
+In C I would expect to see a pointer and a size. In C++ I would expect to see two iterators (like above), but generally the end point is usually one past the end (if you want to be consistent with C++ idioms and the STL way of doing things). 
+
+In Json strings characters can be escaped with . Here is an iterator that can read such strings and convert the escaped characters to UTF-8 
+
+For A: This means zero or more digits. Thats fine. For B: Thats zero or one digit followed by zero or more digits. So the following is a valid number I believe you meant: 
+
+So you have a bunch of different factories that all implement the same interface. But how do you know which one you should use. A common way is for a single creation point. Just ask the system it will create one for the lifetime of the application. 
+
+All the nodes were allocated with new. Does your list use sentinels? (not at the moment see below). (Sure I could come up with more). 
+
+This is a ligitamate solution for a wide sub-set of tasks. But I don't think it applies to to your vector expample. As a user of a vector I would expect to be able to copy it. Solution two Take the time to create a copy. 
+
+I added unit tests to my code above (after adding most of @Deduplicator suggestions. This discovered a few more issues: The can fail leaving the object in an invalid state (Especially after fixing that spurious return). 
+
+Every item we push on the front you have to move all the elements up one place. The whole point of a deque (double ended queue) is that pushes to the front moves the beginning of the queue back (so you move move the "beginning" you don't move the other elements). Think of it as a block of memory 
+
+Personally I would implement this as an object (all the data internal to the object). Then call a method on the object to activate the new thread. This way nobody else can mess around with my data structures. 
+
+This is an indication that you can go backwards and forwards with the iterator. In fact the concept means that your iterator must also support are well as . See: $URL$ The link you provide indicates that a square list is circular. So moving forward all the time you may never reach the end. But without understanding (or seeing your implementation) it is hard to tell if the current implementation will work. 
+
+If something satisfies the alignments for a larger alignment. Then it automatically satisfies alignment requirements for smaller values. Thus if memory is aligned for an object of size . Then it is also correctly aligned for objects that are smaller than 'N'. 18.6.1.1 Single-object forms [new.delete.single] 
+
+This is a follow on to a previous question: Part 3: User Scripts All the code I am submitting here is available in github 
+
+See Why is “using namespace std” considered bad practice?. There is a reason the standard namespace is called and not . Its so that using the prefix is not that much of a burden. Global variables are a code smell. Don't use them. 
+
+We can also see that the calculation of wrap is overkill. All variables are unsigned and bits that fall of the top are lost. 
+
+Also note the use of rather than . The adds a "\n" to the stream but then also calls flush. This is hardly ever what you actually want to do. Let the stream flush itself it makes it much more efficient to do so. In your loops get used to use to loop over containers. They are much more versatile and apply to all containers. Also you can pass them to functions very easily and they allow you to specify sub-ranges very trivially (event the uses iterators underneath). How I would do it. First note that the output does not depend on previous values. You could cache them for speedy look-up but that seems overkill for such a simple algorithm. So there is no need to store the data in a vector. 
+
+Unless you need to change these I would not. This means adding values to the existing variables. Something like this (untested): 
+
+Anyway. You now have three objects that all container a pointer to Tile (the same pointer). When each goes out of scope there destructor will call delete on the same pointer. 
+
+Sorry that function is big and clumsy and hard to read. It also does not provide the strong exception guarantee. You modify the content of this object doing exception dangerous work (call destroy) before updating the content of this object. To do any work in exception safe way you need to follow a three step processes. 
+
+Compile Time Vs Runtime Time This test is a classic example of when to perform compile time test and plant the correct code using templates rather than a run-time test. 
+
+Anybody that uses your header file now implicitly pulls vector/list into the global namespace. This can have undesirable effects with name resolution. Don't do this in a header file. If you must be lazy then use scope so you are not forcing your requirements onto others. There is always a typedef to make things easier. Comments (or well named members) would be an idea.

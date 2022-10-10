@@ -1,0 +1,73 @@
+I notice that you provide both and . First of all, why and not ? Second, have you considered whether the correct signature might be just a single overload ? Your structure could arguably be viewed as a handle referring to the buffer; fetching a mutable reference to the object stored in the buffer can be done without modifying the structure itself. Food for thought, maybe. 
+
+Writing from scratch is left as an exercise for the reader, but the trivial C++17 implementation is just this: 
+
+Or if you're really worried about holding the mutex for some reason, then check again after taking the lock but before going to sleep: 
+
+to save a copy. (Yes, this will in fact do the efficient thing: see overload #11 on the cppreference page.) And you certainly don't need to make a copy of when you assign it to ! Replace that vector copy with a quick vector move: 
+
+Your condition variables have mildly confusing names, IMO. Is the thing I should wait on when the queue is full? Or is it the thing that gets notified when the queue is full? A little thought shows that it must be the former; but I don't like thinking, even a little bit. :) 
+
+This creates a global variable (so, you know, don't do that) — and it creates the global variable in every .cpp file that imports this header file. So unless you only have one .cpp file in your project, you're going to get linker errors when you try to link your project. What you wanted to do was put this variable definition in a .cpp file and put a declaration of it (using ) in your .hpp file. Alternatively, as of C++17, you could have made it an variable: 
+
+Nice to see you again! :) As with your deque from last time, I think your coding style is very good but the actual design is a bit questionable. (Less so than last time, though.) Consider: 
+
+That is, your code is equivalent to providing two overloads of , plus a couple of mutually exclusive templates (one for integral types and one for other types). The specific overloads for and will take precedence over the templates. 
+
+At first glance this seems nice and straightforward... it looks like you're using a classical-OOP class hierarchy where a is-a , which means you have to use heap allocation and s all over the place. Now, I personally don't like classical-OOP style in C++ (because it requires all that heap allocation), but sure, as a learning exercise, go for it. Your use of is indeed correct, as far as that goes. However, I would expect a good programmer to write 
+
+And since you mentioned pickling: it doesn't work for me, even with a not-incomplete instance. I'm guessing you have a more recent Python version, maybe? I'm on 2.7.10. 
+
+The use of is traditionally reserved for macros; for a plain old variable I would use , and for an enum I might use any of , , or depending on the rest of the codebase. 
+
+Nit on your posted code: At one point you . Wouldn't it make more sense to instead, if that code is never supposed to be instantiated at all? Or is it really okay to instantiate it as long as it's never called? 
+
+A cool thing about delta swaps — besides how efficient they are — is that to get the inverse permutation (a.k.a. "rotate left around x axis"), all you have to do is invert the order of the swaps! (Swaps that don't interact with each other don't have to be inverted. I found it aesthetically pleasing to keep such swaps in decreasing order of shift value.) 
+
+Stop! I'm pretty sure this is one of your bugs. You're saying, "Carefully load a value from into a register named . Then, without any kind of synchronization, compute and fetch the stored at that memory address." If two different threads do this at once... well, it's actually okay so far because both of them are reading, not writing. But one of them will succeed. That thread (call it Thread A) will update the value stored in , and then return reinterpret_casted to a . Return it to the caller, who can do absolutely anything with that pointer, including write through it. So now we have a data race: in Thread A, we've returned the pointer to our caller and our caller is writing to that memory, while simultaneously in Thread B, we're attempting to read from without synchronization. Undefined behavior and boom. 
+
+As for using STL algorithms: yes, I bet there are several places in this code where STL algorithms would be useful. That -loop that just reduces two sequences with respect to seems like a good candidate for , for example; and I didn't write for you, but I bet it's a two-liner with the appropriate STL algorithm. (Look up and to get started.) However, the resulting code is extremely unlikely to be any clearer than the naive -loop-based version, and probably harder to maintain.. So take STL algorithms with a grain of salt. Everyone knows that debugging is twice as hard as writing a program in the first place. So if you're as clever as you can be when you write it, how will you ever debug it? 
+
+You wrote where I would write — I use plural names for parameter packs, and recommend everyone else do so too. (And as for over — it's just shorter.) 
+
+Here we're assigning (an ) to (a ). This isn't going to do what we wanted! ...Or rather, it is, but only via a very bizarre path. Here means , which because of the elsewhere in the function, means "do only 1 iteration". So this semantically means ! The ultimate effect of all this spaghetti code is to make it so that if the user accidentally passes in a null pointer — 
+
+Your use of global variables (lots of them) is a problem. Try to move them into the scopes of the functions that use them, instead of exposing them to the entire program. Again I spent a few seconds staring at a line of code wondering if something was missing: 
+
+Two things obviously wrong with it: One, it returns a -qualified object — that's always wrong, because it disables move semantics. Two, the name of the method is , plural, but the thing it's actually getting is spelled , singular. Pick one name and stick to it! The third thing wrong with this method is that it returns a potentially expensive vector by copy instead of by reference. The fourth thing arguably wrong with it is that it returns the whole vector, but the only place you actually use this function, you want to fetch only a single element from the vector. 
+
+Since you're trying to make this fully generic: note that is going to be inefficient for a lot of iterator types. If you were writing this for a popular library, you'd write 
+
+is just a waste of characters. (The definition of is important because you have to hang the specifier on it; but the definition of is perfectly redundant.) 
+
+Seems short enough to me. It's impossible to know how to refactor any code without first knowing what it is supposed to do. All we know about this no-op function is that you "want [to] exclude several type[s] like void or char". How many types? Which types? Why? 
+
+In fact, I'd prefer to go further, and say that you shouldn't be using C++'s native "conversion" mechanisms for this kind of conversion at all. IMO you should write a user-defined function, along the lines of or , that does precisely and explicitly what you want. 
+
+fails, because the template expects its parameters in the unusual order "destination-type, operands" instead of the usual "operands, destination-type" (cf. , Concepts Lite syntax, function declaration syntax). I strongly recommend reversing the order of the operands. Plus, if you do that, you can collapse the versions into the other ones: . "Has an convertible to bool" is not quite the same notion semantically as "Has an "; but the difference only shows up in fully generic contexts. Another option (requiring even more metaprogramming, sadly) is to special-case as meaning "has of any type". (I say "requires more metaprogramming" because for some reason is usually false.) 
+
+traditionally means "don't copy the value, just reseat the pointer to point to the same heap object as ", then your use of will seem perfectly natural. To me it seems confusing; I'd rather write . 
+
+but in C++11 you can't make a function-that-returns-a-naked-lambda without a ton of boilerplate — if it's even possible at all. 
+
+On to your routine. ...Which is a problem, because you should have written a couple more helper functions instead of cramming everything into . Your code's flow here is: make a sequence of Fahrenheit , then print them out in a formatted table with their Celsius values. This is fine; but your table-formatting logic gets in the way of understanding the basic flow of your program. Let's split that out into a function whose single responsibility is to format the sequences it's given into a table. Perhaps something like this: 
+
+In the signed version, your use of is a red flag. is never appropriate in generic code. For one thing, if is some clever fixed-point type, won't compile; what you meant is more like 
+
+Your second program is also silly in that it uses a loop instead of a loop, even though you have all three pieces of a for-loop (initialization, condition, and increment) in close proximity. Why didn't you use a loop? Just for practice with different kinds of loops? In that case, I'd dock you points for not using a - loop! ;) 
+
+(I've already taken the liberty of normalizing your indentation style. My editor window's vertical space is valuable; don't waste it!) Here, I think you've put the verbosity in the wrong place. I would have pulled out that confusing and ultimately "skim-over-able" type into a typedef, and collapsed all the value-space logic into a single line. 
+
+Your C++ code could definitely be cleaned up by removing a lot of its blank lines and premature declarations; for example, there's no need to put a blank line in between every pair of declarations, and there's no need to pre-declare outside the for-loop. Just tightening up the style (whitespace and such) will go a long way toward readability. 
+
+Furthermore, once I saw what you were trying to do, it was apparent that wouldn't be good enough either. Try the expression ... can you figure out why it crashes? 
+
+First nit: and strike me as basically synonymous. So it's kind of confusing that you're using both of them as identifiers in your program. Are these identifiers supposed to be meaningful, or are they just placeholders like or ? 
+
+That is, needs to take a parameter that tells it the size of the array you want. Compare this API to in C++; it should look very very similar. 
+
+Now there's only two lookups. — You might say "only one lookup", but look again and notice (as I missed the first time I wrote this code) that is only ever called with as the hint! So using here is exactly as inefficient as using unhinted . A really good static analysis tool might have caught this bug of mine. So let's do this instead: 
+
+I don't think the code is so "unpleasant" to read as CodeGorilla suggested; but it could definitely be improved by some minor reformatting. I strongly suggest putting a blank line between each pair of member function definitions: that is, not 
+
+For more on and what it means exactly (and why it's the proper default when you don't care about the details), see Stephan T. Lavavej's N3994 "Ranged For Loops: The Next Generation". Basically, it'll make a reference with the proper degree of constness and rvalueness for whatever the thing is that you're trying to iterate over. or would also work in this case, but not necessarily in all cases. The big thing in this case is to stay away from reference-less , because that makes copies.

@@ -1,0 +1,99 @@
+So, you would have a TRIE with a maximum height of 10. Starting at the root of the TRIE, if you have the number 4294967295, you traverse branches 4,2,9,4,9,6,7,2,9, and 5. At each branch, you would perform an array-styled binary search. If the branch located at that TRIE node is an exact match, you can assign a percentage to that level, and recursively walk down that branch to check for the next digit and return percentages from deeper TRIE nodes to add to the percentage you have at the currently searched TRIE node. If the branch located at that TRIE node is NOT an exact match, you stop your recursive search there and return either 0 or some other percentage you may want to designate. Given the sum of return values from all searched TRIE nodes, you may want to sum up the percentages and divide that answer by the length of the string. In other words, Pct per Node = (1 / (Number of TRIE nodes that need to be searched)) or Zero(0). Sum(Pct) = (Number of TRIE nodes exactly matched) / (Number of TRIE nodes that need to be searched [length of the string being searched]). Given the length of the numberic field you store, you have O(log n) due to field length. For each TRIE node, you have O(log n) for searching for the proper branch. Overall, your search should have O(log (log n)) search time. This performance stands out ever more if the field is alphanumeric. Assuming using only ASCII, each TRIE node would have 256 branches. The height of the TRIE would depend on the length of the character field. Representing this TRIE for variable-length strings would produce TRIE nodes that would be very sparse, but quickly searchable nonetheless. Regardless what database you use, carefuly plan the data types you will be using to represent the TRIE node. You may also want to partition the table so that strings of length n terminate in partition n. Thus, you will have O(log n) search time at each partition. $URL$ $URL$ $URL$ $URL$ 
+
+You could switch to and deal with it as a Table to Query. STEP 01) Convert mysql.slow_log from CSV to MyISAM 
+
+I just noticed that you are at the Windows Command Line. You are trying to launch MySQL. You cannot start MySQL because you are not an Administrator. Please Open as an Administrator. Then, you can run 
+
+From my standpoint, you may have potentially introduced data drift into replication. Baron Schwartz presented this as a puzzle in his blog. You may have to reload and with fresh data. At the very least, you should use pt-table-checksum to see if 
+
+This will help speed up the query in STEP01 As for locking the table during this process, I would need to see the table structure. I have an idea concerning using the DB Connection ID. It goes something like this: Add a column called to table and index it 
+
+That's it !!! Make sure you set the IP Address for and By the way, don't worry about the in the master_log_file parameter for . Line 29 of the dump file should have the correct setting there due to the . You can see it by doing this to the dump file 
+
+@John.Locke's answer hits the nail on the head. +1 on your answer. @DTest's comment confirmed it. +1 on your comment. Here is how to get around it: Step 01) Create an empty stopword list 
+
+Smaller datatypes, especially for JOIN keys, will make the same query go faster. If the fields will not exceed , use for even smaller columns. OPTION #2 : Use a Bigger Join Buffer Add this to 
+
+Based on this, you could run mysqld on a Storage Node if the dataset is small. You are not obligated to do so. It is preferable if you had a separate Storage Node and a separate SQL node. If you have separate Storage and SQL nodes, then do not run mysqld on the Storage Node. 
+
+With foreign_key_checks, it is session scope only. Further proof of this is when you go to the command line and run this 
+
+If you do not trust , there is an alternative where you can manifest the new Name values before inserting them: 
+
+Of course, you don't want downtime if the 10TB of data is on a standalone machine. DELAYED REPLICA SET If you have a replica set with three nodes, use one of the nodes for backups 
+
+SUGGESTION If the table has barely 1000 rows, you could manually compress it and force to have MAX(id) each time. Suppose the table looks something like this: 
+
+That way going forward, you can maintain the name_country table in such a way that name and country do not have to be 1 id apart in the original table. You could freely enter names in bulk. Then later on, attach the country values. Once you can create a name_country table, you could then do joins like this: 
+
+Depending on the environment, you may not need all four options. Perhaps setting innodb_fast_shutdown to 2 is better than 0. Maybe the default setting for innodb_max_dirty_pages_pct is fine if you have low-write activity. In any case, test which options help your shutdown and startup concerns. Keep in mind that innodb_buffer_pool_load_at_startup and innodb_buffer_pool_dump_at_shutdown are for MySQL 5.6. Therefore, check to see if the version of Percona Server you are using has those two options. Give it a Try !!! 
+
+Seconds_Behind_Master is based on the difference between UNIX_TIMESTAMP() and the timestamp logged for the query within the binary log of the master, or the relay log on the slave. Seconds_Behind_Master actually gets you lost in context of realtime if replication processes a series of long running queries. The lag could grow astronomically until all relay log entries are processed and then Seconds_Behind_Master will suddenly drop to zero. In terms of realtime, you have no way to knowing or anticipating when the lag will eventaully dissipate until it hits zero. Strictly using mysql, you can monitor replication lag in terms of realtime in the following manner: 
+
+The second bulletpoint is what you want because it will show how heavy handed MySQL is at opening partitions,... or not. 
+
+It will be handled immediately on mysql startup. You do not have to wait for a mysql restart. First, set to be 10 in /etc/my.cnf 
+
+When it comes to a MyISAM table, deleting rows does trigger a kind of garbage collection in that all the unused space is recording in a linked list. The data length you saw is correct. Your cron job deleted every row less than . This will not cause the table to shrink. All the delete rows are just chained together. THere are other options you could have chosen to shrink the table: 
+
+Get the output of date +"%s.%N" from the OS on the master UPDATE replagdb.replagtb SET tmstmp = numberFromStep1; 
+
+Sorting ranks vs sorting points could be just a matter of preference. However, there is something to consider. If you rank by top 10,000 or 20,000, rank should be a SMALLINT. If the points is also SMALLINT (< 65536 or 64K), then either index/query scenario is fine. However, if points can go beyond 64K and need INT, then go with indexing the rank and dynamically assign the rank. I would also store rank and point together in the same table to avoid the need to do JOINs. It already has a full plate doing sorts via the index on the points/rank. 
+
+For MyISAM, I would say yes because a MyISAM table keeps its total row count in its header. Inserting a row into a MyISAM would consequently impose an additional write to the table header to update the row count. For InnoDB, the disk writing activity to a table is delayed until row changes have to traveled throughout the InnoDB Plumbing as shown in this Pictorial Representation from Vadim Tkachenko (Percona CTO) 
+
+The two CSV tables are the slow log and error log, should your change log_output to FILE. The 5 InnoDB tables were introduced to support crash-safe replication (See Documentation on this). It does not stop there. MySQL 5.7 introduced more InnoDB tables. 
+
+If you mainly have MyISAM tables, you should increase the bulk insert buffer. Here is what the MySQL Documentation says on setting bulk_insert_buffer_size: 
+
+It is an attempt to store a 2-byte string into one byte Since the maximum length of TEXT is 65535, it can safely hold 32767 (65536/2 - 1) 2-byte characters without an error message. Any attempt to add 32768 2-byte characters will result in because the 32768th character does not have the room to be inserted into mycol. In reality, you do not get a malformed character. You really can a TEXT field whose 2-byte character count and length is 32767. The last character is simply lost and not considered . To make sure, run this 
+
+DISCLAIMER : Never Learned Relational Algebra but it looks interesting From the schema given and your question, this is what the SQL should be: 
+
+The user permissions start getting shifted. Whenever you run , it is hardwired to expect columns in specfic places in mysql.user (given the fact that mysql.user is a MyISAM and its ROW_FORMAT is Dynamic (Default)). It is very easy to see a user suddenly lose permissions when you reload a MySQL 5.0 version of mysql.user into a MySQL 5.1 instance. In the future, should you ever decide to reload users into MySQL, try to dump the users to a text file using pt-show-grants rather than mysqldump. I actually wrote my own version of pt-show-grants as follows: 
+
+Then, you can walk away feeling OK (you could actually logout on purpose at this point) because process 1 () will pick up the process ID that is running the mysql session upon the SSH session termination (voluntary or involuntary) because it was suddenly orphaned (What a great dad !!!). 
+
+If you look at the code, there is nothing monitoring the tree height or any particular level. To compensate, I have a revised version of this code 
+
+What is interesting to note is someone actually narrowed down the page cleaner issue with regards to the InnoDB Buffer Pool instances. The post was written back in November 2016 (MySQL InnoDB page_cleaner settings might not be optimal) That post mentions something from the MySQL 5.7 Documentation on innodb_page_cleaners. Here is the full first paragraph: 
+
+If you see DB Connections coming in from the Apache Servers, CONGRATULATIONS you have manually performed a failover. UPDATE 2012-09-19 14:28 EDT If you cannot use a DBVIP, you must do more work instead STEP 01) Activate Binary Logging on the Slave Add this to /etc/my.cnf on the Slave 
+
+If > 0, then the DB Server can be used as a Master. Ask your sysadmins or DBAs if there are any active or dormant Slaves. If = 0, then the DB Server is standalone. You could then just delete all or some of your binlogs using these methods: METHOD #1 
+
+If you know the exact IP of the incoming MySQL users, you can do the following Suppose the user is called and the incoming user's IP is . From what you are saying, there should be a MySQL user within called . You cansee that user by running this query 
+
+It is possible to create a partitioned table without a . Someone years ago posted this in their question: 
+
+will deep dive into things like InnoDB internals and binlog format and the source code involved, but is very silent about grants (only mentioning the source code filename on pages 6 and 11). The source code in that link is for MySQL 5.5. You could just get the source code for the latest version of MySQL 5.5 and play with it. I wish you well on your endeavor. I hope you never try to upgrade to 5.6, 5.7, or 8.0 because you will have to repeat your coding adventure for those versions. 
+
+The only thing that you can do is this: ServerB must become a slave to ServerA Let's assume the following 
+
+The mysql_upgrade program tries to realign the mysql.user table with latest grants for that MySQL Major Release. Since you only did a minor upgrade (5.1.30 -> 5.1.47) the mysql_upgrade was needless. The grant tables for the Slave have no bearing on Replication since the Slave has to authenticate back at the Master. Fixing MySQL Replication is just a case of repointing replication from the last know executable position and starting from there. Here is how you do this: Run and choose the following two fields 
+
+Your bulk insert buffer is 4G. That's great ... FOR MyISAM !!! InnoDB does not use the bulk insert buffer. You may need to have sqlalchemy throttle the calls into multiple transactions. You may also want to disable innodb_change_buffering, setting it to . Unfortunately, you cannot do . If you dom you may need to set it in my.cnf and restart mysql. UPDATE 2012-07-13 16:53 EDT I just noticed that you have two values in the my.cnf for . First one is 2385M, and the last one is 14G. If MySQL for Windows accepted 14G and you only have 12G of RAM, your server must be having a good old time swapping. You can verify what the buffer pool size is with 
+
+This creates an SQL script to drop the table, create the table , insert data into the table, and index it. Give it a Try !!! UPDATE 2014-02-06 14:04 EST SUGGESTION Change from this 
+
+This method may be better since it only operates on the table id. Please look over both methods. Try testing it on test databases with copies of the data before running anything. If you want to keep the last occurrence of duplicates, replace with . Give it a Try !!! 
+
+After making the index I suggested, you should run the explain plan against this query and your original query. Then, select the best explain plan or the fastest running query. Chances are, you first query should be adequate because it has "less noise" to deal with in the Query Optimizer. BTW I use LEFT JOIN because the id value will stay in the order is was made from the subquery. Doing INNER JOIN will do an inadvertent reorder of the keys. 
+
+That should regenerate the index pages for the MyISAM. Just to be safe (if using MySQL 5.6), run this after the repair 
+
+The is the user defined to execute MySQL Replication. There are two DB Connections dedicated to performing MySQL Replication 
+
+The folder is the correct location for . There are two possible reasons 1400 shows up as table_definition_cache. REASON #1 You did not restart mysql. Login to Windows DOS command line as Administrator and run 
+
+Here is what the Stored Function Does: It first creates a period separated list of Unique UserIDs from the Refactored Query called UserID_CSV using the GROUP_CONCAT function. An extra period is prepended and appended to UserID_CSV. It then creates another variable called UserID_Tag which has a string contains the GivenUserID surrounded by periods. I then use the LOCATE function to get the index position of the UserID_Tag as located in UserID_CSV. If LOCATE returns 0, function returns 0. Otherwise, it returns 1. Give it a Try !!! (@DTest, +1 for suggesting the Stored Function) UPDATE 2011-05-28 18:00 I find your error unusual since I create the storted procedure in MySQL Query Browser with no compiler errors. I changed the code to put the UNION queries in another subquery. Try it again, please !!! UPDATE 2011-05-28 17:52 I have an alternate solution via the stored procedure. I eliminated the use of UNION and piled up unique ids in a temp table: 
+
+in the session or put in the init-file option file. This may still not produce the effect you want since everything goes back to default settings upon connection termination. UPDATE 2013-02-28 15:40 EST If you are looking for a startup option for my.cnf to affect the client, try this: 
+
+I used your sample data from the question, loaded it into MySQL 5.5.15 on my laptop, and ran those two lines. Here is the result: 
+
+WARNING : Practice this on a Staging Server, Please. SUGGESTION All the mt_sms tables should have an index on 
+
+Based on this, you should explicitly run LOCK TABLES on the view. The locks are performed on all the underlying tables then. That way, all the tables are locked as a group. SUGGESTIONS 
+
+Give it a Try !!! UPDATE 2011-08-15 15:16 EDT Some have seen marginal-to-significant performance increases scaling up by changing my.cnf to satisfy Storage Engine performance needs. You need to set the MyISAM Key Cache and InnoDB Buffer Pool. This will recommend the right size MyISAM Key Cache for your given data set:

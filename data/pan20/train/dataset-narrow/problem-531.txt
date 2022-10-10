@@ -1,0 +1,115 @@
+Much smaller tables for year info but much bigger keys to preserve the original ngram. I also increased the amount of test data. You can cut and paste this directly into MySQL. CAVEAT Simply remove ROW_FORMAT and it becomes dymanic and compress the ngram_key tables a lot smaller. 
+
+You could probably do a full backup once a week (like on Mondays at midnight) INCREMENTAL BACKUP You must extract the binlog events In this example, you would look for the You would then use the mysqlbinlog program to copy everything since the last full backup. First you execute every night at 11:59 PM Then you go into and run this on 2016-11-22 at midnight 
+
+If you are looking for the relay logs and you did not configure a name for them, mysqld will use the server's hostname. Why ? According to the MySQL Documentation on the option 
+
+Run this against all tables that have differences and redirect output to a text file. This will show what SQL has to be executed on the Slave to sync its contents with that of the Master. If any output is generated, it will be an entire row replacement (using REPLACE (SQL)) rather than showing the specific columns that are different. 
+
+Of course, this is not for InnoDB. From another angle, whether the tables are InnoDB or MyISAM, if the indexes are larger that than the table, you may have too many indexes. I usually guestimate that a reload of a MyISAM mysqldump should take 3 times as long as the mysqldump took to make. I also guestimate that a reload of a InnoDB mysqldump should take 4 times as long as the mysqldump took to make. If you are exceeding the 4:1 ratio for reloading a mysqldump, you definitely have one of two problems: 
+
+Notice it is a MEMORY table. Like MyISAM, all INSERTs, UPDATEs, and DELETEs into a MEMORY table require a full table lock (See Locking Granularity for MEMORY Storage Engine). There has to be some intermittent lock to populate values into this table. Since this table is local to the DB Connection, only the DB Connection is affected. POSSIBLE CAUSE #2 User authentication may be blocked for a time due to host caching and DNS. Note paragraph 2 the MySQL Documentation on DNS Lookup Optimization and the Host Cache: 
+
+column was defined with an implicit default of . When you compare a non-existent variable with a real value as you did before you get . When it comes to the expression you gave, , you are asking if equals 5. In terms of symantics, cannot by compared with anything: 
+
+I changed A and B to be subqueries using 1 for and If you want the opposite, just reverse A and B subqueries to something like this: 
+
+This will retrieve the specific info for whatever x, z and type are there. CHOICE #2 : Use x,z,type as the PRIMARY KEY Run this query 
+
+As along as the DBMS (like MySQL, Oracle, PostgreSQL) supports transactions via MVCC, read and write order should not matter. What should really matter is the content of reads coupled with the selected transaction isolation level. 
+
+At present, you are not in danger of hitting the max value. UPDATE 2014-08-04 14:28 EDT If you are willing to schedule downtime and we are only talking, at most, 8 million rows, run this: 
+
+This will setup the event midnight tonight, and the query will increment for all records whose timestamp was yesterday. Keep in mind these expressions 
+
+Your way would seem fine. Older versions of MySQL do not have . Here is another way that would get around that issue with older versions 
+
+Another major difference not as yet mentioned is how caching for each storage engine is done. MYISAM The main mechanism used is the key cache. It only caches index pages from .MYI files. To size your key cache, run the following query: 
+
+Step 05 : When Master1 comes back up, rsync or scp from Slave_1 to Master1 Step 06 : Login to MySQL on the Master1 and setup it up to replicate from Slave_1 Don't worry about the real binary log filename and position. Using embeds command with the real coordinates on line 23 of a standard dump. You can see it with the following 
+
+On DB1, On DB1, (DB1) Copying the backup () on DB1 Copy on DB1 to folder on DB2 Importing DB1 backup to DB2 () On DB2, Start mysql on DB2 
+
+I cannot make promises on the queries, but, at the very least, the index suggestion should help. Give it a Try !!! 
+
+When SQL statements are executed, gtid_executed is updated with the GTID Set value. MySQL Documentation says about gtid_executed 
+
+I have a little surprise you : Did you know that if you have the SUPER privilege, you can write to a read_only database ? According to the MySQL Documentation on read_only: 
+
+Since this is db.m3.medium, I see two problems, maybe three PROBLEM #1 : Available RAM Since RDS is using 75% of the RAM for innodb_buffer_pool_size, this means you only have 960M for the OS. Not a lot of headroom. PROBLEM #2 : DB Connections Multiple DB Connections opening and closing can cause the OS to compete with the DB Connections for available RAM (See my old post : How costly is opening and closing of a DB connection?) PROBLEM #3 : Too many tables in the database Did you know memory is consumed when you have many tables and columns ? 
+
+Thus, would not have incremented because of the description being . It went straight to disk. would have incremented instead. SUMMARY Many factors were involved 
+
+I see something interesting in the table layout that cries out 'I don't feel like counting'. What I am about to say is only a hunch. You ran this query before 
+
+LOCK TABLES will hold up any transaction-based row locks that are trying to be acquired. Since the tables are locked independently, you must just need to increase the size of your InnoDB Buffer Pool (innodb_buffer_pool_size) to make more room for row locks across all InnoDB tables. 
+
+but may not have an effect on the MySQL client pager. Since fails and you want to fail, here are your options OPTION #1 Try disabling the FILE privilege anyway on by doing this 
+
+From here, you could load each file into a BLOB and store that BLOB in a table. You would have to make sure the DB Server has SAN storage mounted. You would then specify the file with its fullpath. 
+
+You can use mysqlbinlog remotely using --read-from-remote-server. Besides, you do not go back to the old Master, ServerA. You are doing these things among the Slaves, making ServerB the new Master. If you are using some manged hosting company, those admins need to be involved in this process. At the very least, they could provide some SSH tunnel access to permit you to access the Linux box and all necessary folders permissions. No MySQL authentication is needed. 
+
+This is risky because this speeds up changes to indexes in favor of not having buffering to recover in the event of a crash or reboot. SUGGESTION #4 (RISKY) Another cavalier approach would be to disable the Double Write Buffer. Since a restart is required, do this: 
+
+Run CHECKSUM TABLE command against a table. There is a caveat for this. According to the MySQL Documentation on CHECKSUM TABLE: 
+
+My guess is that stores functions and not regular functions. Evidently, you would create some UDF in C/C++ and register it in using the syntax. 
+
+Using will catch any error-based output (aka stderr). The mysqldump should still pipe normal console output (aka stdout) to the other mysql session and load the data as intended. EXAMPLE : I have a small database called sample on my PC. I ran this: 
+
+You need to rafactor the query in such a way that you control and micromanage the temp tables being created and their sizes. Based solely on the JOIN, WHERE, and GROUP BY clauses, you need to implement the following changes: jobs needs to be indexed on job_visibility_id,active,id Needed Subquery 
+
+I also suggest not using but using reading only needed columns. This would significant reduce round trip times for queries. The point behind these suggestions is to avoid a process of opening and close threads of data that is fetch repeatedly. UPDATE 2013-06-04 18:47 EDT Perhaps you could write a stored procedure, run the SP to collect all the data on the server side, then simply read the data in one pass. Again, this will reduce rounds trips of calls, opening and closing DB Connections. All the PHP logic would thus be done is the SP. 
+
+and see if the reports multiple files If there is only one , then is most likely in the wrong folder. It should be in one of the following places 
+
+LOAD DATA INFILE can be thrown off if read_buffer_size is larger than max_allowed_packet. This is the case when it comes to replication. See the following bug reports 
+
+You are going to have to recreate the mysqldump so that the Storage Engine is Specified. Perhaps just drop the from the mysqldump command. The end result is the that the table will remain a MyISAM table when being imported into MariaDB. This is just a guess but look at the error message you posted. If a BLOB prefix is 768 bytes and you have 10 BLOBs, that 7680 bytes. That leaves you with 320 bytes. If the remaining datatypes exceed 320 bytes, then it is impossible to convert to InnoDB. Since a TEXT column is the variant of a BLOB, converting to TEXT does nothing since the storage requirements for TEXT and BLOB field are identical. 
+
+PostgreSQL The internal datatype serial is used for auto increment from 1 to 2,147,483,647. Larger ranges are allowed using bigserial. Oracle : The schema object called SEQUENCE can create new numbers by simply summoning the nextval function. PostgreSQL also has such a mechanism. Here is a nice URL that provides how other DBs specify them : $URL$ Now concerning your question, if you really want to have multiple auto_increment columns in a single table, you will have to emulate that. Two reasons why you must emulate this: 
+
+Trying a standard shutdown of mysqld with no available diskspace complicates the problem. Just kill the process, delete the 18G log file, start mysql back up again, and live with InnoDB crash recovery. Trust me, it is better than looking for alternatives in a Windows environment which will not work because of the same disk issue. 
+
+This is what the --disable-keys option embeds in the mysqldump. Also, this is embedded after all the INSERTs are done 
+
+AUTO START Make sure you have or enabled There are no mysql utility programs to auto-startup except for mysqld_safe, which is launched by the mysqld (or mysql) service. This is usually issued by (MySQL 5.7) or . If you would like to attempt to write a custom mysqld_safe script, please see my old posts for ideas 
+
+Make sure the UniqueKey has a unique index. Give it a Try !!! Since your timestamp is a UNIX timestamp, I'll adjust the code using UNIX_TIMESTAMP() function 
+
+Please note what the MySQL Documentation on says about running on InnoDB tables, bulletpoint 7 under the heading CHECK TABLE Usage Notes for InnoDB Tables 
+
+EPILOGUE All files will vanish and all InnoDB tables and indexes will exist inside ibdata1 Give it a Try !!! 
+
+In order to restore the MyISAM called into you must do the following STEP 01) Run this query : This will tell you what the base directory is for data. For this example, let's use the default (/var/lib/mysql) STEP 02) Copy table_name.frm to /var/lib/mysql/database STEP 03) Copy table_name.MYD to /var/lib/mysql/database STEP 04) Copy table_name.MYI to /var/lib/mysql/database STEP 05) That's it. A mysql restart is not needed because the information_schema database is very sensitive and detects folder changes very quickly. To make sure the restored table is known to mysql, do the following: STEP 06) Run this query 
+
+Here is the SQL Fiddle to prove it : $URL$ If the names become too long due to truncation, you will have to extend GROUP_CONCAT's maximum length. To set it to 16K, run the following: 
+
+Find out if you can manually change the default character set before connecting to the the desired DB server If you connect to a remote DB using mysql client program and the characters for DB names look normal, then you are just dealing with character set issues with phpmyadmin. WIth regard to the error message, do not surround database names with single quotes ('). Instead, surround them with back quotes (`) 
+
+GIVE IT A TRY !!! In the future, you may add another subject to or remove a subject from the student record. Here is another method using Dynamic SQL that figures out the subjects present in the table 
+
+You would load first, then SUGGESTION #3 : Read the next auto_increment of every table into a script You can use a query like this to make the SQL script: 
+
+With a unique and as an INT, you can increment for each time there is a on . The can now be done like this: 
+
+SUGGESTION Please try to commit data in smaller chunks. If you cannot, then please store binary logs on fast HDDs (not on SSDs) for faster write performance. 
+
+Let's look at many perspectives PERSPECTIVE #1 : SELECTs against MyISAM tables If you are doing only SELECTs, you need to run this query: 
+
+There does not exist a command nor is there a manual mechanism from the Master to stop Replication. You would have to go to each Slave and run on of the following: 
+
+You will see how much wasted space disappeared when migrating the mysqldump to the new 10GB Instance. This will definitely defragment all InnoDB tables. You may need to run the above script () I gave you above to run on all the tables in the database once a week to keep the as small as possible. You can also run the Big Storage Engine Space Query to Monitor when it starts approaching 10GB. 
+
+It may be possible that both instances of MySQL are trying to record log entries to the same location (same file). I do not think mysql allows more that one error log per MySQL instance. Here is something further on using error log with mysqld and mysqld_safe: 
+
+These three(3) things work together. The log buffer flushes changes from the buffer pool into system tablespace files but there is no way to control how much or how little to flush from the log buffer and buffer pool (in more than one direction). Look at a more sophisticated RDBMS : Oracle RAC. Scaling out Oracle RAC simply creates a log buffer per RAC Node to distribute writes to one or more servers that have the data files. You could probably unleash CHECKPOINT commands to flush the Log Buffer at a RAC Node. If you could, this would still not be wise (and your scenario impossible) because you cannot control which blocks are written to which RAC Node. Why? Even in a distributed architecture like Oracle RAC, you still have a single Data Dictionary. This is much more so the case with InnoDB when it comes to controlling changes and flushing of dirty pages. Flushing databases differently puts the InnoDB Storage Engine at risk of losing all data integrity altogether. ALTERNATIVE SOLUTION #1 Create another MySQL instance on port 3307 (or a different number other than 3306) on the same server. That second instance would have its own Log Buffer and its own Checkpointing. Using a separate my.cnf for the second instance, configure innodb_flush_log_at_trx_commit at your discretion since it will be independent of the first instance's flushing behavior. ALTERNATIVE SOLUTION #2 Take the source code and implement multiples log buffers (each with a dedicated buffer pool), including a mechanism for tweeking the flushing of commits per log buffer (You'll be a millionaire in 2 years. Give it a Try !!! 
+
+and restart mysql. Then, those three accounts will be properly rendered inoperative. Give it a Try !!! UPDATE 2011-09-12 10:00 EDT This delete: 
+
+Note that and are reversed. That way, there is no need to traverse all rows for a given account_id that would separate enabled from disabled. Only enabled entries for account_id are read. SUGGESTION #2 : Refactor the Query Instead of 
+
+Don't specify upon reload. Those two lines will create (if it is not already there) and make the default database before loading the data. 
+
+Then, that user can run any Stored Procedure. If you want to restrict it to just the Stored Procedures in the database, then do:

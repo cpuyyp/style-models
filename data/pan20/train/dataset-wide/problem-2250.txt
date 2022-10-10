@@ -1,0 +1,43 @@
+It's definitely SQL Azure. You can easily recognize it as the icon is azure, unlike the green one for a regular SQL Server instance You can see the the video by Thomas LaRock here How To Connect to SQL Azure database using SSMS 
+
+You can find more useful info here: Auditing triggers in SQL Server databases Disclaimer: I work for ApexSQL as a Support engineer 
+
+In future, you can also use the SQL Server Audit feature, just make sure you have specified all events you want to audit. Disclaimer: I work for ApexSQL as a support engineer 
+
+There is a huge difference between the records logged in a transaction log file for a DELETE and for TRUNCATE TABLE statement A DELETE statement records what exactly has been deleted, i.e. the value of the deleted row e.g. 'JohnSmith', so you can read the transaction log content (you can use fn_dblog), see what was deleted and re-insert the deleted record if you want. With the TRUNCATE TABLE statement, you cannot do this, as the statement is 'minimally logged'. The exact deleted values are not logged in the transaction log, only the IDs of the pages that held the truncated records are logged. These pages are marked for overwriting in the database data file and the truncated data will be gone for good when the new transactions are written to these pages. Therefore, reading only the transaction log cannot provide the values that are lost due to the TRUNCATE TABLE statement. The only chance you have to recover the truncated records is to read the page ID in the transaction log and find it in the MDF file, in case it hasn't been overwritten 
+
+See installed roles here $URL$ Create a table with the installed roles. Then select from dba_roles where not exists from the table you created. 
+
+You will need to re-start your database before auditing begins. This will enable the columns SQL_BIND and SQL_TEXT. To audit a users' session do this: 
+
+This will show your error within the past 5-minutes. You could put this into a shell script and add a cron job that runs it every 5-minutes. 
+
+The DBA_AUDIT_TRAIL will have the audited records. The SQL_TEXT column will contain the sql statement the user ran. Careful, your audit logs may fill up quickly. 
+
+If you have more than one database on the server, you may not want to put the SID in your .bash_profile. You could use ORAENV after logging in as the Oracle user. 
+
+In fact, using ORAENV is the preferred method, as this will set your ORACLE_HOME environment variable. 
+
+We recently changed the oracle id to 502 and the group oinstall to 502. Everything under the $ORACLE_HOME/bin is owned by oracle:oinstall Since this change we can only connect locally to the database using IPC. When we try to connect remotely using TCP we the error => ORA-12537: TNS:connection closed When the oracle user tries to stop the LISTENER we get the TNS-01190 error. 
+
+A null value means auditing is turned off. You need DB_EXTENDED to capture bind variables and sql statements. 
+
+Try shutting down the database and open a text editor to create a pfile. Only two parameters are required for a pfile - db_name and data_block_size. Then start up the database in no mount mode using the pfile. 
+
+The alert log should tell you if a data block is corrupt, no need to validate index structure. That will lock your table until completed. If no backups you might try to exporting the data using expdp. Then drop the table and re-create it and import using impdp. You will need to create the indexes, constraints and grants as well. Could also use CTAS. 
+
+SQL Server Profiler shows all queries executed against a SQL Server instance. The queries can be executed by a user, application, SQL Server itself,etc. To be able to see the queries, a SQL trace must be configured and running: 
+
+Right-click the database (not the table!) Open Tasks | Generate Scripts On the Choose Objects tab, select the table to script 
+
+Besides sqlcmd, SQL Server provides the osql utility The same as sqlcmd, osql is stored in the SQL Server's installation Tools\Binn subfolder, and is used from the Command Prompt The syntax is 
+
+Yes, this is normal. When you created the database objects and inserted data into tables, the database pages were populated serially, row after row. Understanding Pages and Extents When you use the database and for example delete a table, it doesn't mean that the database MDF file will become smaller for the amount of deleted data. The MDF file will contain the deleted table data, just marked to be overwritten. There is a nice article by Brent Ozar that will help you understand the database files: How Does SQL Server Store Data? 
+
+Understanding Logging and Recovery in SQL Server An inactive VLF can and will be overwritten, but not immediately after the checkpoint, so the transactions will be there for a while. They will be gone when new transactions overwrite them. That can be in 5 minutes, or in 2 days. It depends on several factors Please note that 'truncate' doesn't mean 'deleted', just marked so it can be reused, i.e. overwritten. 
+
+Just to add that restoring a database from an older version (e.g. SQL Server 2005) to a newer one (e.g. SQL Server 2012), i.e. upgrading is usually smooth. The issues are encountered when restoring SQL Server 2000 and older databases to SQL Server 2012 and newer. Downgrading - restoring a SQL Server 2012 database to a SQL Server 2005 instance is troublesome. 
+
+Firstly, forgive my poor question title. I couldn't think of the best way to summarise this. Essentially I'm putting together some scenario based DR documentation, with this specific scenario being a SAN issue where we have lost disks which hold either log or data files. I'm assuming that MASTER has been affected (ie. the drive where it's files exist isn't accessible) and SQL services won't therefore start. My specific questions are as follows: 
+
+I was recently asked to take a look at at some SQL Servers for a friend and carry out a few config and security audits. There were a couple of servers belonging to the same application group which interested me because there were many inconsistencies and generally odd configuration options set. One thing which attracted my interest: Named instances configured on a dynamic default port (i.e tcp port 1433). SQL Browser was running but clients connected using ,. My thoughts on this were that this was totally wrong. I mean, why bother creating a named instance only to put it on a default port, and why make that port dynamic? I contacted the vendor who very assertively told me that their documentation and installation guide stated that instances should be named and configured on dynamic port 1433 ("As you know, this is the default port that connections expect SQL Server to be listening on and changing this would void your client's support contract with us...") I can't bring myself to fashion a reply at the moment. Part of me feels it's not worth the argument as I'm doing this for a favour really. To arrive at the point, my question is two-fold: When would it ever be useful to operate named instances on default ports, and why would it ever make sense for them to be dynamic?

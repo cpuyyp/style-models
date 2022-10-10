@@ -1,0 +1,59 @@
+Most python users would just use . That's \$O(n log n)\$, which is not that much worse than your \$O(n)\$ solution. But the code you've actually written is just a reimplementation of: 
+
+If you don't like nasty bugs, always use for allocation sizes, not . Yes, somebody will do it, this is a fatal flaw in the Qt libraries. You're missing move constructors/assignment. Most likely they should be implemented by moving the ownership logic out to a separate class (if you don't take all of my advice, would work) and then using the Rule of Zero. There's no point in providing a method (this is a flaw of ), you can just use on the iterators (that you need to implement). Most implementations use instead of , or even just a single member which points directly to the string data. and stores size/cap information at offset . Newer implementations often use SSO (Short String Optimization) as well. You're missing slicing operations. Slicing operations should return a class though, instead of allocating a . You're missing , which most people want from a string. Though I'm not convinced it's useful; I treat strings as opaque blobs rather than containers. If you choose to have mutable strings (see below), you're missing , , and . In either case, you're missing . You're missing , , etc. These should allow mixing with . 
+
+You could extract the content of inner loops to methods with speaking names. E.g. You could introduce a method like 
+
+If a number can not be divided by 2 it can also not be divided by any even number. So you can check2 and than only the odd numbers. you can make a list of all little prime numbers and check these and from the point where you have not the primes, try all odd numbers you can stop checking at sqrt(n) but that is quite expensive to calculate. Not so good, but still halves the work, stop at . 
+
+REMARK If there is any rule for the distribution of the intervals, you might be able to calculate the correct interval (or at least calculate a good guess and search from there). 
+
+That said, your short-circuit if the lengths mismatch is a good idea no matter which implementation you use. There are some style issues that jump out with your implementation: 
+
+Likewise, it is exceptionally rare that allowing mutation of a string after construction/assignment is actually useful. This makes the constructor nearly completely useless. 
+
+There are a lot of functions that aren't safe to call in a signal handler. For the few that are allowed, look at the Async-signal-safe functions section of the signal(7) man page. Your current signal handler is almost okay, but any variable that might be changed from a signal handler needs to be declared . Officially it must also be instead of , though I'm not sure how important that is on real-world platforms. You should be checking the return value of and . They will return (which is usually but could theoretically be any negative number) with set to if the signal has been delivered during the underlying system call. That said, there is nothing to prevent the signal from being delivered before or after the syscall itself (before is the nasty case, and doing the syscall yourself won't help unless the signal is blocked around the call). If you want to handle signals in any sort of sane way, you need to them, at least some of the time. Either then unblock them during "safe" runs of code and check the flag periodically or else leave them blocked call (which will not invoke the handler). 
+
+to a method passing true or false as a parameter and reuse it instead of having nearly exactly the same code twice. 
+
+This algorithm is far from optimal runtime O(n*logn), but I have chosen it because of its simplicity. For an Efficient algorithm see the comment of @corsiKa for a quite simple O(n) algorithm. 
+
+If shape and number of polygons do not change (or at least not often), I would add an extra step (the new first step) to your algorithm. Calculate the center and radius of the smallest surrounding circle for each polygon. This way you can calculate in a minimal and maximal distance of all vertices from the given position in one run without iterating through them. If the minimum distance for a polygon is greater than the maximum of an other polygon, no vertex of that polygon can be the nearest => we can ignore this polygon. Than proceed like you did before. 
+
+In my experience providing or on strings is a mistake. Instead, strings should be constructed via one of: 
+
+My preference is to then use so that I can stuff it in a or or set along with any other read- or write- file descriptors. 
+
+Note that it does not return indirect subclasses, only immediate ones. You might also consider what happens if some subclass of is itself abstract. Speaking of which, you should be using and . 
+
+Other answers have handled specific issues, mine will handle larger design issues. Some of my later advice is highly opinionated, but it is motivated by real design problems; be sure to understand the problem before dismissing it. 
+
+You can move your method to a Utils-class and pass instances of different Classes all implementing the same Interface. e.g. Based on your parallelizationEngine #3: Utils: 
+
+Why do you need a linear search [O(n)]? You can determine in which interval the value belongs by a binary search [O(log n)] (do not implement is with a recursion! use a loop or hard-code it))). Average number of comparisons for linear search is n/2. Binary search needs a constant number of comparisons of ceiling( ln(n) / ln(2) ). 
+
+And so on until you have only short methods with speaking names. This makes the code easier to read and understand. 
+
+You're matching the regexes in a loop, giving it \$O(n m)\$ performance instead of \$O(m)\$ where \$n\$ is the number of regexes and \$m\$ is the length of the text being matched. Any halfway decent regex engine can match an arbitrary number of regexes simultaneously and then tell you which one matched (a trivial extension to the way is matched; I've done this in C); I am not familiar enough with JavaScript to know if it has one. Possibly since these regexes are fairly simple, you could capture a fixed piece of text and then use that in a dict lookup? 
+
+There is no good reason for you to make 4 separate calls. Most likely a single call for would be enough, but even if you have a pressing need for them to be on separate pages, you should still 4 pages in a single call. You don't need to open to get anonymous memory, just pass as the FD and add the flag. 
+
+If possible I would try to avoid a method like . If someone manages to manipulate the this becomes a classical injection problem. If you do not need the flexibility to make any kind of db requests, use prepared statements for specific requests which only get some parameters. 
+
+I think you can improve the 'Inverse rotor pass' a lot by hard-code the inverted rotors instead of searching the inverse function every time. Your is never below so you could try to replace 
+
+I have never written any Lua code before, but a short view in a tutorial at $URL$ let me come up with this: Extract a method which returns 3 values: 
+
+All of the above, except for the last two which are special, provide exactly the same public API (except ) and can be implicitly constructed from each other if it makes sense. 
+
+Instead of , use to avoid precalculating and storing the entire sequence in memory (and also spawning an unnecessary subprocess). Instead of , use to name the argument then use . Note that is an alias for , but it's idiomatic to use for assignments and for expressions. Beware of the possibility of failing! Using an chain as @glennjackman suggested will avoid this pitfall. It would also be possible to replace with but that's ugly IMO. 
+
+I think this method is not that long that you really need to refactor it, but you could do something like 
+
+To see where the bottleneck is, you need to profile your code! Here something which may be a little improvement: replace: 
+
+to a method passing 1330 or -25 as a parameter and reuse it instead of having nearly exactly the same code twice. 2. You can extract 
+
+You can also unroll the - loop, by copying the inner body 2 more times. If you can manage to change the mask_function: 
+
+It is a matter of taste, so there is no 'better'. But more common seams to be because often the conventions of JavaBean are used. If you work in a team, I would discuss the naming conventions to use with them.

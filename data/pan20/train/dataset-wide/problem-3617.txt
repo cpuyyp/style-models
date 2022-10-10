@@ -1,0 +1,63 @@
+Courier - it's a bit of an also-ran in MTAs, but I think it deserves a higher profile. I find it much easier to configure than any of the others and seems to avoid most of the personality quirks of them, too (e.g. qmail's inability to locally relay). 
+
+I often have more than 10 windows running and wanted a way to select them. I found out how to configure C-a Shift+0 through 9 to select windows 10 through 19. 
+
+You need to check their setting as that controls the permissions newly created files get. Most distros set the mask to which will give files group read and world read, but other distros have a more restrictive mask which will only set owner permissions. 
+
+Other ways to tackle this problem involve modifying slaves and failing the application over. This is more closely tied up with how your databases replicate. I also haven't done this one myself, so I can't describe exact steps. Finally, there are a dozen server settings you can twiddle and several more that are much harder to change that will affect how long it takes to copy a table. The sort buffer is one, but also how much memory MySQL is allowed to use is another. (Remember that you can set a lot of those per connection, too, rather than setting some of them high globally.) When dealing with a lot of data, MySQL has a 'tipping point' effect where things are fairly linear up to a certain size, and then go to hell suddenly. It often comes up with complex queries working with a lot of data and is related to internal temporary table sizes and how much memory it is allowed to use, but it can come up with table alterations because they involve re-indexing the data. That is one reason why giving a database more memory is almost always a good thing. 
+
+The three addresses you listed there will work with a certificate for *.example.com. Be careful with other names you might add in the future if they have more words separated by periods. The meaning of * for certificates is inconsistent between browsers. Some will match anything, others will match only one word separated by periods. 
+
+I just did this install myself recently. The Erlang included in Hardy is too old. Simple as that. You need to build Erlang as well as CouchDB. 
+
+The directive can be used several ways, depending on the syntax. To execute a file the way you want, you must use the full path relative to the DocumentRoot, preceded with a /. Otherwise, it's taken to be a literal message to be displayed, which is what is happening for you. Try this: 
+
+Also, you can loosen up on the escaping. It doesn't hurt, but it also doesn't help anything, and it makes it harder to read. 
+
+I think you need to set up a display manager such as GDM. When Xvnc is starting up, it tries to communicate with a running display manager via XDMCP. That's what the option is in your xinetd file. I've set up GDM on Hardy before, and it worked pretty well. Give this a try: Install GDM if it's not already installed. Edit /etc/gdm/gdm-cdd.conf: 
+
+Whilst a dump of the database would probably work, in my experience, properly documenting all the access and setting it up again with statements is much better. There are two benefits to doing it this way: 
+
+UTF8 is fun. Once it works. :-/ If anything in the chain is expecting something else and doesn't check, then it all goes pear-shaped. 
+
+Review your aggregation algorithm to see if it is designed to grow with the data, or designed to stay a fixed size. Acquire more storage. Stop storing logs in the database. 
+
+There may be others. Some of them you may want to increase at least tenfold. Some links to help you understand these settings: 
+
+Just to be complete, Courier fits all those requirements. All (well, most) of it's bits'n'pieces need to be explicitly turned on, so you can install it, and only enable the MTA. Courier also supports MSA mode, which means is an MTA listening on a different port and with some relaxed rules for accepting mail. That's almost enough for you right out-of-the-box. 
+
+Have a look in the tables. It is possible that some permissions have been set on that table that remove your access. I know MySQL's permissions don't normally work that way, but it's worth looking at. Also, does the table's file itself have the correct file system permissions? If MySQL can't write to it, it might confuse the permissions subsystem as to what's wrong. 
+
+Basically what this is doing is looking at the url of every request and if it is matches, inserting some config rules on the fly before the authentication and authorization stage of the request. To modify it, change the bit, the regex match , and the list of directives to insert. This will leave you with a user file to maintain, where the username is the directory name from the url. If you want multiple users per directory, you'll have to use groups and maintain that file as well. For that, change to and add . 
+
+You can use the auto_increment_increment and auto_increment_offset settings. Each server will have a different offset value, and they will all increment enough each time to "hop over" and leave room for the numbers your other servers will generate. There's some good docs about it here: $URL$ 
+
+That's it. It clearly won't tell you how a file was changed, but at least you'll know that it did change in some way. 
+
+Do you have this job in a user's crontab (Can you see it with ?) or is it in the system crontab ()? The system crontab (On linux at least, don't know about other systems) requires an additional user argument that the user crontabs do not. In a user specific crontab, it should look like: 
+
+I'm developing a web-based Java application at work and (obviously) have to run it locally during development. I've figured out the Tomcat docs and have a suitable context.xml file in but every so often, Tomcat decides to delete it! Which means I have to put it back and restart Tomcat. Why does it do this? I have searched the Tomcat docs about it and am none the wiser. (Oh yes: it's not actually called but as that's the HTTP path prefix for this application.) Update I've now seen Tomcat delete the file whilst Tomcat was running. I think I need to file a bug... 
+
+I hate to be a killjoy, but your problem is that you're using Postfix. Postfix makes precisely this exercise very difficult. I know: I had to do it some years ago and it took days and days to get it right. The option is the right one, but there are other things to get right, too. (And even the name of the option shows that Postfix's authors didn't really want to support this.) I recommend switching to Courier. Courier supports this "catch-all" method in a much more sensible way because of the way it extends its existing alias system. 
+
+You have some sort of backups right? If not, do that first. Perhaps with rsync and an extra drive, rsync over ssh to another location, or a snapshot if this is a VM on a provider that provides that service on disks. Once you have good backups, run tar with the flag. That will delete the source files as they are added to the tar file. 
+
+That will cause it to skip the next rule. However, you're going to be updating it by hand from here on out. You might be able to pull off something automated with some RewriteCond magic, but it'll probably be tricky. I'm not really familiar with that, so someone else would have to help you out there. If this is only used by a small group of people, then you might be better off skipping this rewriting stuff entirely and just update everyone's working copies. is meant specifically for situations where the repos is moved and you just want to update your working copy without checking it out again. I understand there are situations where this simply isn't feasible though. 
+
+If you have a busy site making lots of connections, you need to keep an eye on the number of threads and connections in MySQL. (They're almost the same, but not quite.) If running shows lots and lots of 'sleeping' threads with times of many seconds, you need to lower variable , probably by quite a long way as it defaults to many minutes and most web pages are over in seconds. It would be good to look at status and see if it is rising rapidly over time. If so, you need to raise the variable . I'd also look at status . If it is rising constantly, you should raise variable . Both of these are basic performance improvements in MySQL for a busy database. You should also setup Munin or Cacti or some other performance monitoring tool on both Apache and MySQL. Apache also has an Extended Status monitoring page which will help you see how to adjust it's child/thread settings. 
+
+This gives me the current user, current host current directory (without replacing $HOME with ~), current window and last error return. Since I normally have 16 or more screen windows open, knowing the current one is useful. 
+
+Try putting quotes around in your command lines. I suspect that has spaces and those might confuse it by looking like several separate arguments. 
+
+and follow the instructions to reload apache. If it still doesn't work, add a comment below and possibly update your question. I'll take another look and maybe set up a test system. 
+
+Hope that helps. Please comment if you have questions about any part of it and I'll try to explain. Or figure out how I goofed up if it doesn't work. 
+
+This is not at all clear in the documentation. What I believe is happening here is that causes the session to read only the rows or bytes or whatever that existed when the table was locked, regardless of what size the table actually is when it gets to it. Rows can continue to be inserted into the table, but only at the end, past the locked portion of the table. 
+
+TL;DR : Stopping your services is not necessary with LVM snapshots. +1 for XtraBackup. It is not required to stop the services. The LVM snapshot is equivalent to pulling the power, which means it is consistent, but the same as a crash. When starting the service from one of your backups, it will have to do crash recovery. The time needed to do this varies depending on the size of your InnoDB log files but can be several minutes. Once the crash recovery has completed, your service will be up and running again normally. By shutting down services before the snapshot, your recovery will start faster but at the cost of some downtime every time you run your backups. Also worth considering is that every time you stop services, you lose all the warm buffer pool, so you will also incur some performance degradation from having to read data into memory again. XtraBackup is designed to work with Oracle MySQL as well as Percona Server. It's a good option, though as with all things backup, test, test, and test it again to make sure it works before you find out you need it. 
+
+Different filesystems have fairly negligible effects on the performance of MySQL as it doesn't have huge demands on them. XFS is often recommended for how well it handles large files and large file deletions, a combination useful for video storage (e.g. MythTV), but rather less of an advantage for MySQL which doesn't delete files much. Ext2/3/4 are also good performers, as is anything else modern and current in Linux. The +noatime option will positively affect your actual disk traffic, which I have measured, but I couldn't measure any difference to MySQL. Generally, if you have enough database traffic to have to worry about the filesystem under MySQL, then you should be looking at high-end dedicated hosts in a co-lo, not Amazon EC2. 
+
+In theory it should be the same, but in practice you may encounter applications that assume there is always a drive letter. These sort of apps make it difficult to use a UNC. Older apps written with once popular toolkits (e.g. Borland's widget set) are a good example. Without access or knowledge to the Windows source code, this is difficult to answer.

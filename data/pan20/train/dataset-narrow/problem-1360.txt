@@ -1,0 +1,69 @@
+One last note, don't use an infinite loop to receive the packets either. It's much nicer (and user less CPU) to use a to do this kind of work. It has a 15ms resolution but, then again, so does . You're waiting longer than that resolution anyway. 
+
+And ditch the hungarian notation. The variable names more or less tell me what type these are without those prefixes. 
+
+Single Responsibility and Lying Names The method does too much. It both gets input from the user and stores that information in an array (a potentially large one at that, but more on that later). Then it prints the array. You should have three separate methods here and should do one thing, sort an array. As it is, nothing actually gets sorted per se. You're just keeping the list sorted, which seems smart, but... Performance Think about what happens when I give the number 100. The number 1 gets placed into the 100th position of the array. To get it back out, we have to then iterate over 100 positions. If I give it 1000 instead, we now have to make 1000 iterations in order to find it. That's 10 times as many iterations. This method gets exponentially slower. It is no surprise that inputting 10^6 exceeds the time constraints; it takes 10^6 iterations to print the number, even if it's the only number in the array. This can be solved by implementing any number of well studied sorting algorithms. A quick google search should get you started. I recommend learning to bubble sort first, then move on to the more efficient algorithms. This assumes you're doing this for educational purposes. Otherwise, just use Ruby's built in Array#sort method. 
+
+The biggest problem here is that an IPv4 address is really four unsigned 8 bit integers, but you're using 16 bit unsigned integers to represent them. You should be using an array of bytes instead of ushorts. Obviously, you'll still want to leverage the other answers and them as well. 
+
+I recommend making it virtual so you can override the behavior if you find a need. Perhaps it's premature to do so. 
+
+How is anyone, including yourself 6 months from now supposed to know what these variables represent? Naming is one of the hardest things in computer science, but it's also one of the most important. Variables should be descriptive enough to understand what data they hold at a glance and never should you number them. Never. If you think you need to number a variable, you likely need to restrict another variables scope, extract a function/sub, or add a loop. and stand for and so what not just say so? You'll save yourself a ton of grief later. (I've not dug far enough into the code at this time to recommend better names for the others.) 
+
+Your view is calling methods on your presenter. The view shouldn’t know the presenter exists. Instead of calling the presenter directly, the view should raise events that the presenter reacts to. The difference seems trivial for what you have here, but it can make quite a large difference on a larger more complex system. Oh, and I should mention a few other things. 
+
+Is this really still a Todo? Imagine yourself coming back to this code six months from now. Would you be absolutely positive that you completed the work here if you saw this? It's also important to note that most IDE's will pick up that comment in some kind of task list. This is just cluttering that up now. If you've implemented the code, remove the Todo. 
+
+There's a lot to cover and talk about here. I'm going to take a line by line approach, so this review might seem nitpicky (and it probably is), but there are some seemingly innocuous things here that can cause bigger problems given a chance. 
+
+Be wary of . It's convenient, but if you misspell something, you'll never know it. No compiler error or warning. No runtime exception. Nothing. The object just never gets passed to the view and no element gets rendered. I just recently ran into a bug caused by this in one of my own applications, so I know just how difficult it can be to even spot that something was ever wrong to begin with. I only spotted it as a fluke. It's preferable to leverage strong typing of models in a view. However. To the best of my knowledge, you can only bind a single model to a view, so you'll need to use partial views to make the magic happen. There is more that can be said about the code though. 
+
+And call it from . Continuing doing this until each method has exactly one responsibility. You should end up with code that looks something like this psuedocode. 
+
+While you're at it, limit the scope of the and variables. You have them declared at the module scope. They're not used outside of this procedure, so declare them inside this procedure. (And for the love of clean code give them a half decent name.) 
+
+To clarify. returns as soon it finds an element, whereas has to iterate over the entire before it returns. Note that this isn't true for . still returns early when called on a , but so will because a list keeps track of how many items it has as they're added/removed. s do not already "know" how big they are. They must be iterated to get a count. 
+
+People will commonly create an Extension method for to add a map method that behaves much like the method. 
+
+The third benefit is some code clarity. You may or may not realize it, but you're relying on the fact that the object's default property is it's path. 
+
+There's no sense in assigning to an empty string just to over write it two lines later. This would be much more terse. 
+
+I've got to say, I didn't even know that properties in a standard module would compile. They're typically reserved for classes. You've created well encapsulated and abstracted code, but I would change those properties to functions to lower the surprise factor. 
+
+It's certainly not ideal still, but I prefer vertical scroll to horizontal scroll. It lets us see what the method is doing "all at once". 
+
+I don't understand the trouble you were having with returning your model from . You shouldn't need to pass it by ref. 
+
+may provide a better lookup time depending on how large the data is. source It will, however, provide a nicer experience and make the code more understandable. 
+
+Great documentation, but what is this special case? You've gone to great lengths to explain what you decided and why, but never actually state under what conditions the constructor will throw an error. 
+
+I like that you took the time to comment that it's not implemented, but anyone calling will have to dive into the source code to find out why it's not doing anything. Worse, it might take the unwary dev a long time to realize that it isn't doing anything. All of these should raise s. Putting that aside, you're right. The simple fact that all of these are not implemented does smell, but we'll get back to that. 
+
+However, in order for these categories to be useful in a larger project, I would create a static class that defines all of them. Remember, tests are real code too. Some of the "rules" are different, but most of the same SOLID principles apply to our tests as production code. If we can reduce duplication and make our tests easier to write & maintain, we should. One last note on your category: I like that you're using them, but this one feels a bit useless. It doesn't provide any additional information. We could already execute the tests by class, if we wished. I tend to use this attribute to categorize my tests in other ways. What I end up doing most often is separating my unit tests from my integration tests. For a mid size project, I often have both categories in the same test project, but I obviously don't want to run my integration tests all the time. Using this attribute allows me to separate that out on my CI server. So, that static class I mentioned could look something like this. 
+
+I'm not sure if that's expected behavior or not, but I'm not sure it matters. I don't really think you need a special function to accomplish what you're doing. Just take your number and it. If the data is coming in as a string, then simply cast it to a value first. 
+
+I don't like how you've mixed the concerns of calculating with output. I know that right now you only want to output to a file, but what if you decide later that you want to work with this data in some other program? Writing to the file system is expensive and slow. Why write to a file and then read it back in. I would modify this to be in two parts. One to generate the names from the dictionary and one that uses that class to output to a file. This leaves things open to writing the output to Standard IO, some other UI, or for another program to simply work with the data. The idea is that each class should do one thing and do it well. On this note, each of your comments indicates a missed opportunity to extract a well named method that does one and only one thing. 
+
+BUT........ Correctness Is a valid string? Both your and my method says it is. Your regex also suffers from the same problem. 
+
+Co-dev Hat It works, so I don't really care how it's implemented. (At least until I actually have to make some kind of change to it. Gods help me that may I never have to truly understand your parser. Not because it's bad, but because I haven't spent any time learning it.) Reviewer Hat I would expect the s to be part of the . I understand why they're not. The grammar file you borrowed from another Open Source project didn't include comments. This is because that project was interested in executing VBA code. Therefore it, naturally, excluded them. Our project is different. We're interested in analyzing the code and this includes the comments. I feel like the technically right thing to do would be to modify the grammar file so that comments are parsed along with the rest of the language. At that point, implementing features based off of parsed comments becomes identical to implementing any other feature based off of parsed code. As it is, any features that need to know about both the code and the comments is likely to need special handling for each. That's double the work and double the chance to introduce a bug. Now, is that worth the effort? I don't know yet. I haven't tried to modify the grammar file to pick up comments yet. 
+
+I'm not sure it would be any more efficient, but it might be. At least it's a bit easier to read. Instead of reading every line of the file like this. 
+
+However, this would be terribly slow if there is a large amount of data to process. It would loop through the entire destination once for every call to . 2) Move everything inside of the outer loop. There's no sense in looping from over and over again. The code gets DRYed up a good bit and sees a performance boost by moving the logic inside. 
+
+It's not quite as DRY, but an here instead of an improves readability. Considering it's merely assignment, I think it's a good change. 
+
+Maybe I'm tired, or maybe it's just good. I can't tell for sure at the moment, but I think you have some pretty solid code here. Good naming and formatting, as well as a very nice abstraction and use of interfaces. 
+
+Also, just a small note. I like your brace style, but most Java folks use a different convention. Consistency within a code base is most important, but folks get kind of crazy about this kind of trivial stuff. Best to do as the Romans when in Rome. 
+
+I've recently taken an interest in analyzing commit history to find files with a lot of churn. The idea being that high churn files are likely targets for refactoring. Right now it's a simple console app that returns the number of times a given file was committed. (Renames are not currently followed. It's a known area for improvement.) The basic design is to have a visitor walk the commit graph and raise events for a listener to gather information about them. Currently there is a single listener that diffs each commit with its parents and caches those diffs. This should be flexible enough to create another one that, say, collects committer stats though. GitNStats v1.0.1 is on Github if you prefer to view it there. Visitor.cs 
+
+Two things. As a maintainer of the code, I've no idea why you're stripping out the ampersands. A comment here is in order. Secondly, this loop needs a StringBuilder. StringBuilder is a mutable string of characters and thus, more efficient in this situation. 
+
+There are also a lot of magic numbers in your code, but I'll get back to that. First, let's talk about extracting some well named methods. The random number logic is a good one to extract out. When reading this method, we don't care really how the random number is generated, only that we are getting one.

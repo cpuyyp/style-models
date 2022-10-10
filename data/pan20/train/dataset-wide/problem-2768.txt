@@ -1,0 +1,147 @@
+Minor: .h file --> Also add a little documentation of the .h files, it goes a long way in understanding. Minor: spelling: --> Pedantic point: may be signed and defined for and , not . 
+
+Avoid empty parameters lists: Rather than , use . This approach will certainly cause a compiler warning should code call whereas will not. 
+
+Functional simplification: Rather than enter a number to indicate the desired temperature scale, enter or . 
+
+Avoid a big wall of code. Break it down into chunks of logic like the following. Of course will be the biggest helper function, yet that will form a nice function for later coding tasks. Even should be broken down into sub-functions. 
+
+There is lots of small stuff that muddies seeing the overall flow. My apologizes for only a primarily low-level review. 
+
+Curious style change. Why in 2nd line, yet instead of . Suggest the latter. Further, not a fan of when is meant. to me means the maximum number so characters - which is 1 less than size. 
+
+Minor: is passed around a lot by value. Typically structures are passed by their address. Yet is small. Consider making it smaller 
+
+Modest extreme case: is multiplied in the right order. When or is , good to use first as that is type and the subsequent multiplication will then happen at least using math. The concern being that with , calculated first could overflow using math, but not math. Pedantically, even can overflow. Should code need to detect this, the reasonable approach is to use the widest unsigned types like or . (Other more pedantic methods exist.) 
+
+Since function allocates data, make that clear in the function declaration. Also document candidate error returns 
+
+The net effect of is 1 of 1,000,000 different results. (Seems weak and is reminiscent of an online poker hack that use the second of the day as a game seed: Only 24*60*60 different decks). Recommended to use more of "now" to achieve more than a paltry 1,000,000 different results. Example: 
+
+OP all ready knows "would be better if the the number of buckets was dynamic,". It is important to add that making the bucket size a prime number has performance benefits in that a prime makes a weak pre-hash function better. Rather than allocate the size of a type, allocate to the size of the pointer's reference type. It is easier to maintain and less likely to be wrong. 
+
+When creating a structure such as , which may have a very large number of instances, using types narrower than makes sense for space economy. 
+
+Source code should be tolerant of auto-formatting to various widths and not rely on manual editing to align. 
+
+%f v %g Recall that floating point numbers have a floating point. With , large numbers will print with many unnecessary characters and small numbers will print . It is more informative (especially during debug) to print the leading digits than to a fixed decimal point format. Suggest using or . 
+
+Watch out when subtracting with unsigned math. returns type , an unsigned type. With someone trying to hack code, the first character may be a null character, so and likely will be the same as , eventually causing overflow with and then undefined behavior. 
+
+OP's has not stated the compare functionality of Not-a-number s. A desirable aspect is that all NaN sort to one side, either all greater or all less than any other number, regardless of the NaN's "sign". considers sign first without regard to NaN-ness. 
+
+Complex macros: Unclear as to the value of . Instead make a function. Clear pointers. should not assume what the calling code does afterward with and its fields. Since this code frees the allocation, then the pointers and zero the count. 
+
+I am not a fan of your name-space choices for which includes If I say these used in other ..c files how would I be guided back to as their origin? Although a bit verbose, I prefer Minor: need not be in nor in . should have as it calls . should not rely on including that. Similar issues for 
+
+Since is type which could change, (there is no comment near saying this is just shorthand) make the format adjustable too near the same place is defined. 
+
+There is no protection against pushing too much. I'd expect the size of memory available with to be provided and to code against overflow. In any case, OP should provide documentation concerning what happens when too much memory is requested. There is no clear functionality against popping too much. I'd expect either an error return or a perhaps the equivalent of the top allocation having size 0. Some compilers will warn about mixed signed/unsigned math. As the return type from is some unsigned type, use unsigned constants throughout. 
+
+Good use of number theory. With a prime mod, such as 4001, this will improve a weak pre-hash function , such as and will not harm a good one. 
+
+Asymmetric file handling ends with the file closed. returns with the file still open. Inconsistent width handling limits the input width with (good) yet no limit with (bad). I'd expect limits on both 
+
+Missing header Make a separate header file like to show what goes in there and not in the companion Implementation vs test separation Move these test declarations and functions to another file or to the bottom of the post to show a clear demarcation of test code. 
+
+Assume exists in some other file like You are reviewing/maintaining code in the some file and code compiles OK, 
+
+Variation on @JS1 fine answer. Walk the list with a previous pointer. This is something of a hybrid between OP's and JS1 code. Make a temporary top node. Only its member is important. 
+
+Minor: Might as well use unsigned types like or even better . IMO: Yes, "large data types" are necessary given the algorithm of finding the most popular non-numeric character. 
+
+[Edit] Sample merge Since the calling code essentially needs to keep track of the present size, pass then both in by address and let the pointer and size variables get updated together in this function. 
+
+Detail on "this runs in O(n)". Code first initializes with . This takes a fixed amount of time. From an efficiency stand point, the initialization can dominate run time when the string length is small. If the target use of this algorithm was applied to many small strings, a different approach should be considered. Code could vector on the initial portion of the string. If was at least of length (maybe 4 to 8), then proceed with your current approach. With small a short string, simple compare each character of against each character of . If this extra code is worth it or not depends on various things. The point being that a simple pre-analysis of the arguments and could be used to steer which algorithm is used. The major downs-side is more code to develop, rate and maintain. 
+
+Suggest error return of instead. Hoping exists after failing 3 environment variables it a questionable fix. At least is sure to exist. Also the environment variable might not end with . May need to check that. 
+
+For the next step in prime number improvements use the Sieve of Eratosthenes. may exceed range which may be as small as 32-bit. Code may need . Avoid manually formating. Below code and other indicate a hand effort. 
+
+Global variables I am neither a fan nor a opponent of global variables. Either approach has it merits, yet in this case, consider a structure storing the puzzle data and pass the through funcitons. This approach allows for future growth and, in my experience, easier to debug. 
+
+Weak functionality Below are 7 test cases that failed OP's code. Sample working code provided. is a bit ponderous, yet useful as a test competitor. 
+
+Robust code would check the result of . When objects are constant, using helps to convey that to reviewers and helps with some compiler optimizations. 
+
+In general, OP is attempting to use where it is not the best tool. Although named "str-n-cpy" and sounds like it should do string copy respecting a buffer size of , it does not. Although named "str-n-cat" and sounds like it should form a string by appending 2 string respecting a buffer size of , it does not. Certainly this is to be "safer" code, yet with incorrect usage code would have been as "safe" with . Consider other approaches. In particular, when a string operation encounters an insufficient buffer, simply truncating the result is weak. Better to fail or report the error. 
+
+Debug tip. In C, memory management is a pain. Zeroing free data has 2 advantages: it tends to more quickly show access errors of free'd data and from a security standpoint, clearing buffers is a good idea. 
+
+Drop though cases. The code appears to be OK. Yet it looks like it might be missing a at the end of . Recommend to add a comment at the end of a case that intentionally lacks a , ,etc. 
+
+A style issue, yet declaring and initializing is a nice coding style to consider. Avoids uninitialized variables and keeps them closer to use. 
+
+Debug code? Clearing the block serves little aside from cleaner debug. Don't use a type unrelated to the variable. 
+
+Minor: Style: I found the vertical spacing excessive creating challenges seeing the overall flow. YMMV 
+
+does not test the year. Leap year calculation is incorrect for years prior to 1582. This code appears resilient for very distant years, yet even a test for that is good design practice.. Suggest year checks 
+
+Minor Odd use of Every reason to use and not with all the unneeded casting. I suspect this is another reflection of compiling to C++ rather than C. 
+
+Unclear why is so small (5). I'd expect a buffer width enough to handle the widest and then twice that. No reason to be stingy in buffer size in user input of a single number. 
+
+For functions that do not change , add to better convey codes intent and allow for some optimizations and wider application. 
+
+Creating a textual version of an to save as a C string to a buffer that is all ready allocated and maximum allowable size is determined seems common. Thought I'd make a function to fulfill that. If the destination size is too small or destination is , return . Your critique of functionality, style, use, etc. is requested. 
+
+No need to code to some approximation that might or might not be the best for an implementation when a one-time calculation can solve that. 
+
+Is there specifically any way I could improve the argument/input parsing blocks? See #3 far below Would it be more consistent to ask the user for minutes if they supply an hours command line argument? Could go either way on that. #3 far below does that. Should I offer the variety of options at all, or should I stick to command line arguments only or "dynamic" input only? 
+
+Minor: When a function does not alter objects that are "pointed", consider using to 1) indicate no change 2) allow passing a pointer to a constant linked list (this is rare with linked lists) 
+
+All UPPERCASE identifiers are often considered macros. Code with may confuse viewers of your code. Re: Not using all UPPERCASE for defines like with is a problem as a user of that macro does not benefit from the all uppercase hint that it is a macro. That macro uses twice . Consider the effect of this usage 
+
+9) Efficiency. For large values of , code does loops. Better to terminate at about the . At time, also calculate . This can often be had for free, depending on the processor. Once , code is done. 
+
+Change of type without checking range - candidate bug. Similar unqualified type changes used. The loose use of permeates code. 
+
+Separate out functional code from the test driver. I'd expect some stand-alone function and then code in testing it. Questionable space size and incorrect use of . Avoid coding naked magic numbers like 20 
+
+Only minor things to add as previous reviewers did a fine job. The following would be an infinite loop in was odd. Since the definition of did not comment of this limitation, code should not assume is even. 
+
+Minor: could return . Best to test function return value before dereference. Minor: Suggest . . Minor: Best to make array indexes : Minor: Casting and then to in can easily lose significant data. See note #4. 
+
+Help the compiler use its optimizations. By using , the compiler can know referenced data should/not will not be changed and optimize accordingly. 
+
+Subtle point. When is used to store a character and subsequent code interacts with , the standard C library model is to treat the values as . This is important when is signed and values outside are used. Recall returns values in the range. 
+
+Consider this 2nd style. Easier to code, less chance of coding error, easier to review and maintain. 
+
+It is apparent code is not written using an auto formatter and that is the biggest style problem. Any style worth using will match an auto formatter. Manually formatting is not productive and too inconsistent. 
+
+I found the index of 8 spaces excessive. As with such style issues, best to follow your groups coding standard. Style: not needed 
+
+Portability Use of and other code relies on as a binary64. A simple test would prevent a number of errant compilations, even if not increase portability. 
+
+Code looks wrong with the , yet it appears code functions correctly. The 2-ness needs explaining. Below is a version. Note use of . 
+
+Calling twice on each string is wasteful in time. Current code make 3 trips down each string, once for length, once for copying, once to determine new length. 
+
+Questionable code I am not confident work as expected for all , especially when the math quotient is just over a whole number, but rounds down before . Clearer alternative: 
+
+Questionable code when (if that occurs in this code.) Odd mixture of using and . I'd expect either ( and ) or ( and ). With signed arithmetic, these have slightly different functionalities. 
+
+The role of member is unclear. It appears to represent the raw alignment with . Later use with could then result in an unaligned . I recommend that first take and increment it as needed to an aligned size and then save that value in . This will simplify subsequent code too especially the macro 
+
+Minor: Suggest simply shifting by 1 each loop. On 64-bit machines, likely will make little improvement, but with humble machines, a single shift is easier. 
+
+Avoid negated variable names. Rather than --> For boolean variables like , use tpye . Be sure to include Use standard functions like . This replaces the entire loop. Make both and for better optimization and greater clarity as to its use. 
+
+A potential infinite loop. Consider some limitation on repetitive conditions. I would expect a before the . 
+
+What other functions apart from the four currently installed, would you recommend to implement as an exercise? 
+
+Missing file names. The name of the files is important to. Recommend and . Incorrect initialization. Also in other functions, code does not update fields in error conditions. 
+
+The execution time of the front-end code is a very minor consideration as code is to later do the Sieve of Eratosthenes. To optimize, call a common function that handles the string to number conversion and check. is the key. Make the function flexible for this and other applications. Further, leading white-spaces and an optional sign (, ) should be tolerated. As command line arguments, leading/trailing white-spaces are not expected, yet still recommend that a generic conversion routine tolerate them. 
+
+Better to use . This also prevents buffer overrun. Avoid naked magic numbers Why 30, 256? Use constants to allow for graceful code updates and self documentation. Be more tolerant of long names. e.g. and their construction should they contain unexpected characters like , etc. See also Falsehoods Programmers Believe About Names 
+
+does far too much for an interrupt service routine (ISR). The single biggest issue is interrupt latency: time from when an interrupt occurs to it being handled. This function call routines in a loop: , and potential CPU count sink-hole . These are message length dependent functions that could take a long time in a worst case scenario. It delays the time that another interrupt waits before being handled. 
+
+Format to presentation width. Use an auto formatter. Weak formatting employed significantly detracts from code's presentation. 
+
+Avoidable integer overflow. When the text version for is passed, what happens? Both and are experiencing overflow, which is undefined behavior. This means, even if you get the hoped for result today, you may not get it tomorrow or on another complier/platform. Best to avoid. One method is to accumulate amongst the negative side as there is the same or usually more negative numbers than positive one. (think +2147483647 vs. -2147483648).

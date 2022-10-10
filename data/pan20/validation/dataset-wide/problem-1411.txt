@@ -1,0 +1,105 @@
+If I should return an object of any type I'd rather use the type for it then . I don't know how you actually use it so I assume that all objects have some set of common properties but don't share a any common interface. In that case I think it would make more sense to create an artifical wrapper for those objects so that you can read those properties (or methods) without having to use everywhere. 
+
+The derived text boxes should now only care about this method and implement it according to their needs. Because the new method isn't an event handler anymore, you could even make it public now if you need to. 
+
+You should not need the second call to . Without parameters it should already trigger an update to all properties. 
+
+and what he sees is . Why? Because there is only one shared between everyone and there is no other way becasue even if you create an instance of the class it still works with static fields. 
+
+LinqDatabase and DI Well, the virtually hardcoded connection string and the timeout hurt testibility. The connection string should be a parameter of the constructor. You can use a default value but without having the ability to override it you cannot test it independantly with a different database. The timeout could be a property. There is no need to use data tables here. You write this data layer to work with strongly typed structures like the class - that as a matter of fact should be called because it represents a single entity. Turning them into a data table is counterproductive. Methods like violate the SRP (single responsibily principle) of your class. It should only care about how to get and save data and not how to convert it to something else. You could however create a conversion service and pass it via DI to the repository if you want to keep the data tables. What are the three , and fields for? You don't use them anywhere. And the fact that they are public fields makes them even more evil. There is acutally only one kind of public field that we use - a field with some constant-like value. BookingDB It's not clear to me why you need this class. You already have your that should know how to get bookings. Just add your queries there. This one is really unnecassary and it's implementation is wrong or rather incomplete. If you added the method then you should also add the interface to it. You like data tables, don't you? ;-) Get rid of them. Create a new class for the result of the query and return it as a . It's much easier to work with objects then data tables. using You could use some more s in the method: 
+
+I store all values as . If it's a single value then the min and max are equal. Some values can have a step or an extension. 
+
+You should always choose meaningful names for all variables. You did it well for the others. This could have been or . 
+
+or should be a readonly property of the and it should have two normal properties for the first and last names. Your repository shouldn't care and know how to build a person name. It should just pass the data to the . 
+
+There is convention that collections/ienumerables shouldn't be null but rather emtpy. usually indicates there is something not right like when the collection is null in this case. saying the number of items is let me thing the collection exists. Compare to . 
+
+I used the console for output as I run this in LINQPad and added the thread-id so to see where it runs. 
+
+They are always bad. Even if something appears to be obvious now, it won't probably be that easy to understand in few weeks. 
+
+Inheritance If you want to do it with inheritance then the new service should be derived from the legacy service that is derived from an abstract base service. The overridable method should then be called . The base service just calles the core method: 
+
+But if you throw exceptions, be so nice and try to communicate what happened, if possible why and if possible how to fix it. 
+
+The same here. would be much more appropriate and alone by the name of the exception you'd know what's wrong. What more you'll be able to catch it with if you need to. 
+
+However if the provides different tables where each of the different users implement the then I'd say it' fine. Otherwise it would not be that usefull and you could just return the normal . 
+
+With LINQ you can get the job done quickly. Is it sometimes slower? Maybe, but who cares? Most probably no one will ever notice that unless you test it with an insane number of elements although your production code will never ever see that many. If you need to optimize something then run a profiler first. Why? Because if we assume for a moment that we use a poor comparer here and you only work on optimizing the loops you'll never find out that actually the comparer is making your code running slow, no matter how hard you try. People say LINQ would be slow so you focus on optimizing its queries but not the comparer bottleneck. Usually there is something else that kills the performance like reflection, poor comparers, string concatenation or other calculations and only rarely LINQ. 
+
+You should either instantiate it once like @Heslacher suggested or you can use static method. It'll cache the expression so it'll be quite fast too. 
+
+In my review I assume you cannot use EF or alike... I don't see any particular really bad practices here but there are a few minor things that make me uncomfortable when I look at your code. As the important things are correct (everything is disposed and you use parameters to prevent sql injection) there is not much left to review. But hey! this a good news ;-) 
+
+On machines where I don't have C# 6 I use this named string interpolation method. I tried to make it as pretty a possible as far as good coding practices are concerned but I just can't get rid of the repeating code for braces validation and index incrementation. Somehow I don't like it. 
+
+I don't like either of them because they look like multiple numbers could be assigned to multiple persons which is obviously wrong. You can get only one result for a search because you are not searching with wildcards so consider this. A person can have multiple numbers so for a person you can have a single hit. If you search for an exact number you'll also get a single hit. This can be made clear by naming the method appropriately: . Later you can add another one that can search with wildcards (patterns). 
+
+So is your code maintainable? Well, even though the score is not so bad I don't think it's. Why? Because it does two things that it shouldn't which are: 
+
+You also might want use a case insensitive search and look at the end of the resource name and not whether it contains the string. What if you named it . Your predicate would find it... unless this is what you want. 
+
+ExtensionMethods SetEndOfTheDay This method does not set-end-for-the-day. It adds hours and minutes. What if the current time isn't exactly midnight? The end of they would be invalid. You should calculate the offsets or create an entirely new instance. 
+
+The normal dictiory separates the key from the value... but what if the key is a part of the item it stores? It then forces you to enter the same things twice, once for the key and agian for the item. I never liked it so I thought I write really simple class that takes this unecessary step away a makes life easier again by allowing you to specify a key selector like the extension does. 
+
+Finaly you want to print the results. Let's do it in . If you decide to write the output to the console you now just have to adjust this small function. 
+
+You obviously implemented the Observer pattern here. So let's improve the naming and the overall design so that the pupose of each class and method is clear to the user. First instead of just the class should be called and consequently the interface should be: 
+
+This line shouldn't be there. The caller should take care of disposing the stream. Every method should keep track only of its own resources. The ones that come from the outside world should be taken care of by their respective owner. I'd be really surprised if I called this method and wanted to work with the stream later but get an exception that it has already been closed. 
+
+The class is really simple. It's backed by a newer implementation of my old CronExpression. There are currently only these two methods. The factory method creates a new scheduler that ticks at the specified intervals and provides schedules as s to the observers. Jobs are scheduled with the extension. This one requires a cron-expression and the action to execute. 
+
+A lot of code to just concatenate a string. This could be a single line if you used the method. There is no need to cast or convert anything. 
+
+GetLargestWholeSize This should be an extension method as it actually provides additional functionality to the that goes beyond the normal unit conversion. SizeScale.None I don't think a value without a unit makes any sense. The parameter of the should be of nullable type rather then none. Better then would be but the parameter should still be nullable and undefined should cause an exception instead of a silent conversion to another type. 
+
+I don't see any reason for why the lifetime of the should be completely wrong. It's too general and probably just meant to not let you pass the question. The only things that I'm not so fond of are 
+
+Rather then this and catching exceptions use . This won't throw and is much faster. You should avoid exeptions where possible. 
+
+but this is not necessary. You can do everything with only one loop by adding the prefix in the second loop iterating over the only once. 
+
+CacheBase and inheritance Inheritance doesn't work like that. The abstract does not have any abstract methods that need to be overriden in derived types. There is no point of having it abstract. This design would be better for composition where you pass an instance of to the but let's stick to the inheritance for the sake of an excercise. 
+
+Core The main part of the framework is the class with a corresponding interface. It encapsulates the most repetitive common tasks like managing a connection, executing queries and adding parameters. There is one thing that this early version lacks namely sql injection protection. The parameters need to be sanitized later. I used generics to make it strongly typed and avoid magic strings later (like table or column names). With this design it supports each provider's own data types. 
+
+Room Why does the room have such properties like ? Can a room move? They are not easy to understand. Consider a different name. 
+
+So you should ask yourself: Is it ok to be done multiple times if someone else uses and then starts enumerating it again or is better to prevent such situations (for whatever reason)? I would use here for one more reason: it's quite difficult to debug lazy code that is calling web-services, databases or other resources. When something goes wrong here you'll be having a lot of fun. 
+
+I think this would be more useful if the user could specify an interval and how many times he wants to retry like: 
+
+I'm pretty sure this is the bottleneck of you application. Strings are immutable so in order to concatenate strings, the runtime has to copy the old one and appaned something new to it. Usually this is not a big issue but since you have about 40 columns and 30k rows of data this is really a lot of copying. And the string is growing, so each copy operation has to handle larger and larger strings. For frequent string manipulation, especially in loops, you should use the that does not requrie copying. There are numerous pages about this topic so if you are interested in its internals, just google for it. 
+
+It's hard because there is no object to work with as the will never return so you can only add the once via the constructor. Code The delegate shouldn't be nested inside the class. It also shouldn't be a custom delegate too - if used as an . By convention we use the delegate for this. As you want to pass the input to the event handler you'll need to create custom to make it possible. There is a generic where you can use the new class. 
+
+Omitting can easily go sideways especially if you mix it like in the example above. I suggest to always use them. Even if it's just 
+
+It'd be safer to serch for parameters by type I think rather then relying on the count. If for whatever reason they add another overload with two parameters in future it could break. The same goes for . Also the string could be replaced with . 
+
+I find neither approach is acceptable. The first one with the empty blocks only confuses. It lacks comments so you can never be sure whether there is something missing or intentionally left empty. The second solution is also a bad one because it concatenates multiple conditions in a single giant without any hint what they are actually testing. To me maintainable and self-documenting code looks different. This means that instead of writing comments you should create a helper variable for each condition. You then can put them inside the . Now it is self-explanatory and anyone can easily understand it (provided you pick really good names for the variables). 
+
+DRY The constructor and the are nearly identical. Create another that is static and requires one more argument - the size in bytes and call it by the costructor. 
+
+But wait a minute! Let's take a look at what actually does... to my (not) surprise it does not calculate anything but instead it checks products against a customer!!! How confusing is that? 
+
+Voxel class You pass a data to various methods of the voxel class but you don't store it anywhere. I think it would be a better idea to move dynamic mesh related properties and methods to the and override its methods in different dynamic meshes if necessary rather then the 's: 
+
+You don't have to run the same regex twice by first checking if it matches and then replacing parts. You can do everything in a single call to . If it won't match then the string remains unchanged. 
+
+I doubt you need a new type for this. With a few extensions you can achieve the same with less effort and based on the original . Let's try... 
+
+I think the class has too many resposibilities. It stores the license data, it encrypts/decrypts the license, it serializes/deserializes it, it writes/reads it into/from a file. My suggest to refactor it like this... 
+
+What it does is cutting-off the from the name of the exception type and appending the properties to the message together with all inner exceptions. 
+
+As far as the block is concerned you don't need the variable. With LINQ can create the list inplace: 
+
+assertions like these ones could be appropriate (just examples) or anything else that makes sense for the repository. 
+
+One of the most confusing parts is the one where you create the from and copy it to the . Why don't you simply use LINQ to do this so it could be as simple as:

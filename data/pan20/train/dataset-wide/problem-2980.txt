@@ -1,0 +1,47 @@
+Once you have an absolute Row and Column relative to the Worksheet, it makes your calculations a lot simpler. For example: you can test to see if the Row you returned if one that you care about, and then use that knowledge to directly address the other cells you care about without fumbling around with the Offset. 
+
+First, I thought I'd mention that your code is stylistically really good - variable and function names make sense, indentation is great (with one small exception noted below), and the functions are focused and readable. Just one minor point: The code under each in a is typically indented one more level: 
+
+You do not have to go to all this trouble to implement a caching wrapper. It can be done much more simply: 
+
+But why also rename to and add the "action" prefix to method names? Consider also your dispatch code: 
+
+This implementation has a cache that never expires, but you can modify (or override in a derived class) to tweak this behavior to taste. It also has no thread safety, but that's as easy to add as 
+
+The test is taking the return value of the default property of , which is (it returns a ) and is seeing if it is equal to . This is a good way to run into problems later, because if the cell has a formula in it that evaluates to , will return : 
+
+Variant Use This is a data type that invariably leads to problems down the road. In generally, you should type everything as strongly as you can. You're basically giving the compiler and run-time license to treat whatever the variable is as loosely typed, which can lead to unintuitive behavior or bugs. This declaration in particular is a head-scratcher: 
+
+In your shoes I would totally scrap using (IMHO it's useless in practice). If you want to go the extra mile and auto-detect the user's locale, use an IP database (I have used MaxMind GeoIP in the past myself) or the upcoming W3C geolocation spec. 
+
+It's much better to make the default controller name part of the application configuration and have the router take it from there, because it's reasonable to want your "home" page to be equivalent to the "/something" url instead of "/index". The same goes for 
+
+There are magic numbers everywhere. This makes it both confusing and non-obvious what cell and range indexes are referring to. I'd replace them with descriptive constants that make it obvious what is happening - this also makes your code much easier to maintain if the layout changes: 
+
+...makes it immediately obvious that the array is 1 based without having to scroll to the top of the module or remember that the base is non-default. Variable naming: and are about as meaningful as and . Something like and would make it a little more obvious what your code is dealing with. Worksheet references: You are currently using magic numbers to locate the worksheets that you're operating on, and the indexes are based on the ordinal of where the sheet is in the collection. If this is intended to operate on two fixed worksheets, use their class names instead. This has two benefits: first, you aren't using 2 procedure calls ( and the implicit ) to get a reference that you already know and have access to . Second, your won't break the first time you add a new worksheet. For example, use (or whatever it is) instead of . Binding: There is no reason to late bind to the scripting runtime. The interface hasn't changed in this century, and is unlikely to. This is a pretty good performance hit in exchange for absolutely zero upside. Add a reference to Microsoft Scripting Runtime and declare it explicitly: 
+
+All the basic parts are here, but there's still room for improvement. First of all, I wouldn't have the constructor call and then call because it makes the second method less discoverable when the code is being read. Contrast this with: 
+
+Here it is much more obvious what you method you should be looking for. It's true that you, as creator of the code, do not need this -- but others might, and it's a totally free lunch. Second: this line bakes an application configuration decision inside the router. You don't want to do this, as it's totally reasonable to want to change this configuration most of the time while the router would stay mostly untouched. 
+
+Note, it isn't clear from your question if the numbers in the have meaning outside of the code that you posted. If they are, just make them a property of Advisor. Throw in a couple factory functions to easily generate objects (curse you VBA for not having constructors)... 
+
+2. User cancellation is not an error condition I'd consider this section to be an abuse of the error handler: 
+
+These are not conditional, so pull this step out and do it by itself. A fairly efficient way to do this is to build a lookup of "CUSIP" to row number from the EDM sheet with a , and then go through the SSB "CUSIP" column and see if they're in the lookup. While you're doing this, keep another hashset of "CUSIP"s that are unmatched, and then use them on the next pass. 
+
+This check with would allow any url that maps to a function to be successfully dispatched, even if that function does not map to a "real" action (it can simply be a helper method). That's not really a security issue (you can easily make sensitive functions ) but it's not very consistent: targeting will get you to the index page, while targeting e.g. will show a blank page as most likely does not directly produce content. By demanding that actions are implemented in functions with names starting with "action" you can make sure that this never happens. The default action is a special exception to this rule, as it allows the controller writer to effectively specify which url routes to the default action and what the default action should do at the same time. Third: It's not consistent to show a 404 for a missing controller but not do that for a missing action and use the default one instead. You should do the same in both cases, and the right choice would be the 404. Fourth: Parameter handling needs immediate attention. To begin with, you are sanitizing parameters to an unreasonably restricted set. What if there's a search action somewhere and the user wants to type in a character like or a non-alphanum string? Clearly parameter sanitization needs to simply be removed. Apart from that, you are passing GET parameters to the controller action positionally. The positional part is not a dealbreaker by itself (although it would be a dealbreaker in a framework, or if the URL format were configurable), but the GET restriction is a bit ugly. However, this cannot be fixed easily because there's no good way to know where parameters from $_POST should be inserted, or what their order relative to one another should be. To address this, you need to make the code reflect into the controller method and look for argument names and default values, pull these out from your list of GET parameters and $_POST, place them in an array ordered by the position of each named parameter in the function signature and call the function with that. You should also probably return an HTTP 400 if the action turns out to have a non-optional parameter the value of which was not provided. All in all not the end of the world, but a speed bump and a non-trivial amount of code. 
+
+Just a couple of housekeeping type things first. I'd indent everything between and one more level, and indent the timing code at the bottom to the correct level. It might seem like a small thing, but it really improves the readability of the procedure. 
+
+9 - You have another (less) subtle bug. If you use to have the user select the range to work with, you can't use the global or collections - they have to be qualified. The reason is that you yield control to the user, who is free to select a cell in a different Workbook than the one that was active when the macro started. 
+
+On principle the code is sound except for one issue: you do not check if the language is "valid". This raises some questions: 
+
+If were then the could be reduced to protecting just the statement, but as it stands it must protect everything inside . 
+
+In both cases, the sane outcome would be to default to your "main" language, which would probably be hardcoded in your application. Another issue you may want to consider is that nobody knows that there is an Accept-Language header and how to use it, so using that as a source of the user's preferred locale is not recommended: 
+
+General Notes First - In addition to replacing the magic numbers, I'd put your file path into a constant at the top of the module for easier maintenance: 
+
+Third, turning off screen updating is your friend if you are going to be writing values to a lot of cells. Again, I don't know the use case here, but it is a good habit to get into especially because of... Finally, performance. There are some things that VBA does well, but in general the built in Excel functions are going to be much, much better regardless of your algorithm. I have yet to find a function that I can outperform Excel with if a native alternative exists. First among those functions are look-ups and sorting, which Excel does extremely well. I took the liberty of testing your code with the numbers 1 through 10,000 in D3:D10003, 5000 random numbers between 1 and 10000 in column A, and 3000 of the same in column B. Your code took about a minute and a half to execute (in my resource starved VM). The code below took 10 seconds:

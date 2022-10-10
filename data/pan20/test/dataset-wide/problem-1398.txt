@@ -1,0 +1,75 @@
+We can see that this is much more concise and easy to read. I believe that it is worth the extra layer because it automatises the pattern and conforms to DRY; it is used in the remaining types. 
+
+Now that you are using static memory, you can provide two private functions to avoid having to use ugly casts everywhere: 
+
+It simply returns , it should return . Note that this is a source of a bug in your code. You end up creating a temporary when you assign by using the dereference operator. This can (and did on my system) result on a crash due to the memory access violation. Only align to alignments that are powers of 2. Your test code aligns to 7 and 13. From [basic.align] in the C++ Standard (emphasis mine): 
+
+Some implementations (such as VC++) of will ignore the specified alignment template argument if it greater than and default to said value. If you want to support over-aligned types in a portable way, you should specify storage alignment manually: 
+
+Do we really need and ? No. Here is an alternative solution: You currently allocate bytes. This is wasteful. You can use exactly as much space as you need by declaring your storage any of these two ways: 
+
+Review goals The full implementation (with iterators and a -like interface is omitted because of the amount of boilerplate code involved. This question is already long. A sample toy implementation is provided in the demo below to demonstrate minimal usage. I would like a review that focuses on: 
+
+Consider the rule of 5 when your class manages a resource. Whenever your class manages a resource, it probably needs to implement the destructor, copy and move operations. You definitely do not want pointers to be copied when a copy of is made. Possible issues: 
+
+Two reductions are performed every loop to check whether we're stuck with an irreducible number. For reductions that would loop infinitely, we can deduce two properties: 
+
+The variadic template is not a pack forwarding references, it is an rvalue reference pack. For it to be a forwarding reference variadic template, the variadic template must be a function template parameter: 
+
+Inside , we find the function which returns both the remainder as well as the division result. This function internally is likely to use processor specific instructions so that only one operation (division) is required to get both the remainder and quotient. Your compiler might perform this optimization, but let's not leave it to chance. Note that per Tamoghna Chowdhury's suggestion, we use and for clarity. 
+
+Introduction In template meta-programming, integer sequences and ranges are very useful. I've made a couple of utility classes that do various operations on compile-time integer packs. The implementation is non-recursive (except for \$log(n)\$ recursions when generating a pack), allowing faster compilation and a greater number of template arguments. Note 1: In every implementation section, at the top of every namespace, there's a comment indicating which feature is inside. Note 2: Include guards are omitted. Note 3: The following headers are used: 
+
+Consider having also a which uses and returns from . This would allow to iterate over object. With some template magic this could be done with single implementation. 
+
+Implementation incorrectly returns value from . It seems that instead it should return value from . Return instead of as it would not require copying of the object. (But to do that you have to do the same for as commented above.) 
+
+Unused local variable. I would write instead of . Feels more natural. But in the end there should be no difference. You are making no check against exceeding maximal positive value for . Change argument to if you are pre-C++11. Otherwise use move semantics when constructing from . And also possibly add overload anyway. 
+
+It could be useful to forbid copying of objects as it seems there is no use in that. To do that use if you have Boost. If you don't then either explicitly "delete" copy constructor and assignment operator (if in C++11 or above) or make them without defining them. 
+
+There are also other possible extensions. For example you could add allocator support. Or allow in-place construction of elements. But those are more advanced topics. Maybe save them for later. 
+
+You should properly define copy constructor and assignment operator. Or at least forbid them (as already mentioned for ). Consider adding other constructors. For example from a range of elements of other list (by positions or by iterators). 
+
+Instead of writing to use exceptions. There are also other means (like returning error code). But outputting to is of no use. (And seems more adequate anyway...) in loop condition is risky. Once you change to () (as commented above) for would wrap around and result in maximal positive value. The loop would be go crazy (although it would not be infinite). Instead of that you could start with . In loop use rather than . On modern compilers with integers it doesn't matter really. But it is cleaner to write so. And could make a difference if would be an iterator rather than integer. So it is better to have good habits. You could extract the loop fragment to separate () method which returns of given position. It would make code somewhat cleaner. And also you could reuse the method in other functions that I recommended to add (in comments above). You should first store in a local variable. Then set to . And only then the local variable. Current code uses of already deleted object and sooner or later will crash on that. I would write instead of . Feels more natural. But in the end there should be no difference. This method is badly implemented anyway. For example on a list constructed with the single element constructor calling will actually the node from but will never update member. Maybe changing the condition to (and next to ) would correct it. But since the idea of is likely wrong this method would change anyway. 
+
+We need to test whether a certain door is openable by a certain key. Using the previous building blocks, that's easy to implement: 
+
+This finds the number of doors that can be opened by key \$K = 1\$ in the range \$[10, 32800]\$. As a general note, please note that identifiers that end with are reserved by POSIX, so be careful if you're including POSIX headers (if you are, remove the part to be safe). 
+
+I don't know Python, so this is a purely C++ review. 1 PYObjectBase 1.1 What is a const rvalue? Move operations ownership of some resource generally, so how can a move operation's parameter be ? It logically does not make sense. Your function... 
+
+Factor out repeated code. Your overloads and have the exact same block of code being repeated; this block is a prime candidate for being extracted into a private function: 
+
+Although C11 introduced , there is no support for aligned reallocation (AFAIK). The structure that follows and its related functions provide such functionality. I wanted to provide something with as little overhead as possible, which is why there's close to no error checking done. I envisioned this structure being wrapped in another structure that does do safety checks if that is required. Is this reasonable design? features: 
+
+You can similarly apply this to all your other applicable conversion operators. It will greatly reduce the amount of code inside your class. 
+
+You will be copying bytes. You only want to copy the bytes in your stack that contain values. A simple copy function will do the trick: 
+
+From that, we know that to reduce a number, we must simply subtract the concatenation of the largest digit x times, where x is the count of digits of your input number. Since we know that a digit is from 0 to 9, we can write the following function: 
+
+Offsets the integers in the specified template argument integer pack by the specified value of . If the boolean template parameter is true, the offset is added to the integers. If the boolean template parameter is false, the offset is subtracted from the integers. Tests 
+
+This allows the creation of from or from . This is might or might not be faster (I haven't timed it) than calling your function. The main reason for its existence is having small pieces of reusable code. 
+
+3.3 Initialize your members in the constructor member initialization list You do it in some constructors, but not in others. Do it whenever possible. You can start with 's move constructor: 
+
+Make an type where is the values in the range \$[from, to]\$ using an increment/decrement of . will be subtracted if \$from > to\$. Tests 
+
+Additional usage/test This simple example shows how one would create the symmetric difference operation of two integer packs using the already existing operations: The symmetric difference of two sets A and B is the set of elements comprised of: 
+
+From implementation it seems to be a cyclic list. Was this intended? I don't follow the idea behind node. I think that it is not needed. Not to mention that it's value could be undefined while it will show up during iteration. The class would be a bit more usable if you could add element at arbitrary position. Given by integer (to make your design consistent) or iterator (to be consistent with previous comment). The class would be a bit more usable if you could remove element based on iterator. Or else allow the iterator to return it's position as integer. But remove by iterator is more in line with C++ (STL) style. The class would be a bit more usable if it allowed also iteration. So should have a overload returning iterator (as commneted above). Size in C++ is usually expressed using type. So should be also positions in your case. There should be a default constructor making an empty list. 
+
+As you noted yourself your iterator differs significantly from what C++ considers and iterator. This means in particular that it will not be usable with any STL function. Or other libraries that use "normal iterators". As a side note I will mention that makes it much easier to write proper iterator. But it requires use of Boost. With your current design as it is how will you know that the iteration ended? There is no method in that says that. With your current implementation (of cyclic list - see comments in ) any iteration would be infinite unless you would count elements yourself during iteration and stop at . 
+
+There is no need to make public. and need it but client of your library doesn't. So consider hiding it from him. For example by defining within the class. 
+
+Consider making it so that it cannot be used for conversion. Add also second argument being count of initial elements. And default it to . It would make the constructor a bit more flexible and little cost. (And also it will match typical STL container constructors.) Change argument to if you are pre-C++11. Otherwise use move semantics when constructing from . And also possibly add overload anyway. Use member initializer list instead of assigning to members in constructor's body. 
+
+Use member initializer list instead of assigning to members in constructor's body. It would be cleaner if would be set to (if in C++11 or above) or / (otherwise). Change argument to if you are pre-C++11. Otherwise use move semantics when constructing from . And also possibly add overload anyway. 
+
+It would be cleaner if would be set to (if in C++11 or above) or / (otherwise). There should be no use for default constructor anyway. (See below notes on .) In fact use of this constructor requires type to be DefaultConstructible while there is no need to require that. 
+
+in loop condition is risky. Once you change to () (as commented above) for would wrap around and result in maximal positive value. The loop would be infinite. On the other hand note that alternative results in infinite loop for being already maximal positive value. (Which however seems less likely than being .) In loop use rather than . On modern compilers with integers it doesn't matter really. But it is cleaner to write so. And could make a difference if would be an iterator rather than integer. So it is better to have good habits.

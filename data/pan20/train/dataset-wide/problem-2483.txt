@@ -1,0 +1,63 @@
+What I ended up doing was creating an extension method that would handle this for me without worrying about any of this. So I ended up righting code like so to generate the correct element naming. 
+
+I'm wanting to create a Reusable class to work on Enumerations so that I can decorate various Enums with different attributes and I can use this class to get a particular attribute property to display. An UnitTest example of how I would use the class is: 
+
+This first lot of refactoring lead me to realise that is passed to each of the 3 methods. I thought at this stage perhaps a class for these actions might make sense so that the common parameter is extracted to a class level variable. 
+
+I would probably say yes. You are tying UI concerns in your business models. Why does your model even care about the text that is used to display it? It should be more concerned with buiseness rules and performing buiseness operations I think. Let your UI layer/layers deal with presenting it to the user. 
+
+This is something I always get confused with as well!! I would probably think it's fine where it is but if you were considering moving it I might suggest using an interface and injecting that into the controller. That way it doesn't matter where the latest friend information is persisted and the controller remains separate from this concern. Although this might be overkill for your situation and example of this in use might be: 
+
+Here's another stab at something. Mainly I think I see a bunch of duplicated code in your lists, so what about something along the lines of 
+
+Now, I'm sure those statements could be be refactored via linq to only a single line. Will think about that some more. 
+
+I would consider first splitting the method into smaller methods as other people have mentioned. The only suggestion for now is I might suggest changing your bool daily to a enumeration. This in theory means it might be easier to add a Hourly,Monthly etc reporting option. Although this is only slightly better in my opinion and I'm sure there are better approaches (maybe using interfaces?). Something like this as an exercise in splitting things out into various methods keeping most of your code but just re-arranging it slightly. 
+
+The problem here is that on binding back there will be no Firstname element on our encapsulating viewModel. What the input really should have looked like was 
+
+I think I like the combination of your third option with that supplied by Dan. I've made some other changes which may or may not be better. Not really sure. My aim was to have the Delete set status callbacks only i.e. success, failure while the UI event handler handled the confirmation requirements. If anything, I would always suggest using .Any() over .Count() > 0 operations as although a minor thing could have unexpected have performance benefits on large collections. And if anything I personally think it reads a bit nicer. 
+
+I think I agree with Jeff. So because of this, perhaps you might want to reconsider the design? Do you really want to make RestClient dependant on WebClient or could we make it dependent on an interface instead and decouple it from that side of things? Perhaps this is overkill? Here's a crack at an alternative for comments: The testing 
+
+NOTE: After Ben correctly commented that he was doing this from the WPF not MVC approach my answer was biased to MVC so although I'll leave it here it it may not have much relevance to what he is actually looking for. 
+
+There is the INotifyPropertyChanged event handler, but I'm not sure why you would need that in this case? Instead why not just load the details when the ID changes as that seems to be the only value that will change between LoadDetails calls. Perhaps something like: 
+
+NOTE: I would have loved to test for the not a number scenario, but wasn't sure how to generate that given the definition of my parameter Func. Also, initially I remove the need for a static class but reverted that to keep in line with your implementation. hence the commented out 
+
+Advantages? I guess it's quick to implement and test. But short turn gain, for possible long term here I think. 
+
+Well, my first attempt is to suggest injecting a mapper into the controllers you want to do this for (assuming you are using a DI framework. If not anyone of the popular choices out there will meet your needs. AutoMapper, Unity, Autofaq etc). 
+
+Maybe. But how are you going to know what actually went wrong? All that's going to happen is you know something went wrong but when it comes to diagnosing it you will be at a dead end because you have swallowed the exception (so to speak). Given that your exceptions seeming to be handling cases such as the database offline, or connection issues I think it would be best to bubble those up as that would be a core system fault and you would want to know more info. Here's an alternative solution using a non-static class and sharing the Database context between methods. 
+
+Firstly I would consider injecting the DbContext into the repository. Even though your RepositoryBase class is abstract I would have a protected constructor 
+
+If my service required other services I would simply pass those into the constructor. If I found myself passing too many then I would start knowing I had a bit of SRP mis-use and consider creating another service or re-arranging my existing code base. If you wanted a GOD service class you could still achieve this as you did with your UnitOfWork example by doing something like: 
+
+I would first start by creating a method for the Authentication failed parts of the code. Something like 
+
+The method is doing too many things. It's responsible for querying for your record, instantiating the record and populating as well as performing the persistance. The method has too many dependencies. It looks like you have made it subject to both an external UI component in the .Text objects as well as the database layer. What happens if you had multiple ways of populating the object. You would have to duplicate this method? 
+
+I think the code reads good. One minor point I have is about the hard coding of the FileName into the class. This limits that entire class to only being able to deal with a file called . I think you might get more testability out of moving that to a constructor argument. If you didn't want to have to always specify the file name each time the class was constructed you could either create a default empty constructor, or provide a wrapper class. Some options for example: 
+
+Because you are working with an it's possible that the underlying implementation of the method will re-execute any re-loading of the data set each time you are enumerating it. Hence if that involved querying a database table you might make multiple calls into the database each time. So Resharper suggests you do a on the Enumerable to force the result set to be fetched and returned into a list so that from then on you are only enumerating the objects in the list in memory. If you know for certain that the will not do any re-fetching etc then you could ignore this warning from resharper. So in your specific case: 
+
+Create a local Func() Create a method on some sort of utilitly class or on a specific class for dealing with Date manipulation i.e Calendar Create a private method to the class (as it won't be used anywhere else anyway) Create an extension method 
+
+I'm also unsure as to why you are creating the database connection twice but I would consider passing that into the GetRoles method like so: 
+
+Following this line of thought you could create a method on your Model to accomplish the same thing for the working days variable. i.e. 
+
+Jumping in after the horse has bolted with a very minor different approach (using Any rather than Count and null). 
+
+I would probably consider making the entities object a class level parameter since it seems to be used in every method. I wouldn't put the success message in this class as that seems more caller dependant. Hence I would let the caller determine what success message they want on a true result. I would only supply a failed message to at least inform the user what happened. Is this sort of a repository pattern... not sure. But I might toy with the idea of changing DataAccess to ManRepository and getting rid of man in the function names so it's just Create, Update and Read. 
+
+I think I personally like the set by constructor method in general. I think it provides a means by which you can better allow for TDD and also implicitly implies the contract all inheriting classes must obey in providing a Entity object if they wish to inherit from the base class. I think if I were going make Entity a requirement of the second method I would make the protected method abstract which would also enforce this constraint. However that doesn't allow for the easy of use in using dependency injection which I think would suit this approach nicely. I'm not sure why there would be a huge increase in the size of the Entity object itself. I would assume the size increase would only be as large as the size of the memory register holding the location of the Entity object itself. As for performance, I can't comment explicitly but I would assume you would still need to make visible the EntityData object to it's children so you would probably do that via a property accessor or method anyway so performance impacts to me would be low on the priority list unless profiling the code suggested otherwise. So assuming the Entity is required in inherited classes I would consider something like: 
+
+Here's a way. Not fully Linq but using a little bit in the for loop. Also passes a few more unit tests than your original. [EDIT]: After re-reading your question and some comments by other reviewers I added a few more unit tests and low and behold my original answer broke. So I've re-worked it and now made it even more complicated :) but passes the new unit tests I put in 10,11 and 12. Whether your code needs to pass thoses tests or not though I'll leave that for you to decide. As for optimization. I haven't profiled it so can't comment there. 
+
+Making your view responsible for knowing the implementation details of fetching data. It should only be responsible for knowing how to show data. Inability to share that logic in other views Your view is tied directly to your database. What happened if the source of the data changed i.e. a different table. You would have to change your view 
+
+Masking potential problems Using from past experience is typically used because developers don't want an exception to be thrown if the criteria constraint is violated i.e. they don't want to see a bug come through. However this may also mean that an error occurs somewhere further down stream because of this. You will then find yourself debugging errors that in fact relate to model data violations and might have nothing to do with the code you are debugging. The problem should ideally be fixed at the point where the model data violations were made, rather than the rest of the application having to worry about it. Summary I would always advocate over if the intent of the query is to only expect 0..1 data objects returned. So use what you expect the data state to be in. Unless of course you want to handle bad data state yourself and then I would expect error handling to occur if this was violated.

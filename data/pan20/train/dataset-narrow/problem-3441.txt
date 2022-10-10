@@ -1,0 +1,63 @@
+Using job control and output redirect We have a default linux without graphics that boots to text console just as do. There are several virtual consoles named , and so on. You can switch to it with (tty1), (tty2) and so on. I have made a small test script that will output "hello world" on standard output and "error output" on standard error every 3 seconds in an endless loop. 
+
+I'm with Raspbian Lite from . With the raspi you should be connected to your local network and to your audio output (earphone, amplifier etc). First you can check your audio output with this small audio file working.wav. Of course you can take any other audio output test. 
+
+Here we can see what has happend. Both users are in group so each can create folders in . But the created folders get the user and group rights from the user, so pi2 cannot access folder from pi. is not in group . Also the group rights on the new folders are only read and execute . We have to make sure that the group is inherited from the parent folder. For this we have the . Also we have to make that the group gets rights by default. For this is the . For it`s meaning look at the internet. Lets do it: 
+
+Then you have to setup your local domain and tell windows (and other clients) to use your local dns-server for domain name resolution. Usually this is done with the DHCP-server that tells its clients what nameserver to use. Search with google. You will find many examples how to do this. 
+
+But the vpn server on the other side of the tunnel will not response because it does not know where to send responses to 192.168.4.2. For this it must have a static route to this subnet. But I think we don't have any chance to do that. So we also have to fake the server with a NAT. On the raspi set: 
+
+Update: I'm using from Raspbian Stretch Lite. To omit the option is only for test purposes. Your test script doesn't need it. Of course it can be added when the error is fixed. The input to as shown in your example is: 
+
+It should be said that there are also options for bonding in systemd-networkd [2] but they are buggy in systemd 232. They are working since systemd 234. So we setup the bonding driver direct with modprobe. It's parameter can you get with . Now it's time to reboot. Then you can check and test bonding with your settings: 
+
+The default unit systemd starts at bootup can be overridden with the kernel command line option. So you can edit (mounted on your Ubuntu system) and append the parameter 
+
+For monitoring filesystem events you should use kernels API. For bash-scripts we have nice . Install them with: 
+
+Try it. This already works with current logging. You do not need to have it persistent. But if you want a history you should make it persistent of course. 
+
+references: [1] man systemd.unit [2] How To Use Systemctl to Manage Systemd Services and Units [3] Running Services After the Network is up [4] systemd bootup [5] systemd System and Service 
+
+Testing with wifi connection I have 0% packet loss. When I ping from raspi to the PC it also works flawlessly without packet loss. 
+
+Now we need a configuration file that maps the lirc pulses to the buttons of your remote control. On the internet there is a database with many config files for remote controls. the config file for my remote control I have found there. If you cannot find yours you have to training your remote control by yourself with: 
+
+One problem is that I cannot check out for you the target after that is available. In the example above I use . Don't know if this already initialised . With 
+
+For development I like to take snapshots so I can easily revert to original installation without flashing the SD Card again. For this we have to setup LVM (Logical Volume Management) on the SD Card and move the root partition to it. With LVM it is also very easy to make backups on the running system. For all this you have to make the following only one time. So I've made this answer to summarize all the nice information on this page from today's view. The problem is that we have to create an with LVM drivers so the raspi can boot and mount the root partition which is residing on the logical volume. Creating the must be done on an operating system with ARM processor of course. I can't do this with my PC, it's an intel one. So I must boot into the raspi with a temporary installation only for creating the . Afterwards we will remove this installation and expand the volume group with its place so we have the whole disk space for our working installation. Prepare SD Card with LVM Here I'll prepare a Raspian Lite image for example. Maybe you must have to install the lvm management tools . Flash SD Card 
+
+This works in a shell you are logged in. In a start job you have to do it in a script. Don't know if it works and where the output goes to. There is no login shell. 
+
+Now you can test if you get signals. Start and push some buttons on your remote control. should show you very low level info in and : 
+
+Your problem is to start a program at boot when an usb drive is connected. Nowadays we use for this and we only need a 9 liner. will do all things for you: waiting until the drive is available, mount it then and start the script. I use Raspbian Stretch Lite 2018-04-18. The short story Assuming the program to start is without multithreading/multiprocessing. Create a service: 
+
+But for a raspi laying near by a TV or amplifier and doing its work 24/7 for streaming audio or video or for a camera etc., is a good choise. But you have to do a complete switch. There is no way to mix up with and/or . Step 1: Preparation For reference I use a new flashed SD Card from a with . I will have attention to a headless installation only with ssh. If you using this, double check typos or so otherwise you are lost with a broken connection. Only if you want to enable ssh and haven't done it yet, use: 
+
+If then there are still missing packets try to install them. At least you can clean up your apt-lists. But this should be done with caution. Afterwards repeat the commands from beginning. 
+
+I've made this answer to summarize the experience to this issue. We are talking about Raspberry Pi 3 Model B+, released on 2018-03-14. It has some new and updated features compared to . 
+
+It took a long time to do this. When it has finished I do and the processor stopped to work but doesn't trigger a new start. So I have to pull the power cord after a while (no activity on the green LED anymore). Afterwards the raspi boots fine and everything was working well without any error messages. Powered off the raspi, put its SD Card into a and it also boots and was working well with running wifi. Other distributions The problem here is that they have to update their images with the new firmware and it seems that takes some time. For example does not boot on at the time this was written. Some guys here have tried to update their distro with the latest drivers and modules from and got it to boot but with limits. One time the wifi does not work [6], the other time keyboard does not function [7]. Look at the date of the image from your distro. If it is older than 2018-03-14 it is most likely that it does not run on a [8][9]. I suggest to file a bug report to your distro. The more they get, the earlier they will update. 
+
+This will produce a fairly stable connection with warm up after boot. A typical measure looks like this: 
+
+Put the SD card into your raspi and boot. It hangs on first attempt, so I had to pull the power cord after a while with no activity on the green led. I don't know why. Second try boots. 
+
+Then install packets separate. No need to install . This will be install automatically with . is only a virtual packet and will install . So do it direct: 
+
+Setting the default has a little disadvantage. It`s global and works also on the filesystem of your pi, so you should have a little look at your group rights there. And yes, as @Milliways answers you should use instead of . 
+
+When I use the ethernet interface with Raspbian it interrupts the connection for many seconds so streams will break and a ssh terminal stuck for minutes. For me the ethernet interface is not usable with this behavior. I've looked for this since weeks but wasn't able to fix it. I'm wondering if other people have the same problem. Wifi works flawlessly. My question is: What can cause this behavior and how can I fix the ethernet connection so it works as reliable as wifi? I use Raspbian Stretch Lite Version: November 2017 with on Raspberry Pi 3 Model B. For testing this behavior I ping the raspis ethernet interface from a PC with this command: 
+
+But when I enable the service again it has no effect. tells me but WiFi is always working. Seems to be a bug but that shouldn't matter you. 
+
+On a fresh flashed is no wifi enabled. So simply do nothing with wifi and you haven't one. Configure your wifi with to instead of . How to to that you will find many examples on this site. Then connect to your open network and it's done. 
+
+Summary Seems there is a hard to find instability in the ethernet connection which is triggered by software, the more software installed the more packet loss and always after a full-upgrade. Seems also sd card class dosn't matter. The main difference between the working operating systems Linux From Scratch on the Raspberry Pi as well as and Raspbian Stretch Lite is the lack of . bootstraped raspbian stretch has but in a minimal version. Is there a component in that can cause the connection interrupts of ethernet? What else can do that? But finding the problems with and suggests is not the problem. Seems is it. 
+
+Don't know if you have network running with this. Look at Kernel command line parameters Special systemd units 
+
+I cannot confirm this. With your example I get the expected result. I suggest to get some more information into . This can be done with redirecting standard error to standard output with and then redirect standard output to . Don't use option for in . This will give more information. Also your standard input to with leading characters is wrong. To look what's going wrong I would do:

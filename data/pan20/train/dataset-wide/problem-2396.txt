@@ -1,0 +1,61 @@
+You should intelligently do index reorg and rebuilds. As a general (widely accepted) rule of thumb is If your indexes are fragmented : 
+
+Removing SQL Server from failover cluster - you have to run the setup.exe and in maintenance you have to select remove node. Then removing the node from windows cluster, I would suggest you use PowerShell 
+
+I would suggest you to have a separate publication for these 2 tables and rest of the tables in another publication. This way if something goes wrong with these 2 tables, then your entire data set is not affected. 
+
+SSIS will commit the task with the sequence container. IMHO, best is to use TSQL Transactions instead of SSIS Transactions. Also refer to : Design Pattern: Avoiding Transactions in SSIS 
+
+Perfmon is pretty light weight when it comes to data collection. Collect the data in files and set a sensible collection frequency. Jonathan has written about Essential PerfMon counters for DBA that will give you a good start. For automation part you can use and load data into sql server or as shown here You can even Setup Perfmon with PowerShell and Logman. Alternatively, you can use PAL or Get-PerfMonSummaryStats.ps1 - Powershell script from MSFT exposes perfmon counters in raw form. 
+
+Cant vouch ! As things might change in and its always good to be inline with Microsoft's suggestion + you need to understand your data and the pitfalls that I mentioned above. Also refer to this and this connect items. 
+
+If you want to provide HA for distribution database, then you have to go for SQL Server Failover cluster. Thats the only option. Your scenario is as below : 
+
+Always remember that session level setting will override database level setting for the above SET options. Reference : SET ANSI_NULL_DFLT_ON and SET ANSI_NULLS 
+
+Read up : An Introduction to SQL Server 2008 Change Data Capture by Brad McGehee and Introduction to Change Data Capture (CDC) in SQL Server 2008 by Pinal Dave. 
+
+The C2 Audit Mode uses SQL Trace to capture audit events, which are stored in trace files i.e. they are not stored in database, unless you have a job that loads the files into a database. Note : The C2 security standard has been superseded by Common Criteria Certification. 
+
+SO I guess, we just have to follow what Microsoft says - SQL server will manage them for us :-) ONLY FOR EDUCATIONAL PURPOSE : I managed to clean up the old files by 
+
+Note: In above query you are using an arbitrary ordering in the window order clause (learned it from Itzik Ben-Gan's T-SQL Querying book and @AaronBertrand cited that above as well). If the table is large (e.g. 5M records) then deleting in small number of rows or chunks will help not bloat transaction log and will prevent lock escalation. 
+
+You can use opensource tool like sql-dbdiff or OpenDBDiff. Both are commandline, so can be used in automating scripts. Also, if you want 3rd party licensed tool then Redgate's SQL Compare (if u want for data compare -- there is data compare as well) is very useful and I have used it extensively for automation. Out of curiosity, why do you need Indexes on Staging table as a staging table is meant for temporary loading data and then after cleaning it, the data gets loaded in the primary table ? EDIT : Based on your need, best will be to use SQL Server Partition Management Tool from Codeplex. This utility provides a command line interface to: 1. Remove all the data from one partition by switching it out to a staging table. It creates the required staging table.2. Create a staging table for loading data into a partition. The staging table can be created with or without indexes -- if created without indexes this utility provides a separate command to create appropriate indexes on the staging table, before SWITCHing it into the partitioned table. The commands can be invoked from other scripts for end-to-end sliding window scenarios. Using the utility allows you to avoid maintaining partition maintenance scripts that must remain synchronized with index or column changes in the permanent table, since necessary staging objects can be created on-demand. 
+
+You have to select in properties --> DELAY VALIDATION = TRUE. By default it is set to false. That will take care of the issue you are facing. UPDATE : Also, in conditional split Editor, you can put an expression to skip blank rows : e.g column1!=""&&column2!=""&&column3!="" or you can use Row Number Transformation and using conditional split you can take first few (e.g. 10) records based on the variable created by the component. 
+
+Powershell is the way. And it make it easier, just install dbatools on one of your admin servers and use 
+
+A backup when done to a single file or device will use 1 writer thread. So if you are backing up to Multiple files /devices (be that multiple .bak files) will have one writer thread per file/device. 
+
+Tracking cursors can be tricky. Joe talks about it in his blog post Hunting down the origins of FETCH API_CURSOR and sp_cursorfetch 
+
+@Lu4 .. I voted to close this question as "Tip of Iceberg" but using query hint you will be able to run it under 1 sec. This query can be refactored and can use , but it will be a consulting gig and not as an answer in a Q&A site. Your query as is will run for 13+ mins on my server with 4 CPU and 16GB RAM. I changed your query to use and it ran under 1 sec 
+
+I would recommend you to look at the fragmentation ratio of the indexes and accordingly reorganize them or rebuild them. Best is to use SQL Server Index and Statistics Maintenance as it is best free software out and implemented widely. 
+
+You can use the Power of Default Trace to find out the culprit. provided the default trace files are not rolled over 
+
+When doing backup - make sure to use compression in sql server 2008 R2 and up which is even supported in standard edition. Also to speed up restore, use Instant File Initialization. 
+
+You dont have to use SET. Instead you can do that using DTExec.exe /CONFIG parameter as below: SQL Agent Job --> Steps --> General --> Type (Operating System(CmdExec)) ---> command 
+
+Since you have meaning you are using Linked server, the server will used link server configuration to send the query to the linked server and retrieve the relevant results. Rest everything will be on the server that you are running the query on. Using SSMS, the real execution of the query will take place on the remote server itself along with Parsing and reusing the plan if it already exists or creating one if it does not eixst. SSMS is just a tool - it has no build in query engine. Now if you have joins between your local machine and remote machine (using linked server), sql server will pull in rows to the local server to process the result set. 
+
+Run Upgrade advisor or you can run server side trace to Identify deprecated SQL Server code -By Aaron Bertrand. It will show you - what will break when you upgrade to new version of sql server and change the compatibility mode to the upgraded version. Also, when upgrading from SQL Server 2000 to 2012, consider using both the older 2008 R2 Upgrade Advisor and the new SQL 2012 Upgrade Advisor, as this will provide a more complete picture of issues you may need to fix. 
+
+Open DBDiff ==> This is on Codeplex and works great. SQL Admin Studio ==> This is now a free tool. Hidden Gem from SQL 2005 and up : tablediff.exe (you can find this in the COM directory of your SQL Server install folder) Compare schemas: Regular or Strict Powershell - You have to write your own code or build up on existing ones Since you are using SQL Server 2012, SSDT is also an option. 
+
+This might imply that you are not authorized to do such operation. You can ask your DBA to help you out once you have put in a proper support ticket. Also, its quiet important to wipe out PII information when you do a restore on a NON PROD system - as @MichaelGreen pointed out. 
+
+What Brent suggested is a great resource. There are many way of capturing baseline for your servers, just make sure that you are not collecting too much or too less and be consistent along with having a purge job to remove old data or have some mechanism to archive the collected data. I would suggest you to also have a look at 
+
+When it comes to accessing SQL Server, always use Principle of Least Privilege. You dont need account to do your routine work. Also, if you have windows authentication, why do you even need a SQL Server login with user and password. From Choose an Authentication Mode 
+
+Try running DBCC CHECKDB with TABLOCK hint + make sure that the drive tempdb resides has enough space and tempdb is not having restrictive growth (autogrowth OFF). Lastly, 
+
+This PROC deletes from , , , and and bunch of other tables. This is the entire code for a ready reference : 
+
+Kill all user connections on the primary server (original secondary) and take a final log backup (WITH NO RECOVERY) putting the primary (original primary) into NO RECOVERY state. Ship the transaction log to the primary server (original secondary) and restore the log WITH RECOVERY bringing the primary (original primary) up.

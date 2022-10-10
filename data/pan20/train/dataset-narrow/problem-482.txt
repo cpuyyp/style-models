@@ -1,0 +1,55 @@
+It seems sensible to me that they would want to check the lag between the master and slave. It's one of the key things we monitor here, as if the slaves start getting behind it could be a sign of a problem, it also reduces their usefulness for reads / backups etc. The easiest way would be for them to run on the Slave and look at the value (assuming it is Master > Slave, and not Master > Slave > Slave etc) Alternatively, if you wanted to limit their access, create a table with a single datetime field. Create an Event every X seconds to update it with the current time, then on the slaves grant them access to just that table. They can then compare the current time to the time in the table. (useful where you have multiple levels of slave databases). 
+
+The config items you added in should have little to no impact on the situation. n.b. you will probably also want , (details) but leave that out until after you've imported the data, of you'll have 100's of GB's of binary logs created. I think the real question is whether your OS is happy with a single file that size, bearing in mind that it wont get smaller, but may get larger. If it's going to be an issue you may want to look at (details) which 'basically' splits the data between and a file for each table. (This involves reloading the dumpfile to take affect) (this is on by default from MySQL 5.6.6) There are pros and cons for both options. 
+
+But I am using MySQL 5.5. Is this the correct version of innobackupex to use with my databases, and if not which version should I use? The documentation isn't very clear. I installed it using the following process: 
+
+(-sorry if I have misunderstood) (-assuming you are using binlog file and pos). The key things to make sure of are that your servers have unique (if you have replication running already then this should be ok). You also probably want to set: 
+
+No, this is correct. In your you issue a command, which creates a new Binary log. The initial position in the binary log (after headings etc.) is 107, and always will be (unless you upgrade to a different version - then it may be something else). 
+
+So far so good. It executes every minute, and adds an entry to the table, which replicates to the other Database. However, on the Master B, it is marked as , and so doesn't execute. If I do: on Master B, it starts to execute on Master B, but on Master A it is now flagged as , and so doesn't execute. If I then enable it on Master A, Master B is . The reason for wanting this (in case you were wondering), is so that as part of my failover script I simply need to execute on each database accordingly, as opposed to having to enable / disable all my events (one command vs many commands). Under normal circumstances, on Master A () the events execute as per normal and adds the entry; On Master B () the events execute, but don't insert an entry as they don't have permission. I looked at using as the one command, but if I set it to as the default, then we need to remember to enable it each server restart. Alternatively if we set it to as the default we need to remember to disable it every server restart. The use of seemed a better option as it can be easily included in a failover script. Any ideas? 
+
+I've just installed a copy of MySQL 5.7 for testing, and I love the fact that it now only creates a single root account, and puts the password into a file called .mysql_secret. There's just one problem. Where can I find the above mentioned file. On Linux it is apparently found in $HOME, but my test DB is on Windows. I tried various places including %USERPROFILE% but I just can't find it anywhere!! Can anyone please tell me where to find this file? As otherwise my testing will be over before it has begun. 
+
+There are a handful of options that are Dynamic, but for the most part they have to be added to the cnf file, which means you need to restart your live databases if you want to use it. 
+
+In MySQL Cluster (7.3), is there any way to lock down the section in to a small subnet, rather than setting it to a single IP Address, or open for any IP Address? I've searched the documentation and the web, and I can't see anything that says Yes or No specifically. I tried it on my test cluster (all running on my Win 7 PC), and trying didn't work, nor did . It just seems to be a security risk leaving it open like that, but defeats the point of adding 'spare' slots if they have to be pre-allocated to a fixed IP address. 
+
+Not exactly what I had in mind. Am I missing something, or have I completely misunderstood what does? I'm not sure why I didn't get the latest version either. I ran followed by . (as you may have gathered, I'm not really a Linux person) 
+
+There is no sign of it. If I run then there is an entry for it. But If I run then it tells me it doesn't exist. I know the file is there, because there are two databases on this server running under and it installed fine under the other one. The server is 5.5.54, the server is Debian 8 (jessie). Is there anything else I can do? Can I simply delete it from the table without causing problems? Restarting the server isn't feasible as it is my master database. 
+
+which is basically all the (hundreds of) updates listed one after the other, with no indication of which one is which. But how do I find the one that is causing the problem on the slave? (e.g. which one is at position 211713441) There are literally hundreds of updates, one after the other. 
+
+I'm trying to put together a function to convert a size from one type to another (e.g. bytes >> gigabytes). An extract is below 
+
+High Availability (HA) is a very generic term that can be applied to a whole range of different scenarios. There is no “one size fits all” approach to delivering High Availability (HA). Unique application attributes, business requirements, operational capabilities and legacy infrastructure can all influence HA technology selection. And technology is only one element in delivering HA: people and processes are just as critical as the technology itself. At it's most basic it simply means ensuring your entire system (of which the database is a part) is available to meet your required SLA, whether that be 99% availability, or 99.999% availability, or somehing else. The above link gives the official definition from MySQL. Your use of a Slave database is one of many good reasons for using a MySQL slave. And at it's most basic level, if your master fails, the slave could be manually promoted to be the master. Then you would set up the Master as the new slave once it had been recovered. The below slide presentation gives a good overview of the main MySQL HA offerings. MySQL HA Solutions 
+
+This statement updates 1000 rows. However on the slave I have removed one, so replication breaks and I get: 
+
+In the given example each has two data elements and . I want to get the data elements for and compare them to So with the above Test Data I would end up with: Desired Result: 
+
+I came into work this morning, and first thing I noticed is that one of my Slave databases was running behind. I took a look at the and could see that I had the following running. 
+
+I open the file (in this case I use gvim for windows because of the size) and search for . This returns: 
+
+$URL$ As it stands the only option appears to be to install, configure, and test a copy of MySQL 5.6 (which I'll never actually use) to act as an itermediary between my live system and test system. But that just introduces a whole load of additional complexity when trying to run like for like testing between 5.5. and 5.7 slaves (e.g. is it MySQL 5.7 that caused problem X, or was it MySQL 5.6 doing something on the way through etc). I see that there is a BUG report for this, which they have since decided is Not actually a BUG, but a feature!!! 
+
+It contains a list of events with the time it happenned, and the value. I am now looking to generate a report from this similar to: 
+
+Unfortunately you can't use a trigger to update the table that called the trigger: from the documentation: 
+
+Looking at the documentation it tells me that for the most part they are not Dynamic. So how do I set them to what I need at the time I install the plugin? From what I can tell the only option is to add them to my file and restart the Database. That's fine for a Test System, but I can't go round restarting my LIVE databases, just to install a plugin, surely. 
+
+WHERE x is the time the backup ran the day before. Then we run MySQLDump against backupTable. Alternatively you could do something similar and set a 'backedup' flag in the main table, and then just 
+
+I have a shell script which loops through a folder and picks up a set of files in turn. I then pass the to a .sql script so that the file can be imported into my database. BUT, I can't for the life of me get it to work. My Basic script is as follows: 
+
+What I would do is set it up with sufficient partitions so that your top (MAXVALUE) partition never gets used. In this way when the time comes to add the next partition, you are going to re-partition the 'empty' MAXVALUE partition which should be a lot quicker. So you would start by adding a partition for which replaces the MAXVALUE partition. Then when you get close to 2300000 entries, you would add a new partition for . And because you would be splitting the empty MAXVALUE partition it will be relatively quick. 
+
+On your Slave issue the , commands to stop / start replication on Demand. If you want to run it to a schedule write a batch file / cron to and at the required times. I'm assuming you have a good reason for doing this? 
+
+I've just started testing Row Based Replication on my MySQL 5.5. databases. I have now got the following error: 
+
+I've been looking to implemement the . So far I have installed it and configured it, and it seems to be working ok. Except, I have installed it on a slave Database as I don't want to run it on my master database (because of the additional overhead, and the fact it requires a DB restart if I want to configure it), and it doesn't appear to be logging any queries. I have set up a script to import the logfile back into a standalone MySQL instance so I can query it, and from what I can tell it only records events that happen locally on the slave, but ignores all queries that are replicated from the master. I implemented it because I need a way to audit the types of statements being run on our databases (, etc.) but if they're not going to be recorded it's not much use. I can't see anything in the documentation for this (either Percona or MySQL). Does anyone else use this, and is it just me that has missed something or am I going to have to go back to the drawing board. I'm running MySQL 5.5 with Statement Based Replication.

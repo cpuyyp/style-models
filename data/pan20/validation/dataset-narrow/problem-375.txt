@@ -1,0 +1,109 @@
+Step 05 On ServerC, run If is a Number, CONGRATULATIONS !!! Step 06 On ServerB, run ; On ServerC, run ; Give it a Try !!! CAVEAT If the majority of your data is MyISAM, ignore all commands that change . 
+
+You have two caches, one for each Storage Engine. MyISAM Only caches index pages in the key buffer (sized of key_buffer_size). All data pages are read from the of the MyISAM table. InnoDB Three Components 
+
+InnoDB likes to write everything it does to the Double Write Buffer located somewhere in the middle of the file ibdata1 as a precaution should there be a crash. Missing data and pages are recovered from the Double Write Buffer. Since you are doing a big migration to a slow device, you should disable it for the duration of the migration. In this instance, just do the following: 
+
+If innodb_file_per_table is enabled, then a temp table is being populated with the new compression. The original table is currently intact, just not writable. Running on the Connection running the should do the following: 
+
+CAVEAT You may have to experiment with latin1, change the character set and collation of the individual column in the table, or possibly both. At the very least, use latin1 for display in phpmyadmin. You could tweek and experiment with making the entire database a specific character set and collation using ALTER DATABASE. 
+
+If your database is all-MyISAM (you start hearing Twilight Zone music) : Don't mysqldump. Shutdown mysql and maker a copy of /var/lib/mysql (LVM Snapshot, scp, rsync, etc). That way, there is no SQL controversy. You should probably dump data and table structure together, just to be sure. 
+
+the MySQL will not do any crash recovery during mysqld's startup phase. If you decide to rsync a live server, you are not taking into account the InnoDB Buffer Pool that has dirty pages (changes needed to be flushed to disk). Starting mysqld from a live rsync would impose crash recovery using ibdata1's double write buffer and a scan for any changes (deltas) in the redo logs (ib_logfile0,ib_logfile1). This is risky in a write-intensive live database. Option D Doing --single-transaction mysqldump creates a convenient point-in-time backup. Doing the incremental using binary logs will require four(4) things: 
+
+To make a long story short, slowness is being imposed because your is not optimal and the MySQL Query Optimizer is still abiding by its preset rules. There are checks being done on possible null results from the subquery even though you know there will be a non-null result. SUGGESTION Rather that doing a deeper dive into what makes your query's execution slow, I would rewrite the query as follows: 
+
+However, doing does nothing for space already allocated. To quickly drop the space down to zero rows, you can do the following: 
+
+Something to keep in mind: The DROP privilege encompasses databases, table, and views. Unfortunately, and fall under the same privilege scope. For example I create a user called kumar and a database called kumar 
+
+This would automatically do all DML against that table provided you replicate to the same named table. 
+
+Since the the number of rows is about 100M, the Savings in Diskspace would have to be between 900M and 1.3G. UPDATE 2012-08-23 13:00 EDT To answer your comment 
+
+You need to create my.ini Go to You should see a bin folder and the data folder you have in your question Create my.ini in I noticed you have 
+
+If there is any intermittency between steps 1 and 2, this could account for what seems to be replication lag. Since there are stable servers, I suggest resetting the relay logs on the unstable servers by doing the following: 
+
+I figured you should change the to because you are not doing any actual aggregation (i.e., you not doing SUM(), COUNT(), AVG(), or any other summations) 
+
+to have replication conitnue If you have multiple error numbers to skip, it should be a comma-delimited list of error numbers 
+
+You shold get the definitive counts you were looking for. Yet, why would the counts for NULL and NOT NULL compute correctly? Again, this is just an educated guess. You have the column indexed. Here is what I want you to try: 
+
+If you find the Sort_merge_passes and the rate too high, then feel free to increase sort_buffer_size. Suppose you want to raise to 4M. You would run this: 
+
+That way, a cutover would not involve editing any part of the app. Please notice that I did not mention running anywhere because this would allow any final SQL statements to flow over from Master1 to Master2 once mysql is stopped on Master1. 
+
+You may to have adjust some VARCHAR length in some table based on the Character Set you are using. That exact error message is actually posted as a bug report from Nov 2004, when in fact, it is not really a bug. That should direct you on how to adjust key lengths, especially your PRIMARY KEYs. If you know which table is causing the , you have to do the following: Step 01) mysqldump only database schema 
+
+Step 02) This will enable binary logging on the master. On the new slave, you can run the following command: 
+
+OPTION #3 You may want to consider just customizing a solution with ComputeEngine instances with MySQL manually installed and create frequent snapshots of your data folder (which should contain InnoDB tables only along with binary logs). Additional instances (at least 1) for setting up MySQL Replication slaves may be need to still have additional HA. 
+
+Why would the County have to have (name,state_id) as a unique key combo? For example, there are 10 countries in the USA named Orange County (One is in New York, another is in California) Let's go with City 
+
+That will allow more connections effective immediately, but don't just arbitrarily increase the number on whim. You have to make sure mysql has enough RAM to accommodate the increase. CAVEAT : If you change max_connections dynamically to 300, please put it in /etc/my.cnf 
+
+Nothing in the Documentation states a way to set a size or know its limitations. It only recommends placing the doublewrite file on a fast HDD. CONJECTURE (OK I am guessing at this point) If there is no limit on the doublewrite buffer size, then the number of blocks that make up all the data and index pages would be the maximum size. You would run this query: 
+
+Using on an InnoDB table requires a full table lock because TRUNCATE TABLE is DDL (Data Definition Language) not DML (Data Manipulation). Doing will not help because MVCC info is written to the undo logs in ibdata1, and that can hold up the table from being emptied. If any uncommitted transactions are holding onto , that could potentially hold up a as well. You could rename the table so that it is immediately available 
+
+EPILOGUE The main part of the query is the subquery because it retrieves the maximum ID for each issue_key 
+
+is executed afterwards. You really have to know the table layouts to understand how to change privileges manually. For example, I created a user called with the following privileges 
+
+If no rows disappear after this, then it was most likely the problem of open file handles agsint the MyISAM tables. MyISAm keeps tabs on how may file handles have been opened against the table. If mysql has been shutdown and you query the table for the first time since mysql startup and the MyISAM reports it already has open file handles when you are the first to access it, the table is marked as crashed. You can actaully run that repair on startup as follows: STEP 01) Make a one-line script to repair the table 
+
+This will list all users that have SUPER privilege. Most users that do application-related DB processing do not require this privilege. According to the MySQL Documentation, those with SUPER privilege can do the following: 
+
+As we all know, mysqld_safe and mysqld are very different mysqld : The database server instance daemon mysqld_safe : Control program that examines and sets the environment for mysqld to execute. The mysqld executable is actually launched in a loop. When mysqld terminates, the mysqld_safe program will examine the return results and decide whether 
+
+Setup MySQL Replication (if you haven't done so already) Perform all SELECTs involving against the Slave on the Slave Perform on the Master. Perform all SELECTs involving against the Master on the Slave (Replicates to the Slave) 
+
+Each INSERT command you read has a certain number of rows. This number you cannot control unless you script to put them together in the number of rows you choose. I would advise against that be mysqld decided the best number of rows for that particular batch given the current configuration settings (perhaps the max_allowed_packet) SUGGESTION #2 : Use and batch them your way When you deactivate --extended-insert, each INSERT command will have one row. You can collect the rows using a script and collect as many rows as you like. CAVEATS 
+
+This is not mysqld setting, it's a mysql client session setting. You may want to add show-warnings to mysql client session 
+
+In fact, by doing this, you are actually taking the and changing it on . Looking back at your first query 
+
+None of the system tables (that is, nothing in the INFORMATION_SCHEMA database) exist that has that kind of information recorded anywhere. In other words, there is no native mechanism to put any timestamps on column changes. Any time that 
+
+SUGGESTION #4 Perhaps recreate the table from a start date. For example, to keep the last 30 days, do this: 
+
+A two node Cluster is still operational. When introducing the third node for the first time or bringing back the third node from being down, one of the two operating nodes enters a read-only state (as a donor) to help the third node play catchup. Only one As I said in the first question: When there is a third node in the Cluster, at least one server can collect inserts, updates, and deletes. 
+
+See the 5.4M per thread? That is multipled by max_connections. In this example, that would be a maximum of about 10.8G of RAM. Therefore, each time you bump up max_connections, you should run mysqltuner.pl and check if you are pressing the OS for too much memory. In any case, limiting who has SUPER privileges give such users opportunity to mitigate flooding mysqld with DB Connections. 
+
+You may want to disable the variable innodb_stats_on_metadata. According to the MySQL Documentation on 
+
+If the summonerID drives which gameIDs to retrieve, then the query needs to have be the lead table in the query 
+
+OPTION #2 : Have mysqld execute script before allowing connections You would have to add this option 
+
+This should work just fine for MyISAM. It should also work for InnoDB if there are no constraints. If there are constraints, you may have to disable them for the import session: 
+
+EPILOGUE There is no substitute for common sense. If you have limited memory, a mixture of storage engines, or a combination thereof, you will have to adjust for different scenarios. 
+
+I think your explain plan is doing a heavy index scan. What you might need is an index with those exact three columns. Please create this index 
+
+Actually, the numbers you have indicate something special: Your table data are fragmented. Why such fragmentation ? InnoDB data and index pages are 16K. Row data will never completely fill up 16K. I am sure if you reload the dump into another mysql instance, the data will take up less space, no fragmentation. What you could also do is shrink all the InnoDB tables. How ??? To shrink run 
+
+STEP 04) Once you startup mysqld, the slow log entries are recorded in the MyISAM table mysql.slow_log; To rotate out the entries before midnight, you could something like this: 
+
+This would only apply if you are choosing to query one id. If you are displaying multiple users, it gets a little hairy. You would have to sculpt the query for each column by searching for the field name in the list of public fields, displaying the field if it is found, 'Private' otherwise. 
+
+There are things to keep in mind if you decide not to shrink ibdata1. First of all, if you switch to innodb_file_per_table and you do not perform the Cleanup, the InnoDB tables will still reside in ibdata1. Any future tables you create will be stored in .ibd files. As a side note, since you are using innodb_file_per_table, you will need to increase innodb_open_files. The only way to know which InnoDB tables are still in ibdata1, you would have to run this: 
+
+MySQL Documentation Under Natural Language Full-Text Searches Paragraph 1 returns a relevance value; that is, a similarity measure between the search string and the text in that row in the columns named in the MATCH() list***. 
+
+SUGGESTION Perhaps just running will close all open files handles to previously accessed tables just prior to doing any commands. UPDATE 2017-08-15 08:21 EDT I looked at the buffer statistics at the time of the incident you posted. 
+
+There is no WHERE clause. It is generating a temp table for an unbounded result set. LIMIT has low precedence in the eyes of the Query Optimizer. Why ? According to the MySQL Documentation on 
+
+There is no implicit shared lock in REPEATABLE READ isolation level. You need to change the transaction sequence as follows: ISOLATION LEVEL You could switch to the SERIALIZABLE isolation level and disable autocommit. That way, the row is locked in shared mode implicitly. If you want to stay with REPEATABLE READ or READ COMMITTED, you will have to call SELECT ... FOR UPDATE manually before doing the UPDATE. QUERY (Optional Suggestion) You should also experiment with 
+
+or disable autocommit using .NET protocols (Disclaimer: I'm not a .NET developer) Although I am leaning toward READ-UNCOMMITTED to allow "dirty reads", you must experiment with other transaction isolation levels at some point to see which one has the desired effect. Give it a Try !!! 
+
+OPTION #1 : Use Master/Master You could use Master/Master only under one condition: If you write to a DB on ServerA, DO NOT ISSUE WRITES TO ServerB, and vice versa. In this way, you split writes cleanly. Splitting writes to the same DB in Master/Master can be a little clumsy if you depend on looking up rows by IDs that have the AUTO_INCREMENT property. If you look up rows by unique keys that never change from server to server, such as Social Security Number, Driver License, a HashKey and so forth, the splitting writes to the same DB between two Masters in Master/Master is fine. OPTION #2 : Use Slave Servers @DTest already described this, so I will add nothing additional to his suggestion (He get's a +1 for it). OPTION #3 : Use MyISAM in the Slave Servers When using read-only slaves that are not being used as a master for other servers, you should do two things to the data in that MySQL Instance

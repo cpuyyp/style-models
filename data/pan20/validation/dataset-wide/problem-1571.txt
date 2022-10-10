@@ -1,0 +1,39 @@
+I'm also wondering why multiple queries have to be made to initialize dataRetrieveModel, but for now, I only want to focus on this method. But then all those return View(dataRetrieveModel) seems too verbose, so I thought about defining a return label and using a goto. I'm not sure how others feel about it. I'd like to hear any suggestions on this matter. 
+
+The confusion is probably compounded by the fact that I'm working overseas. People here speak little to no English here. Which method should I stick with? 
+
+My instant reaction: Ugh. Being a shameless fanatic of LINQ, I decided to rewrite the code using LINQ. 
+
+Without thinking twice about it, I switched to the any version because .Any() is more readable for me. But a coworker of mine sees the change and asked why I did it. I explained that this improves readability but his objection was the following: 
+
+It's a very simple controller that returns a model. My question is given this code, how would you go about cleaning/refactoring it? Here's my approach. First, I identified a lot of short circuiting points along with empty spaces, so I went ahead and cleaned those up first: 
+
+As I explain here, the EF model is primarily a data layer. Its classes may be suited for other roles, but their primary responsibility should always be: smooth data access. Your question is about combining three possible roles an EF model class could play: 
+
+The trouble is that with extension methods it's too easy to 'add' methods to a very general type while the scope of these methods is more restricted than the scope of the type itself, even within one namespace. For example, I had extension methods on that I decided to ditch again later, when wisdom finally took over. This phenomenon also applies to your extension methods. They are defined on . Now I don't know how many classes you intend to implement, but who says they're all going to have ? This means that you'd have to confine the extension methods to contexts knowing about . This, in turn, may imply that you may as well replace the extension methods by instance methods in one specific context class. When create a method at all? That's another question. No matter if it's an extension method or an instance method. Is the task even worth creating a generally accessible method? I specifically frown upon this method. To me, this looks like something that should probably be a service method. Remember the single responsibility principle? A context shouldn't have any knowledge about any format. That's a (domain) service's responsibility. It may make the context with all its paraphernalia less applicable (or targeted) to other parts of the application or other assemblies. Or, worse, you may get tempted to enter a range of methods to meet other specifications. Alternatives Finally, there are other ways to deal with this 'soft delete' problem, i.e. the problem that records are deactivated rather than physically deleted, while the deactivated records shouldn't be displayed. Of course (and that justifies your [extension] method efforts) you don't want to add to each and every query. But extension or instance methods supplying a pre-filtered set aren't enough either! Any old time you apply an you'll be in trouble. 
+
+However, I'm wondering if this code is less readable than the above version, even though it is definitely compact. In my eyes, it's definitely readable as I'm comfortable with LINQ but my coworkers have not even heard of LINQ. Which is a better change? Should I keep my LINQ version or unroll LINQ to two foreach loops? 
+
+I'm writing a WCF service for validating password and getting company ID for the clients that requests the services. The service runs on a server locally as a windows service, which sends queries to the database and returns the appropriate info back to the client. I'd first like some comments on how the overall design looks like as I'm going to be adding more operations but wanted to avoid any situations where I have to rewrite them all just in case if I'm headed the wrong direction. I have a specific question regarding the stability of this service. In case if the operation somehow fails on the server's end, such as an exception being thrown because the server couldn't connect to a database. 
+
+Since it may not always be clear if the program control flow will end up calling the method it may seem sensible to load the collection always. But that would require any old time s are loaded, even when they're not needed. Load right before is going to be called (if possible). 
+
+To prevent these errors you'd want to ensure that whenever is to be executed is eagerly loaded (using ). Two options: 
+
+... assuming that simply s the entity to the context. Now EF will see and as new objects and (try to) insert them on . So how to assign the and values? You could do that in a very generic way that will solve this for any you add, not only copied ones, even removing the need of this constructor. It's by overriding in your subclass: 
+
+At the end of the day, only you can tell what performs best. But there are two things that in most cases will help improve performance. 1. Reduce the number of queries. Essentially, you do 
+
+This is fairly easy to achieve. You need to make use of callback, which can perform the functionality specific to the method, which your generic method then uses. Something like this: 
+
+"it was not object orientated" is a weird response. It would make me instantly worried about the company as it suggests they are living in the past, so it's not somewhere I'd want to work. Having said that, I'd imagine they were looking for something like you declaring an interface and classes to handle each tax type. Something like: 
+
+Whether this is better than what you wrote is moot though. Your solution works. By making it "more object orientated", I've arguably made the code harder to maintain. So whilst I've shown how this could written to follow OOP concepts, you are better off sticking to your approach and simply following the advice in other answers on how to better follow C# conventions and how to improve the code. 
+
+The second part is OK. Getting the most recent item from a collection always requires some ordering that defines "most recent". Note that using the improved form, EF will translate this into one query, because isn't materialized yet. It is an expression tree1 that can be merged with the second expression. If you want, you can create one statement in LINQ as well: 
+
+As you see, for the details I use a ( which serves as an outer join) to determine the existing and the new details. The existing ones are modified, the new ones are added. 
+
+Note that doesn't return but . This opens the opportunity to compose a LINQ statement involving multiple repositories and still translate the whole statement into one SQL statement. For example, if you need an occasional (because there is no navigation property), it would look like: 
+
+Whether or not you should set up a UoW/Repository layer on top of the UoW/Repository implementations that EF offers out of the box (/) is a question I consider beyond the scope of this review. You'll find many many opinions about this on the internet. But a couple of things are definitely wrong. Repository's internals

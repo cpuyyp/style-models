@@ -1,0 +1,49 @@
+VAO can share VBO's because they do not store vertex data itself but references to Vertex Buffer Objects. So you can first generate your buffers and upload your buffer data (vertex data and index data) to currently bound buffers. 
+
+Why are uvs needed? For example I rendered geometry to screen quad and then I need to apply some postprocessing on this quad in another rendering pass. To sample from that quad I need texture coordinates in range [0, 1]. So to calculate them I perform division . 
+
+Nvidia in this article presented a way to upsample low res buffer to full res buffer called Nearest Depth Upsampling. This works by comparing four depth values from downsampled low res depth buffer with current value of full res depth buffer and selecting texcoords where difference is minimal to sample the low res buffer. In the article they stated the four places to sample as "bilinear footprint of the current full res pixel". In the picture, the circle marks the texcoord of one of the fragments of full res buffer. So if full res is 4x4 then low res is 2x2. 
+
+Your confusion comes from fact that in some basic tutorials like one you point cubemap which is used for applying lighting is global and static - it does not come from actual geometry but from infite sky box which moves with camera position so it is valid everywhere. And there is nothing mentioned about second type - local cubemaps which are actually computed using local geometry and are valid only in point of their placement. This can be approached using multiple local cubemaps and connecting them with local objects situated around them but what is problematic is that it generates seams between them especially for high frequency reflections, which you probably would like to test. For now you can generate few local cubemaps - each one centered at one of your small objects and used on it. They would move with objects if you plan to change their position. They would take into account your local geometry and, if you render it, your global skybox or skydome. You can precompute these cubemaps each time you change the position of your objects or do it every frame. If you want to make your whole sponza reflective with high frequency, that's harder problem but one idea is to voxelize whole sponza with different mipmap voxel levels and then ray trace it as in voxel cone tracing technique. Voxelization could be done as precomputation but it is generally memory intensive. 
+
+Currently I got interested in implementation of Precomputed Radiance Transfer. I decided that occlusion representation (which is not trivial to compute) would be precomputed as CPU raytracing and stored as vertex buffer in addition to usual vertices. This representation would be stored as SH coefficients because I need to have information about occluded and unoccluded directions (probably 4 so additional buffer). So these would store only unoccluded directions. I don't know yet how that would behave but using this foreach vertex should make it quite accurate despite being low frequency. And as for color representation, computing it is quite trivial (transforming image representing skymap scattering and normals into SH set) and I want it to be dynamic so it would be done every frame. These would be 9 coefficients because why not. So in reconstruction step I would have two sets of coefficients: precomputed occlusion (4 coefficients) and real time color (9 coefficients for RGB so in sum 27 coefficients). Can I (and how) multiply them (as in the picture below from this paper) so in the result I would get representation with occluded color filtered out? 
+
+Is there a way to make it work (in ESM way, not traditional due to acne) or due to specification it is rather impossible? In traditional way it is possible. 
+
+For some time I have been working on UV unwrapper for radiosity computation. The information online about it is very sparse, except how to do it in some high end software. So far I have used triplanar method. The mesh I am testing is Sponza obj file - which consist of 384 objects in single file. This method computes normal of each triangle and depending on its direction take into consideration two components of position of model in world space. 
+
+then some walls seem to be correct, others not... EDIT: Adventures in tangent space... Is there a badge of longest question ever or biggest number of pictures? 
+
+Each technique is based on grid moving with camera in voxel size increments. The key I think is to describe pros and cons of kind of technique in more general way. For example some other techniques are based on RSM sampling. I think two kinds should suffice. Is there any other important or popular kind of technique which I should include or I am not aware of? 
+
+And then generate your VAO's and connect vertex array object data index you provide in call with currently bound . The can be a little confusing because it doesn't require call. So how it is connected with VAO? It seems that binding the buffer ties it to the currently bound VAO. 
+
+I'm trying to implement POM using this tutorial. As stated, I need to transform fragment-to-camera to tangent space and then pass it to a function. 
+
+So at start you have samples from your cube map. Each sample has color and normal (dir) at which you sampled that color. This is how I do it. I use coeffs from this paper (the same you linked), there are values for the first 9 of them. So for constructing for each sample you: 
+
+This is rather general programming question but parallelizing for loop (most common usage) in c++ is easy with openMP library. Basic example for parallelizing outer loop: 
+
+General answer is that creating a window as a GUI element with some GUI designer library involves subclassing some basic GUI element (like widget in QtCreator for example) with class providing handling GL context in more or less user friendly way (like in QtCreator which provide some user friendly wrapper or on the other hand basic Win32 API handle) and override methods for handling its framebuffer drawing or resizing, swapping buffers etc. with usual gl extensions provided by some lib you use. This will work perfectly fine with other GUI elements. I don't know which GUI lib or IDE with GUI designer or language you prefer but most good libs can handle this. You can even do it in Assembler with WinApi GUI elements. 
+
+I'm doing something wrong. And I wonder why we multiply by 3x3 part of the model matrix? EDIT: I've found function which calculates tbn in fragment: 
+
+Here (FrostBite engine) it is smooth constantly independent of camera movement. So is there a way to simulate camera movements? Or any other technique to correct the issue? Here you can download some content describing subject. 
+
+I see you are rendering one quad of grass at the time. Many draw calls each for small number of vertices aren't very efficient and would make massive CPU bottlenecks especially if you want to render thousand of grass blades. This isn't an answer to your question about order of transformation but you might consider how I implemented this grass technique. I stored each grass instance (3 quads with 60° degrees between each as in picture) in single VAO which contains buffers for vertices, texcoords, indices: 
+
+Shadow mapping with acceptable quality is quite a journey. So you implemented first step - basic shadow map that encompass whole scene statically. This means that shadow map texel size in light view space to texel size of rendered scene in camera view space ratio is quite big, resulting in aliasing. To reduce this ratio closer to 1:1 there are techniques you mentioned like: 
+
+while(currentLayerDepth < currentDepthMapValue) { // shift texture coordinates along direction of P currentTexCoords -= deltaTexCoords; // get depthmap value at current texture coordinates currentDepthMapValue = texture2D(textureHeight, currentTexCoords).r; // get depth of next layer currentLayerDepth += layerDepth; } // get texture coordinates before collision (reverse operations) vec2 prevTexCoords = currentTexCoords + deltaTexCoords; // get depth after and before collision for linear interpolation float afterDepth = currentDepthMapValue - currentLayerDepth; float beforeDepth = texture2D(textureHeight, prevTexCoords).r - currentLayerDepth + layerDepth; // interpolation of texture coordinates float weight = afterDepth / (afterDepth - beforeDepth); return prevTexCoords * weight + currentTexCoords * (1.0 - weight); } Thats the result (simple displacement): 
+
+Also thing to consider is using SIMD instructions (Single Instruction Multiple Data) which optimize multiple operations to single CPU instruction: 
+
+First, are screen space coordinates of current pixel based on viewport size. So if viewport size is , then each fragment contains: 
+
+You need to be careful about spaces - position and normal need to be in view space. To transform depth into view space position I used this method. So: 
+
+There is good glsl source of noise (simplex noise) online to make real time noise. In addition to this, to make effect of moving fog/smoke like in this video you can make 3D FBM function. This is my function: 
+
+There are also Exponential Shadow Maps - which I use because these are great for removing shadow acne in my experience, so you don't need to add bias resulting in peter panning. I combine them with PCF techniques. Unfortunately I can't combine ESM with hardware PCF. I didn't implemented the Volume Shadows myself but it seems to be interesting area to investigate. You didn't fail with PCF, it looks like that:) I wish there was a way to apply gaussian blur on shadow map in camera view space, but it doesn't work as expected. 
+
+As stated in documentation possible values for layout qualifiers of image formats are (for example floating point):

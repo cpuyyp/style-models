@@ -1,0 +1,71 @@
+Firstly, your indentation seems broken here. Before pasting code into any StackExchange site you should ensure that it has no tabs or that your tabstop is 4 spaces, because the indentation will be forceably converted to spaces using that tabstop. This would be more readable with names for etc. Could be , , or anything simple and consistent. The correct way to avoid division by zero is to use instead of . 
+
+It's not entirely clear how this prevents distortion. From the context and your comment I understand that the point is to adjust the aspect ratio so that pixels are assumed to be square, but the comment doesn't really explain itself, and it doesn't do anything to prevent you changing the initial values of etc. in such a way that this rescaling introduces distortion. I think it would be more maintainable to have the initial values in the form of and coordinates for the centre and then a parameter. If the code were 
+
+I agree with Peter Rader that static factories are not a good pattern. For this particular task I would be inclined to use a builder pattern. In particular, I would quite like to have a varargs parameter somewhere, and IMO the cleanest way of doing that would be for it to be the sole parameter of a constructor. 
+
+If you first transform the string into a run-length encoded representation then these cases are all pretty simple to check. 
+
+In this case it loops through all possibilities: for other inputs it will loop through fewer than possibilities. But it's never necessary to loop through more than . To handle the tie-breaker needs to be descending so that the first time we hit the optimum we also have the optimum ; to detect the cycle we need an extra variable outside the loop or a repeated calculation inside it. E.g. 
+
+For a start, the and keywords aren't doing anything useful here: they just wrap an extra, unnecessary, task around the explicitly created one. But secondly, the only reason I can see for wanting a is if the callback is slow. Would it not make more sense then to take a which returns a and that task? 
+
+I don't see the conversion to lower case. Is the doc buggy or the code? Also, maybe because the posted code doesn't include the class header for the main class, I don't see a full explanation of the data structure. I see mention of it being a "compressed trie", and it's possible to deduce from the fact that a contains a substring which isn't necessarily a prefix or a suffix roughly what is meant by this, but e.g. what guarantees do we get about common prefixes between siblings? And is there any constraint on the order of the singly linked list implemented with ? That information is essential for the maintenance programmer who has to deal with this code in two years' time, and they shouldn't have to try to reverse engineer the code to work it out. Optimisation I mentioned the singly linked list implemented with . I would prefer to use a suitable for two reasons: firstly, because there doesn't seem to be a good reason for reimplementing something which the standard library already supports; and secondly, because with the right collection (I'm thinking ) you could use binary chop rather than linear search. 
+
+The next trick to consider using would be a implementation which wraps the original string and an offset for the starting character. 
+
+As discussed in comments, there are better ways of doing the calculation, which in particular avoid the need for so many special cases. This is important because the failure to consider all of the special cases means that the code you've posted is buggy. Consider the following unit test: 
+
+With a bit more work you can pre-calculate when the will be hit, but this post is already too long, so I'm not going to elaborate it any more. 
+
+You don't need to loop over four variables (\$N^4\$ tuples) to solve \$a^4 + b^4 + c^4 = d^4\$. As Loki Astari has already pointed out, given \$a,b,c\$ you just need to test \$a^4 + b^4 + c^4\$ to see whether it is a fourth power: so \$N^3\$ tuples times a lookup (binary chop is a reasonable suggestion). Combined with Dannnno's suggestion in a comment on the question that without loss of generality \$a \le b \le c\$ you can reduce that further to approximately \$\frac{1}{6}N^3\$ tuples. But actually you can take the loop reduction a step further: rewrite the equation as \$a^4 + b^4 = d^4 - c^4\$ (with \$c < d\$). Then (at an abstract level) you can write two parallel loops, one over \$(a, b)\$ and the other over \$(c, d)\$, processing a total of about \$N^2\$ tuples. The implementation detail is that \$N\$ is too large to store the tuples from one of the loops. A standard approach to get around that is to generate the two sequences in order using priority queues. To keep it simple, I would initialise the ab queue with \$(a, a)\$ for each \$1 \le a \le N\$, and the cd queue with \$(d-1, d)\$ for each \$2 \le d \le N\$. Then the main loop is (Pythonesque pseudocode): 
+
+the question I ask myself is "How can ever be zero?" One call to and the user is required to give me a sensible value. That's not to say that you shouldn't have sanity checks, but they should be sanity checks rather than intentional interface elements. Similarly, I would add some listeners to the checkboxes to enforce that at least one of lower case and upper case letters must be selected at all times. 
+
+As I understand your approach (which needs some comments to explain it better), the indices are the right way around for the first pass, but the second pass transposes the table. An approach based on transposition of a large 2D array can never have good cache coherence. As I hinted in a comment, a faster approach which makes minimal changes is based on Gray codes. 
+
+A suitable name for this method would be . A non-recursive implementation can be written which simply counts from to in base , then converts each digit to the corresponding object. 
+
+There's a possible minor optimisation here: when you already know the LCP, but you calculate it again. In my opinion it would be worth duplicating the simple test before the loop, and only considering . As a bonus, you would no longer need to track because you would always be testing the common prefix of and . (Hint: does that give you any ideas for optimisation?) Why the update to ? I can figure it out, but a comment (and a better name - because the value of isn't the previous LCP) would be useful. 
+
+seems a bit more general than you really need. Since is always it could be simplified. Alternatively, you could use it to simplify the calculations at the start of the mouse handler. 
+
+Firstly, those comments are pointless. Secondly, two of the methods are written correctly and two are not. The latter two should be 
+
+If you're not going to modify the original in place, you might as well at least create the one you are going to modify directly from the original one, to reduce the number of times you copy the entire string. This line here copies it twice, once in the constructor and once in the constructor! 
+
+seems like a lot of implementation detail for the javadoc. I would be inclined to inline into this method, rename it , and simplify the javadoc to something like 
+
+As already observed, this is terribly inefficient. The following optimisations occur to me: Sticking with quadratic time 
+
+This takes \$O(n^2)\$ time. There are \$O(n \lg n)\$ algorithms to do it, so since you say that performance is a concern you probably want to revisit this method. 
+
+That will handle , , , all numeric types, ... (NB I haven't tried compiling it: you might need to add suitable casts to inside the expressions). Your treatment of will require special-casing. One option would be to put that before in the if-chain. Another might be to apply a projection before applying the comparison; for most types it would be the identity projection, but for it would be . 
+
+has and , which are cleaner than the mucking around with . Appending to an external accumulator is quick and easy, but may give more readable code. If you combine that with passing the minimum next denominator and the remaining fraction (rather than respectively extracting them and recalculating them on each call) you get 
+
+(Of course, this has a hideous magic number, but it's not much worse than the in the one it replaces). 
+
+does almost the same thing: the only difference is that it does an extra at the end, hence the changed loop condition. 
+
+is eager: it can't find the smallest element without reading all of them, and it can't read them and not store them because in general an doesn't guarantee to be free of side-effects. Moreover, does comparison-based sorting, not radix-based, so it's superlinear time. , on the other hand, is both lazy and linear. So if you're going to split the two operations up, you should most certainly do the before the . I can't, however, see any advantage to splitting them up. So 
+
+So right now . That means modulo any out-by-one errors. It's worth writing a few test cases, but you should be able to eliminate the loop entirely. 
+
+Now, the part you're really interested in. The algorithm. The question of finding the next permutation in lexicographic order is a classical one (going back 7 centuries) and well documented in the literature. E.g. Wikipedia gives the following algorithm: 
+
+Finally, some of the method names seem slightly misleading to me. connotes "this object already exists and is stored somewhere", but several of these methods are actually creating (or getting, with a creation fallback). I would favour renaming with a or a prefix as appropriate for each case. 
+
+Again, a linear removal could be replaced by a swap and a constant time removal. But I wonder whether this actually meets the spec. Rather than removing from the pool entirely, didn't you just want to guarantee that it won't be the first element picked after repopulating the pool? In fact, I'd be inclined to take this further. Suppose we refactor so that is backed by its own field rather than , and that we have an additional field (or field-backed property) . If we replace with then when gets to 0, the pool contains the entire play list in reverse order of when they were last played. Now 
+
+C# supports operator overloading subject to some constraints, and has all of the arithmetical operators implemented. So you can improve legibility a lot by using standard operators rather than . Local variables in C# normally begin with a lower case letter, so using upper case is not very helpful. In addition, doesn't tell me anything useful: I know that the type is because I can see the declaration, but what does the variable mean? Renaming and using overloaded operators I get rewritten code which IMO is easier to read: 
+
+I get the impression that you care more about performance than numerical analysis, but I think it's worth making this point anyway. There's an important difference between 
+
+You're asking the wrong question. The right question is "What should I use instead of ?" The answer is that if you want to reinvent the wheel, you should use prepared statements, and if you don't then you should use an ORM which uses prepared statements under the hood. Prepared statements allow you to pass in parameters and ensure that the escaping is done correctly. E.g. you would use passing parameter rather than . 
+
+Two questions: firstly, why ? I don't see anything which uses the value. Secondly, why include in the name? The type says that already. 
+
+This looks backwards to me. creates the lock file, then creates the JSON file, and finally deletes the lock file. I think the logic should be 
+
+There is a significant algorithmic improvement for even \$n\$. We start by generalising a pattern in the values you've found for \$n=2\$ and \$n=4\$. Let \$n = 2d\$. Then \$(10^{2d} - 10^d + 1) (10^{2d} - 1) = (10^{3d} + 1)(10^d - 1)\$ is a palindrome and a product of two \$n\$-digit numbers. Suppose \$ab\$ is a larger palindrome, where \$10^{n-1} \le a \le b < 10^n\$. Clearly we require \$a > 10^{2d}-10^d+1\$; let's rewrite as \$a = 10^{2d} - 10^d + x\$, \$b = 10^{2d} - 10^d + y\$ with \$1 < x \le y < 10^d\$. Observe that since \$ab\$ is greater than our known palindrome, its first \$d\$ digits are \$9\$, and since it's a palindrome that means that its last \$d\$ digits are \$9\$. Therefore we have \$xy = -1 \pmod{10^d}\$. It follows immediately

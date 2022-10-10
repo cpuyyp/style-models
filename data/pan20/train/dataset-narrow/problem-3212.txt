@@ -1,0 +1,75 @@
+You need to set the mount options when mounting the stick to allow the motion user to write to the USB stick. Try these fstab options 
+
+The easiest way is to do what lenik said and move the Pi to an internet connection. However, there is a fairly easy way to do it. But it may require a few trips. You will need to find all the packages that you need. Debian has a package finder @ $URL$ Once you know which ones you need, you will need to download them from $URL$ Then once you have retreived the ones you need, place them into /var/cache/apt/archives/ and run apt-get install python which should then install the packages that you have just placed into the archives directory. If you have missed any, it should tell you. 
+
+Reboot the Pi with ethernet disconnected. This will force the Pi to use the wifi connection for all connections, even to the internet. 
+
+No IP Address for mon.wlan0 is normal. What DHCP server are you using ? Can you paste the config for the DHCP server ? Assuming you're using Raspbian - What's the contents of /etc/network/interfaces ? Have you disabled ifplugd ? ifplugd causes issues with hostapd. 
+
+If you want to have a GUI on the Pi to use it as a normal PC while still using it as a media streaming server, you can install minidlna on the Pi to stream media to other devices. 
+
+You'll need the package to setup the bridge that you need to do this You'll need to setup hostapd with the same SSID and security as your existing wireless network. Assuming you're using Raspbian - to install it Then modify and add the configuration file path to the line e.g. 
+
+IIRC there's a sound device selection in XBMC itself. $URL$ Should be able to set that to your USB sound device. 
+
+If they are all web servers, you'd want to have one in front of the rest which controls which webservers clients hit as they would all have different IP addresses. What you want is a high availability proxy - $URL$ In this configuration, you'd have 1 Pi as the HA proxy, and then 4 other Pis doing the web-serving. The HA Proxy will ping each one, and if one of them is down, it won't direct traffic to it. 
+
+iptables can monitor network usage by port. assuming your application only uses a certain port, then this is a possibility A quick google found this - $URL$ That should give you a pointer at least 
+
+Add in to make sure that eth0 will actually come up and get an IP address, so it should look like this - 
+
+Additionally, once it's all setup, I would make sure that security is up to scratch and harden the configuration if it's going to be publicly accessible. 
+
+Create the user like normal and setup the auto login how you want it, Then add the user to DenyUsers in /etc/ssh/sshd_config e.g. 
+
+Check /etc/dhcp/dhclient.conf and make sure the line that begins with 'sendhostname' is not commented out. 
+
+I've written a blog post detailing how to connect DS18b20 temperature sensors to a Pi here, but the short version is this: The sensor has 3 pins: Sense 3.3V Ground Which is which should be indicated on the PCB, with ground labeled as and Sense labeled as I'm not sure whether the PCB itself has a 4K7 resistor already on the board or not. If it doesn't have a 4K7 resistor, then you'll need one across VCC and Sense. If it does, it's just a simple matter of wiring VCC to 3.3v on the Pi, Ground to Ground on the Pi, and Sense to a GPIO pin on the Pi. After that, activate the dtoverlay to get the sensor picked up by the OS. The sensor should show up in . The values can be retrieved by using the command on the w1_slave node under sensor ID. In my case, it looks like this 
+
+Then create the configuration file at that location above. You'll also need to add the line to And then modify and add these lines 
+
+Always run first before installing / upgrading as that will ensure you are getting the newest packages / package locations. 404 errors are commonly because packages are no longer available as new ones have replaced them, or you aren't connected to the internet. But as you can ping google.com, that rules out internet connectivity issues. After , that's when you run 
+
+to schedule jobs like downloading and displaying the image to download a file from a http/ftp server alternatively to download a file via ssh 
+
+Add in an if statement to check to see whether mpg321 is already running. There are a whole bunch of ways to do this. First way that comes to mind is this - 
+
+You've installed the wrong version of . I'm assuming you're using Raspbian ? You get the error when you've installed Debian ARMHF packages on Raspbian. You've probably used the wrong repositories to install . If you haven't done much work on the Pi so far, I'd re-flash Raspbian on, and then again to get the correct version of installed. 
+
+You need to disable the DHCP Server so that it doesn't run on startup. I don't have a box handy at the moment, but this command should do what you need it to do 
+
+This will stop the dhcp server from running on startup. If you have both servers installed, you may need to run that twice, replacing with the second time around. 
+
+It would likely be a 4-pole RCA cable, similar to this one - $URL$ However you will need to check pinouts on the cable to make sure it matches with what the Pi is outputting. I found this blog post - $URL$ - that details it 
+
+For NOOBS, you should just format the SD card as fat32. NOOBs will take care of the rest of it for you. The method is for "raw" Operating images that you can get off the Raspberry Foundation site, like Raspbian. For those images, when you download the file, it will be in an format, which you then to the SD card like so - <-- where is the device that corresponds to your SD Card. 
+
+If there's nothing of value on the SD Card, just blow away everything and create one vfat partition on the SD Card, then copy the boot files there. You can do this with which will just create one big partition taking up the whole device. Afterwards, get the boot files from the image, and copy them over to the SD card. 
+
+What sort of router is this ? Is it actually a modem ? Will it only let one device online at a time ? We need some more details on how things are setup, Which ISP you are with, what modem or router you're using etc. The fact that your Pi is getting a 88.168.64.x IP Address is suspect... I'm suspecting you have a modem, and not a router, which will only let one device online at a time, even if it keeps handing out IP Addresses. 
+
+Comment out the movie saving parts or disable the movie saving parts. Find the line and make sure it's either set to or removed altogether Check the other lines in that area to make sure they are also off / commented out / removed. 
+
+Not quite. For Raspbian, you should be using apt-get is the package manager for Raspbian, much like how pacman is the package manager for Arch Linux 
+
+Check your firewall to make sure SSH is not being blocked. If SSH was not working on the Pi, you'd get a time out error. 
+
+Transmission-daemon has a web interface. If you want a pure command line interface, use transmission-cli Otherwise if you want to use transmission-remote, you'll need to modify and modify this line - and make the true a false 
+
+If you mean have the whole card formatted as ext4, then no. The boot partition must be vfat However the rest of the partitions can be ext4 
+
+If you have to ask, it's beyond your ability to do it (if it's even possible, which I don't believe it is). 
+
+Does the user you're running the perl script under have permissions to modify the path ? Can you run and post the output ? As a test, you can run chmod 777 /dev/shm/rPItemp.rrd and see if the script can update it then. Edit After reading some comments, if you don't want to keep writing to the SD Card, I'd recommend using a separate ramdisk with read/write permissions for everyone rather than putting into /dev/shm. 
+
+Using you can sort by cpu or memory usage. Once you run , hit to choose how to sort the output. sorts by cpu sorts by memory usage 
+
+If you only have one network in , rather than using , use as this will allow you to use static IP addresses. 
+
+Using any recent version of Raspbian / RaspBMC will do it automatically. You don't need to do anything manually. 
+
+Reboot, and it should bridge wlan0 to eth0, and then anything connected to wifi would automatically get bridged to ethernet and act as if it were just connected via ethernet cable. Reference (my blog) $URL$ (ignore the bit about dnsmasq) $URL$ 
+
+If you've expanded the root partition to 8 gigs, then plug the SD card into a PC, and use gparted to resize the partition back down again. Once it's been downsized, make a dd image of the file with this command 
+
+Did you happen to have a look at ifconfig or the syslog before you rebooted ? What probably happened is that the wlan0 device disappeared. Whether it was a temporary issue or perhaps a sign of failing hardware is hard to tell without logs. The wlan0 device can disappear if there is a hiccup with the device itself, or a hiccup with the power supply which then has a flow on effect. The only real way to avoid the issue is to check that the wlan0 device exists, and if it doesn't reboot the Pi. There may be a command to reset the USB bus or something like that, but from what I've heard, there's no reliable way to reset USB devices on the Pi beyond unplugging it and plugging it back in.

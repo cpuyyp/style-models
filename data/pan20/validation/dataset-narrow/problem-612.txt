@@ -1,0 +1,83 @@
+So your component test really is more of an integration test, not a pure unit test. There are basically two ways to improve on that: 
+
+I would not worry about efficiency here. Rather I think the search is not very useful: you can only search by exact value of "to" field. Try to make it work so that you can filter by only writing part of the destination name, like "Ams" instead of "Amsterdam". Filtering on every keypress would also be nice. Note that the filtering isn't applied to the newly created entries. 
+
+I would still question your decision to use binary encoding for storing the deviations. It has several downsides besides the extensibility problem: 
+
+As can be see, we simply replace each token with corresponding HTML. When writing out the we also take care of prepending the as needed. Additionally we escape all HTML special chars in URL and within rest of the text - using a little utility function. To tie it all together: 
+
+This way it would become clear that the creation of array only depends on the count of values, not on the values themselves. Additionally the function only uses assoc-array to extract values from it - therefore I would recommend only passing in the values in the first place (it shouldn't be the job of the averaging function to extract the values to be worked on). 
+
+It should be fairly obvious how to extend the to support additional BBCode tags. One missing feature is to automatically append close tags if one would input something like . This is left as an exercise for the reader :) 
+
+For me the main semantic question is whether you should have a section containing articles or an article containing sections. Or perhaps even an article containing other sub-articles. From the HTML spec: 
+
+So you load data for each view, but then you also go through all other views to pass this data to them when they happen to need it. However you don't only pass the data from currently loaded view, but you try to cover all the views (some of which have not been loaded yet). So the first optimization to make is to eliminate this third loop through all the views. Just passing the data from currently loaded view to the views that need it: 
+
+You should avoid mixing calculations with input/output. It would be better if your would not call the output function directly, but instead would just return the result of its calculations: 
+
+That's better, but we still need to loop through all the views to find out which ones need our data. Perhaps there are hundreds of views and only three need the data. A better approach would be to use a publish-subscribe model. Instead of having to loop through all the views, each view that needs data would subscribe itself on the view who's data it needs. When the data for that view is loaded, it would publish this data to all its subscribers For example: 
+
+Better to first think what is the responsibility of a particular controller and what's the suitable level of abstraction for the code that accomplishes that responsibility? For example in both controllers you have the following checks: 
+
+First, the obligatory pointer to PEP 8. In particular, your class names and some docstrings do not follow it. Variable names and line lengths arguably as well. Next, a couple of specific cases where you could make the code clearer or more efficient: 
+
+Nothing else really. The s at the start of all your strings are a bit ugly, and some people prefer using empty print statements to indicate extra empty lines. 
+
+You could leave out that second – it will cause an extra unnecessary line break if the name overflows the limit and will not alter normal output in any visible way. Calculating the column width is also independent of the current score, so you could move it out of the loop, breaking the overlong line: 
+
+Is it an improvement? On the original: I think so. Nested logic is generally more difficult to follow. On the --? Not really, but that's the price to pay for caching the intermediary values. 
+
+Here you could avoid the list creation by using a generator (by changing the to ) or you could use . Probably no difference performance-wise, but the latter is less code. 
+
+You are saving some data that you never use. , never used after this. The whole parameter is unused if you remove the assignment. already is. If you remove from here, you can also remove from . 
+
+By default pickle uses an ASCII format, so you shouldn't really open the file in binary mode, although nothing should break if no one touches the file. You could leave out the s from both calls or use binary pickling by passing to . 
+
+Recursion adds its own cost, though, so whether it's faster in practice would require testing. An alternative would be to add a second iterative compression function: 
+
+My recommendation (echoing well known advice) is to use the 32-byte random string directly as an ID (converted to base64 if needed). That gives such a small chance of collisions that you can do away with the loop as well. (It's likelier e.g. that the CPU fails to loop due to cosmic rays than that you see a collision.) 
+
+If those random bytes are random, passing them through a hash function adds nothing. If they are only somewhat random, hash + truncation is better than just truncation. However, are from a strong RNG, so you can use them as is. The problem is that 8 bytes is not always unique. You solve it by looping until you get one that is unique. However an attacker could do the inverse: guess until it hits a real ID. The probablity of guessing a particular ID is \$2^{-b}\$, where b is the number of bits in the random number. If you have n users in your database the probability is n times as high. With \$n = 2^m\$, the attacker needs only about \$2^{b-m}\$ guesses to hit some ID. If your ID's are 8 bytes: 
+
+There's also a question mark I have: – that works in Python 3, but not Python 2, because . Since your code seemed to work for you, I assume you are on Python 3. I'm not sure if Python 3 people think making it portable with a dot/cast is a good idea or not (i.e. ). There's always the explicit if you can't decide. 
+
+You generally should not to nest your components. Though when the component is small enough, like a one-liner, it's fine to do so. In your specific case, you can make use of withComponent method to change the tag name of an existing component: 
+
+Use smaller functions You say this code lives inside a function. But for some reason you don't give us the whole function, instead you're describing in text what the parameters and return value are. Is it because your actual function contains lots of code unrelated to your question? Even when that's not the case, this function is way too large. You should break it up to smaller functions. 
+
+Well... now that you've learned how to use loops, why don't you just throw it all away and try to write it from scratch. Often it's easier to rewrite the entire thing instead of trying to improve the existing code. Don't be afraid to delete the code. You've learned a lot by writing it for the first time, it will not go to waste - you'll be smarter now, and it'll be much easier to write it the second time. You can back up the original code, so you can always safely return to it when your rewrite fails for some reason. There's nothing to loose. 
+
+According to the single responsibility principle: no. The App component defines the routing. It feels awkward that it also handles login logic. It seems to be doing too many different things. While the Login component seems perfectly suitable for handling everything login-related. 
+
+Well... this function doesn't really do what its name says. It in itself does not process the arguments, it only create arguments parser. I would personally suggest implementing so that it actually processes the arguments and returns them, so you can pass the result directly to : 
+
+Presentation matters. It really does. If you would apply for a newspaper reporter position, would you submit an essay where paragraphs would start without indentation and sentences would end without full stop? Any fool can write a program that a machine can understand. A greater challenge is writing code that other people can easily understand. You need to learn how to properly format your code. Google "JavaScript style guide" and follow whichever you like - doesn't really matter, as long as you format your code consistently. Code structure One of the benefits of a framework like React is that it allows you to split you code up into multiple simpler components which you can then compose into other components that perform more complex tasks. Your code does not take advantage of that. Instead it has been written as a single large App component. The same applies for functions. Instead of large function like you should strive to break your logic down to smaller functions. Giving these functions good names, will also allow you to make your code more self-documenting without needing to write a comment. 
+
+The main things is that your system is much more verbose and harder to understand than simply hard-coding all the calls to superclass methods: 
+
+Usually the first approach is better and requires no extra tooling. If you decide to go the mocking route, my personal choice is the rewire library, of which there exist various versions for various environments (e.g. for Babel). Regarding specific tests Avoid temporary variables when you can write the values inline. Instead of: 
+
+You should define the lower level method instead. will use that to define and that way you are sure to get efficient testing. Speaking of which: 
+
+However, beware. AFAICT, the item could have been deleted by another process in between checking whether it exists and deleting it. You should probably just delete the item and raise an error if that fails. 
+
+In python 2 you can remove the invocation. That alone saves a few seconds. A set is faster for testing, so that's also an easy fix. Take advantage of 's and by noticing the length stays constant and you are at 2x the speed: 
+
+At this point you can probably guess that I'll recommend doing away with the list. A generator should work. If on Python 2, is probably better than as well. (Note, I didn't mention . That could be changed into invocations if you are on Python 2, but you seem to be on Python 3.) 
+
+I was able to shave some milliseconds off by moving the call inside the calls, which let me get rid of the explicit loop: 
+
+In the other place you correctly used . The difference is that executes the given string as an expression, which is seldom what you want (and usually unsafe). 
+
+Any GPU limitation on salt lengths is small, unlikely to last, and will not necessarily apply to ASICs. I do not think it is a good idea to rely on it. The salt is only used on the first iteration of PBKDF2 so it might even be possible to precompute the first step with a CPU and leave the rest for a GPU. It would be fine to halve the salt length, but since it only costs memory and a constant amount of work, it is not a problem to leave it as is. Nit: You misspelled "length". 
+
+I also found this PyPy issue that leaves me less confident there's any performance still on the table. 
+
+Personally I find your use of a global variable fine. Using a singleton class for encapsulation where a module would do is IMO needless complexity. If you can have multiple high score objects it's a different matter, of course. 
+
+By choosing block size close to , you only need to keep about \$\sqrt x\$ items in memory at a time. 
+
+On Python 3 you can encode the letters into bytes and avoid inside the loop, for similar performance. You might still make it about 1.5x as fast if you replaced the -> algorithm with something faster ( and depth first search?), but that's about it. 
+
+Again, I do not think relying on this is a good idea, but it does not seem insecure either. Personally, I would rather make the number of iterations a smoother function of time, i.e. round after the multiply. You still get different iteration counts for different passwords, but you also avoid the abrupt stepping up every two years. Also, you lack any code to upgrade the iteration count of password hashes as time goes by. That should probably happen somewhere in the class, e.g. if the iteration count is less than some fraction of the current.

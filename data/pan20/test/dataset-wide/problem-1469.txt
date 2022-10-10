@@ -1,0 +1,45 @@
+This may not account for everything, but notice that you're doing more work in than in the sum of the other options. See for example - you iterate over [SM1, SM2, SM3] x [IL2CMS, IL2FORMS, IL2PORTAL, IL3FORMS, IL3COMMS] which is 15 combinations of (environment, component) in total. Now, look at . Every component is checked in every environment, so now the five components from are also combined with SM4, which they never were before. That's 5 more iterations for the components that you don't run for alone. Similarly, 's four components are evaluated for , which they weren't before. That's only nine more combinations in total than running the three options sequentially - perhaps those combinations take more time to complete because they don't really exist, and the connections time out? 
+
+It's a 1-pass algorithm with linear time and constant space overhead. It's actually related to run-length encoding, if that helps. 
+
+Oh, and for completeness, a sample (untested) one-pass state machine that doesn't require special cases for the first and last characters: 
+
+It just seems like a simpler interaction between the callback, the call site and the , somehow. I think it's because this is a straighter call chain, compared to the factory-lambda-returning-a-nested-lambda approach, which is a bit like the world's densest dependency injection. 
+
+if the loop terminates because , you'll still increment again. Other that that, it looks fine to me. 
+
+If you have a sorted array and want to determine the most frequently-occurring value, use the fact that all repetitions of the same value will be adjacent. Now you know what you're aiming for, can you write it yourself, or do you want to see the code? 
+
+again, the optimizer might have figured that out already, but this version is anyway more expressive. 
+
+I'm going to say it again though - you should profile both choices and verify this. Even if the asymptotic complexity is better for , the constant overhead is greater, and that could dominate depending on your data size do you actually use for anything? It looks like you only ever use the back, in which case you could replace it with a single 
+
+neither of those are problems that will stop it working, but the code doesn't feel that well aligned with what you're trying to express. 
+
+move the special case outside then, you only have to iterate over the values used in the second branch (so , ) but we only use and in the body of the loop, so simplify this to and and just use and in the body notice that the two conditions () will always agree, so we don't have to test both 
+
+Now, onto the code! My first thought was that you could replace a lot of the preprocessor code with templates, much more cleanly. You might still have a top-level wrapper type using token pasting for the methods, but it could defer all the actual meat to a templated container class exposing methods. My second thought is that Boost.MultiIndex can do all this for you already, so I'd focus on just writing the preprocessor wrapper for that if you really want the nicely-named accessors. 
+
+if you're keeping two vectors synchronized like this, it's sometimes nicer to replace them with a single vector whose elements have two fields: 
+
+If you're not totally wedded to emulating the STL interface, you could replace the with a simple . Passing both by value just to see if is filled with well-known magic values is unnecessary. Oh, and if your input is incorrect, you can advance off the end: 
+
+the log thread only waits if , so the log function only needs to signal if is true before pushing you're discarding the working deque every time: your allocator could cache deallocated blocks and recycle them back to ' allocator instance for re-use 
+
+I put the sanity checks at the start, because I think it's easier to read the successful path if you already know the preconditions. Otherwise I find myself reading it, and then trying to remember it while I check the branch to see what happens there. Also, it reduces the depth of nesting which is a largely aesthetic preference. the complain-and-repeat stuff is done twice, and I'm not happy with the way it modifies the loop counter. This is fragile in the face of changes to the loop logic, since we now have to update the and each of the two branches together. We'll make this more robust. using a array for the number used logic is fine: we could use a bitset or something, but I don't see it as a problem using an array of int pointers for the values is probably over-complicated, here: we know how much storage is required in advance, so we can allocate it all up-front 
+
+surely you can just use instead of templating on the function type? capturing by reference can go horribly wrong. It's not a bug in your library, just an observation ... 
+
+does bounds checking. You either need this, in which case you've arguably written your loop condition poorly and should be prepared to handle a exception, or you wrote the loop safely, don't need the bounds checking, and needn't pay for it. Because you might fail the bounds checking here, but don't handle the exception, your program will just terminate for some valid input strings. 
+
+Well, firstly, your hashmap isn't a hash map. If that's what you want, it'd be better to go and implement one first. Remember, just because C doesn't have direct support for OO, doesn't mean you can't write real containers, or use real abstractions. Try implementing the hash map in isolation first, then you can test the implementation, and then write your app on top. Alternatively, if you want to focus on the app logic first,and then drill down into the implementation, either find an existing hashmap you can use, or switch to C++ and just use 
+
+For that matter, why put the logic in where you can't test it? I would hope to see something structured like: 
+
+The smallest change that might make it more readable is to the vectors first, so you can index the elements rather than calling . It's generally a good idea to vectors before a loop anyway if you know how big they're going to end up, and will handle that too. 
+
+For reference, here's a simple C++11 implementation, which is (hopefully) much closer to Python than you can get in C: 
+
+is vulnerable to the function call throwing an exception: you should probably assign it to a smart pointer before calling, and lose the explicit delete. that overload of also has a problem if either or can throw: it will leak the heap-allocated Func. You can fix this with a smart pointer too. 
+
+I suspect that reducing heap operations by re-cycling memory like this could dominate both the signalling and lock-free changes, but I'd rather benchmark and find out for sure.

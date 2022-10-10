@@ -1,0 +1,47 @@
+Note that due to ' type signature we don't have to use at anymore. Follow naming conventions and use existing library functions Still, our function is sub-par, since we don't follow the common naming convention () on the one hand don't use library functions for our advantage. So let's say we have so that repeats the times and collects the results in a list. Then we can write 
+
+That way we will always have a current value. The initial empty memory is the same as yours, except for the pivot value 
+
+Yeah, that's not really easier to read. However, we can get rid of your helper, if we simply pattern match on two list elements: 
+
+But you need to be lazy enough for that. Use knowledge you already have In , you'll check whether you already reached the correct length: 
+
+It's easy to get rid of those bindings if we enable all warnings with . By the way, you defined but never used , nor did you use anything from . You probably intended to use it in but automatically inlined it. Apart from those nitpicks, your code seems fine. As I said, I cannot comment about the cryptographic details and whether your implementation is prone to side channel attacks or similar. Also, the quality of the random numbers depends heavily on and therefore is out of scope for this review. Personally, I would use a top-down approach instead of a bottom-up approach in the code, though. That makes it easier to know our goal: 
+
+First let me say up front that this code looks quite good compared to a lot of code I've been asked to maintain, so you have nothing to be ashamed of here. I'll make a few more suggestions beyond the ones wattson12 offered, but you should view these as ways to make your good code incrementally better. viewDidLoad First, a technical point. You should be aware that this code may not work the way you expect, especially if it needs to run on iOS 5. It's a common mistake to assume that viewDidLoad will only get called once. In fact, viewDidLoad can get called many times in the life of a view controller. If the view controller receives a memory warning when its view isn't visible, the default behavior up until iOS 6 was to unload its view hierarchy and set self.view to nil. The next time self.view gets accessed after that, it gets lazy-loaded from the NIB again, and viewDidLoad gets called again. This can lead to some tricky bugs if your code isn't designed to handle it. For example, your implementation of viewDidLoad re-adds your notification handlers. This will cause them to get called twice when their notifications are posted. Since iOS 6 the risk is greatly reduced because self.view isn't set to nil by default in response to memory warnings, but you may decide to do so manually at some point as an optimization, so I'd still consider designing your viewDidLoad to leave your object in a valid state if it gets called multiple times. If nothing else, you should be prepared to explain to an old-school iOS developer in an interview why your code should be safe in iOS 6. Review Resource Management in View Controllers in the View Controller Programming Guide. Now then, on to code smells. Comments The main code smell that jumps out at me here is, believe it or not, the comments. Whenever you feel the urge to add a comment, you should stop and ask yourself a couple of questions: 
+
+When you say retry you mean something like a "play again"? In this case you could use something like: 
+
+I made this script to carry out a specific real-life task, which was to sort a list of candidates in a public competition by grade. The file with the informations consists of a text file copied from part of a pdf with the ID, name, grade in the exam and grade in the composition. There are a little more than 1,000 candidates. I needed it sorted by the final grade, which is obtained by the formula: 
+
+(You may note that there's a page number between the last grade of one of the candidates and the ID number of the next one right in the beginning of the fragment) So I had to find a way of detecting and removing the new line characters and the page numbers, and put each part of the string in the correct place taking into account that the names of the candidates could be of any size (Like "Anderson Soares Freixo" or "Maria Auxiliadora da Silva Santos Xavier". I came up with this code: 
+
+Note that the method names are expressive enough that the comments are now redundant, so I can remove them: 
+
+It's already much easier to tell at a glance what this method is doing, but I'd personally continue refactoring to this: 
+
+It's almost always possible to refactor your code into a form that documents itself expressively enough that your comments add no value and can therefore be removed. When you're done, your methods will almost read like pseudocode. BTW, you'll notice your classes filling up with lots of little private methods. Don't fret. That's generally preferable to a handful of large methods, but if all the little private methods start to feel overwhelming, that's a code smell of its own. It suggests that some of your methods may belong on other classes. Move each method its most appropriate class. Don't be afraid to invent new classes, but also consider using Objective-C categories as convenient home for your stateless methods. #pragma mark My next suggestion is to come up with some convention for your #pragma mark statements, and then apply it with consistency and discipline. It really helps to know exactly where to put each method, and where you can go to find it later. My personal convention is to put "Constructors" at the top and "Private" methods at the bottom for quick access. Above my private methods I have special sections for "Notification handlers", "Actions", "Dynamic properties", and "Public". Then above those I put all my protocol implementations and overridden methods in sections named after the place they were originally declared. So I would organize your file like this: 
+
+Furthermore, be honest. Although is called , it's actually a function. While GHC might call it only once, it's not guaranteed, so remember the map. And last, since you know that every key will be contained in , you can use instead of : 
+
+Either way, as an exercise, I suggest you to write and without . Note that Mergesort is a lot simpler to implement in Haskell. 
+
+About optimization Last, but not least, there's an issue with , or rather the use of on the same list twice. Actually, taking the length of the list again is a litle bit strange, since you know how large the sample is: 
+
+For the pivot value, you could use instead: By the way, , but now reversed, since the accumulator in is now reversed. Therefore, we need to reverse for or use here. However, covers your intend best, so I recommend that instead. We end up with 
+
+Well, I'm a beginner programmer too, so I won't be able to answer all your questions, but I have some suggestions: Some minor changes: 1) This part: 
+
+2) When the program asks for a value to the extra bum, it says you can choose 0 for no extra bum, but you set the minimum input allowed to 1. So you must change min to 0. Answering some questions: 
+
+The code works, but I'd like to know if it could be improved (is there a clever and cleaner way of doing it?) and if the style is good. Thanks. (Here is a link to the original PDF file: $URL$ 
+
+(I used .format here because it's the way I know, but it's not ok to mix format and "%" styles in the code. You should change that for the sake of coherence!) 
+
+Other suggestions Well, the code has some bugs and I agree with what Fac Pam said about splitting the code into more functions since it's a little hard to follow it's flow. 
+
+However, I think that your class should be a , as it is probably a quasi class. Use instead of in functions Doesn't require a copy. Keep your data in sync It doesn't make sense to set with a bunch of vertices, does it? After all, the values of , , and should correspond to the original , right? Therefore, you should make , and so on private and provide only a single updating function 
+
+Note that I've renamed to , since the suffix indicates multiple elements. Don't repeat yourself Although yout and differ, the logic in is almost the same. That's a sign that you can re-use the code, so let's try that: 
+
+Disclaimer: I'm a Rust beginner with a background in C and C++. Now that I've lost my credibility, let's have a look at your code. Use rustfmt, clippy and rustc There are (at least) three helpful tools when one writes Rust code: , and the compiler rustc itself. Rustfmt provides a common ground The compiler doesn't yield any warnings, but rustfmt will change your code. As many Rust developers use (or , which calls the former), you should also make a habit of using it. That way others will feel right at home if they look at your code, and the same will hold for you when you look at theirs. Clippy's warnings on the other hand will catch common mistakes. In this case its mostly the redundant in your functions:

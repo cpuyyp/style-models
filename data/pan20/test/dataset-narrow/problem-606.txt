@@ -1,0 +1,107 @@
+Since we have to convert to a list here, there's an argument for doing it earlier and ensuring that we only iterate through once, solving the problem of non-deterministic iterators. 
+
+Note that if you take the final option, it might be worth generating the code with T4 so that you only have to edit one place in the .tt file to fix bugs rather than having to fix them method by method. Further note that although I said this was a tradeoff, strictly speaking your code is buggy: if the original image is in then the conversion to might turn an almost opaque pixel completely opaque. 
+
+Note that I prefer to use with manual synchronisation, although there's certainly an argument that if the body of throws an exception then we don't mind never loading the scene. I've made private because it should never be called except as a callback, and has access to it even as a private method. I'm also tempted to make abort with a fatal error if the number of incomplete actions is less than 0, because that indicates a major logic error which you want to catch before taking the project into production. 
+
+For high-performance brute-force combinatorics involving binary strings, bit fiddling is the way to go. You don't want an array of bits, you want an array of rows. Consider that with 
+
+Again, it would be nice to have a short comment explaining why the recursion works on suffixes (and proving that it's correct, which isn't obvious, because it would seem to allow inserting a before the first digit of the line in contradiction to the spec). It would also be nice to see a justification for working on string slices rather than using integers with div/mod by powers of 10. 
+
+On the subject of names: tells me the type, but what I care about is the meaning. For Eratosthenes that's easy: a means that the index is a prime, and a means that it's a composite number, so is a good name. For Sundaram the exact interpretation is a bit trickier, but would still work. 
+
+(As it happens your buggy implementation works better than Euler's method, but if it was intended to implement Euler's method then it's still technically buggy). 
+
+This is quite alarming. What is ? It seems to be using a field to pass a value whose scope is a single method. If the tasks are executing in separate threads then this is a definite bug, because there's no synchronisation and one thread could overwrite between another thread's assignment and invocation of . Without it's probably safe, but it's definitely a code smell and risks becoming a race condition if the class is refactored. I should also add that the name is confusing. If it's just getting data from one blob, why is it not ? 
+
+you can build up the sets of different sizes in different layers. I think that it would be almost identical to except for the addition of the test. It might even be worthwhile refactoring them into a single method with an argument which is a "can these two permutations be combined?" predicate (passing while building , and a method which always returns while building S_8). 
+
+Use of setter-only properties as methods. This can occasionally make sense where you need a property for binding purposes, but in general it's more obvious for methods to be methods. 
+
+Tastes may vary as to which is the nicest implementation. You can test to see which is the fastest for your use cases. (Of course, for "serious" use as opposed to practice, itertools is your friend). 
+
+I can't suggest concrete changes without rewriting the entire code, but I think it does need to be completely rewritten with a public API and eager enumerations. 
+
+I'm not sufficiently familiar with PDO to say more on your database access than that you don't seem to have any injection vulnerabilities. However, there are a few things which I would do differently. Salt entropy There are two things which strike me as odd about your salt generation. Firstly, using a base-77 encoding. If you configure your database correctly then you can use the full 8 bits of each byte of salt. That's more efficient, avoids possible bugs with generating a number in the wrong range (how sure are you that ?), and is closer to the assumptions made when analysing salted hashing. Secondly, while is better than it's not a cryptographic PRNG. The best portable secure PRNG in PHP is ; if you're not planning to deploy to Windows then you could also get good entropy from . Hash SHA is not generally recommended as a hash for passwords. The current conventional wisdom is that you want password hashing to be slow, and should use either bcrypt or scrypt. If you insist on SHA then you should use it as a component of PBKDF2. Account existence oracle There are two schools of thought on telling people "That username doesn't exist". The usability argument is that it's preferable to tell someone that they got their username wrong. The security argument is that you should always say "Either your username doesn't exist or you got your password wrong" to prevent people identifying accounts which do exist and then trying to brute-force their passwords. (Anti-brute-forcing techniques is a separate issue which I'm not going to address in detail). If you favour the security argument over the usability argument then you need to avoid telling people indirectly that the username doesn't exist. That means that if you should still do a hashing operation to avoid a quicker page load which leaks information. Minor style points 
+
+Stylistically, I think there's far too much whitespace in . I suspect that you're applying C++ style guides designed to avoid parsing ambiguity with vs . Why not ? There is plenty of room for debate around when to use , but I think few people nowadays would favour writing out an explicit type twice when calling a constructor. 
+
+So if is between and but is not found in the table, that's an ? It sounds to me like an . However, if the logic given here is correct, then we can refactor as 
+
+And it's far easier to spot the special case that uses instead of and to either fix it or add a comment explaining why it's correct. If it's a bug then the comment suggests how the symmetry allows three cases to be collapsed into one. 
+
+It took me a while to figure out what the purpose of was. Given that you're using Linq, I can't see any reason not to just implement as 
+
+Is that necessary? It might be (again, blind leading the blind), but the name suggests that's it's more intended for cases where you want to modify some of the current buffer without modifying it all. Given that you're updating every pixel, it may be unnecessary overhead. Something funny seems to have happened to the indentation here. This is a micro-optimisation which may be premature, but since the point of iterating over first is to get good cache locality, I would take advantage and remove the multiplication: 
+
+is the default step, and isn't so obscure a function that the maintenance programmer would wonder what does. 
+
+Is there any reason for using two variables here? I think it could be simplified by having one variable which tracks whether there's any increase over the previous digit (although the complete rewrite will eliminate this anyway). 
+
+Indentation Consistent indentation helps readability. The indentation of this code seems to mix tabstops of 1, 2, 3, and 4 spaces. Prefer interfaces to implementations 
+
+Now apply that to your search problem. Consider : is it a permutation of ? Now consider advancing one character through : you remove and add . How can you update the data structures used to test whether it's a permutation of in constant time? Hint: 
+
+In my opinion, and are about the worst possible names for a type which has members called and . If you insist on one-character names for points, mathematical conventions would typically name them , , ... or , , ... Also the method itself: . Whether the distance is too close or close enough is a question of the calling context. The method really checks . Argument validation What should the following test give? 
+
+This is just wrong. The specification calls for you to find the most common minor axis (presumably with some margin of error, although that's not stunningly clear) and to take just the points which correspond to that minor axis as the points on the ellipse. The details are a bit tricky. You're casting to when producing the output of the parameters, so do you assume that all minor axes should be integers? If so, that makes the grouping relatively easy. Otherwise the easiest implementation would be to add a parameter , sort the values of and scan to find the value of which has most points in the range . Then if that cluster has points, you take the points in the cluster, average their parameters to get the values for , and add their values to . 
+
+What other possibilities are there? Shouldn't that just be an ? Why instead of ? Pick a style for use of whitespace and stick with it. 
+
+is easier to read and should be faster for non-trivial inputs. An alternative, which is arguably even easier to read, uses a single accumulator: 
+
+Observe that some of the factors of are also factors of . Why? How can you use that reason to avoid doing the same work more than once? 
+
+is not. The x-coord is offset by a quarter and the y-coord by a half. If the arguments to the constructor are centre and size then one of the four quads is misplaced, so on average something like 1/8 of the items which should go further down the quad are being stored in the current node. If the arguments to the constructor are corner and size then three of the four quads are misplaced, and on average something like 7/16 of the items is not being pushed further down. 
+
+I think that it would have been far better for to be the default and to require in those cases which require context, but it's too late now for Microsoft to change this, so we should all get into the habit of using by default and in those rare cases documenting the reason for leaving it off (or even explicitly using and supplementing it with a comment which gives the reason). 
+
+Why should it be necessary to sort? If it is necessary then I would definitely want to change the way the sequence is generated to make it unnecessary. And at that point it might not be necessary to coerce to list: 
+
+Even rewriting that to ditch to and use , it's doing multiple linear searches through the same array. I would want to investigate whether I could refactor to replace with . If I can't, I would strongly consider introducing a local struct or class to wrap , , and so that the search can be done once. Then in this main loop, has elements at random positions selected for removal. In that case it should under no means be a . is far more appropriate for random removals. isn't supplied, but I suspect that it also does a linear search. There's nothing stopping you from introducing an to find the parents quickly. 
+
+This searches through the dictionary's data structures twice. The .Net API has a nicer way of doing it: 
+
+When I compile this I get a warning. Generally the idea of a constructor is to construct, not to implement the logic of an entire program. 
+
+This should be unreachable, so why not throw an exception to alert you to the fact that if it's reached you have a bug? 
+
+In the worst case has \$2^\textrm{elt-1}\$ keys at the start of the loop body, so this runs in \$O(2^n)\$ time assuming fast dictionary lookups. For completeness I will note that an alternative, but more complicated, solution in \$\Theta(2^n)\$ time would be to go through the subsets using a Gray code. For even more efficient solutions to this particular case (where the set in question is rather than an arbitrary set), you could look at porting code from OEIS A058377. 
+
+This is the biggest problem, although for your typical use case it might be relatively minor because it doesn't sound like this iterator is going to be a bottleneck. Removing a random element from a list takes \$O(n)\$ time. But since you don't care about the order of the elements in the list, you could copy the last element to position and then delete the last element in \$O(1)\$ time. 
+
+? That sounds like a bad name for a 2D array, but the spec doesn't ask for a 2D array and I can't see why you'd need one. is again just . 
+
+Obviously readability is subjective to some degree, but I prefer the version with . I should note that it would be more Pythonic to use a double comprehension instead of a comprehension inside a loop, but I don't find double comprehensions very readable. 
+
+I can easily see that I haven't missed any digits without having to count; I can easily see that I haven't accidentally mixed digits from the two styles; I can easily see that the offset subtracted is correct in each case; I can easily see that the values returned by the anonymous functions are integers from to and not strings or codepoints corresponding to to , which is useful if I'm not primarily a JS developer; If I care about squeezing every last byte out of my JS, I can see a way to combine the two into one: 
+
+The indentation seems to mix spaces and tabs, sometimes even in the same line - or, at least, that's the most generous explanation. Keep it consistent. 
+
+exposes far more than is necessary. If you make that private then a public method can call it with the appropriate initial values. Names 
+
+First make it right. Then worry about readability, compactness, etc. Consider the following use case: 
+
+Split left and up. depends solely on , so you could have two sets of three s each rather than one set of nine. Use . 
+
+Length in what units? Generally with cryptographic stuff it's clearer to explicitly use bits as the unit of length. 
+
+I think that the last of these is the most transparent, but that's an issue of aesthetics and you may disagree. Note that I've assumed throughout, as you do, that the rectangles are closed (i.e. that they contain their edges). To make them open, change to and to . 
+
+is absolutely not something you want to do on a production system unless you're also using to log it to somewhere private and ensure that the end user never sees the error messages. Similarly 
+
+To my surprise (as someone who has used MySQL but first learnt SQL with a different database), this is actually legal, but comes with a caveat: 
+
+Algorithm Backtracking is usually the last resort of a Sudoku solver. You would be able to get a significant speed-up with some very simple rules: the only cell in a row/column/subgrid which isn't blocked from having a number can be filled with that number; a cell which is blocked from having eight numbers can be filled with the remaining one. That solves most "easy" Sudokus without any backtracking. When backtracking is necessary, it's worth looking at heuristic approaches to pick the cell to guess rather than just taking the first one. 
+
+An alternative way of doing it would be to use to find the predecessors on the fly, handing off the caching to the library. Here it is necessary to track the depth as well as the predecessor. 
+
+But that doesn't just skip through the odd numbers. Was the update intended to be ? Also, I think there's a risk that if you create a lot of maps with a large initial capacity that this could become a bottleneck. There's no obvious reason for requiring the next prime: I suggest that an alternative would be to have an array of pre-calculated primes which are just less than a power of two, starting with . Then it's nice and fast to find a suitable size, and it's convenient for when you extend the code to resize the array of buckets if the chains start getting too long. As a bonus, you don't even need to calculate them yourself: the Primes Pages include primes just smaller than a power of two. The other reason for choosing just smaller rather than just larger than a power of two is that it might interact better with whatever memory allocator is being used under the hood. 
+
+Could use some documentation explaining what and are. I think is the number of bytes to process, and is the number of bits corresponding to the fractional part. 
+
+which isn't the correct output format, and breaks if the number of cases isn't 100. In future please post your actual code for review, not a hacked debug version. 
+
+There is a fair amount of redundant code. In addition to things already pointed out, you can add at the very least 
+
+Thirdly, the commonalities between the and branches could be exploited a bit more. In particular, both search for a two-byte sequence. This could be pulled out into a method which can then be optimised once. Although that would mean losing the from the loop in the case, that's a good thing because it's probably faster to use than to manually copy byte by byte. The particular optimisation which I have in mind is to only look at every other byte. If you find one of the two interesting ones then you can look at the previous/next one. It won't be twice as fast, but it might be 1.5 times as fast. There may also be ways of searching faster by marshalling to an array of a wider type (e.g. ) without copying, but I think that would require C++.Net and unsafe code. The subtlety here is how to handle overlapping from the last call. One option, which you may feel is too tricky, is to push it back into . That would give the following structure (warning: not tested):

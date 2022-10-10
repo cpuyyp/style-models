@@ -1,0 +1,99 @@
+Further Advice. I would suggest some more specific recommendations. But unfortunately you do not provide the expected usage semantics of your factory. Thus I may write something that is tially usless. If you can write some more details on how you think the factory is going to be used I can give you some more concrete information. Errors in the code: 
+
+A member class (like all other members) has access to any part of the object. So making it a friend is no required (this was required in original C++03 but was changed for C++11 and had been implemented by compilers long before C++11 was released). 
+
+It also makes reading types easier. As you read types from right to left and const always binds to the left (unless it is the first item then in binds right). 
+
+You should include all header files that are required (no more than are required). In your case you use the following types in the header file. 
+
+The problem with the printf style is that it is not type safe. The main advantage C++ has over C is the exceptional type safety of the language. Use this to your advantage. This is so bad I nearly swallowed my tounge.: 
+
+Your code could be much simpler if you use a sentinel node(s). It removes all the code that checks for NULL (as an empty list has the sentinel in it so no NULLs). Because you don't need to check for NULL it makes the code much more trivial to write). 
+
+You should defiantly be using . Your code should compile with zero warnings. So make sure your compiler does not let you generate objects until the warnings are gone. 
+
+OK your shuffle algorithm is ok (better than most people I see try this). But again there is one in the standard 
+
+You should prefer to use automatic objects (that is perfect here). If you are going to use then you should wrap the result in a smart pointer to make sure the allocation is exception safe. 
+
+What happens if half way through this move you throw an exception? Then you leave the source object in some intermediate state. If you look at if the data type used does not have a nothrow move semantics then it will use copy semantics to guarantee that's its operations have the strong exception guarantee. You should strive to have the same semantics in your class. There is some template magic to do this test but I don;t have my notes with me. Are you sure you only want a forward iterator? 
+
+Big Issue: Alignment. You do not consider alignment. You may not need too. But you should definitely comment the code to explain how it can be used. 
+
+This is a multi-threaded environment you can not assume run_task is being called from only one thread. You must assume that it can be called from any number of threads. 
+
+Asserts are the worst type of control and they are really only good for debugging; not for error handling. Remember compiles to the when in release mode so there is no checks. 
+
+As a result. C++11 deprecated the specifier on functions/methods and introduced the specifier. So either your function is exception safe and throws nothing or it can potentially throw. 
+
+This is not really necessary. All your sub-classes just return . So just return it here so you don't need to have the same default implementation in all sub-classes. 
+
+Everything @ChrisWue said. Also: Design. Using does have affects on meaning (especially when copying). And I don't think you handle that correctly. Also You are building a container like structure. Usually memory management is done either by container (for groups of values) or by smart pointer (for single values). These are complementary types of memory management and intermixing them adds redundancy. You are already writing code to manage memory why add another layer on top (you can but it usually more efficient to do it manually). So personally I would have not gone with smart pointers here (because you are building a container). But the problem: 
+
+The method is a validated access to a container that throws on failure. If you already know that you are not going to access out of range then you should use . 
+
+In your version here you seem to overwrite the sentinel. This is wrong as if you add 0 multiple times it will only be added once. Leave the sentinel alone and just concentrate on adding a new node each time. 
+
+No. The way way you are using struct assignment is fine. BUT personally I would provide one so that you can construct this object from a single short/int/long. That way you can construct from a single integer literal. 
+
+If you're code never returns anything but 0 then I would not return anything (let the language do it stuff). Do this to distinguish it from code that can return an error code. I hope you profiled to make sure it was worth reading the file twice. 
+
+All that does is detach the underlying native thread from the thread object so you no longer have any control or way to check the state of the thread. The class is the very low level interface (that basically mimics pthreads). You should look at , and . This provides a higher level abstraction to threads that will give you a more modern handle on how to create threads (this is the interface that modern applications should be using). BUT not for this problem. Bugs The curl library is a C library and thus knows nothing about C++. It uses functions pointers and assumes they have a C ABI. Thus giving it C++ function pointers is dodgy. You pass a pointer to a static member function. There is nothing in the standard that guarantees this will have the same ABI as a C function (you just happen to be getting lucky with your implementation). 
+
+Notice that if m_bRunning is false at start-up then you may not unlock . Also the second time around the loop you are call un-lock without calling lock. This case can be fixed by moving the first lock inside the first while loop. In general though this is a good case for the usage of RAII where things need to be done symmetrically even when exceptions are in play (In parallel to the advice about the constructor, it may be worth wrapping the pthread_X objects in some C++ classes). Though I comment you for commenting. I prefer comments at a minimum and try not to write comments that tell you what the code is doing. We should be able to see that from reading the code. Comments should be there to explain the overall technique of what we are doing (ie what not how). 
+
+Also prefer over . There are a few very specific use cases where list is better but on average it is best to default to a vector then measure and optimize later. Code Review Emplace Back You can simplify this: 
+
+Using std::forward Vs std::move I have not had time to understand the algorithm yet so I have no comments on that. But I may come back and have a look if I have time. 
+
+Stop using this. It works out great for small programs but for large programs it becomes more of a problem. Getting in to the habit of not using it. I would avoid over use of std::endl everywhere. What it does is place a newline character then flush the stream. If you have lots of output then it will cause the output to perform sub-optimally. 
+
+Move semantics and efficiency. Copy semantics are good for simple types. But move semantics allow you a very effecient way of adding an object to another object. So you should learn how to move or construct in place an object. 
+
+Test for self assignment. This looks like a good idea. You look like you are optimizing the performance when performing a self assignment. What you are actually doing is pesimizing the performance in the normal case. Though self assignment does happen (and your code should work if it happens) it happens so infrequently that optimizing for it actually hurts normal code. It hurts it enough that you can measure the difference in real working code. This is why the standard idiom for doing copy assignment does not check for self assignment (even for large strings). But makes a copy each time. Because we would rather pay a high price for something that barely ever happens than pay a small price that basically happens alllll the time. Also I believe your optimization for small or same size assignment is wrong if T is a non POD type. 
+
+That will take a long time. But it looks like you have done a basic job of getting it working. It may improve the use of the swap method which can be useful in a lot of situations and the default implementation of swap is not very efficient for any container. You do not re-use the array. You always delete and allocate. That can be very in-efficient. It may be nicer to check if the array being copied over this one is smaller and if so re-use the array just move/copy the elements into this array. You don't pre-allocate memory for possible expansion in the near future and thus fall into the trap of deleting and re-allocating the array for every push onto the back no matter how big it is. 
+
+It should be noted that the implementation of this layer is currently very basic. One of the improvement points is implementing a more efficient version of this package stream. PackageBuffer.h 
+
+Design I think you will find that your code becomes a lot simpler if you move your test for out of the public members. Then make the test for the first thing you do in the private member (Don't test before you call the private member test as the first action in the call). This will simplify all the situations were you currently have to test for . For Example: I would write addValue like this: 
+
+Now we have a conundrum. As I am passing an object (but not expecting ownership to be transferred). But the other is dynamically creating objects. So I have both types of pointer on the queue. So when the destructor is called how do we tell which objects should be deleted? So if we look at the destructor: 
+
+What happens if I call release multiple times? I should not be able to break the code from the outside of the interface. Once you have released the handle you should make sure that a subsequent release does nothing and getting a should return . Note I: Calling once will break the code. As the object will subsequently be destroyed and call release again. Note II: Because your object is copyable. Passing it as a parameter will also break the code. As a copy is made and both the original and the new version will eventually be destroyed. Looks like this should be a movable but not copyable object. 
+
+See man send: If returns -1 as an error you need to check to check the actual error. Not all errors need to be terminal. Eg is not a problem. Don't wait for the server to close the conection. 
+
+You should seed the random number generator only once during an application run. By seeding it multiple times you ruin the distribution. So move this out of the loop and put it just after main starts. Random Number generation. 
+
+Also since the access to this constructor is so controlled you never really want to pass a NULL object so you should pass by reference. If you must store it internally as a pointer fine take the address of the reference parameter for local storage but personally I would maintain everything as references. You should not be using the keyword unless you are required to do so. Declaring and defining it inside the class makes it automatically tagged inline. And apart from linking it has no affect on the compiler. So avoid this keyword unless you actually need in and you don't (it just clutters the code and makes people think you are trying to inline code (which only happens if the compiler thinks it is required)). Does it make sense to be able to move the Locked Proxy? 
+
+When we get a connection on the port(16382/16383) a new object of type is created to handle the request (more on these objects in an upcoming post). Of course nothing is ever that simple and you may want to parameterise your handler object. So the call can take a second parameter that is passed as a reference to the constructor of the handler type. An obvious example is the HTTP Protocol and how servers like handle it. The same type of effect for NisseServer can be achieved like this. 
+
+This encrypts the file "T" using the public key of the github user "retailcoder". You know who you are come and see if it works. The output of the above command is: 
+
+Yes this is really ineffecient as you are creating multiple arrays and copying stuff around. I would create a new private constructor to solve the issue. 
+
+Of course this tightly couples your code with the logging system. To make singeltons work effectively they should always be used in conjunction with other patterns so that you don't tightly couple the code. There are a couple of different ways to avoid the tight coupling. One of the simplest is to use a factory pattern. Then get the appropriate logger object from the factory. This allows you to use a different type of logger during testing etc. 
+
+It is not clear why one is multiplied by 1000 and the other divided by a thousand (nor why one is an integer and the other a double). 
+
+Insert Your lock is over too large a surface area. You lock the queue even while you are working on and this is not used by the reader thread. The reader thread could be actively using the queue while you play with the word count object. You should also look into using RAII to correctly lock and unlock your lock. You read loop is a busy loop. You are going to melt the processor doing this. It would be better to use a condition variable and force the thread to sleep if the queue is empty (which it will be most of the time). Lastly you overcomplicated the addition. 
+
+It may be included indirectly via or . BUT you should still include the header file because these dependencies may not always hold (on different platforms or different versions of the compiler it may including things differently). So do not assume because it worked on this platform it will always work. Think worst case and explicitly include The include guard seems a bit too generic: 
+
+You use the recursive technique to call . I personally prefer the iterative approach. This uses an initializer list. 
+
+I agree with them as it just makes things hard to read (thus maintain). So one variable per line. And initialize on declaration (where appropriate). 
+
+The trouble here is I don't know who owns the pointer that is returned. Is it a pointer to a static array. Is it dynamically allocated. There is no way to know from the language level based on reading that interface. In C++ it could look like this (probably not but steering clear of vector for you). 
+
+The standard containers try and provide the strong exception guarantee. For example on a vector resize once we have a new storage area the vector will try an move the elements from the old storage area to the new storage area, but it can only do that if the move constructor provides a no throw guarantee otherwise it must fall back to using the copy constructor (because that allows rollback). Move Assignment can be done in the same way: 
+
+I would just put all methods in (no need for a ). But this is a pattern not a design and you may have a reason that are not obvious from the current question. There is no need to define methods that are covered by the default versions. 
+
+This is not exception safe. Use RAII. Basically it looks like C code that happens to be wrapped in a class. As it stands not very good as it is easy to use incorrectly. The whole point of C++ is to design the class so it can not be misused (not just write C in a class). What I would expect as a C++ design. 
+
+Here you pass by value. This means you copy the value into the parameter. Then you copy the value into the storage element (using copy assignment). What you need to do is pass by reference: 
+
+Why are you putting code that determines correct usage of the function external to the function. Rather than that why not put the code inside the function then it can never be used incorrectly. The top priority is maintenance and re-use. You should write your code so that it can not be used incorrectly. Thus rather than:

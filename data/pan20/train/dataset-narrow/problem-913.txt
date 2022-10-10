@@ -1,0 +1,55 @@
+Doesn't that look nicer? all the names and ratios nicely bundled together in one spot. That's also why I've set it as a global constant in my example: The ratios and their name have nothing to do with the main function, they just are, so they should exist out of context. Declare variables as late as possible should be declared as close as possible to the first use. Use algorithms when possible. You can use to calculate the sum: 
+
+Adding support for double or half-precision floats would just be a matter of adding the proper specialization to , which a user can even do within their own codebase. 
+
+What looks like "convenience" to you just ends up being "confusing" for possible users of the class as they have to wonder "which one of these should I be using?" Take objects by value if you are taking ownership 
+
+You have the right idea with these macros: Making sure to release the mutex before exiting the function is important. However, the C++ language has a better construct at your disposal: destructors. 
+
+Obviously, the library makes aggressive use of operator overloading, so the user-facing API is actually much nicer. However, adding that feature to this snippet would have added a whole lot of boilerplate that would draw focus away from the part I need reviewed. If you want to see actual usage of this, you can find it in the file in the linked github project What I'm looking for 
+
+Style-wise, objectively improvable: Avoid leaving dead code This looks like junk you forgot to delete: 
+
+Imagine that you had a type that looks very roughly like this, and your conversion functions used these values to build the resulting float value. 
+
+You are already doing the right thing in 's constructor, so I don't know why you were so trigger happy elsewhere. 
+
+Good stuff, I particularly like being a purely abstract interface, that's exactly how to best do modern inheritance. State needs a virtual destructor This is 100% required in this case, since you delete states from pointers of . Reduce API surface You have too many functions 
+
+Input sanitization Your functions take a as parameter, as such, they should be "well behaved" for any possible passed to them. Note that well behaved does not mean that it has to "work", just that it should not break anything. Specifically, what would happen if I passed the string to that function? is , ruh roh! There's a few different ways to tackle this. 
+
+You are conflating the game representation and the visual representation You are using your graphic representation as your game state. Generally, that's frowned upoon, as it breaks isolation of concerns, and forces you to think about the game state when manipulating the visual representation and vice-versa. This is definitely a bit contentious, as it's so very convenient for tic-tac-toe, that there is value in it. 
+
+If you don't have such a function, then indexing the objects in the way you do makes no sense, and you should just be storing them in order of generation. Apart from that, my other recommendations would be too dependant on the context. For instance, I would look for a way to not have to store the entire table of objects, and implement the evaluation algorithm in a way that at most a few objects have to be in existence at the same time. I would also consider that brute-forcing an optimization problem like this is generally a last resort, so I would probably look for tackling this with something like a gradient descent if possible. 
+
+Otherwise, your call is useless and might as well be a . Personal opinion: The custom exception type is not necessary here. Letting the out_of_range exception bubble up is perfectly acceptable here, and lets your code be cleaner. 
+
+Use front() and back() to access the first and last elements of a vector You could make an argument that is as good as , but not for the last element. 
+
+Mark non-mutating functions as const. Your member function should not alter the trie in any way, so you should mark it as like this: 
+
+With this, you don't have to worry about anything. The mutex WILL be released when the function exits, no matter what, even with exceptions and whatnot involved. You can also ditch your macros, and use regular old true and false for your return values. Don't worry about performance so much Your code obviously has a O(N) complexity, which is as good as it's going to get here. Beyond that, wait until you have identified this code as a bottlneck beofre wasting time on optimization. 
+
+Since I'm a huge JavaScript neophite, I'm sure there's a lot to improve in there. So I'm looking for any and all feedback on style, general practices, functionallity, etc. 
+
+A good example of this is vs having a base class at the bottom of your hierarchy. With , which is composition-based, you get a few major benefits: 
+
+No conversion to/from double A bit of a no-brainer, but that would definitely be nice. In fact... it would be nice to support arbitrary floating point formats through a traits type. Concerns about overflow behavior of multiply/division operation 
+
+I'm not going to comment on the OS interactions here, just the C++ code in general. prefer anonymous namespaces to the static keyword static is just a C backwards compatibility thing, the proper way to prevent a name from leaking out of a translation unit is an anonymous namespace: 
+
+If you keep iterating on this project, sooner or later you'll have a , or a verbosity control argument. It would then be too easy to accidentally disable a piece of program logic. At the end of the day, injecting the dll and logging wether the injection is successfull is too separate concerns. Keep your concerns separated. inject_dll()'s error handling. The function as written is a textbook example of why some people argue that functions should only have a single return statement after initial sanity-checks. Even if this function is correct, that coding style of manually cleaning the proper stuff in each exit branch of the function is bound to bite you in the ass sooner or later and should be avoided in general. The best way to fix this would be to use RAII, either using a type function, or a std::unique_ptr<> with a custom deleter. Don't do massive allocations on the stack The following is too big to put in the stack in my opinion: 
+
+Basically, virtual functions (type erasure) are only needed when you need to access an instance through a pointer to the base. Since you are instantiating the subclass, and accessing the methids through it directly, you don't need the virtual interface. You can simply use the object as if it had the interface (duck typing). 
+
+This kinda violates the separation of concerns principle. Have a class/function do 1 thing and do it well is generally preferable. 
+
+The thing with this is that has the implicit contract that b will be in the same state a was, and vice-versa. Doing otherwise can lead to surprises, and surprises are never good. 
+
+This looks pretty good in general to my eyes, however, there are a few alterations I would do: I see no real need for to make a copy of the source data. It's an adapter, I would make a const reference, and create a wrapper around this + a container if I ever need an owning version. To elaborate on this: I would operate on a pair of iterators for the source container instead of a range. This will allow you to apply your code to sub-ranges. If you want to stick with the container-based interface, I think the template parameter in 's constructor is just overkill. You can get forwarding semantics by simply taking the object by value: 
+
+Only letters in the 'a'->'z' range are admissible. That's only 26 letters. Only strings of length <= 100 characters are admissible. By extension, this means we'll never have more than 100 substrings of a given length to deal with. 
+
+This was working just fine until I had to implement the recursivity expression. In order to prevent the compiler from running into a dependency loop, I came up with a hare-brained scheme. The loops are broken up by "tagging" the trait lookup type when we first evaluate it, so that we can select a different specialization the second time it's evaluated during a cycle. So far, so good. However, since recursive expressions can invoke other recursive expressions, that tag must be maintained as a list of types. To top it all off, dependency order is not guaranteed to be stack-like (There can be a A->B->A cycle). So the end result is, frankly, too convoluted for my taste, even if it does work. Edit: Specifically, I don't like that someone implementing a new expression type needs to deal with a mysterious template parameter he/she would have to propagate. The expression is just spilling accross the entire code base, which breaks the compartmentalization I've been bale to maintain up to now. (Note: the code is not quite identical as found in the linked project for the sake of isolating the feature I want reviewed, and removing the project-specific lingo and complexity) 
+
+Your function currently will always go through a copy-constructor, and for this is definitely non-trivial as that has to be thread safe. By taking the StateRef by value, this gives users control over whether to provide a RValue, move in a LValue, or provide a copy of some other object. Maximum flexibility without any overloads. This brings us to: Prefer unique_ptr over shared_ptr I see no shared ownership scemantics here, unique_ptr would be better simply for performance reasons. But you may have other parts of the larger codebase that warrant it. That comment is just about the code I see in isolation. That's pretty much all I've got here.

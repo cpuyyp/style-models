@@ -1,0 +1,45 @@
+※1 Rather than nesting the entire body of code another level deep, treat this as a pre-condition and write it this way. It is clearer and easier to read because you know at this spot that this test controls the applicability of the entire procedure here; with the nested code, you don’t know until you analyze more where the brace ends, whether there is more stuff that is not under the condition, or an branch. ※2 Instead of a bool , use an enum that states black or white. This enum is used to make arrays, as explained above, so you have a matching variable in each color. You refer to this result twice, so check once and save it! ※3 Don’t use “out” parameters. Return values (⧺F.20). I do note, however, that you were keeping the difference to just the variable used, rather than duplicating the entire line. Think that way in general! ※4 You are dynamic casting, throwing away the result, and doing it again! The declare/assign/test form of the is meant for exactly this purpose, and first explained with in particular! Note that the variable is only in scope where it is OK to use it. 
+
+Don’t do explicit tests against . Use the contextual boolean value as a truth test. This is more important when you start using smart pointers — in general, the object itself of any type answers “are you OK to use”? in whatever means is appropriate. 
+
+The trouble is that I had to cram the range checking in there before doing the allocation. But, writing a separate function is general purpose and reusable! 
+
+You don’t need say when it is defined inside the class like this. Don’t use to refer to your members. 
+
+(deeper thought: I kept the params to by simple value passing, which is probably right for types you’ll use for this, and you always copy on returning anyway. Just make sure it’s move-friendly and optimization-friendly for other types such as large strings) 
+
+What you are wishing for is called a projector, and it is a common need so Eric’s Range.v3 library features optional projector arguments on most of the range algorithms. To get to look at a single data member of the arguments, just supply your own comparison function. ‘What I mean by ordering KEntryContact objects is to just compare the single member inside it.’ 
+
+You should mark this as . You have no idea how handy and useful it is to always have virtual overrides marked. It allows you to make changes to code more reliably, as well as initially making sure you are not accidentally making a different function by the same overloaded name instead! 
+
+Think about what happens if (say) 27 is divided by 5. You get 5 plus remainder 2. You do not have to check any numbers greater than 5, because if anything succeeded you would have found it earlier. I just threw that together — you should check the edge cases, e.g. <= vs just <, or what if you have a perfect square. 
+
+In general, make these instead of . (T/43) index iterator If you have to create an iterator, start by using Boost.Iterator library. Either or will fix you up nicely. Not only do you not have to write all the details of what makes an iterator, but it will certainly be right, saving a very picky review against the std iterator requirements. This will save you a lot of code! 
+
+OK, you allocate memory and assign it to , then assign which leaks the node you just created. Likewise, is allocated, and then if the loop executes non-zero times you drop that on the floor, too. 
+
+which takes anything that is a “range” of some kind. If you call with completely unrelated parameters, like an int, this is not chosen (there is no overloading here, but that is the thought in general). Then, inside the definition, 
+
+Function is another example of repeated code. You can see that the win/lose messages and return values are stated three times, with a pair of nearly identical checks in each repetition. Instead, call a separate function that just returns a code indicating the winner (or lack of) and then print the message based on the result. And only have one copy of the print code, using the variable to state which player it was. The actual checking can be done more algorithmically, not expanded out into individual tests like that. I see you did manage to not repeat the checking for X and O, but test for a row/col/diag of the same mark. That is better than most of the other code here. 
+
+To remember a specific range, you do not need to copy the elements into another vector. Just remember the iterator positions. 
+
+You might try different types for the cells other than . If they were one-byte, you would fit more into the data cache. Use a typedef for everywhere instead of and it will be easy to change and check timing differences (like I do here since the result can go either way! Division and modulo is very slow, and jams up the CPU besides. For division by a constant, the CPU will go to some effort to replace that with a multiply and a few other short operations. But your is a lot of effort for simply wrapping around. 
+
+It doesn’t return the tuple of results though, but rather just returns the function object. So you would instead of -int the results. Incomputable: In your version, can you use return type deduction and avoid the horrendous meta-computation for the return type? Let do the argument deduction on the results and figure it out. 
+
+To generate the candidates, you intuitively knew that you only need to check the odd numbers. But you can rule out many more than that! Consider that numbers ending in 5 are also not prime. Look at a grid where you blocked out primes and you will find a simple pattern: A prime must be one less than or one greater than a multiple of 6. So, count by sixes, and try the value on either side. 
+
+I don’t know what is about. It’s non-portable. If it stops the screen from scrolling, why do you need that when you are done and not going to print anything more? 
+
+and to show that the is being used to deduce the type of the variable, the way you would write it before 2011 would be 
+
+The style in C++ is to put the or with the type, not the identifier. This is called out specifically near the beginning of Stroustrup’s first book, and is an intentional difference from C style. ⧺C.149 — no naked or . You should probably make this a as a drop-in replacement without otherwise changing the architecture. 
+
+Each function will return the thing it read. In a pure lexer, you can either make that a holding just the chars comprising that token, or a token structure containing information such as its kind and “value” which will be used by the parsing stage. Even if you don’t want to use it, read the tutorial for Boost.Spirit’s lex class to get ideas on that. You might want to track the original position of the token in the source, too. In my functions shown above, if the thing was read, the is updated to remove it from the beginning of the line. If not successful, the returns no-value and the view is not changed. This lets me write non-terminals by calling one and if that didn't work call the next possibility. For more complex cases, the can be saved in a temporary and restored, cheaply — that allows for backing up to try something else. 
+
+Rather than writing your detection from scratch, use the detection idiom, either in the compiler's header if you have it, or a copy of the published definitions otherwise. 
+
+It’s been a good many years since I wrote significant code in x86 assembly language, but I’ll wade in here. Yes, is a fat pig of an instruction. It not only takes a ridiculous number of clock cycles, but it uses many of the dispatch ports, clogging the CPU so it can’t do much else while waiting on the result. See the links in this S.O. answer. This is because division is difficult. You could look up how to transform division by a constant (10 in this case) into multiplication and code that. But, successive division/modulo by 10 is now I learned it. The biggest speed benefit will be from allowing pipelining to work well and not stalling. Sometimes you code two or three different copies of the loop and interweave them so that there is more independent calculations to work on at the same time. To that end, you might start by dividing by 10000 once and then doing high digits and low digits separately in interwoven loops. But, using the instruction makes that difficult because it has pre-targeted registers that it uses, and worse, the instruction does not pipeline. I think the fastest would be to use the div-less algorithm with vector SIMD instructions to compute multiple digits at the same time. 
+
+Thou hast scribed an olde dialect. You’re using the ranged loop so your textbook must be written after 2011; perhaps it is just a slightly updated lesson plan from 1998?

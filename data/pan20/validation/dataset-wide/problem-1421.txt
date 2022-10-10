@@ -1,0 +1,71 @@
+Update Following your comment, this is how I would implement the file creation based only on a date + a counter (if needed) 
+
+Extracting UI calls Finally the UI calls must stay in the UI-part, namely into the JavaFX controller. Typically it could looks like this (simplified): 
+
+If the rules are likely to change, it would also be possible to refactor this code and take the "final predicate" as a constructor argument. Extracting "standard" logic In your case, it is only the rule that assert the password and the confirmation password are equals. This is not a business-specific rule but rather a commonly accepted rule everytime a user creates a password. Moreover it seems you have a "validation flow" defined (first check the equality between the two password, then check if the password in itself is valid) that can be extracted into a separate class 
+
+is fine. The resulting string in is misleading. The is the amount of cans the vending machine currently holds and the is the number of coins that have been inserted. You should also directly return the string instead of creating an empty variable 
+
+I see at least one big problem in your method: there is no separation of concerns. Everything is mixed into this method: common rule for password double-checking, business rules for password validation and UI calls for user response. Extracting the business logic The business logic in your case if the password validation specific rules, as you named them rule1, rule2a, rule2b, rule2c and rule2d. Everytime you will need a password validation, you will need these rules to validate a password, therefore I would extract these rules into a BO. 
+
+This is from my library it's similar to the other solutions but it's using a little hack: the array_key_exists() is a slow function so i execute first an isset() 'function' and if it's says "yes, it exists" then i don't have to execute the array_key_exists() function. The reason why isset() is not enough is the isset() will return FALSE if the key exists but the value is NULL. 
+
+This is a really simple approach but it can be used to signal what happaned in the authentication process. Exit? What is the reason of the exists of an exit statement in a business layer class? Why is stopped the whole request process if the passwords not match? What happens if you want to test the password equality check method? If they are not equal the test stops? Direct $_SESSION write (super global) Of course writing into the $_SESSION array is not bad you can have your own session data handler in the background so everything can be done this way. But again: what happens if you want to test the functionality of writing a session data in your Auth class? You will test the session data saver also (your own or the one built into PHP)? I would wrap it into a class and pass an argument to the Auth class as i described above the IUserStore solution. HTTP stuff in an Auth class? Why is a header() call in your Auth class? Is it really neccessary or the redirection can be done depending on the result of the authentication process in your controller if you are following an MVC approach? 
+
+The is really nasty here ! One expect to only return a value but before it does some unexpected computation ! You should write it in the form of a simple getter. 
+
+Going even further As I said in the first chapter, the method has actually 2 responsibilities. I would split those in something like that: 
+
+Update: taking into account This is how I would fully replace a boolean into a business class. It looks like overkill but in reality it's not. Each class has a single responsibility, is testable and maintainable. is now abstract because the "blocking" behaviour can't be defined here but only in suclasses. 
+
+This parameter is the thing that bothers me the most in your class, and also the one who gave me the most trouble when trying to remove it. Why does it bothers me ? Everytime you have a in a method (or constructor), it's a sign of poor design because the class/method should do 2 things now (one for each boolean's value), therefore violating the single responsibility principle. It makes your code hardest to test and to maintain because of the conditionnal logic flow. If I understand correctly, the purpose of this flag is to avoid client code retrieving a when calling because the cache has not been updated at least once. I would rather resolve this problem by blocking in as long as the cache has not been computed once. In Java, one have the who is a thread-safe class able to fulfill this responsibility by blocking only until the cache is computed the first time. I came up with the following wrapper to achieve that: 
+
+No this is an ugly way to do it. extract() (PHP4 stuff in 2012/2013?) The problem with exract() is that it's creating variables ionto the global hyperspace (oh God, why) where can exist (in localy also!) any other variable and can have name collisions and can overwrite the old values. Beside this you are losing the control over your code and it will be hard to maintain (debug, fix also) and to extend. load_view() Not always returns a value: in PHP this is okay but in general programming it's a bad habit. I do one thing in a case and in another one i do a complete different stuff in same function? And why am i in a function? How about a non-static class method where i know everything in my small environment? Here is a small example of an idea: View class 
+
+I'm mostly with Heslacher's solution but in don't let to any of the collections to be null and i'm preparing to have null values in the collections. To spare some time i don't bother to create arrays from the input sources too. I also renamed the extensions method to EquivalentWith because SetEqual means a different thing. Tests I have used the provided unit test as base to write my ones so here are they: 
+
+Final solution All these remarks put together, I came up with the following solution. Note that is an inner class because it doesn't have to be known in the outside world. 
+
+At the moment there is an method. However since you should add cans and not set cans, you should rather take as an argument the number of cans you should add: 
+
+Beyond the requirements The two setters are superfluous and can be removed. Also, Java class naming convention is CamelCase so you should rename to . Since your class is not meant to be inherited, you can mark it . Here is the full resulting class 
+
+I also suggest that you declare of type instead of so that it becomes unambiguous for anyone reading that the synchronisation in is guaranteed. 
+
+This kind of requirement is the kind of which clutters the code with at least one and is in general irrelevant. If you are okay to have a number in the filename (going from 1 to n), then why not having 0 ? After all, the requirement behind that is that no filename should be erased by another with the same name. So the real problem to resolve here is how to make sure this method won't create 2 files with the same name ? Since you stated 
+
+This will result in one SQL query if the backend is an SQL database and will not recieve entites which are unnecessary (i think the Last() would download all entities). 
+
+The construcotr may not contain any business logic/work process Your logic is not enough clear to me (hard coded WHERE clause first [id=2] then in getNumVisits() is just a simple select all query, etc.) No they should not be used in classes, force to inject them into the worker methods (ISession interface) Clarify your logic please Just read the common OO and SOLID principles, search for Martin Flowler's name 
+
+For example an id is not always mandatory it can be optional or we could define a pattern like "veryimportanturl" but the framwork can handle like: controller => lottery, action => getthisweekwinningnumbers, id => 5 
+
+Yes, there is: create a stored procedure and UNION the result sets then sort the records and return them to PHP. 
+
+You can found a lot information about what is dependency injection and with the example above you can use any existing DI framework (or create your own) you only have to do is create an adapter (Adapter pattern) which is implementing the IDependencyResolver interface and working whith the current DI framework implementation. 
+
+The requirement doesn't state what's the behaviour when there are no cans, so I assumed it is nothing. If you know what the requirement is in this case, I'll update my answer accordingly. Looking at your current method, I think the requirement is not reached. First you erase the old amount of tokens with then you refill the vending machine with 50 cans when it is empty, which looks really strange and induces an unexpected side-effect (see Principle of least astonishment for details). The requirement also states that you should be able to only retrieve one can at time (and not many). Here is how I would implement 
+
+Note that I'm not totally comfortable with this method because it has 2 responsibilities: creating an excel file and filling it. Long answer Now you might wonder how I ended with the code above, so let's begin... Filename requirement You stated 
+
+There's still a bit of duplication between the but I think you get the idea. The goal is to avoid duplication in order to have tests that are easy to understand and maintain (clean tests are as important as clean production code). 
+
+This is the kind of test I would write (I picked a convention for the names, you can choose another since it stays coherent). Given the previous refactors, the test implementations are more expressive now: 
+
+This is a cleaner version of your code with less query (the first was unneccesary) and inside the loop you are making a lot of small query which can be really bad but first you have to modify your code to not work directly with the context in you page code but through an interface (first iterate through the rows and get all data then pass them to the worker (which can work with the context) and return the result & update the UI). 
+
+ordering the available routes: by the static parts (fix parameters not pattern elements ({})) and by the constraints (in a route i can set up constraint like the id onyle can be in the range of 0-5) [static length descending, constraints' numbers descending] iterating through the ordered rules collection and trying to find out which one will be the first mach by using regular expression (the Route contains it's pattern translated into regular expression), if a match found i try to fill the pattern with data; if everything is in place i've founded otherwise continuing the search. 
+
+You can't find the correct answer until your code is just a bunch simple PHP scripts. The ultimate solution would be is to use a dependency injection container and resolver where sou can say for example a PDO instance to keep in use until the request ends (in PHP this would be a singleton behavior). If you can't rewrite your whole system to have an object oriented design to have the ability to use a DI container then the only thing you could do is to create a class loader in your bootstrap section to load a factory. A Factory is a simple class which can build object instances like a DatabaseFactory::CreateNewConnection would return a new PDO instance. You can create a static factory but that would be as flexible as the pig-iron. A recommend you to have a static DatabaseBuilder class there you can register a DatabaseFactory class instance as the default database factory and your factory can hold a database class instance until the request ends. Here is the skeleton: 
+
+I assumed using a timestamp should be enough (guaranteeing you one unique filename per second). Here is after this refactor: 
+
+Exceptions are (badly) swallowed is closed but not opened in this method. This could be a major flaw because it induces a nasty side-effect. It is a general idiom that the one who opens a resource is the one who closes it. is declared in the , no need to close it manually ! (it will be done automatically) 
+
+The hardcoded string for the path The fact that you directly depends on , making the method hard to test 
+
+Using LocalDateTime Since Java 8, there's a new API to use when you are using dates. I refactored the code to use this new API instead of the old one. 
+
+The method could event be marked so anyone reading this code knows that this method doesn't have a side-effect on an object attribute. 
+
+Bill What does a need in order to compute a price ? A base charge and a distance. These two values must be provided in the bill constructor. The bill doesn't have to know about the . Then, the implementation becomes (note that I have made this class immutable):

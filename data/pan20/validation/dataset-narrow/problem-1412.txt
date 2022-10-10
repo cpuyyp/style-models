@@ -1,0 +1,73 @@
+The first method relies directly on the key presses. It's a standard behavior ( probably coming from the operating system ) for there to be a delay before it starts repeating itself. That's why it moves, then stops and then keeps moving afterwards. The second method sets a value for the velocity which is then applied to the x position. It's not exactly clear whether your event or tick() function is called first. When you press the right key, it adds 5 ( or subtracts it if it's the left key) from the x value. When you release the key the velocity is set to 0. So when the tick() function is called 0 is added to the x property. You have to think in logical steps. It's smoother in the sense that the movement depends on a value rather than a direct key press. You basically "turn" the value "on" by key presses and "turn" it "off" by releasing a key. Edit: A lot of game frameworks come with something like an Input manager which you can check in your tick() or update() function. 
+
+I'm working on a transition effect where I have a texture and simply draw that as a pattern to my buffer. Here is a demo, use "e" to start the effect again. This looks fine but it won't work if the texture has pixels with alpha 0 < x < 1. This is the texture I used in my demo ( zoomed ): 
+
+You shouldn't calculate the delta time within the player itself( I think it's the player because it isn't clear on where the pieces reside). The delta time should be passed on from the main loop onto your objects. This way every object receives an equal delta value. You could move the movement to the bullet class Just for a simple illustration: 
+
+Namespaces are like "virtual folders" where you put your classes in. Just in code. Like how Packages work in Java or AS3. Eventhough in those two languages they are explicitly structured in actual folders too. It prevents Class names to conflict with each other and it allows for vendors to be denoted. For example: 
+
+From what I'm understanding you want to check what Tile you're trying to walk over. You shouldn't check textures. You should compare tile ID. In the end the Texture is just a visual presentation of the tile context ( in this case "dirt" ). Like so: 
+
+TL;DR : Yes, the adjacent nodes inherit the G cost from the current node PLUS the directional cost to the adjacent node. 
+
+It looks like you're not keeping the position in the Tile object. ( might wanna check the properties it could be that there is a "point" or x and y property you can store its location in. If you want to retrieve the position manually just multiply with your indices: 
+
+Just realized by looking at your image, it looks like it's more like " Data structure 1" Edit: I think you're looking for something like this then: 
+
+For simplicity, it's easier to have one vector/array that has all the objects that are alive. You don't want to check if they are alive in order to update them. That list represents the objects that need to be updated. Have a second vector/array, a stack if you will, that you add "dead" objects to once they are not needed for the time being. Once you need to reuse them simply pop them back into your vector that you're calling an update on. If you're going by this approach might be interesting to read on object-pools Of course you could also just remove them from memory and create new objects by instantiating them when needed. Eitherway, it's cleaner if you only hold your objects that actually need updating. All your objects that don't need to be updated( because they are inactive/dead) shouldn't be there. 
+
+But again if you want to know the context of your tiles I recommand using Enums or something similar. It's also easier if you reference to one texture file at all time instead of creating new Dirt textures. Comparing 2 different references will result as false. I'm not sure how the Contentloader from XNA handles this but i'm just sharing just in case. 
+
+This is similar to a vector after being normalized. You simple multiply these values/vectors to change your velocity ( or whatever that requires the direction) with a speed. So that the x and y components extend to the right length respectively. 
+
+Why not go for a polymorphic approach where your logic is separated into objects with an update function? You then add these objects to a list and simply loop over this list to update all. You can give each number a priority so that when you add an object to your list you can sort them easily so that you're sure each object is updated in the right order/ If you wan't to take out a system you simply take it out of the list. 
+
+Either 2 of these it think: - It would very well be that you are deleting stuff from the display-list but still have references in other places( like arrays ) that are still being processed. This keeps building up and completely hogs your game. ( but Flash can easily handle tons of objects ) or -Your algorithm, even though simplistic, is flawed and is doing more work than necessary. Memory leaks are nearly impossible in AS3 unless you loose an object that holds a reference to an object you can't reach anymore ( like Events that aren't destroyed and never have their weak flag set to true). This combined with the above one can really tear down the performance. 
+
+Granted, the line won't be smooth. But if I need more detail I add more points. And once created I can reuse them. If anyone knows a way to get rid of the forloop please do tell! 
+
+If you look at the third panel you can see that we check the adjacent tiles of the tile right from the starting point. The already checked tile above it ( top right adjacent from the start) has already a calculated cost. This cost was assigned to it when it was checked from the start ( note that I left H costs out for simplicity ). It appears that the new calculated cost actually takes 20 G to walk from the start point to this adjacent tile. But since the existing node in the open list has a G value of 10, which is lower, we let this one be. If the outcome were reversed where the new cost is cheaper we would set the parent of this adjacent tile in the open list to the current node and set the G value to the value that deems to be cheaper. The cost of each adjacent node is : 
+
+Same can be applied for removing a room. Just make sure you don't overlap rooms. Unless you want that ( empty tiles should be able to overlap without problem). But it needs additional checking so keep that in mind. In this scenario logic is applied by reading the tiles from worldgrid, whether it's passable, non-passable, other gamelogic etc. The Rooms simply hold the tiles which make up for the room. These tiles are translated to the grid: 
+
+In your A* just iterate over your enum list and check the corresponding boolean table that goes with it. This however assumes you always start with the tile which is placed north from the current tile. For example: 
+
+You're trying to optimize prematurely. Most of the operations you mentioned ( normalize, transform, distance ) are pretty much identical to what vector2D does, if you can look at their code you will notice that they are practically the same. The only difference is that vector3D has a third axis. Performance wise it should be trivial compared to a Vector2D. As for your side question: Because you can't multiply matrixes/row-vectors/column-vectors that both have different sizes. 
+
+You could simply calculate the distance ( you can use any mesh for collision clipping to represent the "air flow" limits), the closer it gets the higher the force you apply to it in that direction. Of course this isn't as accurate, but you could add noise to the direction of the velocity. 
+
+To add to Savlons answer: There are two ways of doing this Vector2D objects(Assuming your positions are vectors): 
+
+Your code is ok. I've created my own minesweeper for fun and did the same thing. However I would suggest leaving out the corner tiles ( the adjacent ones ) out. This will make it easier for you to create your algorithm. So instead of 8 tiles it will only check 4. Basically the easiest way to make your check up stop is to add something to an array, and while this array is not empty, do more check ups: 
+
+from : $URL$ Time class: $URL$ Basically what you could do is create a class that holds pointers to functions you want to call. And for each function you have a "clock" ( a simple float or int ) in a time table(Array/Vector) that is iterated over in combination with the delta time to see if x amount of seconds have passed. If so you do a callback on the associated function. I'm not that much deep into C++ and there is probably a clever way to do it. There is also this : $URL$ Which is build ontop of SFML but it requires C++11. It's an unofficial extension library that has some great event triggering functionality. On the upside of C++11, it supports "function" objects. Which help ease out some function referencing. Also google for events and C++ if you really want to dive deep into it. 
+
+L needs to be 0 < L < 1. Meaning it needs to be between 0 and 1. My question: I want to know what L is so if I were to substitute L for both vector equation (or two lines) they should give me the same intersection coordinates. That is if they intersect. But I can't wrap my head around on how to use this for two lines and find the parameter that fits the intersection point. Could someone with a simple example show how I could translate this to a function/method? 
+
+If you go with a "world grid" as in my example you don't need to. Simply request the surrounding tiles and see if they are passable once the player overlaps with a tile. Unless you move from tile to tile, as in snapping to another tile, then it would be as easy as checking player input. When the player hits the down arrow key, you simply test if the tile below the current one; which is [y+1][x]; is passable. If not, nothing happens. 
+
+What is a fast way of limiting the heading vector to a certain angle so that it turns in greater distance relative to the limit. A smaller cone/angle should make the object take a far bigger curve to traverse to reach its goal where a larger cone/angel allows the object to rotate faster in the direction of its goal. If there are some vector tricks i'll be glad to know them! 
+
+I havn't done much with menus and what not. But I think your flaw is within your if else "cluster". It would also be easier to use a base of 0. You might want to iterate over your items or reference them by index if you were to put them in an array. 
+
+But you will not only waste space on your atlast ( meaning it might consume more memory ), you still have to write something that disects every sequence. 
+
+As long you are reusing your Entities and their static ID (something Artemis does). I don't see the problem with this. Chances are you are going to fill in the spots anyway, with the entities that are in an object-pool or something similar. And in the case where you reuse your Entity the memory is already allocated for you. From Artemis point of view Components are very small objects( they can be big, but I doubt that will happen ). I Really don't think you're loosing too much memory. 
+
+Imagine a vector to be an arrow with a specific length. When you normalize it you bring the length to one. 
+
+You know your keywords. So store those in a string array. Store every key press into a char array and read the sequence. Allow a time out that clears the array. Compare your char string to any of the cheat keywords. When a match is found you call your cheat function. your game should have states ( like MENU,INGAME, whatever) it's simple a matter of "if" menu is active. 
+
+Your game should have a global delta time. If not you can create it yourself by checking the time between the last frame and current frame. Your shooting method should look like: 
+
+ID in this case is an enum-type of TileType. So when you load you're level you simply assign the type to the tile: 
+
+It might look the same but unlike your key presses booleans are checked constantly without any delay. You're basically turning on and off by ONE key press. This is an extremely simple way of doing it. And it should suffice. If you need something more complex simply look up how movement is handled in general. ( don't forget to set the variables to false on key up ); 
+
+You could also pre-calculate the shortest path from one end to another. If new bridges are added or removed you need to recalculate the table/graph: Floyd_algorithm 
+
+This will give you an integer which can be used as an index for your grid. Check what tiletype it is and handle the appropriate action. 
+
+I have to admit that I'm still trying to wrap my head around Artemis completely. But since the bitset for components is so specific systems are more 1:1 with components. So this is how I would do it. 
+
+You must make sure that your bullet are inactive at some point again. Or else your loop won't work. If all bullets are "active" the forloop won't shoot any bullets. Coupled with break; it will just jump out of your for loop. ( I guess this is meant for the interval ? ) ( But then again, I have the feeling you are leaving out some crucial code ) I suggest using a Stack or ObjectPool that just pops the top element and returns an inactive bullet. Once a bullet goes inactive ( after being activated) it's pushed back on the stack. This way you don't need to loop trough your bullet list to see if any of the bullets are inactive. You just check if something is in the stack. It's much faster. C# has its own stack class. But creating one for your own needs isn't hard. As an addition you could wrap your bullet patterns into a class which holds the direction for each bullet, the interval time( perhaps per bullet), speed(perhaps per bullet) etc. And when it's time to shoot the next bullet you simply request the next bullet settings from your "BulletPattern" class. This might prevent you writing giant pieces of codes just for one object. If you wrap the data you can also reuse/share them for/with other entities and such.

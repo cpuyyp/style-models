@@ -1,0 +1,49 @@
+In C++17, if you were using this to initialize a big enough vector, you could make use of execution policies to parallelize this like so: 
+
+You normally shouldn't use this. It includes every standard library header. If you compile without precompiled headers, this would make your compilation time much greater. The recommended practice is to just what you need, and if you want to use a precompiled header as well, that's just fine. 
+
+It's also much better to use than , because you don't want to be relying on specific dimensions in GUI applications, in order to allow the GUI to work well in all systems. What if my screen has 2 or 3 times the resolution as yours? Then everything sized in this way would be appear half the size! Additionally, it doesn't make a huge difference but centers the frame in the screen (good job doing that after sizing the frame), whereas you might want to use , which would make consecutive frames open in different locations. 
+
+I strongly recommend that you do all of your setup before you call . That should be the absolute last thing you do. What if you decided you wanted a modal instead of a ? Because it is modal, your code would halt execution at the , and everything past that won't execute until the dialog closes. Always make (along with sizing and positioning) the last thing you do. 
+
+Finally, your function arguments aren't very self-explanatory. What is ? What is ? The names should describe what they are (e.g. instead of ). 
+
+You could just not forward declare the function, and instead just define the function here. It's a little less code to write. It comes down to preference 
+
+There are frequently things I miss when using C; one of them is a nice error-handling (exception-like) system. After trying Rust, I realized I could implement something similar in C itself. So here's my attempt at writing a type in C. The idea of the type is similar to that of an type: if the value was able to be computed, then we return that. Otherwise, if there was an error, we return some error. In my case, my errors are string messages. I plan on using this for a class where we are required to use C, not C++ or other systems languages. We will be using gcc, so gcc specific behaviour is perfectly okay. panic.h 
+
+I recently learned about using fixed point arithmetic on embedded systems without floating point hardware, so I decided to code it. I tried to write in good style, but emphasized speed over style. One hard problem I encountered was to convert the number to a string. I coded up the following in my internal class; the macros aren't leaked to the user. The intent of using macros is so that I could easily make a new function for a data-type of , , and so on, but also have different length of the fractional bits. Unfortunately, my algorithm requires a larger data-type to actually compute the fractional representation, so it's not trivial to make a fractional type for say , as there are no larger types. Also, it fails on signed integers. How is the function? 
+
+This might be overkill if you only use the inside the one source file Huffman.cpp, but you definitely want to do this if the class will be used externally to the source file as well. 
+
+It's a bit odd to define a separate type to indicate an empty sequence. I would expect the empty sequence to be : 
+
+Why only add and subtract ints? If you think it's a good idea to be able to divide and multiply doubles, why not have the same thing for add and subtract? That's definitely something I would expect if I were using your calculator. Functions should only do "one" thing Your functions do multiple things: 
+
+There's also a small problem, where if the field we are sorting by is a pointer, you can have undefined behavior. Comparing pointers with is only allowed if the pointers are from the same array. So it would be better to use : 
+
+At this point, you might have to define a constructor for , in which case you might as well make it a full fledged . Also note that you have s which you are treating as entire trees. This tends to be harder to understand; I would instead recommend having a class which internally has nodes as an implementation detail: 
+
+I've been toying with the idea of making a simple game. In game development, it is good to do things in a more struct-of-arrays style rather than arrays-of-structs style, due to cache locality. However, I wanted to fool around even more, so my class puts all the data in one contiguous block of memory. It was my first time using placement new, and I rather enjoyed the template metaprogramming. I'm not 100% sure that my memory management was done correctly. There are some non-standard parts of the code because I was using Visual Studio: parameter-pack.hpp 
+
+In your class, you make it mutable. However, why not make it immutable? Immutability wouldn't cost much, but it would make some stuff easier to keep track of, such as providing the user an immutable view of your hashtable (this may be undesired, but it's what I'd do). 
+
+But this also disregards - which could be called an edge case, so you need to test zero as well. Not too bad. If you tested these cases, you'd cover most possible bugs. There are a couple more edge cases since we are working with floating point numbers, but from someone learning to code, I wouldn't be upset if they didn't cover them. 
+
+This will allocate memory each time you call it, so it's not as efficient as preallocating the buffer as Loki Astari suggested, but if you wanted to take Loki's suggestion, it may be desirable to factor out the merging into a function that behaves similarly. 
+
+If you don't want to use templates, that's fine, but keep in mind that they make it more general. One other thing to note is that you never change the vector in this function. That's a sign that it should be taken by rather than . However, the expected semantics of a function called is that it modifies its parameter so that, after the function is called, the parameter is sorted. It's unusual and unexpected to have to call another function to obtain the output. 
+
+Basically, when a member function returns a , you need to ensure that you never use that function on a temporary, and never keep the reference past the lifetime of the object. 
+
+Don't use comments to show flow of the methods. , , etc are not useful comments. If it is necessary to include such comments to be able to figure out what is being closed with the , you should refactor into yet another function. In this case, it is perfectly clear that you are ending the function. 
+
+This is okay-ish for beginning programming classes, but should usually be avoided. See Why is “using namespace std” considered bad practice? 
+
+Moreover, you usually shouldn't use arrays; s are way more convenient in general. And you also assume that the array that is passed in has a length at least . At the very least, you should assert this: 
+
+Add the two digits, plus the carry if there is one. Write the ones digit below in the result. Write the tends digit above in the carry 
+
+You also take and by value. This means that the strings have to be copied in (sometimes they can be moved, but for many cases, copied). All that copying is wasteful when you really don't need a copy. Take them by instead to save the copies. 
+
+You can reduce the requirements on your iterator. You declare that you want a , but you really don't need that. Just use and :

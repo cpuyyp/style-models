@@ -1,0 +1,101 @@
+Use the option --no-create-db when you execute your mysqldump, this option avoid inserting CREATE DATABASE IF NOT EXISTS db_name; in dump file. Max. 
+
+Know that if you want to use the same MySQL instance, you "can't chose" file location. In MySQL we don't have this flexibility because we don't have the "notion" of "Tablespaces" in oracle or "File Groups" in SQL Server. You just choose a location for all your datafiles in the my.cnf file, you can use the parameter file_per_table when you want to split your data in different files (one per table) but all these files will in datadir. One solution is to use symlinks in UNIX if you want to "load balanced" your disk usages (The solution that Rolando explain) 
+
+Note that is a cumulativ counter the first line shows the nominal counter value and at each iteration of mysqladmin, a substraction is made to show you how there were insertions during the time you setted (here is each 1 second). By the way, if you want some infos for your error (1205) it's the InnoDB Engine that should check because it's the only way to see which of your query (or queries) is/are stucking your DB. You can find infos on current and past transactions that lock your DB with: 
+
+Last note, we force the auto_increment value to 300 in our transaction so the 300 is no more available, the next one will be 301 so don't forget to force it with your_value - 1. Max. 
+
+Then, with your mysqldump command, use the option to specify explicitly your conf file has your are in crontab. 
+
+tmpdir isn't a dynamic variable so "officialy" you can't, maybe you can play with symlinks but I would highly inadvisable to do this with a running MySQL. Max. 
+
+Instead of loading your MyISAM table and ALTER it after, change the MySQL engine directly in your SQL dump file (on table definition) : The table will be restored directly in InnoDB engine : MyISAM 
+
+For DDL (ALTER TABLE): I stop the replication, run my DDL commands, run a rollbacked script and restart replication: 
+
+The mains "counters" are and for replication status and for lag (ideally at 0 second). If you have a slave dedicated to backups (that is a good practice), I recommend you to make a binary copy of your datadir instead (or in addition) of your mysqldump. The restore will be much more easier and quick. However mysqldump is good if you want to restore a partial backup (especially InnoDB tables) or restore a clean shrinked dataset. If your are afraid by corrumption or delta between Master and Slaves you can use the Percona tool pt-table-checksum (available in the Percona Toolkit) that "Verify MySQL replication integrity" easily. Max. 
+
+Make a generic table call Users with a unique ID by line (user_id)and put your generic infos (email, password...), used for both Registered and Unregistered users. Next, create a table "Registered_Users" to store specific info, with a column user_id (which point to Users table : foreign key). If you want to query just global info about all your users, query : 
+
+If you have more than one secondary index in your table you should have been to drop all but one and show the : 
+
+In the table in . Use the field for reads and sum the fields , , , for writes. These values are cumulativ counters, you should subtract values between an interval: if t1=t0+60seconds, Com_select at t1 - Com_select at t0 = reads in 1 minute 
+
+You're right it's a little bit confusing but it's not a bug. See MySQL Documentation for the TRUNCATE command: 
+
+Use the first one if you want to execute your event everyday. The second syntax will execute once. Option 1: Execute the event every night at 00:20 Option 2: Execute the event once the 2014-05-01 at 00:20 Max. 
+
+Why do you mean by "certain time"? Replication Lag? Query Response Time? In a simple Master/Slave(s) infrastructure, the distribution of the reads/writes operations should be done with a load balancer or directly in your apps. Max. 
+
+On your mysqldump did you dump your "mysql" database ? (it contains users tables) If you can connect to your master check your users: To see declared MySQL accounts use: 
+
+Operations and issues on slaves will not impact the Master. I dont't understand your concept of "the master -> slave replication running every 5 minutes". All transactions on Master will immediatelty be replicate on slaves. If your tables are InnoDB, your dump will not lock any tables (with the option --single-transaction) so you can have normal activity on master and slave too. To backup your slave you can also stop the replication, shutdown your MySQL (Slave) and copy your datafiles or use a hot backup solution like Percona XtraBackup. Max. 
+
+In your mysqldump, did you put the mysql schema in it? The mysql schema contains the information_schema datas so when the mysql is restored, the past infos are loaded... understand? Max. 
+
+WARNING NOTICE If you enable the audit_plugin (it's right with all logging processes like SLOW LOW, GENERAL LOG...) be careful to not saturate your disks in term of I/O. Depends of your workload, prefer write these types of logs on dedicated disks to minimize the impact on your MySQL instances. You can also throw them to syslog but you should have the architecture to handle them (ELK for instance). Max. 
+
+Effectively, DELETE order doesn't release space... You should reorganize tables with OPTIMIZE TABLE order. If you can stop activity, you can also make a dump and restore it. Max. 
+
+Why MongoDB created 9 chunks of a collection that contains 85MB? I didn't change the defaut chunk size parameter: 
+
+Now, transfert the old data in the new table, note that the new fields (here Birthdate) will be empty: 
+
+I worked for a while on your request dude... your problem is that it's not really adapted for relational database (POOR PERFORMANCES), you will be obliged to use some scripting language, but there is some interesting results: I've created a tale with one line: 
+
+Now, if you don't use the Binary Logs on Slaves (for point in time recovery or chained replication) you can disable it and remove them: 
+
+I've just tested your solution about the "CREATE_TIME" field in information_schema and I think it's the good one, look : 
+
+Error 150 is a FOREIGN KEY related error so I bet that you didn't create the table . before . (which is mandatory). Otherwise, you have some bad practices in your query: 
+
+You'r lucky you have only one secondary index, the is a clustered index so it isn't included in the index statistics. You can find the answer with the field of the information_schema.tables view (result in bytes): 
+
+Now with my query you can retrieve one line in your dataset. This query will split the result and return one line, you just have to modify the @i variable to choose your line (0 is the first line) : 
+
+The error refers to the field name and the key name (not the value). You should have a on the field , can you paste the result of: 
+
+I inadvisable to use Datetime type for your answer_time, change it to TIME type because the 000-00-00 will fail with all datetime functiosn (look at the MySQL documentation : link). So, when your table looks like : 
+
+So we change the auto_increment value without ALTER the table, note that as the transaction was rollbacked there is still 0 line in my table: 
+
+There is one parameter doubtful for dev server in the default "Config Type: Development Machine", it's the table_definition_cache. I'm sure that yours is set to 1400 no? Comment it on your my.ini file or just set it to its default value : 400. The table_definition_cache parameter is an dynamic variable, so you ca set it without restart MySQL with: 
+
+By default, MySQL makes a DNS lookup to resolve the client hostnames. You can disable this lookup with the option , check if your server wasn't started with this option: 
+
+Imagine you want to replace fname by firstname, lname by lstname and add a birthdate field. Create your new structure: 
+
+MySQL allows you to create a temp table with a existing name because they don't have the same "scope". A temporary table is visible in the session only, and it is dropped at session ending. If you have the same name, MySQL "hide" the original table until you drop your temp table. You can refer to the Temporary Tables section in the MySQL documentation Max. 
+
+EDIT: For your original problem, i had some issues when using DNS for replication try to use the IP address instead in your "CHANGE MASTER TO" command. Best regards. Max. 
+
+Don't do large restore with phpmyadmin, PHP will block you, you will have something like "Allowed memory size" after few megs loaded... Max. 
+
+Let me explain: The whith InnoDB tables, locks the table, copy the data in a new clean table (that why the result is shrinked), drop the original table and rename the new table with the original name. That why you should care to have the double of the volumetry of your table available in your disk (During operation you'll need 2x700GB). When you are in the innodb_file_per_table = ON. All tables has it proper data file. So the statement will create a new data file (~700GB) when the operation is finish, MySQL will drop the original one and rename the new one (so at the end the 700GB -- probably less because it will be shrinked -- of data generated during the operation will be released) When you are in the innodb_file_per_table = OFF. All data goes to one data file : ibdata. This file has a sad particularity, it can't be shrinked. So during the process, your new table will be created (near 700GB), but even after the drop and renaming operation (and the end of phase) your ibdata will not released the ~700GB, so you wanted free some data but you have 700GB more, cool isn't it? 2. ALTER TABLE You can also use an statement, the will work in the same way as . You can just use: 
+
+No need to ALTER table its quite overkill. I use to do a fake insert in rollbacked transaction to do the trick. 
+
+Replication status and lag are vital monitors you should take care of. Before start a backup you must know if your slave goes well. A simple will show you all needed infos: 
+
+If you are sure that your MySQL is a standalone instance, there is no know issues with the statement and I see that your binary log is 1.5Mb so i'm sure your system can manage that purge without pain. In a Master/Slave infrastructure, you can purge binary logs before they been "played" on slaves, the result is the slaves replication goes down (with impact on the apps). Max. 
+
+Note that my note on innodb_file_per_table is true also for this solution. 4. mysqldump The last solution is to recreate all databases from a dump. Terribly long, but terribly efficient. Note that it's the only solution to "shrink" the ibdata file. Max. 
+
+Your graph shows a binary log purge launched at approximatively 4am the 23th. You can search for a query like: 
+
+If you want to do more complicated tests (directly in you applications for instance) you should setup a real "Test Environment" from a fresh backup of your production. Max. 
+
+Note that your syntax is correct, all statements will be written on binary log (master) and the slave will ignore the and databases BUT YOU SHOULD EXIT THE CONTEXT and before run queries on other databases. The context is : REPLICATED 
+
+If you are on linux you can also make a ls -l on your datadir to show the creation date of your schemas folder : 
+
+Note regarding log-slave-updates: by default if you enable Binary Logs on Slave, the Slave will only writes events executed on the Slave directly, none of the events coming from its Master will be written in the Slave's Binary Logs. If you want to setup a chained replication (M -> S/M -> S), you need to tell the Slave to logs the Master events on its Binary Logs to replicate them on its own Slaves. This options is log-slave-updates. If you need to enable Binary Logs on Slave the command to see the curent position of the Slave´s Binary Logs is you will see the position coresponding to your files on your directory (on slave). Note on Binary Logs managment: Do not forget to set a "purge strategy" for your Binary Logs if you don't want to saturate your disks. The simplest way is to use the expire_logs_days variable which tell to MySQL to purge its Binary Logs older than this variable. I hope I was clear... Best Regards 
+
+It's just a generic example, if you want for specific one, please add your tables structures in your question. Max. Edit for question "At what point would it be a good idea to do something else? ": The INSERT SELECT statement locks (write lock) your table to enforce data consitency during operation. I can't answered to the question "at what point" it depends of your server, configs... But imagine your have a table with 1 Million rows, the operation could take some seconds, we'll say 4 seconds for example, so for 4 seconds, your users will not write in your table. 
+
+I don't think there is a similar command, but if your keys are simple (not composed) you can do the trick. I usually generate a DELETE script with an SELECT CONCAT statement You have your "IDs" file : 
+
+I'm testing the MongoDB Sharding with a Sharded Collection and a forloop to insert arround 1M documents to see how splitting and moving works. I'm surprise that after few documents MongoDB starts to split chunks (well before 64MB), At the end of the 1M (and some) inserts i have thoses stats : 
+
+I do not use phpMyAdmin so maybe i'm out but take a look on a potential autocommit option in the UI... Maybe your PMA's session isn't in autocommit (test with : SHOW VARIABLES LIKE "autocommit"). Other thing, do you have filtered replication ? (do-replicate, do-ignore...) Max. Best regards.

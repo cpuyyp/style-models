@@ -1,0 +1,55 @@
+would benefit with re-write - IMO, is is not simple to follow. As code lacks guiding comments, I am left to guess how to simplify it without losing meaning. Sample idea with some style improvements. 
+
+Leak When a node is popped, the node is not free'd. compare() Avoid overflow which is undefined behavior (UB). Use the idiom . It is recognized by a number of compilers to make lean code and does not overflow. 
+
+Code needs more robust testing. Some mods to create easier testing are below. With such testing, the functional error would be readily noticed. Not so surprisingly, test code can be harder and longer to write than the code-under-test. 
+
+"Is my logic for the implementation correct?" Appears correct except the range of acceptable values is not clearly stated. Gotcha 1. What is ? If is narrower than , the arguments will be widened and is problematic. Recommend instead. Gotcha 2. Only makes sense if it at least 1 or 2. Should test for that first. looks dodgy. Simplify 
+
+Although this may look like a function call, a worthy compiler "understands" and can replace this with efficient in-line emitted code. Let your good compiler do its job - or get a better compiler. If code "knows" refmemcpy(). IAC, a good compiler replaces either of these with in-line code for such small copies. mox nix 
+
+looks very bad to have at global scope. Certainly should have limited file scope with Same for The state space is 128 bit, yet users with are limited to 264 combinations. I'd expect a that allows 2128 or an auxiliary . 64-bit may seem sufficient today. Similar thinking years ago thought was good enough too. Code uses which is not part of the Standard C library. favors 1 bits. Use . There is no difference with as a count of microseconds, yet it would be a weakness should become derived otherwise. 
+
+Avoid magic numbers. Why 10 in ? Suggest I favor . serve little purpose as that is always . By using first, the product is certainly calculated with math. Makes a difference with vs. 
+
+All uppercase tokens like , from a style point-of-view, are typically reserved for macro constants. Still this is valid code. I would recommend something instead. 
+
+Note that expects and so follow that signature. Adjust and functions accordingly. Casting a to may lose information. If conversion to an integer type is truly needed, consider the optional type or better yet . 
+
+treats a null character just like any non- characters. So if the first character read is a null character, then is 
+
+has little value. Simple make the the size zero on initialization. The first time more memory is needed, then begin. Consider if code used many sparsely populated then that could tie up lots of unused memory. Rather see a much smaller initial size. fails to update the other fields. 
+
+I'll offer a more robust "parsing a string into a double" code that allows leading/trailing whitespace taking into account the above §7.22.1.3 10 spec. 
+
+Pattern-less function names. For , rather see function named obviously make sense together like , than , , etc. Comments with preprocessing may not be portable 
+
+Potential UB. Consider the below if . IMO, better to use a variable instead of and adjust code accordingly to avoid underflow. 
+
+Alternative precision test. Code does and various tests when code could test after the multiplication. 
+
+may overflow. will not. The cost of the division is negligible. A good compiler will compute and together. 
+
+A key problem is that this code only returns the kind of poker hand. Given that subsequent code will need to compare hands, like which straight is better, it makes sense that this code not only rate the kind of hand, but also provide info like top card in a straight, or rank of the cards that make up 2-pairs. Inconsistent use of magic numbers and macros. Why and then . 
+
+The allocation of is not needed. Simple use . For text streams, since code is concerned with embedded , code may also need to cope with embedded alternate line endings for text streams. Example: Take the 3 popular line endings: , ,. The expected kind one will readily translate into , but what of the other 2? is used in a questionable context. - as others have said. My takes of the 3 nulls: A. In C, in the null pointer. It may/may not have a binary pattern of all zeros. is always true. B. In C, in the null character. It has the value of 0. I think it must have a binary pattern of all zeros. C. is the ASCII code with the value of . ASCII is commonly used in C as the character coding set. As others have said, the removal of embedded is inefficient: O(n*n). A single pass will do. 
+
+A comment that applies to C, unsure about C++: bit fields are well defined for integer types , and maybe . So a bit field of type may lack portability. Higher portable code would use shifts and masks rather than bit fields to control endian, range and padding issues. only exercises . Recommend adding a example. Also compare values that are both about or . The test set is much to small. 
+
+This mean performing an before each and using that position for when a pattern is found. And let's use a 
+
+Portability is not defined in the C standard Function at 0 Minor: Both and fail with a size of 0. I would expect code to tolerate this edge case and not cause undefined behavior. display() Minor: I'd expect code to use to match or a cast to a wide unsigned type to maintain same sign-ness. Also --> and use or . A goal of is diagnostic. It should avoid data truncation. 
+
+Silently failing due to OOM is a concern. should do similar OOM protection as . Even though it sounds silly that reducing memory usage should ever fail. Consider putting all memory allocation into one helper function. (BTW: did not free . 
+
+From time to time, arrays of length 0 are used. So code should avoid . ( should be OK) Various approaches depending on how code wants to treat the "zero" case. 
+
+Minor Was the right type used? Why bother with making sure? Use the size of the referenced object, easier to code maintain and review. 
+
+Bugs, so not quite 100% functional. Bug 1: Consider . The following attempts to de-reference . appears to rely on the list having a prior insertion. 
+
+For me, I would use the form below and let it handle all edge cases of zeros, overflow, allocation success, free-ing, updates. Be prepared for large buffer needs. 
+
+Pedantic code would inspect and as code really as 3 outcomes: Same, Different, Failed to compare. Should occur, the comparison is uncertain. I would expect return codes from to reflect the above 0:Same, 1:Different, Negative values: various open/read/close errors. 
+
+Presentation Code formatted and presented well. Refreshing. Compiled properly - almost. Initialization With , the queue is pre-populated with the value of 0. This implies that the return values of are all bogus until values added. it would make sense to either

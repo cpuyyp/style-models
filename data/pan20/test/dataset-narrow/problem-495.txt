@@ -1,0 +1,57 @@
+There are a number of obvious optimizations that would probably make the code more obscure, like keeping only odd primes in the sieve, or dynamically updating the limit up to which sieving is done. But they would not affect the overall complexity of the algorithm. 
+
+And if you want to squeeze those last drops of performance, the speed of the following code is marginally, if at all, slower than , and is also much more Pythonic and readable: 
+
+I'm going to skip the making it a class part, but with being a dict-of-iterables, and the above points in mind, you could implement depth-first iteration as: 
+
+Of course the proper, fast way of checking if a number is a power of two is with a little bit twiddling hack that give \$O(1)\$ performance: 
+
+I think the accepted solution is not taking full advantage of the known bounds to the problem, so I'm going to give it a shot as well. One of the nice things of factorization is that, despite the initial bounds not being too optimistic, you can typically improve them as you go. If you do trial division of a number \$n\$ by the sequence of increasingprime numbers, you will know that the number is itself as prime if it is not divisible by all primes smaller than or equal to its square root. Similarly, if you remove all smaller prime factors from a number, you know that what's left is a prime itself, once the next trial prime is larger than its square root. So despite the fact that the largest possible prime factor of a number is the number itself, you only need to do trial division by primes smaller than or equal to the square root of the remaining factor. If you couple this with a sieve of Erathostenes like algorithm, you will find yourself only needing to sieve for prime factor smaller than the quartic root of the number. The whole idea can be implemented very compactly: 
+
+Note that this has slightly different behaviour than your code: you would e.g. accept a of and convert it to a . This is typically not what you want, so I think it is better to raise for such cases. If you don't mind the conversion, then you probably don't need to wrap your calls to in a and re-raise, as you will already get a nice error, e.g.: 
+
+You could make your palindrome detecting function a little bit more general, so that it can handle any , easily: 
+
+I have assumed that this is not a public function, so it should never receive incorrectly shaped inputs, hence the use of to document expectations, rather than raising a proper error as you would do if validating user input. I have also made it return a boolean, and given the function a corresponding name, so that you can then write code using it that reads like which is something niec to have. In the actual implementation there are a couple of magical steps if you are not familiar with NumPy, but which wouldn't really warrant a comment in code that uses it heavily: 
+
+But that is still going to be fairly slow, and take several seconds to compute. If you want a quick solution, you need to stop rechecking numbers that you already know cannot fulfill the condition. This is best done checking the digits from most significant to least significant. A possible implementation using recursion would be: 
+
+And you can play with the ordering of the characters by explicitly describing the endianess of your input: 
+
+I would also refactor your code to have the output creation happen in a single, common place, after some manipulation of the arguments: 
+
+The first few are probably OK, but you really shouldn't be publishing solutions to Project Euler problems online: don't spoil the fun for others! This said, there are several things you could consider to improve your code. As you will find if you keep doing Project Euler problems, eventually efficiency becomes paramount. So to get the hang of it, you may want to try and write your program as if being asked for a much, much larger threshold. So some of the pointers I will give you would generally be disregarded as micro optimizations, and rightfully so, but that's the name of the game in Project Euler! Keeping the general structure of your program, here are a few pointers: 
+
+Then all of a sudden your checks turn into a simple dictionary look-up, which is constant time, instead of having to scan all items in your dict every time: 
+
+It should be obvious that the following, code, that doesn't need to explicitly check for even entries, also gets the job done: 
+
+Making an iterative that behaves exactly as the recursive one is a little involved, but if we do things a little differently, it is simple: 
+
+It looks like you could use . Although you may want to use it earlier in your code, when you create the list of pairs you pass to . As is, you could use the following in your code: 
+
+You are searching over the full set of permutations, which leads to a time complexity of \$O(n!)\$, which is rarely a good thing. This seems like the type of problem that would benefit from a dynamic programming approach. I don't find it entirely satisfactory, as it uses a top-down approach, but it is much more efficient than your implementation, so here it goes: The basic idea is that, if you take a subset \$A\$ of \$m\$ items, and compute the \$m\$ values \$t_{A,j}\$, being the "best taste using the items in \$A\$ and ending in the \$j\$-th item, you can compute \$t_{A^*, m+1}\$, where \$A^*\$ is the set \$A\$ augmented with an extra item not in that set, easily. This is kind of confusing, I know, but below I am indexing memoized solutions by , and building the total taste by adding one of the remaining items at a time. It may be easier to look at the code: 
+
+To be honest, I was expecting it to be faster, but do notice also how the time scaling is roughly linear, as expected. 
+
+This is not a very Pythonic implementation. It actually looks like C or Java translated line by line into Python. But there is not much way around it. Unless you simply do , which is the Pythonic way of getting a listy sorted. 
+
+Know the language conventions! Python's PEP8 dictates format for function and variable names. Avoid unnecessary explicit checks. Your function should work on any iterable, there is no point in checking for and not for, e.g. an or a , which would also error out when you try to compute their . If you want to be pedantic about it, do something like: 
+
+Numpy has built in functions for most simple tasks like this one. In your case, should do the trick: 
+
+The speed-up you are seeing is mostly from removing the calculation of the logarithm from inside the inner loop, and instead reusing the value. This performs only about 10% slower than your , and is infinitely more readable: 
+
+We can do even better though: an alternative approach is to use something akin to a branch and bound approach. We know that the maximum distance that our made up chess piece can move is \$\sqrt 5\$, so we need not consider cells that are further from the destination more than that value times the number of moves left. A possible approach is to create a board holding minimum number of moves to get to the destination from any other cell: 
+
+s are not run if you use Python's optimized bytecode mode. And while nobody uses the switch, because the benefits are really meager, it still is not a good practice to you to validate user input. It is typically used to document invariants or assumptions, which roughly translates to it validating input that other parts of your code have generated, not users. Instead, you should raise an adequate exception, e.g.: 
+
+If you are going to be playing with string representations of native types, you probably want to take a look at the standard library package. With it, you can quickly process your as follows: 
+
+But if you can vectorize your code with numpy, or use a C array directly from cython, then you should have no problem in achieving your speed goal. 
+
+Actually, although not immediately obvious, your solution is \$O(n)\$... The sorting algorithm used by Python is Timsort, thus named after its inventor, Tim Peters, author also of The Zen of Python. It has many subtleties and refinements, but at a very high level, Timsort works by scanning the array to find sorted runs, i.e. contiguous subarrays already in sorted order, then merging them into larger sorted subarrays. When run on an array made out of two concatenated sorted subarrays, it will identify both of them as runs, then merge them into a single sorted array, all in linear time. That's one of the beauties of Timsort: that it can beat the famous \$O(n \log n)\$ bound if the array is highly structured. Your particular case happens to be one of the ones that run in linear time! 
+
+Or you could use the fact that string literals next to each other are automatically concatenated, in either of these two forms: 
+
+Since you have decided to go the way of the specialized object for your board, there are two obvious improvements. One is to use Python magic methods to have a more pythonic notation. The other is to offload the bounds checking to this specialized class. For instance:

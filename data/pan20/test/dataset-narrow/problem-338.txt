@@ -1,0 +1,53 @@
+Now, suppose that instead of the three constraints above we had the following:   1'. no two rows may have the same non-empty -value but different -values;   2'. the -value is never empty; (Constraint 2' is the same as constraint 2; constraint 1' entails adding the qualifier "non-empty" to constraint 1.) With these new constraints the following listing, where the missing -values are , would become valid: Listing 2 
+
+I'm looking for a way to enforce this constraint. (In case it matters, I'm particularly interested in solutions applicable to SQLite3 and PostgreSQL.) EDIT: Just to be clear, the description above does not preclude the existence of rows in table whose value of is not mentioned at all in table . For such values of there is no value of at all, principal or otherwise. It is only for those values of that appear in table that there must be one and only one row in table having . 
+
+On the cache data of other queries, and that other queries may involve tables/data that would use in the current query, how do I measure the time of a particular query, I prefer the cache to be clean because I have 22 queries (TPCH Benchmark ) to measure time of the isolated mode. After the actual execution time of the query, it would have to take the time of the query that is in the "median" among all. Example: 
+
+However, when executing an Explain query, no error is reported. ------------- EXPLAIN ONLY ------------------------ 
+
+I need to know the actual execution time of a sql query, but considering that the data is already cached. I also need to make sure that cached data from other queries is cleared. I believe that in order to know the real time of a query it will be necessary to "warm up" the data to be inserted in cache. Below are the steps suggested by a DBA for me: 
+
+The setup can differ slightly in size and be consistent at the same time. Could be a range of reasons for the size difference. E.g. Different file system, fragmentation, method of determining size, etc... If you want to test the consistency of your replicated tables, run a pt-table-checksum. 
+
+You can limit the relationship from many to one by adding a unique constraint. EDIT: I am guessing I received the -1 for my brevity. Sorry for that, I'll elaborate to clarify. Below you will find the one-to-one relationship DDL. I used a UNIQUE constraint on table B to assure it's one-to-one relationship to it's parent table A's primary key. 
+
+and detect the condition where the search fails. This means performing one such query for usually hundreds, often thousands, of genes. (BTW, most of these queries are usually performed by scripts written in Python, R, Perl, MATLAB, etc. using those language's DBI facilities.) Alternatively, one could concoct a (typically huge) SQL statement of the form 
+
+But such a listing would not be possible with the schema shown above. Even if the constraint were removed from the definition of the column, the closest we would get is Listing 3 
+
+...and from the result deduce the subset of invalid gene names. Maybe it's just me, but I pick up some potent code smell from such huge SQL statements. Bottom line, I don't have an entirely satisfactory solution, but since the problem must be very common, I figure that there must be standard solutions for it. If this is correct, please let me know what they are. BTW, assume that access to the DB is read-only. In particular, please rule out any solution that involves creating temporary tables. Also, in case it matters, ours is a MySQL database. 
+
+Depending on your queries, you might even be able to do with one or two of the above indexes or two composite instead of two single and one composite. It's poking around in the dark for me. 
+
+That is a default option in mysqldump. As the name states it only disables the foreign key check, which is necessary. If you don't disable the check, you'll almost certainly run into foreign keys errors, unless the restore, coincidentally, honors the parent/child relationships in the sequence that it restored the tables in. Extremely unlikely. Mysqldump doesn't account for this. Look at it this way. If your dump restore tries to restore a child table before its parent, it will see the rows as orphan records and the check will give an error. As ypercube said. The dump file will contain a set command at the end to turn the check back on. It's also a session based variable. To address your concern. No. The set command does not remove foreign keys from your tables. 
+
+...but it made no difference: the output of remains unchanged. Is there some other way to optimize this query? 
+
+In the research group where I work, we must solve following problem hundreds, maybe thousands of times every day: given a set of putative gene names (typically a few hundred of them), flag those that are not in our (MySQL) database. This problem is solved in a number of ways by our various applications and scripts. I would like to optimize the process. The simplest approach, of course, is to iterate over the list of gene names (after removing any duplicates, of course), and for each gene name perform something like 
+
+@Decebal, Please consider the following, as the current answer is incomplete, flawed and built on an assumption. First I will attempt to explain my previous statement. 1.) Incomplete (cardinality, prefixing and data types): Composite indexes and indexes in general need to remain lean to fit in memory, actually benefit performance and not over complicate nor confuse things. Therefor the only complete answer would be to test cardinality on your table in order to utilize an efficient index prefix length. The next step of completeness is to slim down your data types. It matters for sorting and other explicit/implicit MEMORY engine usage. 2.) Flawed (null-able UNIQUE composite indexes): The `contact_info_ndx` UNIQUE composite index in Rolando's answer contains null-able fields. This will effectively enforce a partial UNIQUE constraint. Any composite containing a NULL in one of the three fields will allow for duplicates, a NULL effectively breaks the constraint. MySQL doesn't know what a NULL is and therefor cannot judge it. 3.) Assumption (Necessity of UNIQUE constraints): This is quite an impacting assumption as a UNIQUE constraint should be avoided unless absolutely necessary. It add's overhead, circumvents an important performance enhancing mechanism (i.e. change buffer) and increases the probability of dead-locks through gap locks on the UNIQUE key when inserting in batches. With that said, here are the steps that I would advise: Step 1: Data type(s). (Not sure if this step is necessary as you mentioned that the table in your question is "similar" to that of your actual User table.) 
+
+to clarify the situation described in the question above; to provide table-initialization code that responders can use to test their proposals if they so wish (it's in fact the code I used to generate Listing 2); to give an example of the sort of hard-to-maintain hack that I'm trying to avoid. 
+
+This "non-solution" consists of defining some distinct values of that can somehow be recognized as , and redefining to make use of this information. For example: 
+
+1 Another way to express the same constraint would be to say that the following two queries should always produce identical outputs: 
+
+I saw in the link below that you have other parameters for pg_qualstats..., but I believe they are not important, am I right? $URL$ Best Regards Neto 
+
+Apparently the processor is not working variably now. Any idea why the first execution can be faster in many cases? 
+
+After of general modification, I am reply my question!!! Add the parameter below in my postgresql.conf, and set powa.frequency = 5s I am able to monitor the queries executed faster. But something unusual is happening yet. When executing a query it does not appear in the queries monitor, but when clicking on the OPTIMIZE THIS DATABASE BUTTON, the query appears even the suggestions of index. Has anyone ever had this problem? just want to appear when you click on OTIMIZE THIS DATABASE Butom???? My postgresql.conf file is configured as below: 
+
+...because there's no way to determine the appropriate value of for those rows where is . I'm looking for a normalized schema that would enforce the new set of constraints (and thus allow data like that shown in Listing 2). 
+
+My "non-solution" My "non-solution" to this problem is a hard-to-maintain hack. I post it here for three reasons: 
+
+no two rows may have the same -value but different -values; the -value is never empty; the -value is never emtpy; 
+
+This definition misses one constraint that must satisfy. In English, this constraint could be described like this: 
+
+Without knowing a lot about your processing, the first thing that jumps out, besides an all round nice setup, is the amount of un-indexed joins going on. Find them and fix them. I'd advise using pt-query-digest. Something along the lines of: 
+
+Step 2: Cardinality and left most prefix. On each field you will be installing an index, I would advise you to test how much of that field needs to be in the index for it to be effective and slim at the same time. I wrote a small statement to do just that. Replace the with your table name and the with your field name. i.e. for the field on the table :

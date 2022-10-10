@@ -1,0 +1,47 @@
+If you are in this situation the first thing you should do is make sure you know where the documentation for the database product is and start reading it. Initially the focus should be on backup and recovery because if you don't get that right the other responsibilities of a DBA don't matter. If the database is Oracle for example, find the appropriate documentation site for the release you are on from $URL$ A good place to start would be the Conepts guide and then perhaps the 2 Day DBA guide followed by the Administrator's Guide. 
+
+It would probably be overkill, but you could install Oracle Express Edition and use database links to have it retrieve the data to be written from the remote database. You would probably want the logic to remain on the existing server and just have the XE do the file writing. This method would allow you to re-use almost all your code, but it has the downside of requiring an additional installation of Oracle and the associated maintenance. 
+
+We had an OEM job that would run a PL/SQL block using a particular database users credentials. The credentials are the same for two different databases, so there was no problem for the block to use a private database link without credentials to pull data from the second database into the first. We migrated the job to DBMS_SCHEDULER, but the job fails with the following error: 
+
+B. After shrinking things above the high water mark, find out what tablespaces would still benefit from having segments moved. 
+
+I'm not sure how Oracle assigns PIDs, but you could try increasing your PROCESSES parameter to see if that keeps it from re-using the values as quickly. 
+
+I don't know if this will work in sqlite3, but you didn't tag the question with that, so here is an Oracle solution. 
+
+As an example of the lack of distinction, the Oracle 11.2 Concepts Guide includes SELECTS as DML as follows: 
+
+Bug 11720698 with the title "SYS.WARNING_SETTINGS$ NOT CLEANED UP WHEN OBJECT IS DROPPED." may be causing this. 
+
+Flashback Drop does work as implied by the documentation for the Express Edition of 11g, but the default configuration needs to be modified to get it to work. By default XE isn't in ARCHIVELOG mode as shown by... 
+
+Also note that depending on the frequency of look-ups, frequency of refreshes, and frequency of data change, this may or may not introduce more load than a synonym solution. 
+
+If you never opened the database on Host2 and you have all the archive logs between the first backup and the second, then you can recover Host2 using them. If you have opened Host2, you still might be able to do this if you have flashback database enabled and can flash back to the point before you opened it. 
+
+Here are some additional factors you may want to consider that aren't related to the core of the upgrade itself: 
+
+For something more complex you might need a regular expression, but in this case, the following should suffice. 
+
+You could also look into a storage based solution. Many offer a snapshot that initially takes little space and only grows as the snapshot and the source diverge. The database on the snapshot will behave as though a shutdown abort was done and so will require a bit of recovery (automatic). Another option is to do a physical to virtual migration of the system and then have the virtualization product do the snapshot/revert. 
+
+I don't have the 10g version of Express Edition installed, but if it is like the 11g version, then your first question is answered in the comments section of the Backup.bat file itself. For 11g this means the comments indicate that No cleanup script is needed because the script automatically keeps two backups in the Flash Recovery Area. Whether there is a better method or not will depend on what your recovery requirements are. 
+
+If we change this to a right join we get rows from v$bh regardless of whether there is a matching object_id in dba_objects. 
+
+I haven't found definitive information, but the things I have read seem to indicate that since scheduler jobs do not have a login, they cannot use database links that use passed credentials. That would make sense since I get the same error whether the job is owned by SYSTEM or by the user that normally runs the block (and still can when logged in). Can anyone provide further explanation of this situation or more importantly explain ways to work around this issue? I can think of several, but I'm not sure I like any of them. 
+
+The name for a "meta_table" does not seem to match up with your description. As maru alluded, metadata is data that describes the data. The data dictionary already stores this metadata including the name of the column, the column type, how large the column is, and depending on the platform may even contain a description of the column. What is sounds like you want is an auxiliary users table so that a single users table can be used for all applications, with application specific user information in this auxiliary table. If you only have one application and don't have immediate plans to create another, then I suggest you put all the fields in the users table and only split it when/if it becomes necessary. If on the other hand you will have multiple applications, each with distinct user attributes, then such a table may be useful. I suggest including the application name in the name of the auxiliary table. So, if you have an abc application and an xyz application you would have three tables --, and . As to which columns should go in which table, put anything that could conceivably be used by another application in the general table, so that application ABC never has to join . All the columns you listed look to me like they should go in the table. 
+
+*Do we have an auto mode for RESULT_CACHE_MODE?* - The Oracle Database Reference shows that the two options for this setting are MANUAL and FORCE. What is the recommended mode for this? - This would depend on what your needs are. To understand the benefits of the result cache, look at the Validation of the Client Result Cache of the Oracle Call Interface Programmer's Guide referenced earlier. 
+
+As far as Oracle databases are concerned, the answer is you can't. All data in a database is stored in tables, even meta-data. Data can be stored in queues, but those are just a different way of using tables. XML files can be stored outside of a database, but that wouldn't meet your "in the database" requirement. Moving beyond your stated question, JPEG files or any files for that matter can be stored in a database. They would require a table and a LOB column (BLOB or CLOB). XML could be also be stored this way, but importing the XML data into the database would allow you to operate on the data in ways that cannot easily be done now. It would also provide other benefits of databases including: Reduced Redundancy, Accessibility, Concurrency, Scalability, Interoperability, Security, Recovery, and Performance. If the benefits of a database don't further your goals, then don't use one. 
+
+Oracle includes scripts to create several sample schema and data. Oracle has a whole book (54 pages) discussing the scripts and schema created. If you want to generate data for your own schema then you should look at things like these: 
+
+See the Oracle Real Application Clusters Installation Guide 11g Release 2 for Linux and UNIX. It has a section on "Converting to Oracle RAC from Single-Instance Oracle Databases" describing several different ways this can be done. 
+
+Read the entire note for the full context, but it seems that Oracle is beginning to make allowances for even RAC on VMWare. Application Support If your applications are all RAC aware and can gracefully handle the loss of an instance, then some of the benefits that VMWare add would not be as worthwhile. On the other hand, if the applications are not RAC aware and will need to re-connect anyway, then the transparency of VMWare VMotion would be more desirable. Complexity/Flexibility The combination of RAC and virtualization allows for a lot of flexibility, but also increases complexity considerably. To restart a server you could VMotion all the instances off of that node to other nodes using VMWare, or you could bring the instances on that box down using RAC. Each option has pros and cons that you would have to consider. Thoughts 
+
+It would be difficult to say whether this solution would be preferred without knowing more about the nature of the data you are storing and how it will be accessed, but here is another idea you may not have considered. Since your data is fairly static and will be accessed from PL/SQL and the application, you could simply embed the data in a PL/SQL package. The package could be as simple as a look-up function to retrieve a value based on a given key. The application could use the same package to retrieve the data. The function would probably be deterministic and probably in a separate package from the code consuming it. The view and/or table may be preferable if you are mostly consuming the data in SQL. By the way, modifying a view is not really any more difficult than manipulating data - assuming DBA privileges.

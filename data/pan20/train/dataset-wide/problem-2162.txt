@@ -1,0 +1,101 @@
+The obtains the previous state for the same for each row within each group, returning 0 when there is no matching row. It also calculates the last date in each group to use it later to determine the last row in the group. This is what it returns: 
+
+Depending on what you are trying to achieve with this, you may be out of luck. First of all, names cannot be parametrised in MySQL otherwise than using a prepared statement. – So, can we use a prepared statement here? No. Prepared statements are not allowed in triggers, according to the manual: 
+
+While is a variable, it is a table variable, not an array. You access data stored in a table variable the same way you would access data in a conventional table, i.e. using a query. Now when you want to retrieve data of a table's specific row, you need a way of referencing that row. Often you use some sort of an ID column. In this case you could add such column in your declaration: 
+
+Instead of specifying the same IN list for both and , specify it only for and make the subquery correlate with on , like this: 
+
+Checking all the items in Membership means you are adding yourself to all the roles defined in the database. That includes the sp_denydatareader role, which is probably the main reason you cannot open the Properties box any more. If you have been given the permission to alter roles previously, it is likely that you have not removed it by your erroneous actions. So, you could just try to remove yourself from the sp_denydatareader role by executing this command in a query window: 
+
+That is assuming that by "empty" you mean NULL. If you mean to exclude empty strings () as well, you could modify the above condition like this: 
+
+The first CTE, , finds the ID of the first row that comes after the current row and has greater than the current row, for each row in the table. It basically creates a (preliminary) set of ID ranges. For your example it produces the following results: 
+
+If newer messages consistently have larger ID values in the table than the older messages, perhaps you could simplify the filter conditions in your subqueries by removing the checks involving . Those checks may seem to be limiting the number of rows in the result set (thus potentially speeding up the subqueries), but in reality, if a message matches the conversation and its ID is larger than the last read ID and the poster is not but the other party, then it is an unread message for . So, this is how you could count : 
+
+Every / column pair in the common table expression (CTE) is represented as a single column, , aliased . The month name for every value is derived, using , from the minimum value in the same group (or partition) of as the current row. (The requirement is to use the credit date. The credit date is supposed to go before the debit one(s), hence looking for the minimum date.) The query uses a window function to get the minimum s. The column is the sum of all results per . It is calculated using a window aggregate function too, which is this time. (The column is re-aliased as in the final SELECT to match your expected output, but it seemed to me to make more sense to call it at this stage.) Eventually, this is what the CTE produces: 
+
+Again, you will need to test the final query in your environment to see how much, if at all, these additional modifications affect the performance. 
+
+In order to modify the rule later, you will have to drop and recreate it. Before being dropped, the rule must be unbound: 
+
+You can see that the first check is directly integrated into the INSERT statement, because the argument applied to is a name and you need to get an ID from it as one of the values to be inserted. The second check is in the form of an EXISTS predicate. All three initial arguments (, , and ) are thus parameters of this single statement. 
+
+Based on your joins, it appears that DB rows are going to be unique, so you probably do not need in that specific instance. If the output should reflect the number of actual databases, counting distinct names can give you a skewed result, since different instances might have databases with identical names and would see that as a single item. On the other hand, there would probably be no issue if you counted IDs rather than names: 
+
+Here is another method, which is similar to Evan's and Erwin's in that it uses LAG to determine islands. It differs from those solutions in that it uses only one level of nesting, no grouping, and considerably more window functions: 
+
+A demo of this solution, which uses a concise edition of the reduced version of your setup, can be found and played with at SQL Fiddle. 
+
+The above index will ensure uniqueness of product_id among rows where is_primary is set. If you try to specify a second primary image for some product, the uniqueness will immediately be violated and the operation will fail. 
+
+You could supply the new values as a table (with the help of the VALUES row constructor), so that you could join it with the target table and use the join in the UPDATE statement, like this: 
+
+The innermost query does the main job of counting the views and sorting the results. The results are then ranked and at the uppermost level they are grouped again by the rank value, except all the values from 4 and greater are grouped together. The last item is displayed as only if there are two or more cities in that group. So, double grouping is still unavoidable but you can avoid specifying the joining logic twice. Demo of this method is available at Rextester and SQL Fiddle. 
+
+As you want the results to be returned as rows, you need the input to be in the form of a row set as well. One way is to create such a row set dynamically, right in the query, using a series of SELECTs FROM DUAL combined with UNION ALL: 
+
+Your data sample seems to suggest that the two columns are the only columns that can change in each group of duplicates. In other words, duplicates are determined by columns . One other assumption that your data sample prompts is that a row with a greater corresponds to a row with a greater as well. (In fact, the two columns always have the same value in your example.) Finally, for the purpose of this answer, I am also going to assume that when you are saying "first" or "last" (row in the rectangle), you are talking about the earliest or latest datetime value. With those out of the way, you can generate the desired result set from your table if you just group the rows by the columns listed above and take for and for – that is, like this: 
+
+Unless SoldTickets can decrease as well as increase (can tickets be returned?), in which case, rather than the minimum and maximum, you should probably take the first and last value. But in order to be able to do that, you should have the Date attribute in your table variable as well. Then the calculation could be organised using the analytic functions FIRST_VALUE and LAST_VALUE: 
+
+What you are trying to do looks very much like a pivot operation. You could probably achieve the result you are looking for without a derived table, using conditional aggregation: 
+
+Now all the category names in the imported dataset can be mapped to their IDs using the tbCategories table. And that is what the trigger should do when inserting the subcategories: 
+
+The Common Table Expression returns rows supplied with row counts per every partition of . The main query only needs to filter on the condition that a row belongs to a specific category and that the corresponding row count is 1. Note also that if your design allows duplicate entries of , you'll need to replace with . (That may accordingly result in more than one row per in the output.) 
+
+Among the SET statements in your script, SET QUOTED_IDENTIFIER is special in that it is processed at parse time rather than at execute time. From SET Statements (Transact-SQL) (emphasis mine): 
+
+The above trigger will work exactly the same. On a different note, your UPDATE statement may have a flaw: as currently written, it will update the column in every row with the same row count – that of the category matching the inserted row. If the table has multiple rows, each for a different category, you probably need to introduce a filter on to your UPDATE statement, similar to the filter in the subquery, in order to update only the corresponding value: 
+
+And if you decide to go with either Erwin's or Evan's solution, I believe a similar change will need to be added to it as well. 
+
+The total number of rows per is easy, you just need to use . As for the other column, then, assuming cannot be null, you need to count distinct values and compare the result to 1. To explain: if all names are identical, will return 1, otherwise it will return a different number. Thus, by comparing the result to 1 you will determine whether all names are unique or not. This is how I would implement it in SQL: 
+
+And it is indeed possible to do so in SQL Server, because the result of the above SELECT query can be used as the target of your UPDATE statement. You can use it as a derived table: 
+
+That gives you the first ID of every unique combination of . That will be the rows you want to keep. All the others you want to remove. This is an anti-join, and there are various ways to implement it. In this case you can go with: 
+
+Rather than making sure tUsers.regionID matches tCountries.regionID when tUsers.countryID is set, you could simply prevent both countryID and regionID from being set simultaneously on a row by adding a check constraint like this: 
+
+To retrieve data from Form_Element_Groups and Element_Answer_text, you can complete your query with outer joins to those tables in this manner: 
+
+Also, you are not explaining what first and last mean. In this answer, it is assumed that first stands for earliest in the group (according to the value) and, similarly, last means latest in the group. One way to throw in could be like this: First, add two more aggregated columns, and , to the original query: 
+
+Yes, it is possible to return both results without repeating the subquery by rewriting your query using an outer join. The following will return same results as your version: 
+
+Not exactly an answer to the question as asked, but rather than having a trigger reset the value, I would probably introduce a constraint to prevent the column from having a value: 
+
+MySQL forbids referencing outer-level columns deeper than one level of nesting. Your query, however, is referencing three levels deep. What you need, therefore, is to rewrite the correlated subquery in such a way that, even if it uses nested queries, the correlation with the outer level is not nested, something like this: 
+
+The following assumptions have been made (some of them possibly repeating parts of your description): 
+
+You cannot make a check condition a part of the type definition syntactically, but you can create a rule: 
+
+Alternatively, if your SQL product supports analytic functions like LAST_VALUE(), you could implement the request like this: 
+
+and DISTINCT condenses them to just one row. Do you need that row in the output? To me, it does not make much sense to keep it. I would get rid of it with a simple filter: 
+
+However, nesting a query is not the only way to solve your problem – you can also use a nested join, which is much more concise: 
+
+This is not going to look pretty, especially given the more than 300 columns and unavailability of , nor is it likely to perform exceedingly well, but just as something to start with, I would try the following approach: 
+
+However, that will give you a value, not an integer number of milliseconds that I am assuming you are after. To get the number of milliseconds, you can apply the UNIX_TIMESTAMP function to and multiply the result by 1000: 
+
+Writing a parser to change specific bits of your queries would indeed require some effort. Adding just a single line to every one of them, on the other hand, seems a relatively easy task. So, you could mass-update all existing SQL queries/batches in your application with this line added to the beginning of each batch: 
+
+You could use a window MAX() to achieve the result in a way that is semantically very close to the one you have discovered but does not involve a join: 
+
+In case the source table is too big to be converted in one go, you can do that in batches several (hundreds? thousands?) FK sets at a time, making sure each group of rows with the same FKs is inserted unseparated. A filter on e.g. FK1 could achieve that, so the first time it would be 
+
+Let me also note that your query will arguably be clearer if you use aliases for both instances of , as well as avoid excessive use of backticks: 
+
+Assuming the test numbers suggest the order in which the tests are taken and you want athletes having a Negative test coming after the last Positive test of theirs, you can group your table by and then: 
+
+A demo of this query is available at SQL Fiddle. (It borrows the test setup created by Jehad Keriaki for his own answer.) 
+
+Populate it with pre-defined IDs for each type. For the purpose of this answer, let them match RDFozz's example: 1 for plants, 2 for animals, 3 for bacteria. Add a column to and make it non-nullable and a foreign key. 
+
+This is essentially a gaps-and-islands problem. And when I have my SQL Server hat on, I often solve this kind of problem with two calls. Sadly, MySQL, unlike many other major SQL products, does not support , nor any other ranking function. To make up for that, however, you can use variable assignment in SELECTs, which MySQL does support (unlike many other major SQL products). Below is a solution followed by an explanation:

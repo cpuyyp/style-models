@@ -1,0 +1,37 @@
+I'm not sure if this is just your wording "exchange it's LSDB summary" or if you meant Type 3 LSA's, however let us recall that OSPF routers in the same area need to have identical LSDB, by this I mean that they will share all LSA's they know about and which are permitted as per area type (i.e Stub, Totally Stub, NSSA, Totally NSSA). Second: 
+
+Remember that at the Exchange step the DBD packet has the OSPF header plus the LSA header, the latter consists of the following: 
+
+They all process BPDU's and have a time associated before moving to the next state, this time allows for the root bridge knowledge convergence to be synch'd. So basically you are waiting for the best BID to be cascaded to all devices, which will eventually occur, and is considered time costly in today's networks. 
+
+From Understanding and Tuning Spanning Tree Protocol Timers see below: The movement of a port into the listening state indicates that there is a change in the active STP topology and that a port will go from blocking to forwarding. So the listening and learning periods during which the forward delay runs must cover this consecutive period: 
+
+The source MAC in question is ea-08-6b-aa-03-cb. (In case people cannot see the image) I guess by now if you haven't ruled out @Ron Maupin suggestion you could see some ideas below: 
+
+In a nutshell, Topology Table as Ron stated. I will base my answer on this document EIGRP startup process - Unicast and multicast Updates containing topology information 
+
+Log in as the root user and provide your credentials. In shell mode, navigate to the /etc/config folder. (% cd /etc/config) Use ls to list which files are available, there should be something similar to srx650-factory.conf or srx650-defaults.conf Use vi filename to view contents 
+
+The reason why does IP's fit the way they do: "An OSPF router always forms an adjacency over a point-to-point link using an unnumbered interface. This causes the Link ID field to contain the router ID of the adjacent peer. the Link Data filed contains the IP address of the local router's interface or the local interface index value for unnumbered interfaces." JNCIS study guide by Joseph M. Soricelli 
+
+Remember that there is a fundamental rule in OSPF, there must always be a leg in the backbone area(A0). A router that connects to the BB area and a different area is considered an ABR (Area Border Router). Depending on how many areas hence the amount of ABR's The scenario you are putting needs to be in a context, for example you could have R1--a0--R2 in this case only T1 and T2 would be enough. If you have R1--a0--R2--a1--R3 and the new adjacency is between router R2 and R3 in area 1, the R2 is considered ABR as it has a leg in the two areas. Now, if you recall Summary LSA (Type 3) it describes networks external to the area, so basically a T1 from a different area would be described as a T3. So R2 knows about R1&R3 in their respective areas, but R1 and R3 don't know each other, hence T3. "In a link-state routing protocol, each router maintains a database describing the Autonomous System's topology. This database is referred to as the link-state database. Each participating router has an identical database." HTH 
+
+The Link type is one of the fields used in the Router LSA, all 4 were mentioned previously. The information in the router LSA's link ID and link data fields is associated with the type of link OSPF is operating. 
+
+I checked the user guide and nowhere does it mention inter-vlan routing: $URL$ From the following link (1920-48g) $URL$ "Short of the story is, you don't need routes. Just create the two VLANs that you want, both with IP addresses in separate subnets, and you will be able to ping each other." 
+
+So whichever it is, you certainly have power over what you want to achieve, in this case you have decided to perform leaking to have specific routes advertised to your internal area. In this example you have given, leaving the attached bit and thinking about a worst case scenario where there are no failsafe mechanisms, you could end up with a blackhole if you loose connectivity to the specific routes because you still have the default one. On the other hand, I'm not sure which parameters have been taken into consideration for the leaking, so if it were to be something dynamic where the routes are only leaked if certain conditions you specified are met, then if one of those evaluates to false you will stop seeing those routes and this could potentially result in connectivity loss if there is no other way to work around, hence default route. In regards to LDP not creating a FEC for the default route introduced by the attached bit in ISIS. Personally I haven't tested this yet, as soon my hands get on some equipment will do, but for what Google has showed me: From Microtik: 
+
+Remember that each LSA has a flooding scope, in the case of Router LSA (Type 1) and Network LSA (Type 2) they have an Area scope, this means they are not flooded across an area boundary. For this matter a Summary LSA (Type 3) will be used to represent those LSA's into other areas. From the previous answer you can see the information that uniquely identifies the LSA Header which is carried in the DBD packet. Forth: 
+
+I'll base my answer solely on PT 5.3.2. and personal testing. Answer is No. You cannot assign 2 IP addresses due to the fact that the module cards are only accounted for one connection (i.e PT-HOST-NM-1FGE). Below you can see the list of modules: 
+
+You have made advertisement unidirectional instead of bidirectional, meaning that you only advertised from R3 to R8, but not from R8 to R3. We can see this from your config: R3 
+
+Check your device transceiver module compatibility matrix. Output is extensive, check here If you ever run into a case with TAC they might ask you to swap for a Cisco SFP. 
+
+Up to here you have Bidirectional communication: "The Hello Protocol is responsible for establishing and maintaining neighbor relationships. It also ensures that communication between neighbors is bidirectional." 
+
+TCP has "the sliding window mechanism that controls the flow of data between devices. This system not only manages the basic data transfer process, it is also used to ensure that data is sent reliably, and also to manage the flow of data between devices to ensure that data is transferred efficiently without either device sending data faster than the other can receive it." For more info on how the sliding window mechanism works 
+
+Networking protocols and industry requirements have changed since when STP was initially created. STP is kind of old and has evolved into further flavors like RSTP, PVST, PVST+, MSTP to satisfy the need of faster and more resilient networks. For example let's compare STP vs RSTP topology change and you will clearly see why STP is so slow. STP had to wait the TCN flag all the way up from the Root Bridge.

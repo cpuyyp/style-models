@@ -1,0 +1,89 @@
+So, if I enter a correct row, but a wrong column, it'll ask again. Without telling me what I did wrong. I'd suggest 
+
+(without the comment). The code is just as clear. Excessive commenting in general Another comment I'd just like to point out. Somewhere in the code I see 
+
+First of all, let us do some short-circuiting. You're doing a lot of logic to see if it is a nice geometric progression, and after all the hard work, you check some very easy conditions. Turn that around! 
+
+The reason for this re-arrangement is the following: checking is a simple boolean check: really fast. Also, computing is a function call. Not that expensive, but not cheap either. Better to do that just once. On the other hand, looking up is also expensive. There are tricks to make that cheaper as well. I'll get back to that. 
+
+(There are also a lot of conventions on how to phrase a docstring. I won't get into that for now.) Parenthesis in conditional The code says 
+
+Now I just hope I got my boundary conditions right (that's always a problem with a bisection algorithm). Just write plenty of unit tests for this specific part, please! Choosing from an empty storage? I'm specifically talking about the following lines: 
+
+is already defined in the module as . It is strongly discouraged to use non-English vocabulary in code (including variable names, comments, and docstrings). You should always assume people from all over the world are going to collaborate. In this particular example, it's okay, since the script is for personal use, but keep this in mind for larger (open-source) projects. The code isn't reusable. Because you put everything into the top-level namespace, as soon as I try to import it, I get a bunch of output and an input prompt. We can solve this by separating the code into dedicated functions, in pseudocode: 
+
+is overkill (and a little harder to read). Since is a one-liner, you can probably get rid of the function altogether, iterating over the URLs directly using slicing. A bit of a nitpick, but is wrong. doesn't return the request, it returns the response. Thus, makes more sense. Some of your variables could (should) be constants: 
+
+The use of is generally discouraged and isn't needed in this example. You can leave out and the code will function just fine. 
+
+Apart from that, your code is mostly clean. There's an official style guide for Python called PEP8 which I recommend you look over. Security First the good part: you're using , which is good, because it provides a lot more entropy than most other 'random' sources. Now the bad part: you're rolling your own cryptographic implementation. As much fun as it is to come up with your own 'secure protocols', 99% of them are broken from the start. As @Oscar Smith mentioned, you should use be using cryptography, which provides the high level Fernet protocol. 
+
+I'm going to look at the code without the intermediate print statements. They expose an implementation detail, and not the end-result. 
+
+First of all, the could as well be written , but the point is: sometimes returns 1 (and other times 0 or 2). In that case, you'd call , which is basically a do-nothing operation. In fact, I'd hope that would throw an error in this case, but I can't check your code there, so I'll assume it will happily move whatever you tell it to. Unreachable conditional? One of the conditionals in your code is the following: 
+
+Also, in Dijkstra's algorithm, the key point is not the nodes, but the edges. An edge is a tuple (source, destination, weight). But let's first see what we can clean up before tackling that. Your takes a list of things. It claims to be a list of nodes, but it's actually a list of lists: edges. So maybe it would make sense to define a namedtuple : 
+
+Better: use a testing framework like unittest, py.test or doctest. Here's how it looks like doctest: 
+
+Again, assuming is not that large, this is unlikely to do any better, and might even do worse because of the now used. But you're welcome to benchmark it. 
+
+Good job on adding docstrings to your functions and to the module itself. Most people (including me) often can't bring up the effort to add documentation, but you have! :) If you want to help yourself understand the code in 6 months' time, or if you want to publish this as an API, you should be a bit more thorough, for instance by adding information about: 
+
+Note that I removed , because the statement result is immediately discarded anyway. Suppose we feed a key of and a message of to the function. We now have: 
+
+Sure. It's hard to judge exactly what you mean by 'proper', but it works, and I don't see any major caveats with this approach. Binding the callback to the button and calling works just as well, but your approach makes more sense. Think about it: Does the callback apply only to the button? At least in the case of the quit-callback, no; no matter what widget has focus, pressing 'q' should quit the application. Some other remarks: 
+
+Most of the code is docstrings, so I'd appreciate if anybody has remarks regarding the documentation. Also, the security of a session depends completely on the implementation of the developer. Is it worth the trouble designing a truly 'encapsulated' class, or is this design okay? 
+
+First of all, awesome that you have written tests! However, your checker is a bit verbose on the matching case. It is often considered good practice for automated tests to be as noise-free as possible. Consider the following outputs: 
+
+Now, has a problem, it only works on the same filesystem. So depending on your needs you could do something like: 
+
+The difference will be that this gives a list of tuples instead of a list of lists. That's hardly going to be a problem in the following. 
+
+An important aspect when doing optimisations is profiling. You should really start with that instead of asking random strangers on the internet. Anyhow, let me take a quick look. Filtering 
+
+Global variables are not that nice. But this is a simple file, so maybe we can leave it like this for now? Let's. 
+
+if were to be , it would be off the board. So I don't know why you're testing for that. Too much conditionals? One of the first things to note is that you have a lot of conditions. I've counted 10 top-level conditions on currentTile. Also, looking at their order is as follows: 
+
+These are nested loops, which you can probably not do too much about due to your algorithm. However, what I do notice is that you're a lot of duplicate work. You're creating slices of the list, which could be memory expensive. You're using which does a look-up all the time. You're also computing the all the time ( times) which is expensive. 
+
+As @Ludisposed suggested, you don't actually have to convert the entire string to lowercase, would do. 
+
+Your code Ram Chandra Giri covered most issues with style conventions. I'd like to point out something: 
+
+You also leave the first line of every method blank (or make it a docstring). If a function is undocumented, I wouldn't bother adding a blank line: 
+
+Your 'main routine' isn't encapsulated in a function, which means it's hard to to test / explore functions individually from a Python interactive session (or from a separate file). I suggest putting all this top level code into a function: 
+
+In , you use 7 magic numbers. Instead of adding comments to explain what these numbers represent, you can give them a name. For example, by declaring these constants at the top of the file: 
+
+A list comprehensions is shorter and often faster than its -loop counterpart. Debug messages should be sent to stderr, not stdout: 
+
+Getting this right is possible, but you must be willing to spend time and effort to do research, lay out an API, and document it. 
+
+is a misleading name. It doesn't return user input, it returns an action (move the cursor up, move the cursor down, press a button) based on the input. I suggest . In this context, the variable name suggests it has to do with I/O buffering, which is not true. I suggest (?). . Well, sure. But what kind of menu? It's a menu where you make a selection → . tells only part of the story. It doesn't just output stuff, it also waits for user input: it is waiting for the user to press return. How about ? 
+
+The algorithm itself. Your algorithm is also far from optimal, calculating collatz(16) several times. First, when trying to add 3, it goes 
+
+I did the hard work at looking over the rest of the code (the and ), and I feel confident that those parts won't throw a . So let's factor those out. 
+
+And we can probably shave some extra lines off it even more, but I don't think that's necessary because now it is a bit more understandable. As for the points @GarethRees mentioned: those should also be taken care of, as it does not make much sense like this. Probably best to ask for a new code-review after you made these changes. 
+
+Again: profile! But I think it will either make it faster, or not be slower, so you should be good. Adding to or is done, but I don't see any nice way to make that better without losing performance. 
+
+Also, make sure to add any created object to the after creating, so that you don't incur a database hit for that. Dispatch 
+
+That's a bit nicer, right? Using The builtin has a second argument: . You can use it to signal counting should start at instead: 
+
+In addition to @Snowbody's answer, I'd like to point out that and are not fit for generating passwords. The module makes use of the Mersenne Twister, which is not cryptographically secure. The Python 3.6 release added to the standard library, which retrieves random data from . If you're not running Python 3.6 or upwards, you can still use (or directly). 
+
+Implementation The code as is works just fine if you need to modify a matrix, but wouldn't it be useful to turn it into a separate object altogether? We can do this by creating a custom : 
+
+You can then check if , to run if the script is called as the main program (see 'What does if __name__ == "__main__" do?'): 
+
+What follows is a list of things I think you could improve on. I am not a C developer, so feel free to correct me if I'm wrong. 
+
+Yes and no. Your approach works, and it is easy to understand. If, however, you want to keep track of what type of exception was raised, it could be improved. What if you have some super complex function that can raise 10 different exceptions, and you need access to the exception traceback if something goes wrong? You'd need 10 instances. In that case, you should use a instead, which is thread-safe (untested snippet):

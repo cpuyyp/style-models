@@ -1,0 +1,63 @@
+The really interesting part start now with the static function . is called from the VM at beginning of it's life cycle. It does constructed all instruction just by calling the constructor of the class . The function expects just the pointer of the current instance( a class shown later) which is given to an lambda who implements the behaviour of a certain instruction. The lambda which contains the behaviour of the instruction captures s function argument, which is the pointer to the current instance of the . Through this i enable the lambda to access the VM's representation of the stack where all operation happen. You see two s implemented here. NOP and IADD. NOP simply does nothing so the lambda is empty. IADD on the other hand adds to integer variables which are stored on the stack before this instruction is called. if nothing is there, well that would be a problem then. This scheme just repeats for every instruction defined in the enumeration in the header file. VM.h The header contains the nested struct . represent any values possible in the VM. To make life easier anything which is not an Pointer is stored within an double regardless if less bytes are need. Efficiency was not the purpose here. In essence is a tagged union. Because Every Instruction or Opcode is represented by an Byte, ergo is an Value, it can be expressed as an in the "Code Section" of the VM. 
+
+What you see is the that each instruction if constructed is automatically be stored in the global array you have seen in the header file. This shall insure that every instruction ever instantiated is accessible via this very array just mentioned. This is important later on. An saves 4 kinds of information 
+
+I present my implementation of an and . Similar to the implementation of my ArrayView which justs open a window into sequence here a generic implementation of an actual sequence. I have to admit both classes(ArrayView and Stack/HeapArray) look very similar but they are supposed do to a very similar job, so i think that was not avoidable. As always my aim was to avoid any runtime operation as far as possible, so that the compiler can resolve most of the code at compile-time, here in this particular case it is not as easy to follow this policy which lies in the nature of runtime allocation for the implemenation where the can be resolved mostly at compiletime similar to . Both classes have the same interface the only real difference is the way the array is allocated. The allocates the requested array at compile-time as normal c-like array in the form of while handles the the array dynamically via the special overload oif . I am not sure if that is good or bad use of this specialization of but i like the idea quite a lot not to use myself in a direct manner. I could imagine this could be point of critic but maybe not. As usual any criticism are welcome and is much appreciated. You will find an code example at CompilerExplorer The HeapArray: 
+
+Enumeration of the Bytes which could trigger actions Very small Abstraction of an Instruction containing some Meta Information A table of Instruction where the indices correspond the values of the enumeration 
+
+If the trace is enabled we print the current state of the stack as well as the instruction which causes the current stack. 
+
+The function from the class does what you expect. it stores some kind of Measurement(here time). It's not really well coded and if you interested please look up the code at my repository it is in the same project. The Argument given to calls the lambda of our Opcode/Instruction and Measures how long it takes to execute and stores this information for analysis later. I did this because it seems interesting to me to know just how fast is my Virtual Machine. 
+
+What i personally find awesome is I do not have an awfull crazy long switch statement which chooses what code must be executed. In an earlier version i had such an switch statement and it drove me crazy looking at it. So i came up the with global array. The Array you find the Bytecode.h file; where the bytecode corresponds to the index of the array for appropriate instruction need if accessed. 
+
+The main programm Here you see the snippet containing an array of Type. This shall be the code executed by the VM. I tried to make the definition of this array more readable by using c-style macros. The project is not yet at the point that i can read from a file and execute the code stored there. Any code must be hard coded right know. 
+
+This header i believe is pretty straight forward to understand. You find three important parts in it. 
+
+I want present to you my little Virtual Machine. It nothing really sophisticated. It is an stack only virtual machine with the exception for some 'global' variables which i would count as registers but besides that all calculation done by my VM is done on stack. What i planning now is to show the most interesting parts of the project How i implement this VM. Reason why I do not post the complete code directly is you can find it on GitHub where you can clone it and test out locally. I recommend if you really interested download the project, execute and take a look the code and THEN comeback and read the post. It makes it probably easier to understand. It's not that i do have a lot of files but to keep the code readable I think that this is the best choice. Let me know if you think otherwise! Also Unfortunately i am not good writer, not just only because English is my second language... I try my best to correct as much orthographic and grammatical mistakes as possible. 
+
+And all the API with multiple overloads will come as two sets of extension methods – I really like this trick :) 
+
+I would not put dependency on singleton in this class – it means two responsibility for - format properties and orchestrate AD API. Let’s define this helper class to be more explicit on your validation scenarios: 
+
+OK, it is going to be a long answer :) UPDATE Actually, marking for deletion is not necessary, see Little-known gems: Atomic conditional removals from ConcurrentDictionary. I would still consider the rest of the answer as an approach to structure the task. END OF UPDATE - when you about to remove from it - first to get rid of racing conditions. I defined this helper class to assist with this task: 
+
+I would define API a little bit different. Let’s go with couple types: SizeUnit and DataSize, so they can be used as: 
+
+Intensive use of mutable static state always fights back. I would split it to three projects: School.dll 
+
+This type of functionality does not require whole document to be loaded in to the memory. It might be easily done as a set of improvements over which provide better scaling possibilities: 
+
+Should your object know if it is captured? Probably not. So we can factor out that responsibility. Let’s define: 
+
+There are a lot of numerical properties to be invoked many times with an expensive calculation. Let’s say for the sake of example, they expose a Factorial: 
+
+Defines a merge of JObject field content to object, creating one if missing. As shown, there are the following permutations of mapping declarations: 
+
+P.S. Generally speaking, it makes sense to do not hold an intermediate state of you calculations (like trimmed string values) – just an original data + define functions/properties to process them. It makes your design more flexible. P.P.S. It might be useful to have class: 
+
+I would not personally put LoggingService implementation inside factory, as it reduces testability and usually needed to play some tricks with generics type parameters only. To have a predictable behavior according to your design it might look like: 
+
+What do you think about names chosen for the following library code identifiers? Would you name them differently? 
+
+What do you think about this file system manipulation helper? There is an utility class Folder which I can use to define directory structure of my app: 
+
+While implementing things like repositories we often can see that reading and writing parts can be done totally independently. The same time client side will win from the single reference (who wants to inject two parameters instead of one in many places). What do you think about a little bit of IL magic? Let's say we have: 
+
+definitely looks having a lot of responsibilities. Have you ever consider implementing here? It is an inverted IEnumerable, "push" instead of "pull", so it works really well for event sources and they filtering/handling in a time sensitive manner. Reactive Extensions (Rx) for .NET provides you with some kind of LINQ for observable sources. There is a free downloadable book Intoduction to Rx - you will just need a part of it to grasp the idea. 
+
+It does not sound like creation for me… We are not generating code at run time here. What we deal here with is just a set of converters, which is solvable though the composite pattern. Let’s define an abstraction (you could extend it with ): 
+
+Mixin type emitter (Well, not sure that implementation really looks readable - I hardly understand IL. But it works for method delegation :) 
+
+Unfortunatly, Reference Types (classes – heap allocated) are very bad choice for the Math. Using them untolerabably slow downs calculations and significantly increases resource consumtions. We could define our own struct type, but it looks like a some kind of trade off – it is not 100% type safe. Let’s define an algorithm using a generic struct : 
+
+What do you use for refactoring away from exceptions while programming functional in C#? I defined this class to hold function outcome: 
+
+What do you think about the following syntax for some very simple and intensively reusable validations? Does this: 
+
+Nothing really interesting so far - we just defined equality logic for configurations to help detect changes. Here are some fake implementations to make test work: 
+
+DDD How often have you heard from your domain expert manually managing room booking in his/her Excel all those terms like , , ? I bet that never. This stuff does not belong to the domain, does not solve any business problems, and probably should not exist. Having names like that clearly indicates the problem - those words are not in the Ubiquitous Language. Domain logic is way too corrupted with technicalities. Sure, no database related code should be allowed in domain. P.S. It depends on the task, but I could probably load all the data in memory and run here easily. Design What is the Software Design? All the things helping you to keep your project maintainable and that you cannot change latter easily. What helps keep project maintainable? Placing dependencies in a way where volatile components depend on a minimum amount of stable abstractions using Dependency Inversion where necessary. There are too many concrete tech elements in your code to follow “minimum amount of stable abstractions” criteria to keep things maintainable, so design misses its goal here. P.S. It is not a responsibility of the Controller to decide on room/combined room booking priorities – it belongs to the business logic – to the place where you actually implement the logic – repository in your case, as you do not need DDD here at all. I would have the following models in the Core project without dependencies on anything else:

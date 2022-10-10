@@ -1,0 +1,51 @@
+And use and to run your tasks on that thread. It is a lot simpler than reinventing the wheel. The obvious downside is wpf dependency. 
+
+I'm not sure I like the idea of creating viewmodel in a command and then passing it to presenter. First, I feel like it should be presenter's job to create viewmodel and manage its lifetime. Second, the current implementation has really confusing semantics. Consider this: 
+
+is more than enough. Use actual implementation in your software, mock it in your tests. Done. Introducing another internal abstraction leads to creating even more abstractions (see t3chb0t's point about ) and writing even more pointless tests (if you are obsessive about test coverage). I wouldn't recommend going down that road. 
+
+P.S. I'll be honest, this is not the first time I review a code marked with tag, but I still have no clue what (or ) is. But oh well, perhaps one day... Hopefully MVVM is the same everywhere you go. :) 
+
+While you are only asking about event i feel like the general review will help you as well. So here it goes. 
+
+Say first line returns due to timeout. Which I assume means that some "jobs" are still running. How can you guarantee that disposed handle will not be accessed on background thread? check looks like a racing condition. Imagine the following scenario: 
+
+It is not clear what problem you are trying to solve exactly, so it is hard to give a more specific advice. Hopefully this will make more sense, once you wrap your head around MVVM. 
+
+I think there should be a separate method that checks, whether two animals can breed, that you would call before calling method. In this case throwing exception if something goes wrong makes more sense. 
+
+re-throws the same exception, so there is no point in such catch block. Alternatively, you can use syntax. 
+
+You decrement when you remove items from collection, but you don't change it when collection is cleared. Maybe you should? 
+
+Yes, you can write everything in one line, but you will not be happy with the result. And no, .Net creators did not think of implementing a single call which would return exactly 23 characters of dropped file name. :) Silly them. :) Meanwhile, your code makes sense. I see only two possible issues: 
+
+1) Why do you have both: static methods and static instance? You should either remove the property (as if you had a "static" class, just make static), or keep it, but make methods non-static (singleton (anti-)pattern). 2) I'm pretty sure this line should throw . 
+
+I think you should consider inverting control and moving instantiation outside the repository class. Whether or not is a singleton (in single-instance sense) or not is not something that repository should manage or care about: 
+
+P.S. This: smells. I have no idea what this is supposed to mean, but i can guarantee you that you can come up with better property name, than (which should be btw), and with better property type, than . 
+
+Good idea. Why don't you actually implement it? It makes sense. The same can be done to method. Right now it does at least three distinct things: 
+
+It will throw a if was not enough to recieve the full message. You should handle this exception in outer code (where you call this method). If you need to wait longer - increase the timeout. This is bad code: 
+
+But only a bit, both versions look fine. The only thing I don't like is in the end. You should probably keep your tests as small as possible and create separate test for part(s). P.s. Also it's worth mentioning, that most unit-testing frameworks have some support for test cases. In NUnit, for example, you can write: 
+
+This will nicely cover both cases, and in my experience - that is how this patterns normally evolves. 
+
+2) It will make more sense to use collections (such as List) to store warehouse items. I suggest you try implementing it yourself, once you are familiar with lists and arrays. 
+
+Those are the aspects of a fire sword that make it what it is. And every one of those aspects can be defined as separate component. 
+
+And this is a typical game object that theoretically can represent anything from a stone on the ground to a bullet. It's just a collection of arbitrary components. 
+
+If you want to keep the two lists (otherwise check Hackworth's answer), the best solution would be to use LINQ extensions 
+
+Calculators implement deduction rules. Should they, really? How would you re-use a rule in different implementations? The answer is - you copy-paste, as you have demonstrated in , and . A better approach, IMHO, is to come up with a common rule-set and reuse it in your calculators. Say: 
+
+waht happens to reference? members in class do not make much sense (consider making those ). Your class should probably extend and not encapsulate it. This way you can drop all those proxy methods and therefore reduce the amount of code. Edit2: i think using arrays in class is an overkill. You'll end up re-writing implementation. Resizing is the only noticable performance drawback of but that is not going to happen in your case (since you specify the size in constructor). The rest is unlikely to become any kind of bottleneck, so you probably want to keep it simple. this should probably be a parameter rather than a constant (at least as a user i would like to be able to set up the size of a node) 
+
+- those are not very descriptive names for generic arguments. Perhaps you can come up with better naming. - i'm not sure i like here. It might hide bugs and misusages. I think that strong cast is better in that case. - i don't see any reason to use factory method. 
+
+is repeated over and over for every generic parameter. 3) In above code snippet, you are using a linear search, which is O(n). It will become a huge overhead for larger lists of registered objects. To the point that it will take more time to find parameters, than to actually execute a method. Consider using hash-based lookups or more complex adaptive algorithms. 4) Lazy creation of registered objects is not supported. So I have to always instantiate every dependency regardless of which methods are actually called afterwards. Seems wasteful. P.S. I can't shake off the feeling, that if you are injecting parameters to some method using predefined list of dependencies, then it might make more sense to just inject those dependencies straight into component's constructor. I mean what is the point of having method with parameters, if those parameters do not change? But I do not fully understand the use-case, so I might be missing the point here.

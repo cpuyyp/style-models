@@ -1,0 +1,59 @@
+Correct, this is fine and nicely efficient, as long as you're sure your callers know what they're doing. But if your callers don't know what they're doing, they could easily end up with dangling references: 
+
+looks very big and complicated; maybe look for a way to refactor it so that it becomes more manageable. At the same time, I see that is implemented in terms of , which means that is probably less efficient than it could be (because it has to navigate all those branches in that don't apply to its special case). Implementing as a followed by , rather than as a followed by , is a surprising decision. This suggests that you'll want to as well, to make sure you're not paying for an expensive zero-argument constructor. 
+
+Notice that we have problems with the business logic here. Should legendary cheese actually still get better with age, or should it remain at the same quality forever? Should conjured cheese get better twice as fast? The original problem statement is fuzzy on these concepts, because it's not really intended as a problem for working programmers; it's more about getting a learner comfortable with the idea of nested statements. 
+
+(You might need to cast to or ; I don't know. You might also want to see whether the third argument to can be ; or, if not, maybe you should use a temporary variable and assert that the new value is exactly the same as the old value, since it would be Very Bad if that weren't true.) 
+
+Why do you put a copy of this (complete with dynamic memory allocation) inside every object? Most likely you just forgot a here. In C++14-and-later, to avoid such typo-bugs, you can mark class-level constants as instead of . This will alert you (via a diagnostic) if you accidentally omit the ; and, as a bonus in this particular case, it will alert you that your here is not -initializable because it allocates heap memory. What you meant here was 
+
+This strikes me as needlessly complicated. Also, such similar names invite accidental typo-bugs (e.g. mistyping as ). Also, the use of the C++14 library algorithm is unnecessary — ( will do exactly what you want); and the use of is obfuscatory (the type of is invariably ). If you really wanted to use , you should have included at least one of . Also, if you need these variables at all, you might consider putting them in a namespace, so that they don't conflict with the user's own global variable or function names. 
+
+Consider giving a non-static member function , so that if you want the hash of an object you just say , instead of . You'd still have to provide a trivial out-of-line specialization 
+
+Your description of "it is used like this" leaves quite a bit to the imagination. For example, what are the types of , , and ? How are they declared? What do you expect to happen when you evaluate ? 
+
+At this point, if either thread C1 or C2 is still waiting, it's a bug in the standard library. They should both be awake and waiting their turns to grab the mutex lock and process one item each off of the queue. Similarly, the at the end of should not be needed, because if you've got two threads waiting on , you might as well wait for the second before you unblock the second producer thread. So: 
+
+That's assuming that you can use value semantics, i.e. you don't need polymorphism or are willing to hide the polymorphism behind type-erasure (a la ). If you really want to use classic polymorphism / pointer semantics / the heap, I'd expect something more like 
+
+Given that example, I think you can figure out how to rewrite in just a few additional lines: much shorter than the page of code you have now. However, whether this will be equally fast depends on your compiler and optimization levels. When in doubt, check the assembly code! If you see a lot of additional memory loads in the inner loop, that's a bad sign. In C++, but I think not in C yet, you could eliminate even the appearance of extra memory loads by doing 
+
+Otherwise, the code won't even compile for something like , because there's no such thing as a free function . You have to make sure that name lookup will correctly find if ADL fails. (If it's been working for you because you at file scope before including this header, then your code is bad and you should feel bad.) 
+
+Yes, in most cases. For example, the construct (when is a parameter or local variable) automatically treats as if it were an rvalue. Idiomatic C++ code contains very few explicit s, especially at the business-logic level. (If you're implementing hardcore template-metaprogramming libraries, it's a different story.) 
+
+which in my opinion is just too much stuff on a single line. It's not a question of columns-per-source-line; it's a question of ideas-per-source-line. One idea per source line is about right, IMHO. "Here comes a template... here's its signature... oh, and it has a surprising/SFINAE'd return type... okay, here comes the function body." 
+
+These macros' names are unnecessarily cryptic, and their purpose is obscure. Why do you need them at all? The only place you use is in — 
+
+The latter is technically implementation-defined, but on common platforms it works, and it works without any memory loads or stores, which is nice, so that's why people end up doing it. 
+
+The really nice thing about this code is that because we constructed it by starting with C++17 and moving backward, it's easy to take this code and migrate it forward to C++14 (by removing the trailing return types) and then to C++17 (by replacing the implementation of with a one-liner, or inlining it altogether) as your compiler catches up. Looking at your original code, I think it would be a little bit harder to disentangle the C++11isms from the "business logic" of how to compute . For example, you've got the subexpression repeated in two different places, for no good reason that I can see. You could have factored that out... or rather, not factored it in in the first place! :) Don't repeat yourself. 
+
+[wandbox link]. We can fix this easily by simply not perfect-forwarding the expressions that we don't want to be subject to perfect forwarding. 
+
+It's a little strange to write instead of with a suitably overloaded . However, I could totally believe that turns out to be faster for some reason, so maybe that strangeness is on purpose. 
+
+In this case the former is better because it's less typing (and thus fewer chances to screw something up). 
+
+I'm suspicious of this code. Why is it okay for the step number to be a (which is what is)? At the very least, you should replace the word with here for clarity. But also, maintaining this code is going to be a nightmare without a very thorough test suite. For example, you'll have to be very careful never to use or with a step number, because those don't work with . Why not just let the step number be and be done with it? 
+
+It's 8 bytes longer than we thought it was! So with added, it does overflow the buffer, and we get a security exploit. The general morals of this story are bolded above, but here's one more specific moral: Never ever use backslash-continuation, except in the special case of defining a multi-line macro body. 
+
+Implicit conversions (e.g. your ) are the devil and should be avoided. For example, consider the semantics of with your library (and compare to the semantics of with my three-liner). Also consider what happens if you pass your to a function expecting a . (Off the top of your head, what does it do? What should it do? Now try it — what does it really do?) Raw rvalue references (e.g. your ) are also a code smell to be avoided; in these cases, if you can't take by const lvalue reference, you usually ought to be taking by value. 
+
+The next step is to eliminate the overhead of . Replacing with reduces both of our running times by about 3 seconds: 
+
+(I think this is right. "Rotating right around the x axis" means pointing your right thumb in the direction of increasing x, which I think of as "to the left", and curling your fingers in the direction of the rotation, which I think of as "top-moves-away". However, even with this much effort to avoid brain farts, I might have messed it up.) Here's the Python code for converting the input into a C++ function body: 
+
+Maybe the best approach would be to use two non-interacting levels of tag dispatch: first, is integral? and second, what is exactly? 
+
+Notice in passing that I removed your virtual destructor from and made the members , just to discourage people from inheriting from it. If you really need to allow inheritance, go ahead and put the virtual stuff back. 
+
+to save those heap allocations (which, by the way, you never ). The variable should be declared within the loop: 
+
+None of this stuff requires a complicated object model; we're not trying to mirror a whole fantasy world in our adventure game program. Instead, we're trying to mirror just enough of it to manage the player's experience of being in that world. Any concept that doesn't directly affect the player's experience can be tossed out of the program. And in case you're wondering, would be implemented something like 
+
+Now, this is probably getting a little crazy and going off in directions where you might not need so much genericity. But this is the direction I'd think about going. It's pretty unrecognizable compared to our starting point of "require the user to define ," and yet the usage of it has maybe even gotten simpler. No more , no more , no more arrays of pointers... just the rawest possible thing that could be called a "heap." And then we built the malloc'ing on top of that. Anyway, it's food for thought, even if YAGNI in practice. :)

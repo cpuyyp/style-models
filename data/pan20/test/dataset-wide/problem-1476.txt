@@ -1,0 +1,109 @@
+That's all you really need from this. is fundementally wrong, though, since assumes a given iteration order. But classes should be distinct from the algorithms that use them, so it makes sense to me for this to be a local function of some kind. I'd also remove the index check since it'd be thrown for you once you actually try to index, but YMMV. The checks are redundant since you know that it's full only when you've used all the unused cards. You do 
+
+and of doing the division before checking instead of hardcoding a coefficient of +288. If this means we get the same amount of code doing more general stuff with better error checking, great! 
+
+...although immediately ing the result and not giving it a meaningful name is a surefire way to confuse readers on what the code is actually trying to do. Back to . 
+
+The call to doesn't help; doesn't know the dictionary is sorted and so can't utilize that fact. The call to just slows things down. One alternative is to use a loop like 
+
+But then because... why is throwing an ? Surely that's a bug. Before we get there, quickly change this to 
+
+This should reduce the cost to just \$\mathcal{O}(n^2)\$ overall; constant cost for each subsequence. This doesn't do anything so remove it: 
+
+For the next part, note that cyclic shifts like this are not at all fast on lists, so should be strongly avoided. But note also that you can avoid it entirely by just being more intelligent about how you produce values. 
+
+One conceptually easy, but extremely effective, change is to apply a heuristic to the search. This says that if we have found a triangle of cost \$k\$ and our new path could not give us a cost lower than that, do not try the path. I originally avoided this because I could not think of a strong enough heuristic. It turns out, though, that it's really simple. Consider this unfinished triangle: 
+
+This is not good; don't use dead variables as comments. There are other places you do this; fix them all. Secondly, this once again implies you should be using some kind of higher-level container. 
+
+with an extra on the end? If this is meant to happen, the dashes seem useless for getting the count; you should just do . Further, dashes complicate the code. A sensible way to deal with the code is to split the fake lists into real lists. I suggest removing the dashes first: 
+
+loops and statements don't need their condition parenthesized, and operators should be spaced properly: 
+
+It's a bit strange to critique this since "no closed-form solution" basically means no good solution. There are ways of speeding this up, though, that avoid that. A trivial one is memoization: 
+
+There are a couple of logic changes (eg. instead of ), but nothing significant. Next thing I notice is 
+
+should really not be returning strings, but with this organization I don't see anything much easier than an enum. 
+
+takes arguments , and . These arguments could be more explanatory: doesn't sort anything and it doesn't take an array, and and don't say much. It's canonical to use and as indices, so that would be more appropriate - although longer names wouldn't hurt either. The argument would be better as or similar. is -like, so put it first. 
+
+This gives a noticeable speed improvement. Frankly, though, if you want a reasonably fast integer selection sort, use an array. is unboxed, which means that it's some 4x the speed. It's actually faster to copy into a temporary , sort and copy it back than to sort in a boxed . 
+
+since quits the process entirely. is a global constant, so should be uppercase. However, I would put the code in a function and just pass it to the remover. I would let get the date itself, simplifying the main loop. Finally, your printing adds spaces between every part. One way to fix that is 
+
+Now note something bad: , can overflow. Either you want to clamp the code so that , or you want to perform modular arithmetic. Further, you don't know that is a valid lower bound: is a valid reading. You can use to pad like this. If you care about speed, PyPy makes the code run in about a tenth the time. 
+
+which is really a bit odd as it means won't print anything, it means we have a meaningless return value from calling it and it means we have to pass a strange second argument. Better would be to extract the recursive component out from the result-giving. Another fancier option is to generate differently. 
+
+This removes the fiddling with rotations altogether. Further, it means that the functions you pass it to only need to take an oriented card, which can be a different type. So let's look at the card type. 
+
+Don't print values; that's an unwanted side-effect of the function. It makes it unusable from other pieces of code that don't want the array to be printed. You should use a list for with an automatic resize; pre-counting is overhead that isn't needed nor useful. Since this can actually be done during traversal of , I don't think it's worth creating at all. You have far too many local variables, and this trims a lot of it down. It also brings space complexity down to \$\mathcal{O}(1)\$. You check 
+
+Note that I upped to an - there's little reason to use a small type here. Before I continue, let's mention your "parser" first: 
+
+The terminal is buffered so you need to is between prints. It seems like you're using as an ad-hoc data store. You should look into structured approaches like JSON or databases. The easiest in this case, perhaps, would be . This allows sweeping simplifications to the code. Comments like 
+
+Perhaps an easier compromise than Corbin's three classes is having just one to encapsulate most state. This separates the iteration and printing from the iteration step, and IMHO comes out cleaner. 
+
+Note that this still requires doing everything both ways. It would be simpler to require a given ordering at the start: 
+
+which is simple enough to basically be ideal. A more advanced programmer might want to handle errors or put code into functions, but the advantages of those only really apply to larger programs. 
+
+It's unclear why you're using a in rather than just printing as you go. Printing as you go is more responsive and easier to write, so it seems the obvious choice. You do no checking for validity on the input. This is fine for the example, but a bad idea if the code is actually meant to be used. Instead of counting down the number of test cases, it's cannonical to count up the number seen. Plus, why ? What's the mean? Why include the ? I'd also use instead of to prevent ambiguity with the word "no". Your won't work for leading or multiple spaces, although you look like you want it to. Perhaps build a ? To top it off, try and instead of and and change to the equally descriptive but easier to read . 
+
+I want to quickly list things wrong with this line. Most of these are very minor, but it's a lot for one line. Further, the big problem is particularly big. Minor 
+
+Before we get to the interesting stuff, we should handle some stylistic niggles. Note that PEP 8 is a de-facto style for Python code. First, imports should be sorted 
+
+Doesn't actually work. You need to fully exit, not just uninitialize SDL. Actually, there isn't much point running at all. I suggest just doing from a function. I personally don't like comments at the end of lines, but if you must at least space them properly (gap of two spaces and a space after the hash). This is overcomplicated: 
+
+Anyhow, I'm finding this takes 30-50% less time than the original. There are still more optimizations you can do. This is a more efficient which avoids shifts by holding the moving element. This can be further improved by using to avoid the indexing. 
+
+This is a mistiming; you're forgetting that Java has a JIT. JITing the code swamps the algorithm's cost. Allowing the JVM to warm up by running 
+
+instead of . This is still very slow, though, and you should speed it up by caching the count operations: 
+
+gives 2 despite no person's friend having any friends. This of course will only happen if the friendship graph is non-symmetric, but you've not required that it is. I suggest reversing the second line to 
+
+which operates in a single pass. This is encapsulated in the class which does the same thing with just . is undefined if there are no s in the input; will return and returns an arbitrary result. You should use , which defaults the argument to 0. However, if using every value is implicitly defaulted to , so you can just do . Your next loop could also be fixed this way: 
+
+I'm not at all fond of this method. is a bit fragile and more complicated than I would expect. I would personally do something like 
+
+since iterators automatically "pop" read values. You can even inline this by iterating over a filter: 
+
+looks a bit ugly, but I can see why you did that. What might be better is making an auxillary function to stack lines of strings first: 
+
+This only moves the wanted elements into place when they are needed, avoiding gratuitous moves. Here's an implementation: 
+
+This will print the improving bound as time progresses. To top this off, here's a nice big triangle: 
+
+Some small thoughts here. , as mentioned in the comments, should probably not be behind a pointer. This removes the need for the local entirely. is a poor name for a lock; what is it locking? What logical invariant does it hold? and aren't seem thread-safe relative to each other. What is callable concurrently should be well documented, which is lacking here. seems like it could just be an . Those are normally simpler than locking, so I'd prefer it. seems like it should be as acts like 
+
+You might notice that this actually takes noticably less text than the Haskell version (and the same number of significant lines), despite handling several error cases that the Haskell doesn't. This is partially due to the use of - using libraries is a good thing and shouldn't be avoided just because something's a quick job. It also requires much less allocation, in that only the file and actually allocate! (Docopt might allocate, but it is only run once, so it doesn't matter.) Thus, whereas the Haskell code takes linear memory space, Rust takes constant space and somewhat less time. 
+
+Because all the shared variables have been removed, it is now obvious that each iteration is stateless except for the file being written into. This means we can move the entire contents of the loop into a function, though it is cleaner to keep the first outside. 
+
+I don't have installed (yet) so I'm going blind here, but I have a few comments. First, the problem you described can be solved very easily with : 
+
+What;s with those semicolons? More importantly, these assigned values are never used since they always get assigned ahead of time, so they can only hide bugs. Remove them entirely! You then 
+
+and removing the call to , but it should already be fast enough. Then you should focus on cleaning up the code. Spacing is important as are appropriate variable names ( and not-single-letter names). The trick is to make comments redundant: 
+
+? This, in effect, prevents this from actually doing anything past the first tower! This should also probably sort in the other direction and delete from the end: 
+
+You write but should really write ; you end up multiplying the result by whenever you use it anyway! You can also extract the zeroing logic: 
+
+Though at this point it might make sense to just do this at the start of the function. This adds a bit of length but simplifies things. should really be inserted into before is incremented. This lets us work with more natural half-open ranges. We can also skip the conditional for by just reusing the in . 
+
+is used over because the buffering used in breaks the code for repeated indices. The mean is taken with a simple division of the number of repeated values that map to the same index: 
+
+For low numbers, , , , this hits a lot of those later values. We can then split the work into an upper part: 
+
+Globals variables are evil; they prevent you from reusing your functions (such as how now you couldn't do this in parallel on several directories) and make data flow hard to figure out. Don't use them. I do find it odd that you're doing 
+
+The logic to generate a length between and 31 has nothing to do with creating a random list of a given length with a given number of set bits. Split them out into multiple functions. This highlights the usefulness of making the randomness a parameter of the function, so do that too. Use better names than and . is prettier. Your totalLength` is unneeded; the second path always works and the first isn't common enough to be worthwhile. A loop is a much better expression of intent when mutating , and you can drop a lot of silliness by doing so. By now we have 
+
+\$\newcommand{\sub}[1]{\text{sub}_{#1}}\$ This is more of an alternative algorithm than a review on your code (at least for now), but it seems like both could be helpful. A good algorithm results from solving a slightly more informative version of the problem, which is simpler to decompose: 
+
+but , or might be . We can say that and should not be (since both directions extend infinitely), but can reasonably be asked to default to 1. Unfortunately, isn't appropriate here, as with other tricks you can normally use. Thus:

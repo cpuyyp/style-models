@@ -1,0 +1,49 @@
+Kind of surprised no one else has offered constructive criticisms. Let's get the ball rolling. Keep in mind I don't know anything about Mancala. Overall code organization could be better. Rather than static methods in Program2 class, I would go with separate class(es). I suggest you review posts on Tic-Tac-Toe, where multiple classes are used for the board versus players versus moves. There are a lot of magic numbers in the code: 5, 6, 12, 13, and 24 to name a few. I'd suggest using named constants or else change the code a bit, e.g. if 6 is a named constant, sometimes use instead of 5, and for 6. As it is, it gets confusing for someone to follow your logic. is totally unnecessary, unless you are trying to have a independent clone. Your intent is not apparent from the code. And I find that true about much of your code. It's hard to follow your intent. You may consider using List instead of the combination of arrays and IEnumerable. The ValueTuple pair named (seq, count) has a few issues. I think the spelling should be Pascal-cased, with spelled out as . Plus, seems confusing. It's not the count of the associated sequence but rather seems to the the point tally of the sequence. Thus I would rename to . I would rather use a class than ValueTuple. You can have a variety of constructors, plus: 
+
+The last line contains a magic number, so you should consider making a constant for it. You can also get the same effect different ways (shown for example, not necessarily a better practice): 
+
+Tiny array with many duplicates However, as I said for only a handful of items yours is quite fast. The problem is - it produces the wrong answer! Using this array: 
+
+I've credited @Hurricane with providing the correct answer. Correct is insufficient. It was excellent, original, and thought-provoking. I did a small reworking of his answer for the critical method. Rather than using the cryptically-named for counting down, I choose a more meaningful name of for counting up. The up versus down doesn't matter but here at CodeReview we frown upon cryptic names. Expanding upon his notion that performance is better accessing variables local to the lamba, I added a . REMEMBER This tweaking is only for when you expect to have well in excess of half a billion loops. For the largest 63 bit, it went from 6.5 seconds to 6.2. For the largest 64 bit prime, it went from 9.5 seconds to 5.95. Other than that bit of reworking, its the same as @Hurricane's answer: 
+
+The class has no concern about collision logic. It leaves that to the . I did try a test relying more on getter calculations: it took 30 milliseconds longer for a million move spiral. I leave it to the reader to decide whether a small amount of memory is worth saving 30 ms. Private Nested SegmentPool Class The big lead up finally gets addressed! The collision logic – not just limited to comparing segments for a collision but deciding on the critical -3 and -5 away segments – is all done here. Most methods and properties in the class are fairly short and straightforward, with one notable exception: the method. Some could suggest ways to make that method a tiny bit more DRY but I configure the individual dummy segments one at a time with appropriate comments. 
+
+I see 2 little issues with method. First, you check for an invalid negative value but I think that a 0 value is equally invalid. So I would suggest this change: 
+
+You may notice that Encode and Decode look very similar except for whether plain or cipher is chosen. In the name of DRY (Don't Repeat Yourself), this can be reduced to: 
+
+Consider how ugly and jumbled your big statement is inside of (no offense). Its very hard to follow. This logic can be simplified by moving the logic to your class. FORGIVE ME if I translated some of your logic incorrectly. Again it was difficult (as just a volunteer enthusiast to review your code) to follow your original. The important thing is for you to concentrate on the why's and how it's being changed. 
+
+I see a few things I would do differently. For one, I would not use a . At best, it's providing you an order in which floor buttons were pressed. While the buttons may be pressed in any order, an elevator moves in sequential order be it up or down. I would keep a simple where denotes a floor to stop at. Once you stop at a floor, no need to . Instead just set the flag to . By keeping it simple, you won't have to jump through hoops if you are going up but someone presses buttons for 10, 5, 2, 9, 7. 
+
+I personally feel omitting braces on one-liners is acceptable, but never on a , , or any loop really. Switch ... The caused me the most heartburn. I think it was tougher to read than it needs to be. Instead of: 
+
+One of the prevailing rules of C# code development is that your code should be readable by others. That means the intent of what you are doing should be easily determined by someone else reading your code. This is not the case with your post. I can't even begin to comment upon your algorithm without taking lots of time to figure out what you are doing. Therefore, my reply is about style and structure. Don't put everything in . Your app wants to do 3 overall things: 
+
+BEST ANSWER Also, since you have tagged this question with [time-limit-exceeded], vnp's answer is not just clever, but also the fastest in all tested scendarios, which makes it the best answer (regarding performance). 
+
+My solution is a bit longer than the others, but seems to be fast with small number of moves, but dreadfully slow with larger numbers. I go with the philosophy that the moves yields coordinates and coordinate pairs yield segments. The question then becomes whether the current segment collides with the previously known segments (except for the very last one where its ending point is the current segment's starting point). 
+
+Don't know how many total inner loops you are going through. Usually if it's a few hundred thousand, it would not be a factor on performance. Now if it were several billion, converting to an integer array first would have measurable improvement. You would then need to change the relevant code in your method. 
+
+This can be cleaned up by making the parameter optional in the signature, and also by using when using it. Example: Definition: 
+
+For your class, the indexer probably should be read only. The and methods have checks. But this line: 
+
+and you don't have to worry that a 19 year old Male is considered an Adult, whereas a 19 year old female is a Teen because someone forgot to correctly update all the code in all the places. 
+
+Swap Method You really don't do anything with the returned from the method. Plus I see little reasoning in not swapping 2 values that happen to be equal. This method could simply be . You are also encouraged to have meaningful names in C#, so would be better named as . Ditto for . 
+
+Borrowing heavily from Heslacher's answer, can you perhaps parallelize the method? I took a stab at it using a range partitioner. I added these usings: 
+
+I don't think it would've hurt to ask a question or to have some introductory text. I've reviewed some of your past CR questions and do not agree with you that they are similar in nature to this where code is just shoved in our face. That said, I see the is completely ignored. So is it okay if the has a different kind than the ? What if both are since can mean (1) the time zone is not known, (2) the time zone is inconsequential, or (3) its a time zone for something that is neither Utc nor Local. Hence, there is an ambiguity with . I am in US Central Time. I can pass a min representing a time from US Eastern, and a max representing a time from US Mountain. And I could get undesired results. I have worked with other libraries that have something similar. These other libs reject and require inputs that either or in order to remove the ambiguity. I'm not a fan of the property names Min and Max. For a date range I tend to think in terms from a starting time to an ending time. I have a preference for StartTime and EndTime then, but that's me. 
+
+One thing I haven't seen mentioned yet is the DateTimeKind. You may want to preserve it with your methods. Here is but one example: 
+
+You would then tie that back to your UI when the UI makes a call. Instead of the UI using a it would be more like: 
+
+While your use of braces is decent, you have a mixup of spacing. Let your code "breath" by having spaces around things, but don't have a white line before an else. That would change this: 
+
+Choose better names for your objects. a, b, and indx tell me little and are hard to follow. Especially with indx and this notion of pointing to an indx. C# has wonderfully modern features like classes. Something like: 
+
+I think @RobH's answer is spot on and wholeheartedly agree with him that Chain of Responsibility doesn't fit here. The comment to your original post by @Pieter explains it well by mentioning KISS and DRY. Let me offer a more practical example. Let's say you wrote this for a specific application for a ticketing system and the price of a ticket depends upon your age classification. Consider a year from now that the company who hired you wants to you or someone else to modify the age classifications by adding 2 more levels. With your current implementation, you have to change this code twice. This opens the door that you or someone else forgot to change it everywhere, or else the changes were slightly different for Male than Female, when they really should be the same. If you follow RobH's advice, you only need to change this once:

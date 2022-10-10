@@ -1,0 +1,59 @@
+Essentially that's still your code, only put into two functions and using the above. This makes it possible to later test the parts of your previously large . Note that all those functions are rather small, and do only one thing (and one thing well). Now what's left is the . Instead of the previous one, we can now easily use an one. For this, we provide three additional parsers that parse the sub-expressions : 
+
+Leaking memory You have a memory leak. In , you only move the , but you don't delete the previous head. 
+
+Note that you shouldn't copy the vector all the time (see below). Don't use for fixed size collections You're using in order to get three points into your function. That's error prone. One could use two points and end up with an exception, or four point and don't notice that they actually wanted a rectangle. Instead, use a fixed size collection. This could be , or something like 
+
+There are other ways to write , but I they differ on personal preference only. Use the standard library is in disguise: 
+
+takes a range, so we end up with the correct numbers. Your program choosed numbers between 0-99, by the way. However, now we can also get the rules in there: 
+
+After all, your list is a forward-list. Every node only points to the next one, and at the moment all three , and go out of scope, the items will be deleted (unless you accidentally added a loop somewhere). No overhead for empty objects You have an "empty" node at the end of your list. This is troublesome due to two limitations: 
+
+The latter is effectively only , since is already handled by in your first condition. Modularize If I give you an from to , you can print a grade. That's something we can put into its own function: 
+
+That's the usual double-and-add method for , and it's completely fine. However, and are misleading. We're not using some intricate bit patterns here and values later, nor do we use the number of bits as a seed. We just want to check whether is currently and divide by two: 
+
+"Memory" handling Almost all of those functions concern , which isn't obvious. That's because your included all functionality into . If you follow that model, you can never use in any other context. So instead let us write some other functions: 
+
+I would sort them by name, but that's fine. You don't include anything that's not necessary, nor did you forget something (and got saved by a non-standard compliant compiler). Declaration 
+
+We see that most of the work is done in . That's nothing new, though. We would like to see where the additional work happens. Remember that I said that we usually have to add profiling annotations (also called cost centers)? Now it's time to add them: 
+
+but it isn't. Use or something else with a better name. Documentation, documentation, documentation Your class has no documentation, except for , and , and I wouldn't count those three lines as actual documentation. I'm not talking about implementers documentation, e.g. 
+
+Also, if you use , make sure to include the function's name in the error message; best practice include the completely qualified name, i.e. 
+
+Note that the memory usage reported by isn't that stable. Either way, we can see that the doesn't take any noticeable memory in this case, but tremendously improves the runtime. This is a detail we only could find since we measured with and saw that specific methods contributed to the runtime. Ending remarks kostya later added a variant that uses a minified AST. That one is even faster but uses more memory since we don't need to jump anymore. One can probably improve that one, though. Other than the mentioned suggestions your code is easy to read and understand. Well done. 
+
+If the input pipe is broken, the JSON input will suddenly end and you have invalid JSON. Do you need to handle invalid JSON at that point? It's a non-goal, as you said. 
+
+But when all your numbers are positive, you want to use since it's usually faster. Note that many modern processors do and at the same time, so using the appropriate function when you ened both results can be a boon. Back to our prime factors. Now we have the factors. But how can we get the multiplicity? We use : 
+
+Use bindings to keep repetition low However, we repeat ourselves here and use twice. Let's get rid of that: 
+
+Easy-to-use function at global namespace, and function that can possibly get used in a wrong way hidden away in . Which brings us to your new : 
+
+We could also use since we're using , but that's not important. It would fail if we used , though. Now that we've reused , let us have a look at : 
+
+While that's better than just a , it's still not optimal if you have an application that's creating those numbers. Since sum types aren't expensive to write, let's use one: 
+
+As you can see, exceptions aren't really necessary to keep the user from entering a zero. Furthermore, the control flow is a lot easier to read. Note that won't work on Linux, since there is no application called . If possible, try to use your IDEs features to keep your console window alive even after your program finished, or have the output logged somewhere, or use it in the CMD/PowerShell. Exception exercise We need a better exercise for your exceptions. How about this? 
+
+Add type signatures is missing its type signatures because I don't know the ones of and . Always add type signatures to top-level bindings. Not only will it serve as minimal documentation, but it will also make sure that the compiler does not infer too general types or types you didn't expect. Document complicated expressions and should get some documentation. Bottom line Don't mix parsing and arithmetic, at least for arithmetic tests. It's messy and hard to read. Both and are easy to write without any parsing at all. If you were going for code obfuscation: kudos to you, that was brilliant. 
+
+When you write a program, you try to express your ideas in a way that the compiler under­stands it and builds you an executable, that works as you intended. However, the compiler is a second-hand consumer. They will gladly take any code that is valid C++ and create a binary. The human, however, might not. As humans, it comes naturally that we organize the material we work with. Clockmakers will have their screws and drivers sorted, plumbers their wrenches and helpers. Mechanics have their bolts, nuts and gears ready in bins and cans, just a handful away. And we programmers, coders, C++ magicians? We can do what they cannot do that easily: we order our work itself. We partition it with functions and methods, we bundle our variables into single structures, we split our code in files, each meaningful on its own. We model our ideas into the very code in such a way that their interesting, clear, and not too repeating. Now, let us delve head-first into your fantasy world and see how we can improve it. Enable compiler warnings I don't know which compiler you use, but the compiler already tells you what might be wrong with your code: 
+
+You don't need overloads if you provide default arguments You don't need constant s You don't need to check the length of your collection (except for ). 
+
+Either is prime and returns , or it isn't. There is no need to check twice. is usually called a "smart constructor", by the way. 
+
+Note that GHC will warn you about shadowing if you use . But we can still do better. If you're going to compare two values and want to act on more than a single outcome, use instead of two checks (here and ): 
+
+Use common interface should return a , not . Similar, should return , not . Follow the rule of five You provide a custom constructor. Therefore, you should also provide 
+
+instead and simplify both and a lot. The operator parsers would return a instead of an . But we're stuck with the current . Reducing code duplication (DRY) If we have a look at we see that all cases are very similar. They all follow the 
+
+The Zombies are on their way to eat our statistics. Fortunately, we have a way to get rid of them: our votes. However, we need to find them first. The /unanswered section is too large and contains many strong enemies where we have to write a review first. But the StackExchange Data Explorer can sniff almost dead Zombies from a mile. For this, we need a fitting query. This is what I've tried: 
+
+should have the type . If you want to print the number, use instead of . Summary Other than the few oddities, well done. The issue isn't that easy to solve unless you write another function or change your point of view. However, if you manage to actually reduce the amount of available information in your , your usually on the right track.

@@ -1,0 +1,67 @@
+The advantage of this organization is that we've put the module boundary at a natural place: the module is now concerned solely with getting the data for a particular month. The notion of "searching a tree" is encapsulated into it as an implementation detail, one that the user of the module doesn't have to worry about. Nor does the compiler have to worry about it, because we're no longer passing a across the module boundary; the compiler is free to inline and optimize our use of the now- data structure. And we're free to change the internal implementation of ; if profiling proves that a linear search in a lookup table would be faster, then we can make that change, without even requiring the client to recompile their module. Using your old code, they'd have to not only recompile , but rewrite it, unless you went out of your way to reuse the same interface. (And a good engineer would also want to rename , since it would then no longer be using an AVL tree. That's a lot of needless code-shoveling, which we could have avoided by using the right abstractions from the beginning.) 
+
+You can figure out the first parameter of a non-overloaded function pointer pretty easily; I'm not sure but your code looks more complicated than it ought to be. Unfortunately, your code completely falls down in the presence of overloads and/or templates. Here's the error message: 
+
+so that this overload would pick up the calls to that didn't get picked up by the other SFINAE overload of that signature. However, in that case the SFINAE isn't buying you anything. The point of SFINAE is to make functions disappear, not to make them error out. If you just want them to error out, that's what is for. Remove this overload, and replace the other one with 
+
+This is redundant with your loop condition (modulo off-by-one errors). You should avoid doing any unnecessary math at all in your tightest loop, which means 
+
+In general, declarations are frowned upon; although again in this case it's harmless. declarations in header files are the really bad thing. In "ToBase64.cc", you could just as well get away with 
+
+You could then extract the th type and its corresponding th comparator directly, using and , instead of having to do arithmetic to interleave them and then later to undo the interleaving. 
+
+Move semantics are more subtle (and probably less important) than I'm making them sound here; I won't go into detail here. But there is no shortage of material for learning more about move semantics if you want/need to. 
+
+Now you no longer need the comment, because the code no longer has that weird subtle dependency on the length of the array. It Just Works, no matter what you want to use. 
+
+Are you at all worried that returns a completely different map from , even though I might have a and a such that ? 
+
+The biggest reason you flunked was probably that you wrote two identical functions: and . You didn't realize that since their code was identical, you didn't need to write both of them. Just writing 
+
+Friends are a code smell. Prefer to expose the functionality to all the users of this class; and if you don't want anyone besides your to create instances of this class, then give it an obscure name, such as or whatever. Or just leave it out of your documentation. 
+
+At this point the code is simple enough that you don't even really need the function anymore! If you're concerned about efficiency, and you have the power to change your input file format, consider switching to single-character flags and fixed-width fields so that you don't need to or your lines. 
+
+The first problem could be solved by allocating the "object data" directly after the "interface data", with allowances for alignment/padding: 
+
+Notice that we have problems with the business logic here. Should legendary cheese actually still get better with age, or should it remain at the same quality forever? Should conjured cheese get better twice as fast? The original problem statement is fuzzy on these concepts, because it's not really intended as a problem for working programmers; it's more about getting a learner comfortable with the idea of nested statements. 
+
+This way, when I see the call site, my first question isn't "what is ?" (could be a local variable, a function in this file, etc. etc.); instead, my first question is "what is ?" (which I generally know off the top of my head because it's the name of a module, and it's easy to remember all the modules I'm using). Plus, if I ever need to use any other functions out of , they're all at my fingertips: 
+
+Completely untested, mind you; but the most important things about the above code are that - it uses the appropriate constructor instead of repeatedly allocating a gigantic string and then 'ing parts of it; - it follows your original code (good idea!) in repeating the same basic idiom over and over, mechanically, so that if there ends up being a bug in the logic it's easy to see all the places to apply the fix. 
+
+This code is much more complicated than it ought to be, and wastes O(N) memory. Have you benchmarked it, compared to the naive solution? Which, for reference, would be something like 
+
+As far as improving your C++ skills to the point where you can translate Python line-for-line as I did above, the best advice I can give you is go to cppreference.com and study the standard library! The STL is way better today than it was in 2003, and it takes ideas from many other languages. So for example the C++ equivalent of is this humongous ugly expression (and I'm not actually saying you should write that ugly expression in production code!), but it does exist, and translation from Python to C++ is just a matter of being able to remember vaguely what it's called and look it up. And that just takes a lot of practice. 
+
+Making a copy of the lambda there is going to hurt you a little bit, at least in practice. Anyway, I strongly recommend using what I call "the macro": $URL$ 
+
+For more information on refactorings like this, I highly recommend the book "The Elements of Programming Style", by Kernighan and Plauger. 
+
+Nit: I might make this method return instead of , just because that's the natural type of "the size of a vector". But there's a good argument in favor of here too: namely, that is the natural integer type for the platform. 
+
+Somewhat off-topic: I'm leery of your use of to declare a pointer. To me, a bare identifier always means "value-semantic object", as in or ; and if the object is supposed to have pointer semantics, you add a star, as in or . Hiding the star inside a typedef strikes me as a bad idea. Although I admit that if you're coming from Java or Objective-C or Python or any other non-C, non-C++ language where 
+
+With this function expanded out, it's easier (but still not super easy) to see that the here is trying to do an atomic CMPXCHG on objects of type , i.e., 16-byte quantities. Check the assembly code (e.g. by compiling with ); is your compiler actually generating a instruction, or is it (more likely IMO) generating a call to a library routine which will use a mutex internally? To get codegen with Clang and GCC right now, I think you need to be either compiling with some flag that I don't know, or explicitly enabling . 
+
+This lambda takes its parameter by-copy, which is going to be expensive if is, say, . Prefer to take generic parameters by or (in C++14) by perfect-forward: 
+
+I see you use (all caps) but (camel case). This suggests to the reader that something really subtle (and thus dangerous) is happening here — or else of course you'd be consistently using or (both of which are provided by the underlying library). But is the reader's inference correct? Are you really doing something subtle and dangerous? Or are you just mixing styles because you felt like it? 
+
+It's a little tricky to provide feedback on this code, while at the same time remembering that it's just an example. (As nhgrif mentioned in the comments, "What if it's a leap year?") In real life, we'd never want to use a binary search tree; at least we'd prefer to store the data in a sorted array and use binary search — i.e., we'd strength-reduce "dereferencing operations on pointers" to "arithmetic operations on indices", because the latter are much cheaper on our usual hardware. In fact, for just 12 pieces of data, we'd be more likely to use linear search, or perhaps a perfect hash table. However, let's say we had a whole ton of data to store in this data structure, and for some reason we really needed it to be stored in a binary search tree with real pointers. (I can't think of such an application, but I'm willing to stipulate that one exists.) Then your program organization, IMHO, still leaves something to be desired. 
+
+Okay, so that thread won't be doing anything anytime soon. And with that code out of the way, the rest is pretty much irrelevant; it looks to me as if it will end up blocking forever, since there's nobody left to notify the condition variable. Your problem might be suited to a TBB flowgraph; consider using TBB instead of hand-rolling your own stuff. 
+
+This template seems massively underconstrained. Plus, I'm pretty sure it still won't work to compare and , because is not a friend of and therefore won't have access to its private member . Maybe you just forgot to write instead of ? 
+
+to eliminate the named concepts etc. I'm ambivalent as to whether this would be an improvement. (It continues to suffer from the "Write Everything Twice" problem that infects most of modern C++; cf. the repetition in your original question.) 
+
+You wrote instead of . Why? To save two characters? The purpose of is to allow you to be generic when you need it, not to be sprinkled in whenever you feel like it. This function takes and returns ; nothing is to be gained here by playing coy with the return type. Just say ; the reader will thank you for not making him trace through the whole function just to figure out its return type. And you wrote instead of — why? To waste one character? The compiler certainly doesn't care which one you use (in this context). Prefer human-friendly numbers such as "32" to jargon such as "" (and later, you use "") that might again send your reader scrambling for the Standard. Write the simplest possible thing that will work. 
+
+Having methods named both and (as well as the above ) is asking for trouble. Overloading both names with two signatures apiece is practically demanding trouble. What's the point of passing here, when you could just have the client code call their on the return value of the non--taking method? 
+
+IMO, it would be better to take the responsibility for forwarding unhandled messages and move that responsibility right out of the class. Give it to a class whose job is to find the right and call it. The might hold a mapping of ints to handlers so that it could find the right recipient quickly; or it might just query each handler in turn until some handler reports success. 
+
+This is a version of C++17 that handles arbitrary functions to do the replacement, instead of using 's weird minigame language (, , and ). Also, I made it take instead of ; that's more to see if people have opinions on than for any practical reason. :) (The standard C++17 regex library is not aware of the existence of .) 
+
+The thing to remember is that C++ (as of C++11) has an "official" memory model, which defines what operations are legal and illegal according to the official spec. In particular, a program which contains a data race is not legal according to the official memory model. A data race is any occasion on which two different threads access the same data, at the same time, at least one of which is doing a write, and where there's no special-case synchronization primitive involved (for example, concurrent accesses to a or a are fine).

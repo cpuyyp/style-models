@@ -1,0 +1,65 @@
+I'd suggest to filter out unneeded elements, instead of replacing them by -1. Keeping and processing all the -1 is unnecessary: 
+
+Or you might want to keep without the height, and compute it separately. Implementing won't help, as it only exposes the elements of a data structure, while you need to examine the structure, not the elements. What you can do is to create a generalized folding function over , so called catamorphism, which allows you to express functions that consume trees: 
+
+Minor change in the definition: Instead of using , it's more natural to define it using , especially for trees. This can also have significant performance benefits in certain cases, like when using the monoid (untested). 
+
+It's somewhat more verbose, but separates the general properties of distributions (the instance) from the final computation, which then becomes trivial. Another advantage is that the allows to hide the internal representation, which can be potentially replaced by something else, while keeping the interface intact. 
+
+Note that operators (.&.) and (.&&.) are very different! I'd probably prefer yet another variant using , which spares you of the explicit recursion. By zipping a list with its tail we get all consecutive pairs, and then we just express that each of such pairs must satisfy . 
+
+This accepts a character, and either produces a function corresponding to the character, or . Applying the operation on values, taking into account all possible s: 
+
+Looks like you're on the right track, and this might eventually evolve into a parser, or converge to an existing one. From software engineering point of view, I'd suggest to make a . This better separates its API from the implementation, and allows to do changes later without breaking the API. Notice these two functions: 
+
+Just one remark: When handling resources, I'd strongly suggest using for resources that are obtained at some point and later released. Not only it makes your code much safer, it clearly demarcates which resource is used in which parts. And that also prevents separating opening and closing of resources, which is often a hard-to-find error. 
+
+First, since is commutative, you can save 1/2 of your computation if you restrict yourself to cases where : 
+
+However, using and makes the notation usually short enough so that we use the combinators directly without the need to define such helper functions. 
+
+So we can apply immediately on (or rather to to avoid O(n) access for lists) and we get a functional representation that accepts a pair of indices and gives the result. If we swap the indices in a pair, we get a transposed view. The problem with this representation is that we can't enumerate all matching indices easily. If this is required, we could instead convert a list of lists into , perhaps a so that we can enumerate the indices in a proper order. Again, this will be a , but also with this additional ability. 
+
+This is pretty normal. For example when defining a instance, it's customary to define its instance as and . The type class hierarchy doesn't matter at all, you just need to make sure you won't get infinite loops, which can happen with or without type classes anyway. 
+
+Your approach is definitely valid, I've seen something similar used in GHC's implementation of atomicModifyIORef. However I have some doubts if such a class is really useful. If the computations are potentially long running, the performance advantage of using instead of some standard synchronization primitive is negligible. Moreover, if there are several updating threads, it will result in repeated recomputation, wasting CPU power on it. So using plain on some private lock object (so that no other part of code can lock on it) seems simpler, safer and with better performance. 
+
+Further ideas: In addition to insertion and deletion, there are two other fundamental operations on search trees: 
+
+Number (1) is easy to solve, you need to compute only once and share it within the computation. You could use nested or (or their combination), or separate the computation into multiple functions. Number (2) is somewhat harder. One solution would be to create an array from the list first one, that is O(n) (see listArray), and then use to look up elements in O(1). If the number of required elements k is small compared to the length of the list n, you could try to devise an algorithm that'd use this advantage and work in O(n k) or perhaps even O(n log k), still keeping the uniform distribution of the elements in the returned list - this looks like a nice exercise. Also in the case you'd like to use monadic computations, have a look at MonadRandom, which eliminates the problem of passing the random generator around. 
+
+Since you need to abort your computation early and return a value different from the final output, the transformer would be useful. 
+
+(we'll need GADTs for this). Each constructor represents an action that takes a given set of parameters and returns some result to the caller. It will be convenient to have corresponding helper functions so that we don't have to write everywhere: 
+
+We're traversing the list at two different "speeds" at the same time in a tail-recursive loop, to get to the middle. During that we compute the reverse of the traversed part in . When we hit the middle after n/2 steps, we just compare the accumulated reversed first half with the rest. The combined length of and is always n and if we find out in the middle a difference, like in , we finish and release resources early. 
+
+Note: The last part is similar to what you have done in your . Realizing that is an instance you could have written 
+
+As far as I know, Scala doesn't have anything like you suggest. Your solution is short and fast. I tried to think of a solution that doesn't use mutable state and uses existing functions, without examining the structure directly. It is based on s instead of s, which are imperative in their nature. The main idea can be expressed using a scanning function that sums together elements that are equal according to a given comparison function: 
+
+(I'm making my comment into an answer.) You can separate everything that is static (not using the state of instances of ) into a companion object (and import the object at the beginning of the class for convenience). This way, it is clear what functions use directly or indirectly (by accessing class variables). This often helps me make my code clearer, and prevents stupid mistakes such as confuse class variables with function arguments etc. 
+
+What you are experiencing is a common problem that occurs with threads and lazy evaluation. What happens is that the thread creates only an unevaluated thunk, which is passed through to the main thread, and evaluated only then, and the exception is thrown there. This is also a very good example why using exceptions in pure values is a bad idea (but of course if you're making a library like this you have to take this possibility into account). The solution is to fully evaluate a value inside the block, so that any exception that might occur is thrown there. For this we need a combination of two functions: and . The former creates an action that forces the evaluation, the latter one performs deep evaluation (to a normal form, not just to a weak head normal form). Also you might also want to separate the return value from the thread action. If you're not going to operate on thread actions, you can even omit them from the data type, as once you start an action, all you need is the channel. An updated solution could look like this: 
+
+Now specific to performance: - For each pass you traverse the list several times, which can impact the performance considerably. In particular: and in , the same in . Also in . This makes it 5 traversals before the merging pass. I'd try to reduce this number. 
+
+This function fuses two conduits together. The first one numbers lines, the second filters them according to the pattern. 
+
+with the appropriate instance and supply the minimum monoid instance where is the infinity and takes the minimum of its arguments. For example could be greatly simplified by this. The comments are sometimes somewhat misleading, for example in Nothing is interpreted as 0 otherwise it's not clear what "otherwise" means. 
+
+Alternatively you could even keep the result in an ST variable. Also with can be replaced with (untested): 
+
+Below is code based on the above ideas, with some more optimizations (to improve sub-list sharing), left as an exercise to analyze: 
+
+Probably it'd be possible to implement a lot of the operations as folds/zips on tuples, although if you care about performance, you'd have to check if it won't degrade too much. A small remark, for implementing the instance it's often better to implement . It doesn't matter much for such data type that converts only to short strings, but it's a good practice. 
+
+All your functions are in the monad. This goes a bit against Haskell's philosophy to keep side effects to minimum. requires the whole file to be read into the memory. This could be solved by using lazy IO, but I'd strongly discourage you from doing so. 
+
+Then, computing the maximum path can be expressed as folding over a list of lists that represents a triangle: 
+
+Just some details that can make your code shorter: I'd keep just one of the points and the height in . And instead of the height, I'd keep its logarithm, which makes operations on triangles much easier. In general, it's better to keep just the data you need in your data types with as little additional constraints as possible. 
+
+I quite like your aim for simplifying the function and factoring out the generic part. One solution (untested, just compiled) could be done using from : 
+
+Note that placing out of also helps the readability as it's now clear nothing there depends on . Next thing is that you're combining the intermediate results with the data structure you're processing. While conceptually it isn't incorrect, in this case it makes the algorithm harder to understand and more complex. So let's add a parameter to that will hold the intermediate path lengths (and initialize it with an infinite list of 0s):

@@ -1,0 +1,51 @@
+Another thing to consider is whether you really want to hard-code those values. Maybe it is better to move those settings to some xml/json configuration file and parse/deserialize it instead? 
+
+I don't think you are going to need a special for any of those options, simple (or any other panel), should work just fine. But it is hard to tell for sure since your code is rather hypothetical-ish. I do not know the actual use case or an actual problem you are trying to solve (if any). 
+
+impelmentation relies too much on queue being empty when it is called. In general case, depending on the queue size and complexity of the work current implementation might take minutes before returns which I think is unacceptable in most use cases. Instead you might want to terminate threads early by setting some flag and pulsing all threads. Or you can use . However if it is your intention to prevent any data loss, then I guess your implementation is alright. Just make sure to give this special data package a name: 
+
+Arguably, 452 lines of code in a single class (which, to make things worse, is partial) is good enough reason in itself. Another reason: it is not really UI layer's job to query windows api for process updates and track active process. This is a business logic, which should be separated from presentation (in case that one day you get fed up with Winforms evil ways and join the ranks of holy WPF warriors). You should extract it into separate service: 
+
+P.S. Note, that is thread-safe, while options #1 and #2 are not and require synchronization if thread-safety is required. 
+
+It will work for every other class, that has method declared (most standart value types do). You can add method to your own classes, to make them support this kind of deserialization. You can also modify the above code to use instead, to avoid parsing issues related to different decimal separators in different cultures. 
+
+Calculator has no interface. I think it should. And it should be very clear. I don't want to know implementation details, I don't want to call factories and all that stuff, that doesn't even fit the screen: 
+
+If you have control over your data, you can try to change its format to simplier one. You can also try to move the logic to lower level, where possible. So it will look like instead. Its hard to tell an exact refactoring without seeing the bigger picture. Using "shortcuts" for commonly accessed fields is fine as well, as long as you don't overdo it. Use extension methods for that where possible, so that class structure remains clear. You can use shorter naming. Do you really need to have , for example? Isn't just as readable? Also if is an equivalent of individual "cells", then using indexers makes sense: 
+
+In the constructor I know that I should've opted for accepting a int array instead of params int[] by the time I realized that it would have been smarter it was too late however, and changing it would've meant that I would've had to re-format the whole constructor call (indentations, line breaks and such). There is no need for the class to be generic in this application, but my rationale behind it was, I re-use code like many others do, I might need to use a class in another application and in that case it's better to have as a generic class since I can't know what I will store in the cells. 
+
+I have to say without sounding arrogant, because I am only a novice coder, yet after looking at other's solutions, my solution is definitely not the shortest and most lightweight one and probably not even close to one of the most optimized ones. But! I think I have made a very readable solution and I think that it is true to the OOP paradigm. Anyhow with that in mind everything can always be improved, I look forward to your feedback. 
+
+Okay I've tried my best at revamping my code and restructuring after the MVP design pattern. It's not a complete rewrite, and one could argue that it's not a "true" MVP implementation because I never implemented an interface for the model, it felt redudant for the primitive data that I was storing/accessing. Keep in mind, my interpretation of MVP is based on about an hour of reading about it and this is my first attempt at structuring my code after any "explicit" programming design pattern. I've also taken some of your other ChrisW's suggestions and implemented them. I might not have implemented all of them, it's not cause I didn't like them or that I consider myself to know better, it's just that as a part of my learning process, first hand I always try to force myself to think up my own solutions to problems instead of just copy & pasting others solutions, others code should serve as inspiration I believe I'll learn to code better by that. Overall, I want to thank ChrisW for his great feedback and his patience with me. I think the code looks cleaner now (But I'll await your feedback Chris) the only caveat with this solution is that implementing the AI Player will be a tad bit more difficult now. Here's my new code(I've only listed the files that I have changed or added): For easy access, I'll list roughly some of the changes that I've made: 
+
+I may be missing something, but how is this different from ? And why would you want to pay your worker to sleep? Looks extremely inefficient in most cases. And surely there are other names you can use apart from ? So you can both avoid using and give a variable a much more meaningful name. "Event" does not tell much. 
+
+property is fishy. If it is actually a wpf control, than this is a major violation of MVVM. Your viewmodels should never have a direct access to view, thats what databinding is for. If it is not a UI control, then IMHO you should rename it, removing the word from both class name and property name. sounds good to me. 
+
+A class or classes to process parsed messages. Using event aggregator to wire things up might prove useful in this case. 
+
+Just wanted to mention, that you can do it with LINQ only (without creating additional collections): 
+
+(or you can use Linq). I think the line is fine, as long as it reflects the actual data structure. Its definetely not the most complex thing in the world, far from it (mappings for complex databases often have way more layers of aggregation :) ). There is not much that can be done. 
+
+Reactive extensions with + combo. It will take care of throttling text changes, overriding previous results and scheduling tasks. Rx API is not for the faint-hearted though. See: $URL$ . TPL Dataflow with + combo. It will take care about everything except for throttling. You will have to initialize those blocks with correct buffer sizes and degrees of parallelism. 
+
+You have a lot of junk in your xaml. Don't name an element if you dont use that name, don't set properties if they are no different from the default values. You should use s for repeated properties (such as button width/height) instead of copy-pasting them. That way when you will decide to change the width of your buttons - you will only have to do it in one place. Avoid using for real-life UI design. It makes your UI unscalable. Use , , etc. instead. When you need to reuse cast - only cast once. 
+
+clearly should be of type . That is what for. can be safely refactored to with used as keys. Then can be refactored using method, and can return dictionary itself, or . I think the latter option is the best, since it will copy the collection, which will restrict access to property. As of now, someone might modify it in outer code, which will result it modifying ShoppingCart state. Returning a copy will prevent that. cast can be removed. I'm not sure i like the idea of having two methods to add items to the cart, which have different logic. It's pretty error-prone. Is it really necessary? I think you should probably stick to one. I think your shopping cart interface misses method. 
+
+Essentially, I loop through the statements I need to look up, and start working through the library of statements, remembering where the last statement was found, so I can exclude all statements in the library that are before the last one found. This did result in a speedup, but not as much as I would hope, hence me throwing this out here to see if I can get another perspective. 
+
+I cannot change the input data, since it comes from several different systems, and the closest thing we can get to something in common is a delimited list of strings. So, enough background, the first implementation of this was a naive set of LINQ statements: 
+
+In a project I'm working on, the data access layer has evolved to something that somewhat resembles the Unit Of Work and Repository patterns, at least they started with those names, I'm not entirely sure with how far they've drifted, if they can still be called that. For classes data access, an implementation is passed as a constructor parameter from the IoC container. This is a rather simple interface: 
+
+Is there a tidier way of handling this, or is this what I have to do if I want to have the key type of my entities passed in? 
+
+Any feedback on better naming for these things, or better methods? This has served me rather well, with the only thing I don't really like is creating the repository instances like that, But I can't think of a way to handle transactions and keep the somewhat lower level data access code away from higher level business logic. 
+
+Next up are the classes. These don't have any common inheritance or interface implementations, they just follow a few conventions, the main one being taking an in its constructor. These classes contain the interaction with the for operations like , , , , etc, and are responsible for small bits of logic (the method updates the field on the entity, determines what fields to search based on its parameters, etc). So, for example, a Repository for the User entity might look something like this: 
+
+My implementation for NHibernate basically just creates an NHibernate session, and passes it to the NHibernate implementation of , which is just a rather thin wrapper around the NHibernate session, which starts a transaction in its constructor, and rolls it back in the implementation unless the method is called. Then, anywhere data access happens, it follows this pattern:

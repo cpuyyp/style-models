@@ -1,0 +1,91 @@
+That is, generate all the answers and guesses, check for each one (vectorized) which (staying or switching) would be a win, and then accumulate those results. The rest is just to put the data in the same format that your function already had. 
+
+The key difference is the computation of the vector inside the function. First, is restructured from a (n*rep)x2 matrix into an n x 2 x rep array (3 dimensional array). This gives the benefit of generating all the data at once, but also gives a data structure which more easily operates on each piece/repetition. The function from is then used to iterate over the 3rd dimension and operates on each n x 2 matrix separately. Advantages of using is the availability of progress bars simply as well as being able to split the processing into parallel processing with not much additional effort. Since the values for are returned rather than assigned, the calling semantics are slightly different: 
+
+As you did not provide example data, I was not able to benchmark these alternatives (nor, for that matter, even run them). 
+
+The first two lines together create a 0/1 vector corresponding to whether the value in was (1) or (0) (and uses the fact that it must be one or the other of those values). This can be done as one statement, using the fact that and become and when converted to numbers. 
+
+By the way, catching of type might be a bad coding practice, but I'd not discuss it here because the context is not enough to judge. invalidateVarnishCache The only purpose of the try-catch block in the original code is to trace the using a hypothetical commented logger and then re-throw it. I doubt that the block itself is useful, because exactly the same exception is re-thrown and must be handled somewhere among the callers and even probably also logged by them. Wouldn't it be redundant? Concerning the , the problem is that it is a and the caller can miss to handle it properly, with hardly predictable consequences. I don't know what is the range of response statuses that this sort of proxy can return, but your implementation does not make distinction between 4xx and 5xx codes, which may lead either to a client-side error (your request is invalid, 4xx) or to a server-side error (5xx), which is semantically close to an I/O exception. For the latter, I can suggest to wrap the response message into a and re-throw it. For the former, it's still up to you to decide how to handle it, probably just logging is enough. 
+
+You correctly identified the part that differs among these methods, so next step is to exclude this part. Its role is to initialize the instance to be set on . This instance can just be passed as argument to the extracted method: 
+
+In your code, is not defined. Presumably it is some threshold value, since it is used in a comparison of absolute differences. First, reformat your code so that I can better determine what it is supposed to do: 
+
+Further elimination of duplicate work would involve recognizing that higher order interactions, as you are determining them now, are repeating the intersections of the lower orders (that is first intersects and and then intersects that with , but the intersection of and was already determined). And "first" order interactions are just the arguments passed through (as they were simplified in the previous iteration). 
+
+This last is important; if you don't know where the code is slow, you don't know where to apply effort to speed it up. My comments are that, if you have a function that is doing some work, all the information that it needs should generally be passed in as arguments. It took me a bit to figure out what and (after I overcame the cognitive dissonance of thinking was itself an error). 
+
+Second, you replace with , and then test against . That means you are replacing both 's and any 's in the data. If you only want to replace 's, just replace those without recoding them. 
+
+Second, you can call on each element of at the outset which eliminates the need to specify an value to (and thus reducing all the calculations by one call to ). It also shortens the arguments to since duplicates have already been eliminated. 
+
+The Consumer The nested try-catch blocks look weird and useless. Since and throw exceptions, they may be caught in the outer catch block. 
+
+Although I don't like - sequences, in this case it remains simple and readable, but it still can be simplified like this 
+
+Case Classes Some of the occurrences of case classes are overused. I doubt that or could be useful in matchers, because they look like intermediate utility entities providing conversion to target and instances. This transformation can be done through a redefinition of function of companion objects. super-class also introduces a rigid structure and can be transformed into a : 
+
+Clearly, it is not very friendly with the SRP! Another question is why does it check if the pixel is already filled and if the color is available? I think that this validation should be produced outside. Colors and Coordinates The dedicated s for possible colors and coordinates look heavy, especially in the context when they are iterated, mapped or sorted on each call in different implementations of function. What improvements I can suggest: 
+
+Since there are about 3000 nuclides and if you cannot use a resource file (a CSV would be ok...), I'd suggest to split this instantiation in groups per elements. But, seriously, an external resource is much better. 
+
+The original solution from the question, as well as the one suggested by @oopexpert seem too complex and over-engineered. I guess that the author of the question is trying to implement just a simple wrapper around , which reads connection parameters from an expected location. Some remarks about the original design choices: 
+
+So approximately 1/600 of the time. Or, since I didn't do proper benchmarking, say between 2 and 3 orders of magnitude quicker. 
+
+If a streak must have at least one , how can you have a streak of 0? The example here (and the following example) are consistent with a definiton of streak of "the number of consecutive 's preceding each ." I'll continue with this interpretation so that it matches the existing code. Now to improvements to the code. The initialization of can be simplified because is the default numeric value, so the first line can be re-written as 
+
+I'm not clear what you are asking about combing function; you can add an additional argument which is a character vector which then the code just has a series of if/elseif's checking that parameter to see which algorithm to use, if that is what you mean. 
+
+The vector has a added to the beginning and the end which is equivalent to adding a to the beginning and end of the baskets. This makes the first streak start at the beginning and the last streak stop at the end. is a vector of indexes of where the misses ("M" in , 0 in ) occur. The lengths of the streaks preceding them, then, is just the difference in successive indexes (minus 1, since you want to count the number of spaces between, which is one less than the difference of the positions). Now, since the intermediate results are just used once on the next statement, they can be rolled up. Here are successive versions of doing that: 
+
+This will need only two loops, one on and another on . The main logic of the improved method will make a single iteration on the keys of map. The matching of keys in the maps will perform much faster: 
+
+Method signature change may be avoided if you think it is possible to handle the IOE inside the method. Keeps only readable folders inside the enclosing . Creates a stream of expected files. Keeps only that really exist. Creates a stream of optional objects for each existing . Fills the map with created instances of s. I'd also underline that this original way of filling the map is not very clean from the point of view of concurrency, but the context is not enough to judge about it. 
+
+But this still remains rather brutal and rigid. There should be a much more flexible way to implement the entire thing using more OOP features. Since this answer becomes much longer than the question, I suggest doing the job in two steps. If you find useful the remarks I wrote here, please apply them and publish a follow-up question where we will discuss further improvements. 
+
+And you need to invoke only for the case of , in order to check for method. is already available for all objects. Formatting: opening braces should be moved to the end of their preceeding lines. 
+
+You can avoid appending to vectors (which can cause re-allocation of space and can considerably slow things down in principle; though in your case of only a length 10 vector that shouldn't be noticeable) if you allocate them to the needed size initially and then assign within them. 
+
+This change alone would probably speed up your code a lot. You could aslo pull the computation of outside the loop, but that will be a much smaller improvement. The sample of data you gave is too small to do any reasonable benchmarking on. 
+
+I make a vector of all the indexes higher than , and use that most functions are vectorized. For example, with equal to 1, (and picking equal to 2) working the statements from inside out: 
+
+The last simplification uses the fact that a function returns the last evaluated expression by default. I don't necessarily recommend doing that because with compactness comes a loss in being able to see what the computations are/mean. (To understand it, you must essentially reverse the steps and break out each transformation separately to see what it does and to figure out why.) Looking at it again, the conversion to numeric is not a necessary step to determine ; you can operate from directly: 
+
+The comments are good; I copy them here so this question has a "proper" answer, and add some my own: 
+
+If you are using Java 8, there is no need to create a dedicated class for this purpose. Lambdas are helpful: 
+
+Here I suppose that member of this class can take only a predefined set of values (and even should be transformed into an !) and any value that is not in this set denotes an internal problem that puts the application into an invalid state. BTW, since the original method is , I suppose that is also a static member and therefore should be renamed according to style conventions. And I also suspect that there is some misuse of statics, but can't say more about it without having the entire code. Second, we rewrite the original method: 
+
+This implementation will return all the files having . If you want to get them by regex, it's achieved with a little change in the condition. If we push a bit deeper and try to benefit from Java 8, it becomes really concise: 
+
+The method name looks like a getter. However, there is some logic inside and getters usually don't have arguments. seems a bit suspicious for me. The name looks too verbose: category is present three times. Why not calling it ? There would be no repetition and it is read straightforward. To avoid the confusion with a getter, I also think that it could be named or . 
+
+If you really want to eliminate more duplicate calculations, you can assign outside both loops and outside the outer loop. 
+
+Your approach seems reasonable, but there are some simplifications you can make. First, your construction of is needlessly complex. This works just as well: 
+
+I am assuming that the call to is not what is taking most of the time, so I'm not including that in my analysis. One thing that is slowing down your code is that you are assigning to every iteration of the loop (well, every iteration that is 0). That could be pulled out of the loop since it only needs to be done once. 
+
+Here is another way to structure the inner loop. It builds off of @djhurio's solution but is slower. However, I think it is conceptually clearer. Also, global assignment is removed to instead return a vector of results. 
+
+Your interpretation of the code is correct, but I think that it could be written more idiomatically. But before getting into that, the textual description of the output and the example output don't agree 
+
+Then determine what the algorithm is that you are trying to do: Looping over each element of the first column of z, skipping any missing values, compare that value to every other value to the end of column. If the current value and some subsequent value differ by more than some threshold (in absolute difference), set that subsequent value to NA. R is a vectorized language, so explicit loops are often not the most efficient way to perform an operation. Let's vectorize that inner while loop. 
+
+Yes, there is no magic and it is equivalent to double/nested for loops. As I already mentioned, when we have 
+
+Now we cannot reassign the field, but we can operate on its contents when necessary. method would look like this: 
+
+Consequently, some changes will be necessary in class, concerning the initialization of the instance and exceptions handling. 
+
+Bug In the constructor, must be initialized before calling , otherwise a is thrown if the folder contains subfolders. Design Constructor I agree with @holroy about the fact that there are too many things done in the constructor. Its job is too heavy, instead of just initialize some things. Moreover, it makes the instance unusable for other parameters, e.g. to search in another folder or with another regex, one will need to instantiate a new . 
+
+Which reads as "X is greater than or equal to 0 AND X is less than or equal to 1". When X is reversed in the two parts, and you begin to read, it can become a brainer uselessly: 
+
+Bug will return a correct result only on the first call. If you call it again with another prefix, it will return the same value, because it will not be recalculated. Different approaches can be used to fix it. Previous search prefix can be traced and checked, or even a Map of prefix -> nbResults can store already calculated values. Code Duplication in Comparator It's a good idea to normalize the output of method so as it returns in range [-1, 0, 1], but the implementation contains repetitions of same code. If I understand well the logic, the comparison of term query strings is made only for the substrings of the queries that do not exceed number of characters. To normalize the input strings, a shortcut method is useful:

@@ -1,0 +1,51 @@
+(see $URL$ So a query is limited to 1 gigabyte (2^30) in size, minus 1 byte for a terminating null byte. Should a client try to send a larger query, an error looking like this would come back: 
+
+Here's a different approach for which recomputing the is just an optimization, as opposed to being strictly necessary. Suppose that in the tables, you add another column, , which contains the exchange rate at the time the was last updated, no matter when this happened. To quickly retrieve a set of products with a price point between, say, 50 USD and 100 USD that include the desired results, you could do something like that: 
+
+...or use the -d,-h,... and other options of to have it connect to the database and skip the invocation. See manpage for 9.3 for details. 
+
+Besides the pointlessness, it doesn't work, as shown in the question. The reason is mentioned in the doc in 7.8.2. Data-Modifying Statements in WITH: 
+
+Option 1: remove createdb for 9.1 When in doubt, use to learn which packages provide a certain command. Example: 
+
+When a user has privilege, but lacks privilege on the schema, it's a different error when trying to create an object: permission denied for schema public. To check the privileges inside psql, use . By default (shown with extended display for readability): 
+
+When using a query of this form: , the subquery is evaluated independently of , and it's the WHERE block at the end of the query that is supposed to join the rows of and . The query in the question attempts to join inside the subquery rather than in a WHERE clause at the uppermost level (in fact it doesn't have such a WHERE clause), but it's not allowed and that's what the error message indicates. The SQL-standard way of updating each row with a correlated subquery would be: 
+
+Fortunately implementing fast hash-based search at the SQL level is not hard, and in your case (large arrays, no updates, exact match) it may even be the most effective method. Steps: 1) choose a hash function. I'd suggest on the text representation of the array: 
+
+The results of comparisons between strings depends on . In practice, the most visible effect is the sort order. as LC_CTYPE means that the byte order is going to drive comparisons, whereas a real locale means that cultural rules will drive the comparisons. An example with french names, executed from inside an UTF-8 database: 
+
+You can start troubleshooting this by looking at the bytes behind the characters, to check if there are invalid UTF-8 contents independently of the display layer. An UTF-8 string can be converted into its series of bytes in SQL with 
+
+The fields here are year, month, and so on... and the term doesn't seem to have any other meaning in the rest of the document. The newer SQL:2003 standard has this: 
+
+PostgreSQL has few functions reporting information on the client environment, listed at $URL$ Concerning the remote IP address, it provides . Concerning the client username, I don't think it has this information at all, because it's not passed at connection time, unless it happens to be the same as the database user name, but the backend can't know that in general. If the SQL functions need that information,it could be passed up front by your applications in the form of a statement. Current versions of PostgreSQL allow to instantiate any namespace for custom variables. Example with version 9.3: 
+
+You may also use instead of the semi-colon at the end of the query to have psql redirect the results of that query to a file, and to remove headers and footers. 
+
+Since the syntax is used, is again irrelevant. These strings will be interpreted correctly, whether the setting is on or off, by any version of postgres>=8.1 3.Dump of 8.1 data with 9.1 pg_dump with --inserts option 
+
+Yes, these statements can deadlock each other. The fact that the transaction they're part of has only this single instruction does not suppress the possibility of a deadlock. The false hope that it would might come from an optimist interpretation of what atomicity provides at the instruction level. An UPDATE does not acquire several row locks in a single atomic grab: it has to grab them one by one, and any of them has a separate chance to be impossible to acquire. The question's query comes from the documention at $URL$ except there it's shown as two independent queries processing a single . Surely, if updating two rows in the same query solved the deadlock problem, the doc would mention it at this point. It does not mention it because it's not true. 
+
+Due to how is restricted, the above should be run as user (otherwise consider querying directly as the non-standard alternative). 
+
+A deadlock is a situation where multiple transactions conflict which each other in the locks they have cross-acquired. That situation is impossible to solve without aborting one of the transactions. The engine aborts such a transaction with as the error. The is not primarily related to deadlocks, it's meant to alert about the situation that some queries are stuck waiting for locks, meaning that other transactions keep locks for too long. I think what the documentation says is, if you're trying to debug a deadlock problem, and you want some log before the deadlock occurs, must be smaller than , otherwise the deadlock situation will blow up as an error before the log wait information has a chance to get logged. 
+
+For instance newer versions of psql (9.6) have a function that executes a query and reinject the result as an SQL query. Reworking a bit your function to return a query instead of a function: 
+
+It is necessary to keep the error messages in durable storage so that they can be analyzed later. When no error at all occurs, the file for errors should be there but empty, unless the option is used but it's intentionally not in the above script. About the message: saving database definition It is displayed along with lots of other informational messages only when using the verbose () option. The problem is that in case of error, these messages will be mixed with error messages, and it requires some level of expertise to distinguish what's normal from what's not. 
+
+It will be several orders of magnitude faster than a GIN index for the kind of dataset you have (actually I would worry about the GIN index creation taking a really unreasonable time, but do try it). 3) use it like this: 
+
+This can fail if the server's clock goes backward or if non-log files are dumped into the same directory as the log files. 
+
+You may break it down into two smaller problems. First create a function that does the word's simplification. This version just remove any non alpha-numeric character and sets the result in lower-case. Refine it if necessary. 
+
+(and recompiling) Besides the need to recompile that might give pause, increasing by a large margin is not very good idea, because every single identifier stored in the catalog will consume that size, no matter its length. To me, the only reasonable way to show arbitrary long column names would be to implement it in the client-side presentation layer. Storing the names themselves could be done in the SQL column comments as you suggest, or in your own custom metadata table. The presentation layer could retrieve that data at the start of the session and cache it so that it would be essentially transparent for the rest of the SQL. 
+
+This looks like a fairly generic full-text search problem in a relational database. Your prediction that updates in actors or objects would be troublesome in a denormalized structure looks spot-on. Better exhaust the possibilities with the normalized schema before thinking of denormalizing, especially since your tables are modest in size. I'd suggest to FT-index all textual fields separately, and use a query engineered on the idea of querying all of them and combining results with the OR logical conjunction through an UNION. Indexing (with the the text configuration for exact and language-agnostic matching, but use whatever is best in your case provided it's the same as in the query): 
+
+Add to filter on only that one. Be aware that users themselves are "roles" in postgresql parlance (there used to be "users and groups" in older versions, but this have been unified into roles). Here the difference is made between a user and a role with boolean column, which corresponds o the interpretation that a user is a role that has the LOGIN permission. The two can be turned into to add the users who aren't member of any role: 
+
+The same as with any text literal. Or they don't need to be escaped if using prepared or parametrized statements with -style parameters, if your client-side environment supports that.

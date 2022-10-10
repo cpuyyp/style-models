@@ -1,0 +1,71 @@
+Other than that, there's not much I can say. I'm not an expert in F# by any means. You used tail-call recursion everywhere you could, which is good. You use and unions when appropriate, and you used functional paradigms everywhere. The only one I don't like is the . Rewriting as follows should eliminate the need for this variable, and follow functional paradigms as much as possible. (Reduced the number of statements substantially.) Note: I haven't yet tested this, you provided no test data, but it should provide the same result. 
+
+I am actually quite terrified at what is going on here. In this method you're not returning any of those objects, you're literally using the constructors for their side-effects (when you construct the object, the base constructor does the server interaction) which is a terrible practice. You should absolutely refactor this so that you are forced to call an or something method. Why, you might ask? You may say 'I will always want to update the server on what property was just created.' Yes, today. Wait until tomorrow, or the next day: there will come a point where you won't want to do that, and you'll be spending a lot of time undoing this setup. Do it now and save yourself the future trouble. The other problem with this is that your API is no longer testable: how do we know if the server connection succeeded or failed? How do we know what the result of creating it is? We don't, really. Because it will always try to send an update, and that's a bad thing. A constructor should put this object in a valid state, then a method should operate on it. 
+
+Each of them short-circuits as reasonable, to allow us to only enumerate what we have to. The short-circuit path is taken in the case that it's acceptable. A quick set of tests, with a pass/fail for each, is: 
+
+Then you just need to update your array. Of course, all this means we have one more thing we can do: create an to encapsulate what properties of our class are in the CSV and where. 
+
+Now we are storing the with the stack values, so when we one we get the new immediately. This turns the () command into an \$O(1)\$ operation. (Your version is likely \$O(n)\$.) 
+
+I know breaking parameters along multiple lines may seem like a good idea, but it breaks the flow of the code. If (and this gets into one of those "holy wars" of programming) you must break parameters into multiple lines, you should put every parameter on a new line, and line them all up with whitespace until they all start at the same column. I.e.: 
+
+Doesn't that clean things up just a bit? Interestingly, we could actually even, because is just the identity function, and then we can instead of , because it's already numeric: 
+
+I apologize if this felt brutal, but I was actually having a bit of fun with it after I realized what was happening. 
+
+And interestingly if we work with on the filter at that point, the tests if is a , and does the cast for us, so we've finally achieved the same functionality as the C# keyword. And as mentioned in comments, using is another great alternative, which opens us up to a little bit of extraction: 
+
+Now the difference is that we create an that takes an and , then it calls itself, but it calculates the new first, and the new first, we could rewrite it as: 
+
+What do they have in common? They all have a property. So, in order to represent this we start with an interface: 
+
+This does exactly one thing: prompt the user for a number and store it in the array. We won't store it in the array in our sub-method, but we'll extract the prompting out. Let's create a new method: 
+
+One of the things you can do to get some performance back (albeit not a lot, but still more than none) is rewrite to have one responsibility. As it stands now, has several responsibilities. It's responsible for: 
+
+When building a calculator it's hard to effectively build something dynamic, you are always concerned about how things should relate (for example, how do we represent \$a+b+c\$, as \$(a + b) + c\$, as \$a + (b + c)\$, or some other way?), but it's often easiest if you consider each term and operation on it's own. Let's take \$+\$, for example, we should have two terms: a left and a right. But what is a term? A term can be any of the following: 
+
+I would recommend creating an interface to hold common elements between the , and . This will allow you to abstract out a little further, and create actual responsibility separations. 
+
+Is it a pain in the rear to use? Yes. Is it in the Brainfuck spirit? Yes. It's still not true brainfuck syntax, but you won't get there with C#. 
+
+Next, we'll get into some of the actual code and talk about things that can make life easier and whatnot. C# has implicit typing available through the use of the keyword (similar to in VB.NET or in F#. Something like the following: 
+
+This is entirely consistent for the general distribution: every tested run had digits in the range \$[0, 5]\$ appear more than 10% of the time, and digits \$[6, 9]\$ appeared less than 10% of the time. When testing the edge case (if the iteration count exceeds value) it was hit 0 times across \$1,000,000\$ runs when was in the interval \$[4, 10]\$. For a value of 3, there were 13 occurrences on average across multiple runs that it was hit, meaning \$0.0013\%\$ of the time. For a value of 2 it was roughly \$0.0521\%\$, a value of 1 was roughly \$2.3223\%\$. (The final value makes complete sense, \$2.34375\%\$ of the values from \$[0, 255]\$ are within the edge case.) Mathematically speaking, the code should hit the edge case once every $$\frac 1 {0.0234375^N}$$ Where \$N\$ is the or number of bytes to test before the loop terminates. For a of , that's \$42.\bar6\$, for of 5, that's \$141,398,100.2798\$. 
+
+All of these are opinions, you can use or ignore them at your own discretion, but these are some more changes I would make. 
+
+Alright so there's a lot going on here, but the biggest thing I see is concern 4 you had: way too much . Here's the thing about : it let's us do really unhealthy things, it lets us define processing that can go up, down, left, right, inside and outside, all without giving us any guarantee of what happened. I also really don't like the construct, so we're going to replace both those issues with one really fancy design pattern known as "recursive functions" with tail-call recursion. Normally, a recursive F# function is easy to write: 
+
+It won't help your big-O runtime (the version you posted with \$O(2n)\$ runtime reduces down to \$O(n)\$, so by big-O my version is just as fast) but it will help your actual runtime. Of course, this creates the problem of overflow (as does your solution). 
+
+So I have an , which is responsible for providing an abstract base for other objects to inherit. (Like objects, which are people, objects, which are animals, etc.) The provides a solid foundation for and to interact with, I'm just curious if it's not gone overboard or if I've missed something. 
+
+Another quick note (that I forgot when I wrote this at 0200 in the morning): you can get away with using in many cases, where the type is already explicit. (It just allows you to shorten the line of code a little bit.) For example: 
+
+On first glance this isn't bad, though I hate some of the naming. Let's look at some of it in particular to see what's going on: 
+
+If this seems harsh, I do apologize. I just want to make sure that you know exactly what makes this poor, and how to fix it. Making the aforementioned change will definitely get you a very large step in the right direction. 
+
+No, it's not good practice to store the Admin login (or any login, for that matter) in the Web.config. Depending on what ASP.NET model you're using, you have a few options. MVC has a built-in provider which makes it simple to make certain pages/areas only accessible by a specific role. Web Forms is also pretty simple, though you have to roll your own access provisions. You can use the built-in Simple Membership if you like, which usually suits quite well once extended to fit your needs. (You can add properties to users pretty easily and such.) You also aren't encrypting or hashing the password, which is a huge no-no. At the very least you should MD5 hash it, though for security I would recommend SHA1-salt hashing at the very weakest. Though, if you use the built-in Simple Membership for Web Forms or MVC, you'll get encryption and salting by default. I didn't review the actual code as Heslacher did that just fine, but I do think you need to completely revisit the login system. ASP.NET has built-in providers for this, and they're super easy and, quite honestly, pretty fun to set up. (I don't know why no one has pointed this out in the several months this question has been here, or how it got on my radar, but hopefully you still get this advice.) 
+
+This makes it a little more clear as to what the tests are doing by name, so that when you look at the test explorer you can see you already have tests that cover certain aspects. 
+
+Now we safely default to when is not set, or when it's not numeric. Of course, we still have another bug: what happens if is ? That's probably unintended. So, we'll check for that as well: 
+
+2017 Let's fast-forward five years and six months (which is an agonizingly long time) and examine what language features might make this a different process. I'm just going to post the form that takes advantage of the new language features, then we'll discuss where / might help you. 
+
+This really isn't great, and unless you're supporting a legacy system that already expects these enum members, I would rename the while thing: 
+
+You can also add other validation logic in there as you need, but this way it helps separate responsibilities further. To get rid of some of the other additional responsibilities has, we can consider a method which would return the filename, then would call or as appropriate. 
+
+Of course, we can take one more step to cleaning this up by using a : Take our method (second one) from above and rewrite it as follows: 
+
+Some changes I would make: Limit your use of whitespace. You shouldn't need whitespace after opening or before closing braces. I.e. start it as: 
+
+You could consider trying to push the compiler to do more inlining on some of your smaller methods (it may be doing it already, but you can also coerce it). 
+
+Overall: very solid code, excellent work and I'm glad to see another person experimenting with the language. :) Hopefully you learn more and more about it, and become another highly-qualified developer in C#. 
+
+Overall, wonderful work! This code is very clean, very easy to follow, and very maintainable. Most of the issues I pointed out are nitpicks, they're just things that help improve consistency and usability.

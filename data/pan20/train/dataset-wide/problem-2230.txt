@@ -1,0 +1,89 @@
+I have the need to restart Microsoft SQL Server's group of services on a given computer, remotely, through some sort of programmatic method I can insert into a workflow. I'm looking for the best way to do this, I've seen a few different ways and I'm wondering if there's anything I'm missing: 
+
+However I would like to have that integer replaced with a variable that is the RunID of the row updated (which is causing the trigger to fire). How can I do that? 
+
+You're right that SQL Server rarely bottlenecks at the CPU, but it's not impossible and you can tell whether you're seeing a CPU bottleneck by looking at some perf counters. Then you'll know whether or not you'll see a performance improvement simply by updating the CPU to a faster one or one with more cores. If your SQL isn't written to take advantage of parallel processing, it won't matter if you throw more cores at it. Additionally, there's more things I would want to consider in buying a system: 
+
+Take a look at Brent Ozar's perf tuning stuff Identify your bottlenecks (are you seeing bad parallelization, CPU chugging away without finishing, memory, storage) Determine what differences there will be between your new and old system. 
+
+Upgradability - SQL Server will rapidly test the limits of your hardware if you let it, so try to anticipate that Affordability - SQL Server licensing in 2014 is core-based, so this should be a consideration. 
+
+I'm running SQL Server 2008 R2 SP1, on a Windows Server 2008 box. I have a .NET script running from Visual Studio 2010 that does the following: 
+
+I'm not sure of the change that caused this (the logs don't show anything specific) but ever since Monday afternoon I've seen the following error repeated: 
+
+assuming the question is about triggers (and I'm not 100% sure I understand the question), something along these lines may be the way to go: 
+
+@kevinsky is correct, you cannot use as a variable name in PL/SQL, however that is not the only issue. You also cannot assign values to IN variables like , , and . My best guess is that you meant those to be local variables seeing as the first thing you do with then is SELECT INTO them. test table: 
+
+This can then be joined to and and filtered for the row for each with the lowest generality (), perhaps something like this: 
+
+If you are open to a different approach, Have you considered adding a 'deleted' Boolean flag to the table, or a 'deleted_at' timestamp instead. Or better still, deny CRUD access to your database tables and handle the audit trail in your transactional API :) 
+
+Instance Recovery is necessary to get the database back to a consistent state after or some other abnormal shutdown event. Oracle is never going to let you open the database in an inconsistent state, so no, there is no possibility that you can disable it. If Oracle is crashing during Instance Recovery you need to get in touch with Oracle Support or revert to a backup. The concepts guide has essential reading about instances and more particularly what Instance Recovery is and why it is sometimes needed: 
+
+Yes, certainly, assuming your controlfile and spfile are in ASM too and therefore survive the failure intact. This is the kind of thing you need to test in your own environment to give confidence you will be able to pull it off for real when disaster strikes - there really is no substitute for testing your DR procedures to make sure you are not making any invalid assumptions such as: 
+
+However I can't figure out how exactly I need to escape the quotes. It always wants to treat the as a separate column. How can I escape the comma properly? 
+
+When I restore after dropping the database, the fastest I can get a restore going is 4 hours. This is when I put the .bak on a RAID 10 logical drive, with the data files being written to a separate RAID 10 logical drive on the same server. The log files go to yet another RAID 0 on the same server. However, if I restore with Replace, the restore process only takes 56 minutes (similar setup). Did I find some sort of turbo button? This is so fast that I am worried. 
+
+I found the answer elsewhere on the Internet, courtesy of Grant Fritchey. "When you look at the fragmentation percentage, you're looking at external fragmentation. It means the percentage of pages that are out of order showing an inneficient storage mechanism." $URL$ So it's how many pages out of the whole are out of order. 
+
+This is in addition to other IT concerns you'd want to keep in mind like maintainability, support contracts, and your space/power requirements. 
+
+So I have a database (on a SQL Server 2008 R2 SP2 instance) that is 2TB uncompressed, with a .bak file that is 500GB compressed. As I have been toying with the fastest way to restore this database after a series of tests, I've tried a couple of things: 
+
+I'm not sure where else to check, I know I have a lot of moving parts here but I'm getting the feeling I'm just missing a max pool setting somewhere. 
+
+The way to gauge hardware performance is to be take a look at your current workload. So I would begin by quantifying that: 
+
+My function is called several times per second (but only once per session) by a web application. The very first thing it does is lock the table (to do an 'insert if not exists'—a simple variant of an ). My understanding of the docs is that other calls to should simply queue until all previous calls have finished: 
+
+If you create the index before loading the table, the time taken to load the data will be significantly increased. pre load: 
+
+This seems to be a quirk of SQL*Plus and rather than pipelined functions - the following demonstrates the same effect: 
+
+The aim when shutting down for maintenance (or cold backup) is that the database is left in a consistent state with no need for rollback/recovery on startup. There are 3 SQL*Plus commands that achieve this in theory, all of which immediately prevent new sessions connecting to the instance: 
+
+The following two examples should yield the same result by my reckoning, am I missing something obvious? 
+
+You are explicitly setting the role to so you will need to use before your to use the permissions from role (but I'm guessing you probably just want to ) From the docs: 
+
+Because it is just a hint - the CBO is clever enough to ignore it if it means full scanning the clustered index and the table instead of just the table Also the correct hint for a clustered scan is rather than eg 
+
+Please take a look at $URL$ When you include the nested table it is like a join, so if you want a single row per customer, you will need to do some sort of unpivot (note that there could be more than two phone numbers in the nested table — Oracle needs to know how many columns to return. This will return all the rows: 
+
+I am trying to use SQLCMD to remotely detach a database but for some reason it can't find the server. From the workstation, I can connect to the database instance (which is the default instance) using the Host Name through SSMS successfully. The error is: 
+
+Sometimes our developers will write a query that uses cursors, but doesn't close them out explicitly. I'm trying to generate a list of active objects in my production database that use cursors but don't explicitly close/deallocate them. To do this I've written a simple statement that does the job, but is extremely slow: 
+
+Currently this takes something like 3 minutes to run. Is there a better way to get the information I'm looking for? 
+
+The IP reported is the SQL Server. Since this is ongoing, is there a way I could figure out what is trying to pass this credential? If I could get an application name or anything I could probably fix the problem. 
+
+Currently I run when I want to wipe information out of the buffer pool between running SQL queries. However, I was reviewing this Technet article referencing . What caches does wipe that doesn't? 
+
+I have a group of about 30 tables, and I want to know the physical size on disk of all of these tables (plus indexes). Is there an easier way of doing this than through the GUI in SQL server 2008 R2? 
+
+So the first thing I did was to make sure that the instance is accessible via SSMS (it is), and that my CMD prompt is Administrator (it is). Then I checked to make sure the instance has TCP enabled (it does) and allows remote connections (it does). What am I missing? The commend I use, minus the script, is: 
+
+In the script below, the CBO chooses an over an (this is illustrated by the queries with the UNION ALL but you can demonstrate it is true with just ). This choice is made despite the skip scan being the lower cost choice. Once the table is analyzed, the skip scan is preferred (despite the relative cost actually rising). It seems the CBO does not consider a skip scan at all with dynamic sampling, is this true? If not, why is the skip scan not chosen before the stats are gathered? schema: 
+
+I vote for option 1. Bear in mind that RAID 0 means "no protection" - do your logs matter? (yes they do). It also has the benefit of simplicity The SQL Server docs say: 
+
+VACUUM rewrites the entire block, efficiently packing the remaining rows and leaving a single contiguous block of free space (though this space isn't zeroed and the physical disk file might contain the remnants of deleted rows which of course are in no way visible to the database user). test schema: 
+
+Because the join is returning more rows than you expect, I guess this is not the case. For further help we'll need to know the DDL for the tables (in particular the primary keys) ---EDIT on second thoughts, I think 
+
+This also does the trick but 'not terribly fast' would be a huge understatement this time unfortunately - I'm posting it anyway in case it is of academic interest to anyone: 
+
+I'd say No, though of course this is not so much an answer as a principle. The main result is probably a false sense of extra security. The question you need to ask is "what am I trying to protect myself from?". In general on a database that is exposed to the public internet, you would not be opening a port to the database at all - the world would only see your application layer. On databases that only need to be accessed by users on your LAN (and VPN), often you do need direct access to the database, and this is probably the case you have in mind? Security on the LAN is a balance of convenience and protection, and I think you have to choose whether you either: 
+
+After a test completes (on a SQL 2008R2 system), the system updates a row in the TestRun table to include an end time. I am creating a trigger that will take action after that update, and do some post-test analysis for me. Right now it's very simple. 
+
+I have 2 instances of SQL Server installed on one server: SQL002. One instance is a default instance, SQL2008 R2, and the SQL service is generally not running except for specific tests. The other instance is a named instance, SQL 2014 (so SQL002/SQL2014). This is generally running all the time. Today I just had a developer tell me that when they connect to SQL002 in SQL Server Management Studio it will connect successfully. I replicated this from my machine and also see a successful connection, however when I look at the properties of the connection it is reporting that it connected to the named instance. What is going on here? Is there a redirect I'm not aware of? 
+
+That exception usually doesn't refer to the SQL Server itself running out of memory, but instead the client workstation that is processing the results running out of memory. You will generally see this if you are outputting a very large result set into the Output window. To troubleshoot the issue (and possibly resolve it) allow SQL to write the results to a file rather than trying to put it all in the output window. 
+
+The total number of times it will iterate is 150, however it is stopping at 100 connections and I can't figure out why. I could adjust my script to just use a single thread, but I'd prefer to know where I'm missing a max connection setting as that will be more useful to know for future reference. Here's where I've checked so far:

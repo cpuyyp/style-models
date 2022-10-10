@@ -1,0 +1,67 @@
+The member function cpu() is quite interesting and a bit difficult to read. It first checks if the stacktrace is enabled; if so it prints the first line as you can read. Then we enter our interpreting loop; for each instruction contained in our code given to the constructor earlier. this loop runs as long as our instruction pointer is less than the code size, otherwise we would try to access code which does not exist. The first step is to fetch now our first Opcode and increase our IP by one. We than check if the recived opcode is valid and if so proceed. 
+
+What is more interesting is now how such an instruction is implemented. I will not show the whole implementation file but instead a small section of it: ByteCode.cpp 
+
+Enumeration of the Bytes which could trigger actions Very small Abstraction of an Instruction containing some Meta Information A table of Instruction where the indices correspond the values of the enumeration 
+
+The Dissamble function takes the current Opcode pointed by the IP and prints the meta information stored in it including the line number within the code as well as the Name and Value of the operands. 
+
+The function from the class does what you expect. it stores some kind of Measurement(here time). It's not really well coded and if you interested please look up the code at my repository it is in the same project. The Argument given to calls the lambda of our Opcode/Instruction and Measures how long it takes to execute and stores this information for analysis later. I did this because it seems interesting to me to know just how fast is my Virtual Machine. 
+
+We start with the easy case, when the current plant has more pesticide in it than the one to its immediate left. Then we know that the current plant dies after one day. Otherwise, we look for the right-most plant to the left of us that has less pesticide than the current plant. If there is no such plant then we know that the current plant will never die. So suppose there is such a plant, and let's say it's at index \$i\$. I claim that the current plant (at index \$k\$) will die on day $$\max \left\{ d[j] \,\middle|\, i < j < k \right\} + 1,$$ where \$d[j]\$ is the day on which plant \$j\$ dies. What this means is that for plant \$k\$ to die, I have to wait for all the plants between plant \$i\$ and plant \$k\$ to die, at which point \$i\$ will be to the immediate left of \$k\$, and then I have to wait one more day. So far, we still have an \$O(N^2)\$ algorithm. If we think about the input \$ 1, 2, 2, 2, 2, \ldots, 2\$, for every plant we have to iterate all the way back to the start to find the plant with less pesticide in it. 
+
+This header i believe is pretty straight forward to understand. You find three important parts in it. 
+
+What i personally find awesome is I do not have an awfull crazy long switch statement which chooses what code must be executed. In an earlier version i had such an switch statement and it drove me crazy looking at it. So i came up the with global array. The Array you find the Bytecode.h file; where the bytecode corresponds to the index of the array for appropriate instruction need if accessed. 
+
+The main programm Here you see the snippet containing an array of Type. This shall be the code executed by the VM. I tried to make the definition of this array more readable by using c-style macros. The project is not yet at the point that i can read from a file and execute the code stored there. Any code must be hard coded right know. 
+
+What you see is the that each instruction if constructed is automatically be stored in the global array you have seen in the header file. This shall insure that every instruction ever instantiated is accessible via this very array just mentioned. This is important later on. An saves 4 kinds of information 
+
+There seems to be a bug where is not properly recalculated after a call to . Here is the failing test: 
+
+In type annotations, it's conventional to have a space on either side of the , for example instead of 
+
+I can't actually back up this last point. MSDN and FSharp.Core don't seem to stick to one style, even in the same function 
+
+It seems that is always sorted by . If so, you could insert into the list at the appropriate place here instead of re-sorting the entire list 
+
+In fact, will always be empty, and that line will always run. This is because a new instance of is being created: 
+
+There's a problem with both versions in that the method will not return if the input sequence is infinite (which you've mentioned is a case you want to handle). Suppose we have this helper method to create an infinite sequence of a single value 
+
+I'll preface this by saying that Java is not my strong point. Let's start by cleaning up the formatting. 
+
+You're missing some cases, for example what should happen when ? Or ? I think this is valid representation of your current code: 
+
+Then we can store the current chunk in a . Using the constructor that takes the initial capacity should be good for performance: 
+
+The really interesting part start now with the static function . is called from the VM at beginning of it's life cycle. It does constructed all instruction just by calling the constructor of the class . The function expects just the pointer of the current instance( a class shown later) which is given to an lambda who implements the behaviour of a certain instruction. The lambda which contains the behaviour of the instruction captures s function argument, which is the pointer to the current instance of the . Through this i enable the lambda to access the VM's representation of the stack where all operation happen. You see two s implemented here. NOP and IADD. NOP simply does nothing so the lambda is empty. IADD on the other hand adds to integer variables which are stored on the stack before this instruction is called. if nothing is there, well that would be a problem then. This scheme just repeats for every instruction defined in the enumeration in the header file. VM.h The header contains the nested struct . represent any values possible in the VM. To make life easier anything which is not an Pointer is stored within an double regardless if less bytes are need. Efficiency was not the purpose here. In essence is a tagged union. Because Every Instruction or Opcode is represented by an Byte, ergo is an Value, it can be expressed as an in the "Code Section" of the VM. 
+
+Bug fix As I mentioned in the comments, should be . API The only time you return , is when you set to . I would suggest changing the function signature to 
+
+This implementation will exhibit \$O(N^2)\$ performance when all the array elements are the same. Consider what happens in this loop when all the array elements are the same: 
+
+The methods and are identical except for one variable, and could (unless you're planning on changing them) just call in to a common method. 
+
+One way of writing unit tests is called arrange-act-assert. Following that method and using the above recommendations, the code would look like this 
+
+makes no sense. The question states "Given an array of digits (1 to 9) as input...", yet your test input is . 
+
+This is a solution to CodeEval's SkyScrapers challenge. You are given a list of triples \$(l, h, r)\$. Each triple represents an axis-aligned rectangle, with top-left corner at \$(l, h)\$ and bottom-right corner at \$(r, 0)\$. You can imagine these rectangles as buildings against a skyline. The task is to "draw" the skyline, by printing a list of points \$(x, h)\$ where the line drawing of the skyline changes from horizontal to vertical, and \$h\$ is the height of the vertical line. For all heights \$h\$, \$1 \leq h \leq 100\$. For all \$x\$-coordinates, \$1 \leq x \leq 10{,}000\$. There are at most \$1{,}000\$ rectangles/buildings. Examples: 
+
+VM.cpp The Constructor of the VM is quite simple it expects an vector of Types which stores simply a copy of the code. The second argument is the "line" number or the index from the vector from which the VM shall start executing those sweet little bytes of Opcode/Instruction. You also find the call to the static function from the class earlier explained. 
+
+I want present to you my little Virtual Machine. It nothing really sophisticated. It is an stack only virtual machine with the exception for some 'global' variables which i would count as registers but besides that all calculation done by my VM is done on stack. What i planning now is to show the most interesting parts of the project How i implement this VM. Reason why I do not post the complete code directly is you can find it on GitHub where you can clone it and test out locally. I recommend if you really interested download the project, execute and take a look the code and THEN comeback and read the post. It makes it probably easier to understand. It's not that i do have a lot of files but to keep the code readable I think that this is the best choice. Let me know if you think otherwise! Also Unfortunately i am not good writer, not just only because English is my second language... I try my best to correct as much orthographic and grammatical mistakes as possible. 
+
+(I've been a bit fast and loose with this, there might be bugs present.) With all that in place, we can rewrite to delegate to 
+
+It's not a big win in this particular case, but I think it is a bit cleaner. Processing Data with Java SE 8 Streams, Part 1 has more examples of where streams can be a powerful tool. Note that unlike the original code, this will return for zero-length arrays. You can of course change it to return 0 instead, if you want. 
+
+This implementation of Quicksort has poor performance for arrays with many repeated elements. From Wikipedia, emphasis mine 
+
+There's a bug that occurs when the guessed number is equal to the random number plus or minus 5. For example, if the random number is 5 and the first guess is 10, we get 
+
+It looks good! Here are some issues I found. Readability I would recommend over for readability. Naming Greatest common divisor is a more standard term for greatest common denominator. MinValue should be , not . Immutability Since your data structure is immutable, this code 
+
+I'm going to throw my hat in the ring with the iterative version of Heap's method of generating permutations. It took me a while to get right, as my reference source has a typo in the algorithm -_-.

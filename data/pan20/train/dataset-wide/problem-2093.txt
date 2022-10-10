@@ -1,0 +1,45 @@
+... and it should shut down. I know this is a different O/S and version but the principle is the same. And the reverse is true; if you start it as , you need to to be able to shut it down as . 
+
+The account is for adminstering Enterprise Manager, rather then the database; see the predefined user accounts. I would shy away from modifying anything about any of those accounts, even granting an additional role, unless specifically told to by Oracle. The first message you got says that import isn't supported when logged in with the role. That doesn't mean you can't import as , just that you have to log in as with the role rather than as . This assumes you want to do a full import though; for partial (e.g. schema-level) imports you might want to create the user first and perform the import as that user, but I'm not sure that's what you're looking for at the moment. 
+
+So quite a lot... but as jonearles shows, you still need to pick your interval size, fixed ranges and transition point carefully as the combination of those effectively constains the maximum value of the partition key. Every interval exists logically as soon as the table is created, though they aren't created physically until relevant data is inserted. You can't 'skip' intervals. 
+
+Not directly answering the question as I don't use Toad, but you can use without a by using the 'easy connect' syntax for the connection string, at least in recent versions: 
+
+You need to have different keys for the entries in the two configurations, e.g. and . IPC uses memory and semaphores etc. that may be shared across the machine, so you need to provide a way for the instances to be differentiated. Also make sure you're starting the listeners explicitly, e.g. , and you have the environment set properly for your two accounts, including pointing to the right . 
+
+Based on the ORA-600 in the alert log, this looks like it might be bug 6651027, which is related to the resource manager and is supposedly fixed in 11.1.0.7 and 11.2. If you have access to the Oracle Support website you could look at note 559251.1, and the patch set notes. You can also look at the trace file referenced in the alert log for more detail on exactly where it's failing. If you're on an earlier release I'd recommend you patch up and see if the problem goes away. If it doesn't then you'll need to raise a support assistance request with Oracle I'm afraid. ORA-600s that aren't already fixed in a patch sometimes have a workaround, but often need Oracle's input. 
+
+Then you need the grants the user has. Depending on your actual user some of these may not return anything: 
+
+I'm not 100% sure about your scenario, but I think you need to add the option to you command. See the documentation for , and the notes on . However, you really need to understand what you are trying to do, and what the command will do, and not dive in blindly. Hopefully this option will have come up on your course - if not then you might be supposed to be looking for something else 
+
+A non-CDB is anything that isn't a CDB; that is, any database before 12c, or a 12c database created without the enable pluggable database clause. If you create a non-CDB it isn't Multitentant and is a single-instance standalone like a pre-12c database. 
+
+However, this is deprecated from 11gR2. The manual mentons using or OEM, but you could also just make switch to the account to start and stop the listener via . Obviously that gives them full DBA access, it isn't restricted to the listener, which is the case for too. I'm not sure why you'd want anyone you didn't trust to administer the database to be able to mess with the listener, or why you need to shut it down and start it up often enough for this to be an issue. 
+
+Just for fun I put in the MV definition to catch the most basic workaround - so trying to insert also fails - but this model is never going to be very robust. I'm not saying this is a good idea, just that it's possible... 
+
+Have a look at the package. First set to some big number so the output isn't truncated, and set the SQL terminator so you can see how statements are separated: 
+
+As the message indicates, your 3GB recovery destination is full; the database is unable to archive any more redo log files. It has reached a point where it needs to switch a full redo log file out, but there are none available for re-use because they can't be archived. I imagine this is why it wouldn't shut down cleanly, and possibly why you wanted to shut down in the first place as you wouldn't have been able to do much with the database in that state. The short-term fix is to increase the size of the recovery area, assuming you have enough disk space, e.g.: 
+
+In Oracle, writers don't block readers, and it won't lock the table, just the affected rows. Until you commit, all other sessions will continue to see the data as it was before your delete, and can continue to query. The only blocking you'd see in another writer session is if there is a primary key or unique index on the table and it tries to insert a row which clashes; or it tries to update/delete a row that you deleted. That second session will wait until your first session issues a commit or rollback; the second session will then either get an error (if you committed) or complete the action (if you rolled back). 
+
+Then attempting to insert an record for a different department with the same username gives a unique constraint violation, although not until you commit: 
+
+Oracle has an alert log which should tell you when and why it shut down. Depending on how the database was configured, that will be under a directory identified by either the or parameters, and will be called or (in previous versions). If you're running it, you can get information from Enterprise Manager too. Has the server it's running on rebooted as well? If so the listener may be configured to start automatically, but the database not; there's a flag in the file that says whether each instance should start, e.g. when is run, which could be done from an script on boot. You could try changing the flag for your database from to to see if it stops you having to start it manually, at least. If the server hasn't rebooted then the database may have crashed, in which case I'd expect to see errors in the alert log - search backwards, particularly for errors which can be fatal, but also for anything close to the time it crashed. 
+
+So your first clause will match exactly , exactly , and anything in between. Your second clause will match exactly , i.e. any rows where is exactly . 
+
+You don't need to grant privileges, and shouldn't unless really necessary. You should follow the principle of least privilege. From Oracle's security guidelines: 
+
+Unless you want to get into wrappers, you need to have a password set for your listener. There's a good summary of how to set that up here, if you haven't already done so. Then if you start the listener as normal as , you can shut it down as by going into the interactive mode of the controller, enter command 'set password', and enter the password for the listener: 
+
+At least, I think that's what you're trying to achieve... Unfortunately I can't add a demo as SQL Fiddle doesn't have the partitioning option, but this is tested against 11.2.0.3. Of course, you have to make it use the partitions for the query... if I just do: 
+
+If you're really only looking to learn about the development side and have no interest in the administration or installation side at the moment, a quicker route might be to download a prebuilt developer VM image for Virtualbox. That can get you up and running very quickly, and you can connect to the DB running inside the VM from outside, so you can continue to do your development in your current environment. The overview echos what others have said about licensing kicking in once you ship an application (but Oracle licensing is a quagmire, you'll need to talk to Oracle about it if/when you get past playing around): 
+
+Clearly I haven't created any indexes yet. If you are looking for a whole month's worth of data, you would only need to query on a single value, and ignore ; but presumably you'd need a mix at least some of the time. 
+
+So you have one or more Oracle homes (software installations), each with one or more independent databases running from that home. This was the only way to run multiple databases on the same server before 12c's container/pluggable model. The problem with doing that is the database instances are completely independent and have no visibility of each other, so they are all competing for resources (CPU, memory, network) at operating system level, and you have to have enough resources for them all to be running at peak to avoid degraded performance, even if that is unlikely to happen often. Or don't have enough resources and one or more end up starved at some point. You don't want that happening in production, so it's generally considered a bad idea to do this in production environments. This is also touched on in the 12c documentation:

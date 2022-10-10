@@ -1,0 +1,103 @@
+confirms that in both cases the temporary objects are being cached after the first run as expected rather than created from scratch again for every invocation. Similarly tracing the , , events in Profiler (screenshot below) shows that these events only occur once (on the first invocation of the table stored procedure) and the other 9,999 executions do not raise any of these events. (The table variable version does not get any of these events) 
+
+The only object accessed in the process of returning the two rows was the index showing that the data must have been switched. 
+
+No is not sargable. Your own test demonstrates this well. An exception would be if you created a computed column with the expression and indexed that. 
+
+So it uses the same partitioning definition as the rest of the functions. This shouldn't change anything in your example as your expression will just assign to any non matched rows anyway. As for the rest of the plan see Partitioning and the Common Subexpression Spool (Plan afterwards with no sorts) 
+
+Partition by Thing and use to look at the preceding row to the current row when ordering by event alphabetically. If the current row is and there is no preceding row will be . Just preserve any such rows. This is 2012+ syntax. 
+
+SQL Server doesn't support replacing patterns of multiple characters - so to do it via would take potentially 10 operations. With that in mind one way of doing it would be a recursive CTE to process the digits 0-9 sequentially. It does the replacement and then checks the length of the before and after strings to know how many characters of that number there were and what needs to be added on to the total. 
+
+The below shows an example along with a calculated column showing how the is calculated. As the highest is when ordered descending and there are 7 rows. The is = = 
+
+Yes the would rollback all changes made inside the stored procedure except if the stored procedure was itself to issue an unbalanced which would raise an error 
+
+First it creates the stats for column successfully (the initial / pair) . Then it starts creating the stats for column (The selected entry in the screen shot). This entry is followed by an event confirming that the statistics on were created then the timeout kicks in. It can be seen that the stats creation occurs on the same spid as the query and so this also aborts the creation of stats on column . At the end of the process only one set of stats exists on the table. Edit The above refers to stats creation, to test auto update of the stats I ran the above query without a timeout so both sets of stats were successfully created then updated all columns of all rows so that the stats would be out of date and re-ran the test. The trace for that is pretty similar 
+
+This is running on Microsoft SQL Server 2012 (SP1) - 11.0.3513.0 (X64) so writable columnstore indexes are not available. The table contains data for two distinct Market keys. The build switches out the partition for a specific MarketKey to a staging table, disables the columnstore index, performs necessary writes, rebuilds the columnstore, then switches it back in. The execution plan for the update statistics shows that it pulls out all rows from the table, sorts them, gets the estimated number of rows badly wrong and spills to with spill level 2. 
+
+You are converting the representation to which is not correct. returns for me for example. It will give you a result based on the character codes in that string representation in your default collation's code page. 
+
+This difference only seems to apply when the object is a B+tree. When removing the on the table variable so it is a heap I got the following results 
+
+The actual and estimated rows are spot on and all redundant operators have been removed from the plan (so it won't spend time creating build input for the unneeded hash join in this case). 
+
+It would need to be not . Without the parentheses it looks to find a stored procedure with the same name as the string inside . Hence the error you are seeing of 
+
+Will be able to take account that the tables have 100K rows each and give a different plan. In SQL Server 2012 you can only add indexes to table variables via constraints. If the values are unique you could use 
+
+Which (if trace flag 3605 is enabled) dumps out limited information such as the below to the SQL Server error log. 
+
+is left outer joined to - the result of that forms a virtual table that is inner joined to . The predicate will mean that any null extended rows from the initial outer join are filtered out, effectively making all the joins inner joins. This differs from q2... 
+
+This makes sense as the semantics of the constraint do change with the setting. If you encounter this you could consider temporarily removing the problematic constraints etc and adding them back after the switch or just biting the bullet and recreating the table in a more conventional way. 
+
+Yes the clustered index has fewer rows per page than the non clustered index as the leaf pages of the clustered index must store the values for the other two columns ( and ). The leaf pages of the NCI store only the values and a row locator (RID if the table is a heap or the CI key otherwise). So the estimated costs reflect the greater number of reads and IO requirement. If you were to declare the NCI as 
+
+Returns the correct results. But the following returns incorrect results (on 2014 using the new Cardinality Estimator) 
+
+2) Wait for the problem to recur so that it runs slow from the application and fine from SSMS. 3) Compare the query plans for the 2 different environments (retrievable from the below) 
+
+Sorry. The only reliable way is to store this information yourself. Most commonly by storing some increasing value such as an generated value or sufficiently high precision timestamp as a column in every row. (which would be most suitable could depend on various factors - Should rows inserted in the same statement be treated as inserted simultaneously for example?) SQL Server doesn't keep track of this information by default and you cannot rely on the rows being stored in insert order. 
+
+You don't need to (and shouldn't) concatenate a string just to join on multiple columns. You can use 
+
+Based on your description of events yes this must have been the case. The free space might have arisen either due to the initial size of the database files leaving more than 5GB free, or last time it needed to grow the increment was big enough to leave at least 5GB free, or space was reclaimed from deleted rows or dropped items in the data file or some combination of these. 
+
+You seem to be expecting that the parameters will end up being treated as string interpolation arguments. They won't. One way of achieving something similar to what you want would be simply to parameterise the stored procedure 
+
+If we ignore that would remove duplicates (which seems valid to ignore in the case given in the question because can't clash with a string). 
+
+If you can't change the query you can use a plan guide. Test the performance of the query with (will need someone with permissions to try this). If that produces satisfactory performance you can apply this with a plan guide. If it doesn't produce satisfactory performance try and find a hint that does. Possibly if inappropriate nested loops is the problem. You might need to resort to the hint. Once you know the hint(s) required you can apply them using the information here. 
+
+It has no clause so it must process and aggregate all 40 million rows. SQL Server will not take advantage of the index order and skip scan ahead to the next once it has found the for the current group but will continue processing the other rows in that group. Each group has an average of about 30,000 rows. As you have another table that lists the 1,386 distinct IdTag types then you could try the following instead. 
+
+This plan now correctly costs for reading the full 200 thousand rows in both index seeks but over costs the key lookups (estimated 2 thousand vs actual 0. The would constrain this to a maximum of 10 but the trace flag prevents this being taken into account). Still the plan is costed significantly cheaper than the full CI scan so is selected. Of course this plan might not be optimal for combinations which are common. Such as white swans. A composite index on or ideally would allow the query to be much more efficient for both scenarios. To make most efficient use of the composite index the would also need to be changed to . The table below shows the seek predicates and residual predicates shown in the execution plans for all four permutations. 
+
+I believe this is because it is an extended stored procedure and the parameter names are actually entirely ignored. It just goes off position. I have renamed them as below (and given them all the same name) and it still works fine. 
+
+So instead of it reads then discards all the rows. Another disadvantage of relying on it is that the cardinality estimates may not be as accurate as with the traditional range query. This can be seen in an amended version of your SQL Fiddle. All 100 rows in the table now match the predicate (with datetimes 1 minute apart all on the same day). The second (range) query correctly estimates that 100 will match and uses a clustered index scan. The query incorrectly estimates that only one row will match and produces a plan with key lookups. The statistics aren't ignored completely. If all rows in the table have the same and it matches the predicate (e.g. or ) then the plan shows a clustered index scan with an estimated 31.6228 rows. 
+
+Your maintenance plan should not contain any shrink tasks anyway. These cause fragmentation by moving pages around the file and likely the database will just need to grow back to its original size shortly anyway. But this isn't causing your error. 
+
+The query is pretty simple and ought to run fast enough. My guess is that you have a long running transaction performing DDL in one of the databases and your query is getting blocked waiting on a lock. Unfortunately the metadata functions such as don't take account of the transaction isolation level of the outer transaction so even setting the isolation level to allow dirty reads wouldn't help. Can you try this alternative method of doing the same operation and report back? (If still slow try adding to the beginning) 
+
+There is no inbuilt method for granting permissions on tables matching a pattern. You need to grant it to the individual tables. It would be quite easy to generate the required script with a query against for names though. Instead of using a VVC prefix you could create a VVC schema. Then you can grant select permissions on the schema. This would also cater for tables added in the future to the same schema. 
+
+Just in case it isn't clear what the problem is the result of the has two columns called . One from each table. A table can't have two identically named columns so the attempt to create a table with that format fails. The solution is don't use . List out the columns you want explicitly and remove duplicate columns that you don't need or use column aliases to disambiguate any dupes that you do actually need. Usually for a full outer join what you actually want is 
+
+Add before the delay to flush anything in the buffer to the client (SSMS?) first otherwise SQL Server will wait for more data to fill the packet. 
+
+My question is: What is the reason for the better performance of the table variable version? I've done some investigation. e.g. Looking at the performance counters with 
+
+So you get these results because under your default collation these characters sort after but before . It looks as though the collation is defined to actually sort them in mathematical order with the fractions in the correct order between and . You could also use a set rather than a range. To avoid matching you would need a collation 
+
+As you say the query doesn't make any sense. Probably just a parser bug in 6.5. There have been a few similar other issues worked until 2005 with the SQL Server 2000 behavior being 
+
+This seems to be an area with quite a few myths and conflicting views. So what is the difference between a table variable and a local temporary table in SQL Server? 
+
+you may be able to encourage the intermediate materialisation without creating a table explicitly by changing the definition of to 
+
+showing that the (or at least the table variable population) is still carried out and raises an error even though that branch of the statement should never be reached. The plan for the version is below. 
+
+The logical built in place to put this kind of metadata about columns might be in the description box when the column is selected in the table designer. 
+
+With the use of you presumably are getting more accurate cardinality estimates and therefore a different plan with join orders/ join types more suited to the number of rows returned from different parts of your actual query. 
+
+The slow plan isn't calculating the for each row in the outer query. In fact it never explicitly calculates it at all. It gives a plan similar to 
+
+Which appears to show that for large inserts out performs . It doesn't test cache size 1,000 however and also those results are just one test. Looking specifically at cache size 1,000 with various batch sizes of inserts I got the following results (trying each batch size 50 times and aggregating the results as below- all times in μs.) 
+
+but technically a sort could be avoided if you could get a plan that processed the partitions in order and just concatenated one ordered result to the next. If you are happy to assume that the partition numbers will be in order of value (I don't know if this is actually guaranteed but it seems to be the case even after partition splits) then adding a leading column to the sort of the partition number achieves this 
+
+The project home page lists several intriguing projects. One is particularly relevant to the question here 
+
+This is the correct behaviour. The after trigger should reflect the rows that were actually deleted. If you had an audit trigger recording 10 deletions when only 8 occurred this would be clearly incorrect. 
+
+Similarly all computed columns referenced in non clustered index definitions as key columns need to be stored at all levels of the index as they are part of the index key. There is the same requirement regarding precise/deterministic results. Fails 
+
+The difference is between CLR static methods () and instance methods () Static methods are defined on the type itself and are generally utility methods that get everything they need to operate passed in as method parameters. Instance methods operate on an object of a particular datatype and are able to access the private state of that object and mutate the object or return a result that uses that state. always returns the same result. will return a different result dependent On what is. 
+
+It appears to do it in sequence in your plan. Not in parallel. The insert happens into the heap. The inserted rows are inserted into the eager spool which is a blocking operator. When all rows are inserted into the base table the rows are inserted from the spool to the view. As for the percent issue it appears that the spool confuses SSMS. Despite showing up twice in the plan (with the same ) its cost should only be counted once but it seems as though its cost is completely disregarded when calculating the overall estimated subtree cost for the plan and then it displays the operator percentages as a proportion of this incorrect total.

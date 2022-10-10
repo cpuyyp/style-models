@@ -1,0 +1,47 @@
+Nitpick I really encourage you to place braces systematically around if-blocks. There's little reason not to, and it'll prevent the occasional slip-up. 
+
+Your design sidesteps those two pitfalls, which is great. Furthermore, your use of the attribute ensures a compile-time check of the format vs the arguments. Unlike the contenders presented, it will diagnose at compile-time that the number of arguments matches (on top of their types), avoiding the necessity for runtime errors. 
+
+Unless you wish to optimize the code, with specialized swappers for various hosts orders, you are doing it wrong. I invite you to check The Byte Order Fallacy by Rob Pike. The punch line: the byte order of the computer you are executing the code on doesn't matter, because the language abstracts it for you. Thus, only the byte order of the network matters, and the network is big-endian: 
+
+The outer loop we cannot do anything about, but what of the insertion? In your code, the insertion is done by: 
+
+And now, how do we prepend? In C++, using is bad form. C++11 fortunately provides (and C++14 provides ). This is a factory method: pass the type as template argument, pass the arguments to be forwarded to the constructor of this type as regular arguments, and low and behold it returns an instance of this type wrapped in a . 
+
+It would also be more resilient to consider the edge case of starting at 0. It would also make sense to either have a parameter (specifying by how much to resize), or change its name to (resize could be either way, but this is only ever growing). 
+
+As a side bonus, can be forward declared by your users. 5. Exception should inherit . It's a convention that most everyone follows which allows catching all exceptions and being able to display something with which beats hands down. 6. Public first, please. Header files are often peeked at by your clients. Therefore, it is a good idea to expose your class interface in the order: , , . This minimizes the number of irrelevant lines that the user has to skip. 7. There shall be no global state. Global state is a plague on software as it prevents local reasoning, the primary tool you have to understand how a piece of software works. It also suffers from data-races, however just slapping is not a panacea either: it doesn't solve the local reasoning issue and prevents clients from using different threading models such as coroutines. In your case, it's even worse, because there is no good default date which will satisfy every user. 8. Global constants are good. But they shall be constants, hence: 
+
+will be responsible for handling the resource, this implies allocating it, moving it, assigning it, copying it and freeing it. will be responsible for string operations: catenating two strings, finding a character in the string, finding a pattern in the string, ... and will internally rely on for its resource handling. 
+
+This ties in with the bigger question of whether you really want to expose the itself, where a null node represents an empty list and the user has to explicitly call on nodes you return. I would recommend to avoid exposing pointers and therefore to create a class with an inner struct. 
+
+So, not only should you generally avoid , is a mouthful. Just write to get an end-of-line character and be done with it. Thus, we rewrite : 
+
+They are , meaning that they can be copied implicitly, so there is no usability penalty to having the caller by pass value, They are cheap to copy, so there is no performance penalty either. Actually... it may actually perform better. 
+
+Let's start with the small stuff, to get in the groove. Naming convention Whether you use camelCase or PascalCase or snake_case does not matter, as long as you do so consistently. Pick a style for your class names, the same or another style for your functions, etc... and stick to it. I will assume that you go for PascalCase for classes and snake_case for methods, but do as YOU wish. Spaces The C++ grammar allows you not to put spaces around operators, however this really hurts readability. Use spaces: 
+
+Safe interface Whenever designing an API (or interface), you should strive to make it as safe as possible. Your interface here is not safe: having two un-linked variables to correctly pass is asking for troubles; it is just too easy to mix the variables up and pass a size that does not correspond to the array to be sorted (or printed). Obviously, in your toy example it does not show up, however as soon as you manipulate multiple arrays in the same function you'll be very likely to make this mistake. And even with a single array, passing the length before re-allocating (for example) is also likely. So, you need to aim for an interface that conveys both pieces of information in a single argument. An obvious choice is , another would be some instance of or a but those are not Standard so let's not bother for now. Thus, the interface becomes: 
+
+There are minor performance improvements possible still, short-circuitings notably, however they do not improve the worst-case complexity so I left them out to avoid mucking the algorithm. 
+
+I will not lie, exception safety can be hard in vectors. Inserting a range of elements in the middle of the vector is a nightmare when the move constructor/move assignment operator may throw. 
+
+You intend to create a copy with twice the capacity, but instead modify the and leave empty. It should be: 
+
+You are using a lot of manual loops, which may cost performance (unless the compiler recognizes it) and certainly hinders readability but more importantly there is a lot of repetition in the prefix checking, and since you are about to parse files this repetition will probably continue further. So let us start with a few helper methods on : 
+
+Thus I advise jumping the gun and just switch to iterators since that it what the interfaces of the algorithms we use consume: 
+
+A galloping search to locate the two powers of 2 between which logk(N) would be if N was a power of 2. A binary search between the last smaller power of 2 and its successor to locate the exact exponent. 
+
+Note: while it's relatively clear that will have a range , it's unclear whether has a range or ; don't tempt the user. 14. Name your parameters. Here, is probably understood, but in general please attempt to give your parameters full names. Abbreviations are really not necessary in general. 15. Rule of Zero The Rule of Zero states that you should rarely (if ever) define a Copy Constructor, Copy Assignment Operator, Move Constructor, Move Assignment Operator or Destructor. It is only necessary on technical resource management classes, such as or . If you ever find yourself writing such a class, be sure to make it as minimal as possible; without any business logic. 16. Be consistent. Your interface sometimes use for month (where it's ambiguous) and sometimes . Stick to . 17. Follow conventions. The return type of and is never const-qualified, to allow chaining. 18. Be sparse in your includes. You never use , so you may as well only include in your header. Minimizing the amount of includes in your headers help with compilation times. 
+
+In this answer, I will concentrate on since this is the only part you have actually presented, so is dead simple: 
+
+Let's now move on to more interesting stuff. Dynamic Memory Allocation For production code, using or is forbidden1. You should be using , , or one of the many Standard Library containers. Since you do not appear to be familiar with , I advise you to add them to your reading list and will use naked pointers for the rest of this answer. 1 Unless you are an experienced developer, and no other language facility or library allows you to write this code, and your colleagues have extensively reviewed your code. Initialize your values Whenever you build a , you have to explicitly remember to initialize the member to and the member to , lest they have garbage values. Instead, use automatic initialization and constructors: 
+
+It's not idiomatic, and definitely not good style. C++ has evolved along the years, and C++11 brought along a swath of new facilities that good C++ style should now use: they help cut down the number of bugs. Let's start from the bottom up, with : 
+
+If you can easily obtain both streams in sorted order, it would probably wins hands down. If you have to prepare a dataset (sorting it), then it is still advantageous for very large datasets (that barely fit in memory). If both datasets easily fit in memory and one is not sorted, then use another solution (pull the smaller one in a hash-map and look-up into it while iterating over the larger one).

@@ -1,0 +1,43 @@
+Obligatory disclosure: I have worked for MySQL AB/Sun Microsystems & Percona (I never worked for Oracle). I'm now independent, and have no shares/remaining stake-holdings in any. I do however acknowledge that I have a stake holding in MySQL succeeding in general, as I have invested time in a specific skill-set. 
+
+The file is only used by (which is deprecated). The new way to bootstrap a server () writes the randomly generated password to the error log. 
+
+The best way to see current threads (including all foreground and background threads) is now with . For example: 
+
+I would suggest looking at either configuration or hardware. I would agree that 200ms is a lot, so it looks like there has to be some contention somewhere. 
+
+MySQL cluster is built around an index structure that is optimized for memory fit; a T-tree. This is different from your regular storage engines in MySQL which use a B-tree or B+tree structure, which can survive quite well out of memory fit assuming that you have some hot-spots / non uniform access (this is normally a safe assumption). If you want to build some sort of proof-of-concept, there's nothing stopping you from using a large amount of swap to compensate for your lack-of-ram. Just be aware that this will not perform well, and you are using a product for a use case it is not designed for. 
+
+I wrote about this a while ago, after I contributed to the interview process at Percona. I think that to assess someone, you have to try and make them do what they would be doing in regular day-to-day activity. Random questions like "What is a serial data type in MySQL?" or intelligence questions like "why are man holes round?" do not achieve this. You also want to make sure that you give everyone the same test. If you have an open-ended conversation only interview, the more confident and (slightly manipulative) people will stand out, as they can subtly skirt around your questions and change them into ones they are good at answering. You won't always realize when this is happening but it often contains something like "when I started as a DBA we had 2MB of RAM, and used tapes.. blah blah blah" :P Having said that, here's my standard list of questions: 
+
+You can use statement-based replication and add the column to a slave first. Any pending modifications will queue up on the slave, and apply once the alter has complete. When the slave is fully up to date with the new schema, you can effectively 'promote' it. I am sure you are aware, but MySQL 4.1 is quite old. Triggers were not introduced until MySQL 5.0 (2005), so this limits your options to use tools like pt-online-schema-change. 
+
+MVCC applies to isolation levels read-committed and repeatable read (default). You don't need to specify anything for both of these features to work together. Maybe one way to think about it, is that row level locking is important so that you can update multiple rows at a time, and MVCC is so that the updates don't affect read operations at all. 
+
+This is a somewhat complicated question. When first starts up, it will allocate a bunch of memory for itself, but the operating system will actually delay allocation until the memory is first read or written to. That is to say that you will often see in a program like that the size is much larger than the size until the server warms up. Within caches like the and will have a maximum size (that you can change in your my.cnf file). When these buffers are full, then they will discard the least recently used (LRU) contents to make room for new content to enter the cache. So yes, after some inactivity (and assuming a full cache) the tables that are not in active use will be removed from the cache. In MySQL 5.6 it is possible to see the contents of the via a series of meta-data tables in information schema. I have an example of this (to show ideal minimum cache size) on my blog here: $URL$ 
+
+An index on (s,s,l,l) only uses the index for (s,s,l), but applies Index Condition Pushdown for the remaining (l): 
+
+To extrapolate a little from your question, I am assuming you are worried about memory fit with a tree, because to efficiently search, all root nodes should be in memory, since you always have to walk this path to find your leaf pages? This is true, but one consolation is that commercial databases try and make their trees as fat as possible, rather than deep. Try running xtrabackup --stats on your data to see. For example: 
+
+I recommend using the SYS schema that ships with MySQL 5.7. This will show you lock waits (more useful than locks) in a pretty easy to diagnose way: 
+
+MySQL cluster is a storage engine for MySQL, which distributes and replicates data in an in-memory cluster (NDB data nodes) and can be queried via MySQL servers (SQL nodes). Where it gets confusing, is that MySQL Cluster also has a native API where you can avoid the MySQL storage engine system and communicate directly to the data nodes with the NDB API, which is kind of NoSQL-like. I'm not aware of any other storage engines that have this ability, and there are many large customers preferring this method of usage. MySQL Cluster also has it's own release cycle and versioning system, and is currently at version 7.3. 
+
+There are a number of commercial tools that allow MySQL to Oracle replication (Continuent, Oracle GoldenGate). I have not used any specifically, so I can not provide specific recommendations. If you are going to write your own solution, I think the best way is to watch the binary log stream. I have an example of how to do this on my blog. 
+
+For (1) I/O will be able to execute in parallel for this. There are some limits with MyISAM: table locking and a global lock protecting the (index cache). InnoDB in MySQL 5.5+ really shines here. For (2) this is currently not supported. A good use case would be with partitioning, where you could search each partitioned table in parallel. For (3) InnoDB has linear read-ahead to read a full extent (group of 64 pages) if >56 pages are read (this is configurable), but there is room for further enhancement. Facebook has written about implementing logical-readhead in their branch (with a 10x perf gain on tablescans). 
+
+In the comments of my post Tim Callaghan linked to this: $URL$ Which shows inserting 1 Billion rows using the iibench benchmark. 
+
+The configuration option tells MySQL what interfaces to listen on. By receiving the error we can see that is actually working fine. What you will need to do is modify MySQL's privilege system so that you are able to connect from . The potentially confusing part of privileges in MySQL is that it is the combination of a username + the host. This is covered in the MySQL manual here. 
+
+Starting with MySQL 5.5 InnoDB uses a modified LRU algorithm to prevent table-scans from filling the buffer pool. By default only 3/8ths of the buffer pool is available to table-scans. In MySQL 5.6 this is further improved so that a page must be in the buffer pool for 1000ms before it can be promoted to the remaining 5/8ths hot-list. So while this technique was useful in the past, it is no longer as reliable of a method to warm caches. 
+
+I would say that you benefit from future proofing your environment, because inevitably you will want to add more slaves. I also don't like having to remember specific coordinates of what statements have applied/haven't when doing a restore. Having the server know the current set of applied statements is very useful to prevent duplicate processing/rogue corruption. In 5.7 mysqlbinlog even has a mode. Operationally GTIDs are much easier to manage, and are the future :) I recommend row-based replication as well - I think it's a great option: $URL$ 
+
+In my opinion you are changing too many settings without evidence of benefit. In some cases you are also setting values to the default, which is fine - but it may be beneficial to just inherit the default so that if it changes you can take advantage when upgrading. Specifics: 
+
+You need to check the server's error log(s). There are too many situations that could cause this problem. For example: 
+
+The short answer is no: I can't think of a difference from MySQL defaults that would cause this. The longer answer is that it is possible to reduce some locking with READ-COMMITTED as the isolation level + Row-based Replication. To which RDS does not support switching to Row-based Replication :( Whether or not this reduction in locking will help you depends on your schema. See my blog post here under "Write scalability of certain statements".

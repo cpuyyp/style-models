@@ -1,0 +1,93 @@
+so you know the last digit is 0. This condition can then be discarded once you restrict generation to have the last digit as . This basically simplifies the problem to a nine-digit problem. 
+
+The spacing is a bit cramped, but primarily I'm concerned that there are the wrong number of elements! Remove the last one. Further, a comprehension is much cleaner: 
+
+This does prevent accepting mutable arguments, but it's normally best to enforce purity before caching arguments anyway. You then have just 
+
+I used for simplicity; it doesn't noticeably affect timings. Using as a variable has a small but unimportant cost. Times: 
+
+Note that does not currently handle the changes to game flow made with regards to finishing the game. 
+
+I would also consider changing the description; it's obvious from introspection that and default to empty, which is counter-intuitive. I would change it to 
+
+If bracketing substitution was done at the AST level, this would be dealt with by but it would rather hacky. A better option might be keeping a bracket stack during . 
+
+Python has PEP 8, a well-followed coding standard. It's a good idea to stick to it. One point is that most things, global constants and classes asside, should be . I'll rename these as I go, so names will change their case convention as I talk about the code. You don't use , so chuck it. Your is only ever used for one of its results, so split it up. I'd also inline it. Note that you can use for flooring division. The calculation is just . This gives 
+
+Your insertion requirements are mighty strange, but I guess you have some reason for them, so I won't comment further on that. 
+
+Now you can define a look-up table of functions corresponding to the logic table above. Do this by declaring an array of function pointers: 
+
+I'm sorry for my bluntness, but this code is absolutely horrible and unsafe. To worry about global variables while using a mess of function-like macros, together with /, is kind of like worrying about the paint of your car while smoke is raising from the engine and the breaks are dead. Apart from that, trying to re-invent the C language is always a bad idea. Mainly because it confuses other C programmers. You can implement exception handling in much safer and more readable ways: 
+
+The truly fastest way is some manner of look-up table, as demonstrated in another answer. Such a table could even be generated at compile time: 
+
+( please note that naming a variable "str_cat" is very bad practice, I just couldn't resist sneaking in a C programming joke :) ) 
+
+Overall, the program is fairly well-written and clear. One particular good thing is that you have grasped the concept of private encapsulation in C, by placing the static keyword in all the right places. You also use const correctness for your function parameters. All of that is excellent program design, so keep using it! Below are my comments regarding various issues in the code: Bugs found: 
+
+This will reduce function call overhead, but it also lets us remove some of the significant calculation overheads. One could do: 
+
+since isn't generated each access. You should make and local variables to , not instance variables. Don't write: 
+
+Doesn't work. I don't know enough Ruby to tell you why, but it doesn't. Use instead. Further, is not the right calculation. You want . You can simplify 
+
+This allows removing even more of the code. intermission Don't use as a variable name; it clashes with the built-in (same for ). finishing up I feel this is a bit awkward still, but it's nicer than before. 
+
+That's the entirety of the logic! Another test case you should consider is . Does that have 1 significant figure or 3? 
+
+One big advantage (other than simplicity) is, whereas is for s, and are for s. should be extracted into a function, as others mentioned. However, this code is imperfect: 
+
+You should order your imports. should just be called by convention. and the tiles being loaded should be done inside a local scope like . shouldn't be in capitals. The tiles (, , , ...) should be encapsulated into a or class. This makes it simple to pass around handles to resources without making them globals. You repeat 
+
+I don't know what you mean by . If you have encountered difficulty with something, a good comment will explain what is problematic - not just that it is. Hopefully you'll find the new one more capable: 
+
+Combining the suggestions made by Bizkit and William Morris, I ended up splitting the function in two, one that removes all occurrences and one that only removes leading occurrences. To solve the restrict issue, the "remove leading" version calls a in the case where there were no initial characters found. The custom strcpy is defined as: 
+
+As for the rest of the code and overall hardware concerns: this code will be widely ported between various smaller, single-core microcontroller embedded systems. I believe the number of instructions is the main performance concern, then program size. Things like improving branch prediction are likely not a very important concern. 
+
+This code is very easy to understand. However, you asked for optimization and my code doesn't look all that effective; it is possibly slower than the original. Particularly, we have multiple checks for '\0' all over the place. Note that any truly meaningful optimization requires that 1) we have actually encountered and measured a real performance problem, 2) we have noticed that the compiler is doing a poor job at optimizing that particular problematic code, and 3) we have fairly good knowledge of the target CPU and hardware. It a bad idea to manually optimize code if those 3 above conditions are not met. Still, I'll attempt a manual optimization of this, since it was requested. It may or may not be more effective. Branch prediction may be a more serious concern than the number of comparisons executed, for example. For what it is worth, here you go: 
+
+Your first example looks much nicer, so I'll focus on that. First, let's remove the tail recursion in the most obvious way possible: 
+
+It's not clear because I don't know what the code is meant to do. This is what I've ended with. I don't know if it works: 
+
+...except for the fact that borrows mutably so doesn't work. This is fixable with a destructuring assignment. 
+
+Note that the duplicates here are allowed, as removing them requires knowing the value of . Further, consider the contribution of x: 
+
+since Rust doesn't like skipping steps like opening files. Rust also won't implicitly panic in these cases, like Haskell does. The next function is more tricky: 
+
+You can drop the . You should really find a consistent formatting. Since I'm lazy, I just ran it through with the default settings (LLVM-style) except with 4-space tabs. It's probably best not to call - there's no real reason to avoid flushing unless you are actually needing the speed. I also removed the timing code, since it seems to be for debugging purposes. This all gives: 
+
+We know it's way faster on CPython, but how does this compare to the original version on PyPy (once stuck inside a function)? 
+
+Note that this orders by insertion order, not by keys. So you have to be sure to insert keys in order. One alternative is, instead of building a dictionary, 200_success's strategy of keeping a list of what list to take from: 
+
+EDIT Also, consider adding new line characters after each print, for readable output. Code with the above suggestions: 
+
+No, that is very good practice and a good habit. Particularly, there are many dangerous, implicit type promotions going on in C, that explicit type casts can prevent. However, if you want to be explicit, you must actually have quite a deep understanding of what's going on between the C lines. Until you do, you will end up causing more problems than you solve with this coding practice. Also, you do a couple of pointless things that only clutter down the code. 
+
+Unlike any code using recursion, this code is efficient. Feel free to benchmark against the recursion versions and note the vast improvement in speed and memory consumption. 
+
+I am writing a portable library function, which is a generic "remove characters" function. Language standards used are C11 and MISRA-C:2012. TL;DR: it should either remove all occurrences of a specific character in the beginning of a string, or it should remove all occurrences of the specific character no matter where they are in the string. The detailed specification: 
+
+This is not a working program, you have several bugs. Also, the program design is not the correct way to implement opaque type. Program design 
+
+General advise Never write the whole big program at once. Write a litte bit at a time, compile it, test it, if there is anything wrong with it, fix it. Develop the program a tiny bit at a time. 
+
+You'll see very clearly that the code is buggy. Investigate this yourself, and then come back to this post. 
+
+CPython doesn't deduplicate repeated constants like PyPy does, so one should deduplicate it manually. We should also move to using instead of : 
+
+Sorry, Sieve of Sundaram, you're not that great after all. :P And, heck, that Python 2 version is way too fast. 
+
+We're doing then then , etc. From onwards, though, there aren't many things set each run. We end up moving back-and-forth in the array a lot, spending more time "seeking" in memory than actually setting items. Consider, though, this decomposition: 
+
+Your is an exception, so should be called . It's also not needed since already occupies this niché. You should break this onto multiple lines: 
+
+will actually create a slice, which is a new list. This can be almost the size of the original! Instead, 
+
+Interestingly, the original is significantly faster on PyPy. This implies that unless you want a code base optimized for both CPython and PyPy, some of these optimizations (like ) just aren't needed. 
+
+Right off the bat, I see you're using arbitrary-width types to represent fixed-width values; though this isn't wrong per-se, it is certainly needlessly confusing. If you use something like , comment it with why you did so. As far as I can tell from looking at the assembly, this never produces different output than a straightforward, standard , so I'm strongly tempted to use the later. Being performance conscious doesn't even mean you get to drop operator spacing, so do more of that! We see that your is late; doing an early test as

@@ -1,0 +1,77 @@
+You'll notice that I removed the setters from both the interface and implementation. From the same document as before: 
+
+returns a boolean value, so what you're saying here is or . When you think of it this way, you'll see that you can simplify this by simply saying . 
+
+You've already received a very good answer, that I completely agree with. However, I want to mention this just in case you really want to stick with the error handling pattern that you're using right now. (I recommend you don't by the way.) There's a bit of code here that essentially does nothing. 
+
+Now there's no messy code trying to keep the Identity sequential. You let the identity do what it is meant to do, and use this calculated column for whatever reason you need this to be sequential. Just remember, you still need to use the actual Id to identify any particular record, because the or of the record could change as records are deleted form the database. 
+
+Which is a really good reason to not abuse the statement like you have here. Just explicitly call this on and be done with it. 
+
+Side note: Using to declare the variable also makes sense. It reduces repetition and will make it so there's one less change to make if you decide to change the implementation. 
+
+One thing to note is that anytime you're creating an instance of Excel, you need to wrap that code in a . You take in a string file path, but what if it's not a valid file? Then this line 
+
+Let's check the source sheet for data prior to doing anything else. Remove dead variables & and all related dead code. Change from a variable to a constant, it's value no longer changes. 
+
+You're right. You need a better regex, but not exactly for the reason you mentioned. The one you're using is indeed very permissive. It misses many of the cases that need to be checked for. 
+
+Either way, the comment needs to be much more thorough and clear. While we're here, I have a convention for variable names that are used to return values from params like this. I think prefixing them with makes the intention much clearer. I've been bitten by this before.. 
+
+You could write your own interfaces and use them to wrap the classes from the namespace, but why reinvent the wheel? Go install the System.IO.Abstractions nuget package in your project and call it a day. 
+
+That's an improvement, but we're still dealing with a lot of numbers that don't mean much to us until we reference back to the actual worksheet. Let's define constant values for them and some functions that are responsible for getting data from the worksheet. 
+
+Otherwise, some maintainer like me is going to come behind you and remove what looks like dead code. Now, there seems to be some debate about whether or not to declare empty finalizers, but I found a great analysis of the topic that you may be interested in. The TL;DR version of that piece is below. 
+
+The factory should return an instance of the base class or interface. Yours returns a concrete instance of the particular type. The factory itself should adhere to an interface and be broken into one factory class for each concrete type. 
+
+You should also throw new argument error here instead of returning a string from your function if it hits the default case. Instead of 
+
+So, in any public member of your class that uses , you should check the new field and throw accordingly. For example: 
+
+This is a huge improvement over the last version. I'll try to give you some pointers on how to improve this farther, but I am also going to tell you this. Your database is very poorly designed (if not downright broken) and nothing we do here will fix that. If you were using proper keys on your database, you might be able to develop a sql solution to this. You use as a key, but don't have it defined as such. That column should not allow nulls. Period. I suspect that is the source of your woes and the rest of this is a symptom of that. Now that that's out of the way, let's see what we can do short term to clean this up further... Why are you adding an empty string to the end of ? That doesn't do anything at all. (Note: I just found several more instances of this. I really don't understand it.) 
+
+I know you've already received an answer to your question, but I believe you could benefit from some feedback on the code you wrote. You've numbered your squares oddly, and I believe that is the source of your problems. The squares in your grid should be referenced using (x,y) co-ordinates. Or row and column if you prefer. Storing your squares in a 2d array would probably make this entire function obsolete. However, I do see some issues within the code. The first of which is this. 
+
+If you'd like to stick with your curried version of , I'd recommend swapping the parameter order so you can do this, which reads pretty well without the intermediate function name. 
+
+Maybe it's because I "grew up" with a language where everything is passed ByRef by default (.Net passes ByVal by default), but I don't like assigning values to arguments. 
+
+There are so many examples of using one letter variables for lambda expressions out there that I don't blame you. I don't. We all do it, and often we shouldn't. I think this is one of those times. Sure, I think I know what these stand for, but am I certain? No. Either way, I had to think about it longer than I should have. 
+
+This is where it just shouldn't matter what type of we have. The code should just work so long as the message returned from the handler adheres to the interface. We can fix this by letting each define it's own behavior. First, let's adjust the interface a little bit. 
+
+And now we're ready to serialize/deserialize this information. First, an example of reading (deserializing) this information from the XML. I keep this in a static class. You may want to do something different depending on your needs. 
+
+You can do the same for and , but you will need to Override the property. You should also do yourself and the devs you work with a favor and study up on the C# Naming Guide. Properties and Methods should be PascalCased, variables should be camelCased. Also be careful with your bracket placement. It's usual to see brackets on the new line at the same indentation level. They're all over the place in your second snippet. 
+
+This provides a much nicer string back. Consider a workbook with a value of "Hello!" in cell A1 and the following code. 
+
+This here is overly verbose. It's obvious what the type is from the right hand side of the assignment. 
+
+All in all I think this looks pretty good. Without proper inheritance, you're pretty much stuck with the boiler plate properties that simply call on the private untyped 's properties. Everything in regards to that was done right, vba just kinda sucks like that. The only thing I really noticed that I didn't like was the way you're using magic numbers to raise errors. 
+
+You're doing nothing with the result stored in . Either do something with it or remove the variable and block. ( is a pretty bad name by the way, if it stays, consider renaming it .) 
+
+Two things. As a maintainer of the code, I've no idea why you're stripping out the ampersands. A comment here is in order. Secondly, this loop needs a StringBuilder. StringBuilder is a mutable string of characters and thus, more efficient in this situation. 
+
+Here's the thing about IoC containers... You don't need them. They just make our code near the root easier to read and deal with. Write your code so that it doesn't know that there even is an IoC container. When you're done, you should be able to create and run an instance of your program using any container, even one that we hand write into the composition root. 
+
+If you changed this to use an enum instead, that comment becomes obsolete and can be removed. Always try to let the code document itself. I would much rather see this. 
+
+Recursion. You need some recursion friend. Create a function that returns the value if it's found or calls itself on the next level if it's not found. This may not be a 100% working solution, because I don't have quite enough context for that, but it should give you a good start. 
+
+Whenever possible, avoid both static methods and "newing" objects inside your methods. Both make tests difficult to write. 
+
+Note the use of a named parameter to make it clear what represents. I also probably wouldn't inherit from dictionary. 
+
+CommitVisitor.cs Git's commit history isn't a tree, it's a graph and we don't want to visit any commit more than once, so this class needs to keep track of the commits it's already visited. 
+
+Don't do that. Spell it out for whoever has to read that log. It's also noteworthy that there's a lot of copy paste in the function, as evidence by the snippet above. It's wholly worth while to extract that logic into a function that takes an object and a string in as arguments. 
+
+You may have your reasons for it, but there's a lot of duplication in your statement. Consider whether or not a type statement would meet your needs. It will perform worse, so test it against your original to see how bad the performance hit will be. 
+
+I understand that you did this so you could preview results. By all means, leave it. However, you could change the way you comment it out to make it less of a hassle to "toggle". Consider using a multi-line comment like so. 
+
+Assert statements They're awesome. I should use them more myself, but they're not always appropriate. Let's start with when they're appropriate and then look at how you've used them. Assert statements are fantastic for internally checking conditions during development. They get compiled away in our release build, so use them liberally anywhere we need to check a precondition... internally, in places where we have direct control on the input and if conditions don't meet our expectations, something is wrong that the dev needs to look into right now. When I say internal, I really mean internal. I'm not up to speed with Java's scoping keywords, but in C# this would be in private, internal, and (maybe) protected methods. Anytime we're in a public method, we need to be a bit more robust with our argument checking, because we have zero control over what the client hands us. So, back to how you used them.

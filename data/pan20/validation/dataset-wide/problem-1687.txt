@@ -1,0 +1,67 @@
+You can't run PHP code from S3 at all -- it's just a storage service and a web server, it doesn't include a PHP application server. As the other answer states, you can set up an instance in EC2 and run a web application there, but EC2 and S3 are two different services. 
+
+A need for PCI compliance would be a contraindication. PCI DSS version 3.2 requires that you "Implement only one primary function per server to prevent functions that require different security levels from co-existing on the same server". Config and sharding would be two primary functions. 
+
+You need to install the appropriate intermediate certificate, chaining your certificate back to a root certificate that's installed in the user's browser. You should go to this page, download the certificate bundle that's appropriate for your certificate, and then install the bundle in your web server -- how you do that depends on what web server it is, which you haven't specified. 
+
+Yes, if a request is chained through more than one proxy server, then each proxy should add the IP of the preceding one to the existing X-Forwarded-For header so that the entire chain is preserved. 
+
+For redundancy within a single site, on a single Internet feed, you want to put clustered hardware on your front end, with a standby box ready to take over the IP address of a failed box. But you'll be out of action if your ISP has a failure, or your site loses power or suffers some other problem. If you want protection against loss of a whole site, or loss of your ISP, then there are really only two options. One is to get your own BGP autonomous system number, and run your own BGP routes, with peering (well, paid transit) with several different ISPs. The smallest netblock you can do that with is a /24, so you'll need to have a netblock at least that big. You can then advertise different routes to a different site if your main site goes down. Your other option, as you suggest, is round robin DNS. Some people advise against this on theoretical grounds, and there are problems with Windows Vista clients selecting addresses non-randomly, but it should work fine for redundancy, with the backup box just reverse-proxying traffic back to the main box unless the main box/site/Internet feed goes down. 
+
+We see that it simply redirects to _spf.google.com, so you can change it or not, and it will make no difference. I would probably go ahead and change it, in case Google ever turn off the redirect. (The instructions for setting up SPF for Google Apps say that you should include aspmx.googlemail.com: $URL$ But that also just redirects to _spf.google.com.) 
+
+Yes, you're probably shooting yourself in the foot. If every user session stores all the product information, you may run out of memory once you have a lot of users and a lot of products. I'd suggest using something like memcached to cache the queries against the product table, so that you're not hitting the disk too hard but you're not running out of memory either. But it really depends on what kind of scale you're expecting -- if you're only going to have 50kB of product data and 500 simultaneous user sessions, then you'll only be eating 25MB, and you can probably get away with it. If you're expecting 50MB of product data and 50,000 user sessions, then you'll be using 2.5TB of RAM, which you probably won't have. 
+
+An Elastic IP address is the correct answer. It will be deallocated when you stop the instance, but you can allocate it back to the instance after you have restarted it. If necessary, you can write a startup script on the instance that will automatically allocate the Elastic IP address. 
+
+You don't use a root certificate to generate a CSR. You use the root certificate and the CSR to create a signed certificate. What you need to do is to generate your CSR as if you were buying a third-party SSL certificate, and then sign it yourself instead. Assuming you're on a Unix box and have openssl installed, you then do: 
+
+The directory permissions should be 700, the file permissions on all the files should be 600, and the directory and files should be owned by root. 
+
+This is tricky to do without control of the main Apache config, since Name-based Virtual Hosts are the proper way to do it. You could probably improve your rewrite solution thus: 
+
+The easiest thing you can do to have good options later is to write your software in such a way that images can never keep the same filename when modified -- a change to an image must always change the filename. This means that you can set very long cache lifetimes, either through your own caches or through a content delivery network, which will greatly reduce the number of disk reads that you need. (You may need to have some mechanism to immediately flush a specific file from the cache or CDN, if there might be circumstances where an image has to be deleted completely.) To allow horizontal scaling, break the images up into a large number of groups (100 or more), and prefix the path to each image with the group it's in. You may serve all the groups off the same server now, but at a later date it will be fairly easy to use a load balancer to direct traffic to different servers based on the image group. I wouldn't use a clustered filesystem for images, because it adds an extra layer of complexity, and it's probably easier just to use multiple servers and some load balancer rules to spread the load. 
+
+Before you even start to look at optimisation, you need to work out where your bottleneck is. Check your CPU load, memory usage, network load and disk load on all of your machines. Then try isolating the time taken for different parts of the process -- time taken to execute queries against the database, time taken by your app in generating pages, time taken by the browser downloading and rendering the content, and so on. That will give you some clue about what kind of areas you should be looking to optimise. 
+
+No, it's not possible and not necessary to point a domain name at a specific port, in or out of EC2. Just create a CNAME pointing the domain name at the instance, and you'll be able to load $URL$ (assuming that your security groups allow it). 
+
+It's not actually five different websites using your service, it's one server which happens to host five different websites. Your service is used by servers, not by websites. To differentiate between them, you would have to require the websites to provide their names in a custom HTTP header, or make them all authenticate themselves with user names and passwords (or in some other way) in order to use your service. 
+
+The Common Name field is where you should put the domain name for the certificate. If it's blank, then the certificate is not valid for any domain. 
+
+It's not generally possible to "forward" a TCP connection. Load balancers terminate the connection from the client and open a new connection to the origin server, so any connection-specific information that the load balancer doesn't collect and pass on to the origin is lost -- most notably the source IP address (often passed to the origin server using the X-Forwarded-For header) and source port number. Amazon Elastic Load Balancers also have a short timeout period, which generally prevents them from being used for persistent database connections where the client expects the connection to stay open and available. They've recently introduced the ability to customise the timeout, up to a maximum of 3600 seconds (one hour), which might be enough for you. 
+
+A private key is in RSA format, not X509. Use "rsa" instead of "x509" in your openssl conversion command. 
+
+Yes, high latency on a network connection can certainly impact on download speed (there will be a lower impact if the TCP window is reasonably large, so that the source can send several packets without having to wait for each one to be ACKed). And any significant packet loss will have a catastrophic effect on performance, as every time a packet is lost the download will effectively stop for the duration of the TCP retransmission timeout. 
+
+No, if you use OpenVPN or similar, you will still have to assign other IP addresses for the VPN connections. The only way to do it that technically answers your question would be to assign additional addresses from part of the public IP V4 space that you don't ever expect to have to route to, and just treat that part of the public space as if it were private. But while it would be an answer to your question as written, it would also be silly. Just go ahead and assign additional IP addresses, it's not like you're in danger of exhausting the 10.0.0.0/8 address space. 
+
+Unless you're worried about eavesdropping from someone with the resources of the NSA, it doesn't really matter. Yes, some algorithms or key lengths have theoretical vulnerabilities that might be exploited, but in practice it's very unlikely that they will be exploited against you unless you're concealing extremely valuable data, and in any case as a "Linux newbie" you're almost certain to have much worse security holes than that. 
+
+You need a new certificate for test.domain.com -- you can't add it to an existing certificate that has already been issued. If you'll be doing much else with subdomains, you might consider getting a wildcard certificate for *.domain.com. 
+
+They need to be somewhere in your Apache config that will be read for the mywebsite.com domain. That may be or it may be somewhere else -- only you know your own Apache configuration. 
+
+The most obvious application is split horizon DNS, as the document says. Suppose you have some service on the hostname service.example.com, running in AWS, that is accessed both by your own AWS instances and also by external users. You want DNS calls for service.example.com from inside your AWS environment to return its private IP address while DNS calls from outside your environment for the same hostname should return its public IP address. 
+
+You need to run a cleanup on the old nodes, and perhaps a repair -- it won't move the data around of its own accord. See the documentation here for adding new nodes to a cluster. 
+
+And then you can test it with telnet to port 25. But note that sending emails from Amazon EC2 servers is not a great idea, as a lot of people have Amazon's entire IP range blacklisted in their spam filters. 
+
+You get 750 hours a month of micro instances on a free account. Since there are between 672 and 745 hours in a month, that means you can run one instance 24x7. You can run more instances for less time, if you want, but be sure not to go over 750 instance-hours in a month, or you will be charged. You can confirm this and check other free tier allowances here. 
+
+Run a virtual host for each user and suexec to a cgi application that runs in a chroot wrapper See here for a tutorial, for example.. 
+
+You can only do this if the domains are all subdomains of the same domain, and you have a wildcard SSL certificate. 
+
+If your storage engine is InnoDB, you can get a consistent mysqldump of a live database by using the --single-transaction flag (as long as you don't change your table structures during the backup). But it doesn't work with MyISAM. 
+
+What will you do if your main data centre suffers an outage, which happens at all data centres from time to time? You might accept the downtime, you might fail over to another data centre, you might be running in active-active mode in multiple data centres all the time, or you might have some other plan. Whichever one of those it is, do it when you do releases, and then you can take your main data centre down during a release. If you're prepared to have downtime when your data centre has an outage, then you're prepared to have downtime, so it shouldn't be a problem during a release. 
+
+What are the permissions on /Users/me, /Users/me/Documents and /Users/me/Documents/workspace? All of the folders in the tree need to be readable by the user. 
+
+Add your backup user to the wheel group, and it will have root privileges. Or add it to a less privileged group and give that group read access to the /root directory and all the files in it. 
+
+No, I fear the previous answer is wrong. If you stick to giving users subdomains then your wildcard certificate will work, but if you allow users to map custom domains to their subdomains with CNAMEs, then they will need separate certificates for each custom domain, and separate public IP addresses as well.

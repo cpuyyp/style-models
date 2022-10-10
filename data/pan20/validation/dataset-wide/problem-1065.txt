@@ -1,0 +1,57 @@
+Don't get me wrong, in a pinch this can absolutely be done and sometimes when the servers are beefy enough and the load is small enough and not so important that a few hiccups here and there will be noticed then it can work. For example, a runaway/poorly written/large data SSIS package is running but it's slow - what do you troubleshoot? Is there also a large parallel query taking up CPU in SQL Server, maybe the SSRS report is running a large report and rendering, at the same time SSAS is rebuilding a cube. How do you show that one is impacting the other? With all of the services running on the same server, it's extremely hard to pinpoint individual items... it can be done, with the proper amount of monitoring and troubleshooting. However, as stated before, I'd rather have each isolated so that when this inevitably occurs, I can get to the root of the issue much faster and with greater accuracy. 
+
+Nismo, It's not the SIZE of the database that matters (no jokes intended), it's the rate of change coupled with the infrastructure available. For example, a relatively static database might perform poorly on 1Gb connection on an overloaded switch with 5400 RPM sata drives. If the rate of change (aka look at your log flush bytes) is less than around 200 MB/sec and you have very fast storage (or a ton of front end cache) and extremely low latency networking then I would say you'll be fine. Let's go over your questions now: 
+
+The shared network location in that wizard is only used in the wizard and only used as a temporary location to backup the databases to and restore from that location to any of the replicas that could host that database. Apart from that, it has no use and is not used internally anywhere in availability groups. You can easily change the value to whatever new value your storage team has given you, but you'll want to double check that all of the replicas have access to said shared location. 
+
+That'll give you a start on how the pieces will need to fit together. There needs to be much more diving into how this will turn out, but hopefully this will point you in the right direction. 
+
+Restore the full backup, latest differential, all logs. Restore the full backup, all transaction logs. 
+
+To create a SPN for a SQL FCI, use the FQDN of the FCI instance. For example, if the FCI name is "SQLFCI1" on the contoso domain and it listens on port 22000 with domain account SQLSvcAcct then the spn would be: If you don't want to deal with doing this by hand there is a great tool provided by Microsoft for this. 
+
+Yes, it is decrypted when it enters the buffer pool and encrypted when it leaves. In this situation since we are writing to disk, it is encrypted first and then written. Since the writes are going across the network, the data itself is encrypted but any other parts of the network traffic are not. 
+
+If I'm understanding this correctly, you're dropping the current symmetric key (why?) and creating a new one. When the new one is created, since you're not using KEY_SOURCE, IDENTITY_VALUE, and only supplying the same ALGORITHM you're going to get a different symmetric key each time. If you want the data to be the same, use the same values for ALL of those inputs (which is why you're getting a null). I also don't know why you're dropping the current symmetric key as that's what is encrypting your data. Update (Example): 
+
+Correct, that isn't the case. Moving the services manually isn't a failure - you've told it to go ahead and change the owner, this isn't a failure. Rebooting also isn't viewed as a failure as long as it was controlled - for example, I run the shutdown -r command or click start->restart. You're telling the server, "Hey, have a nice controlled reboot - no worries." 
+
+Yes and no. Yes the files are sorted in filename order which generally happens to be the same as the restore order, thus it looks like it goes in order of filename. No, because the files may be tested to see if they contain the log records for the next restore, which means their name could be slightly different and still process. Note that the filename sort is case insensitive and that filenames do matter. 
+
+Someone attempted to make this and didn't know what they were doing Incorrect automated setup was run (with DSC, powershell, or other tooling [chef, puppet,etc]) Testing was done and not cleaned up properly 
+
+If this is what you're using (copied from your question) then I would expect it to say disconnected. You've created an empty availability group (no databases, or database only on the primary) so there is nothing to send or receive other than some metadata about the AG. The fact that it works when you choose automatic seeding means you're adding a database into the AG, it's now no longer empty and should show connected (if it truly is connected). 
+
+The answer to this is a solid, "Yes". We need to write the log blocks to disk, that's when we can arguably be safe in our assumption that the secondary has hardened the data. It isn't redone yet but it is on disk in the log. If it takes, on average, 25 ms to write to disk then that will be included in our overhead time. This is because we need to harden that data onto disk. Why might this not synch up? Why wouldn't the overhead per transaction be 25ms + network latency? Not every IO will take 25 ms, that's the average. Some may be faster, some may be slower. Some may be caused by system processes or cache fullness. Using the method I gave above will give you mostly real-time information. 
+
+I doubt it was malicious. In any event, check out the dependency report - which I'm guessing will be blank. If it is, feel free to remove it and the associated computer object in AD. If it isn't blank, update the post with more information please. 
+
+If there is nothing in the redo queue and the send queue is empty then I wouldn't worry about it as there is literally nothing to be done. This will happen on AGs that have light usage or usage based on specific hours and is then idle the rest of the time. If, however, there IS something in the log send queue and/or redo queue we are extremely interested in the redo rate. We are ALWAYS interested in blocked redo threads as well. 
+
+You'll have to use PowerShell. No AD means no AD and you lose all of the great functionality and brevity it offers. 
+
+There may be additional items specific to your environment but that should be the gist of it. You've pretty much hit the nail on the head in your original question/post, this just adds in a little filler :) 
+
+There is no way to "suppress" the error, nor would I personally want to. The error is letting you know something happened and it's up to you to go figure out what that something was. In your example, it says the database doesn't exist. Let's say you lost connectivity to disks, or there was corruption, or ... ad nausea. In this way, you can key off of the 3013 error as a general "backup database issue" (alert) and then investigate further. Assuming you could suppress the error message, you'd either have to have an alert or line item for each individual error that could possibly happen or just go about your day until someone or something complains. Either way, not so good. 
+
+Finding What Availability Group Listeners Applications Are Using To Connect Finding Which Connections Have Been Read Only Routed 
+
+This is possible, but you're going to use the FCI from your first question then there will only ever be 2 instances, so you'd have Primary Sync and secondary async. 
+
+Correct. Since you're using named instances, the installation directory names will be different which is why you're receiving the error. In order for the databases to seed they must have identical folder structures. 
+
+If you want this to happen, and it must be in a cluster, like Cody said above me, you'll need to use Availability Groups. This, however, it not a multi-master model like Peer-To-Peer replication and thus you would only have a single node available to take write requests - though you could potentially have multiple other nodes server read requests. 
+
+It is and also isn't related to Always On. Always On Availability Groups requires that the database be in the full recovery model - which is why you need log management in the first place. So long as your secondary replicas are staying very close to the primary (i.e. no lagging secondary replicas for hours or days) log management shouldn't be affected very much due to AGs. 
+
+Membership is what the user belongs to... Since users are a database principal this could be database level roles, application roles, etc. Securables are what the name implies, items that are authorized access to. So, let's say we have a login which is a server level principal. The login can belong to a server level role.. it can be a member.. of that role. Then we give the server level role access to server level securables, such as and endpoint. Maybe we grant control endpoint to this role. Since the login has membership in this role it is granted the control endpoint permission against the endpoint securable. 
+
+That would defeat the whole purpose of encrypting the backup - so, unfortunately, the answer is that there is no way. There is no back door or gated access to get the data, it is encrypted by the certificate of which no one has a copy but you. That's what makes it safe and secure (well, partially). 
+
+IMHO totally depends on the environment and the performance hit. Regardless I'd say once a week (for a total check, not necessarily all at once) is the minimum. Once a day is ideal but may be overkill, especially on large databases where a good portion of the data is read only/archive. 
+
+I have no sources for this but have backed up my information through screenshots and configuration options that change settings. Everything in this answer can be found by looking through the product itself and knowing how pieces of windows work (ex: filter drivers). 
+
+This may not be an exhaustive list, but should give you an idea and the most critical areas to look at. 
+
+Quite literally... anywhere. The witness may act as a voter (if it has a vote, depends on if dynamic quorum is turned on, the current state of nodes and votes, etc.) and will be used for arbitration. Doing a manual failover involves having quorum and a synchronized secondary. Nothing in there requires a witness. Let's dig a little deeper. The point of having a witness is to help with having enough votes to keep quorum and for arbitration so that you don't split brain. Since you only have the single vote (I'm assuming defaults, here) in San Jose - it's a moot point. If you truly had a DR issue you'd have (from the point of SJC) a single vote out of a possible of 3, which isn't enough to have quorum and thus the cluster service would shut down. It doesn't matter what the AG settings are, that's how WSFC works. You'd have to force quorum, regardless of if you can see to witness or not. We're not going to get into everything with WSFC but that's the gist of your current setup. Thus, I'd put the witness where it will do the most good, which would be at site DC.

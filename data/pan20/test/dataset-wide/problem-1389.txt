@@ -1,0 +1,77 @@
+Decouple UoW and repositories Adding a new repository should be as simple as adding one new class and we're done: 
+
+The interface I don't mind the IDisposable. If one implementation is designed that way and you retrieve it from the same factory as the other implementations, you really don't have a choice: 
+
+Could be renamed to or . You are returning something that doesn't exist in the target code, so ,in my opinion, it shouldn't be a . 
+
+EF does that for you, and I guess NH does that as well. In the end you are abstracting away the call to . But if you need something on top of these, I would suggest a few changes. Simpler usage 
+
+I would not complain if you choose to keep the code as it is. It's readable and focused, except for the helper methods which you have already identified. But we know that code is never finished, and there are always opportunities for improvements. So here are my nitpicks: In You have a parameter selection, yet you pass that to . Do you have a selection or not? If you have one, why do you need to find it? If you need to find it, then it isn't really a selection, is it? I don't want all these questions when I read code. My mind gets overloaded pretty quickly. And it shouldn't be necessary to look into all the members just to verify if they do what they say. returns a . I think would be a better name. In is called before , yet I have to scroll pretty far down to find while is the very first I see. I would like to see listed first. 
+
+I like this interface, but the only variation, except from the text, are the buttons. Why not abstract the usage instead of copying the actual interface? Like: 
+
+Depending on your needs, can be the , or use the , or be completely isolated from it. The change here is that instead of persisting the domain object, the domain object will store its state to a new object, which is then persisted. This decouples the database schema from the domain object. Two different data sources This suggests you have two bounded contexts where the domain objects may have the same name but address different aspects. I would accept the difference and let each boundary have their own set of classes pretending the other context does not exist: A in the -module is very different from the in the -module. And by that, I think I have given my opinion on your last question: If some data lives in the database and some other in a web service, then you have two bounded context and you need two units of work. How to coordinate those two, I choose to be out of scope of this question... 
+
+doesn't actually need to be called. Personally I prefer loading subsystems explicitly when it's shown I need them rather than the catch-all . In this case you can just get rid of the call. should take as an argument rather than hard-coding it. It should be calculated from the screen size. Both and should be split into and variants. can be initialized with 
+
+would be better in 's docstring. "It is currently read-only" doesn't mean much since everything is public. To mark things "private" the convention is to prefix them with underscores (eg. ). I wouldn't do that, though; I'd get rid of the getters and just have attributes. If you really want getters in order to make things read-only, use properties. Since you're requiring Python 3, remove from the inheritance list; it was only required while transitioning from 2.x. I would separate the embedded classes; sticking them together seems relatively pointless. IMHO, is nicer than . Feel free to ignore this point. I personally don't think should be calling on the input file; it should trust the user to give it an appropriately seeked file, even if that may be offset. Your isn't needed; will error just fine if it's closed (with a more descriptive error, too). It doesn't seem like needs at all, actually; it should be able to receive just a string. FWIW, isn't a buffer. I would use a dictionary to calculate . 
+
+I removed the semicolons, added proper spacing and removed useless parentheses. I also put brackets on the so it works on Python 3, but that's optional. Further, there are a lot of trivial non-formatting touch-ups: 
+
+isn't really useful; just store . I would personally move some more of this out to an iterator that s results. This seperates some of the logic out. So here's a first-pass clean-up: 
+
+We can avoid a third of this by not including the highlighted terms. Then, continuing from rolfl's improvement, we get 
+
+If the time span is not this long, we can break what is left into some number of whole minutes plus up to two partial minutes. The maximum over a whole minute is determined by only the hour and the minute hand; the second hand makes a complete turn so we do not depend on its value. Since the problem is rotationally invariant and symmetric, this only truly depends on the absolute difference between the hour and the minute, of which there are only 31 possibilities. These can be cached in a length-31 array. 
+
+You might use an enum instead, but if you're going to JSON, or reading from JSON, the string is probably easier. Use modern Python idioms One of the tenets of "modern Python" (3.x-style) is a bias towards iteration, especially the notion of infinite iterables. In other words: 
+
+Furthermore, you are concatenating two lists and then discarding the result, when all you really need to do is check the lists separately: 
+
+Your x/y loop can be replaced using The function will do most of the heavy lifting for you in terms of neighbor counting &c 
+
+These two functions are all but identical. Replace them with a single function taking a character parameter: 
+
+Right off the bat, I have the ability to get rid of some of your "explanatory" comments. Getting rid of comments (in favor of "explanatory" code) is always a good thing! But really, it still looks bad. - WTF does that mean, anyway? Let's slather on another layer of macro: 
+
+with underscores in the first two positions. There was no comment at this point. Then, down in the bowels of a function, you have a comment saying that these two bogus values are not really bogus because your code handles them separately?!?!?!?! Why not replace with or ? That would do a far better job of making this clear. Or, just eliminate those slots entirely, and subtract 2 from the indexes. (But, frankly, I'd prefer because that's as explicit as it's possible to be.) And I'd prefer to see the comment read something like: 
+
+You might consider making a inherit from and use a bunch of zero-cost routes to connect to the starting points. That would make everything a graph traversal. If you put a "message" into each route, describing the struggle, then the Resort -> Start messages could play into that: 
+
+there is a chance that could be computed as zero. In that case, your condition would fail, since it checks for dp. You should instead explicitly test for , and be sure your math will survive if is input: 
+
+1. Comments Your comments aren't very good. But conveniently, your code is structured so as to make this critique easy: 
+
+First, get rid of the double-spacing. I don't know if that's an artifact of posting on this site, or if you really coded it that way, but fix it! 
+
+You will need to amend to actually free the entry, and to get rid of that pesky recursion (which exposes you to a stack overflow attack). The current version never frees the pointer, for some reason: 
+
+I would hesitate to implement , and instead implement (and vice-versa). This is because you make no attempt to preserve the rhs' modulo, so you probably shouldn't have one there. Consider the code 
+
+Note that I had to fix to avoid the adding to the other values. With PyPy3 this takes ~0.3 seconds to run. Hopefully that's fast enough. Note that now your clever optimization of going forward as well with doesn't actually help. Getting rid of it even gives a tiny speed improvement: 
+
+There's no harm in doing a bit of parsing at the start since it's only run once. These probably shouldn't be module-scoped, though, so I'd put them in . Now, half of the time seems to be spent iterating over , so you should cache these. 
+
+Oops! There is no simple way of removing this safely, although AST introspection helps. I suggest just not doing this. However, your code seems to crash inside such strings, so this is no good either. As such, you really should be doing this through an AST and proper parsing. You do 
+
+The second underlined group's sum of digits must thus be also divisible by 3 (as both groups together have a digit sum divisible by 3). We also know the value is odd. 
+
+You should structure your code into functions, not have everything in the top-level scope. You should wrap long lines, even if they are only strings. Don't do 
+
+I would change to to make it clear that it returns a value and not a boolean. I would use to improve the formatting of the regex. Maybe: 
+
+One thing worth doing is to use to get times per line. This will show you which expressions need most to be optimized. You mention as a potential candidate. One way to optimize this call would be two write it in pure Cython: 
+
+You can do this as a vectorized summation, but it's not pretty and will probably be slower. First you change the last dimension in to group it in threes: 
+
+Your check can then be removed, but if you want to keep it you should throw an error instead of silently giving the wrong result. With you don't need the check; they will default to . This gives: 
+
+Quick manual optimization can be made by avoiding large intermediates. This is possible by generating sequential cubes with two consecutive additions: 
+
+using the standard library. C++ compilers can tell that is constant, so you don't need to assign it to a variable. It's standard in C++ to do over , although it won't matter in this case. You can initialize your vector with 
+
+I have some issues with your coding style, and possibly with the guide you are using. There's a lot of Java in your code. Consider this: 
+
+At least that way it would be providing information. Your comments are not providing information, because the syntax of the language already specifies that information. An import statement imports. A variable created at the outermost module scope is a global. Never insert a comment that explains language syntax, unless you are trying to understand someone else's code, in a language you are unfamiliar with. Next, consider this: This function adds 5 "0"s per cycle, there are 5 cycles This is useless to me, since I am familar with Python, but might actually be useful to you if you're just learning it, and/or if you got that snippet of code from a SO answer. The comment is inside the function, and discusses the behavior of the function. I would suggest moving the comment up, so it's at the top of the function. Otherwise, this is an acceptable comment (again: for someone new to Python, or unfamiliar with list comprehensions) in the right scope. I would grade this comment as a 'B'. Finally, this comment: This function iterates through each "O" list and adds a space between. This iteration prints on a new line every time a new sub-list is found This is useless again, because it duplicates the code. Also, it discusses things in an implementation-dependent manner that aren't obvious. I consider this to be useless since it doesn't say anything the code doesn't say, and it might get out of date if you change how things operate in a different function. Delete this, or rewrite it to explain what is truly unclear. (For example, if you are having trouble with how works.) 2. Organization I like the functions you have. I'd suggest that you write a or function to handle the creation of the board. Likewise, something to position the ship, although that could be part of the setup function in this simple version. (If you do a huge battleship game with ships of different sizes, etc., you'll probably have separate functions. But that's later.) Consider this code from : 
+
+I started reading at . At first, I thought you had posted non-working code, because your code couldn't possibly work. Then I got up to the definition of and realized that yes, it could work. But it violates so many principles that I don't know what the "real" type of a is. Let me suggest a slightly different model:

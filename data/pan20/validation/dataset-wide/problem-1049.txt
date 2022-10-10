@@ -1,0 +1,65 @@
+Yes there are other tools which follow a similar pattern and for projects outside the constraints I placed on my answer, they are worth equal consideration. But, if you are working with the Visual Studio and Team Foundation Server ALM, I don't think they can compete. What's wrong with VS2010 database projects? 
+
+The standard approach of separating the random IO patterns for data from the sequential of logs simply doesn't apply on SSDs, so I'd choose your option 1 with caveats: 
+
+It isn't stored in , nor is it buried anywhere in the plan XML that I can find. There is useful information in other DMVs however. For stored procedures we can get the time a plan was cached from : 
+
+It's stated in the documentation and is protected from a mistyped attempt by the error message and requirement to specify to force the change through. That was your warning that something bad could happen. 
+
+Drop NC indexes Run the following to drop the PK/CL and rebuild on the new FG ALTER TABLE [lntmuser].[matter] DROP CONSTRAINT [matter_k__2] GO CREATE UNIQUE CLUSTERED INDEX CLIX_matter_sysid ON [lntmuser].[matter] (sysid ASC) -- Add appropriate fill factor option etc ON [Alternate] GO ALTER TABLE [lntmuser].[matter] ADD CONSTRAINT PK_Matter PRIMARY KEY (sysid) GO Create the NC indexes 
+
+Was the database in FULL recovery but no backups being taken previously? Paul Randall's article Running Out of Transaction Log Space covers the other likely scenarios. The DMV query below will tell you why the log cannot be truncated. If you're unsure how to interpret the output, add the response to your question. 
+
+You're trying to do this as a single (very large) transaction. Instead, do the update in smaller batches. 
+
+That equates to 110GB on a 128GB server. Reasoning being that the data warehouse will likely continue to grow and could eventually grab more than you want it too, so put the correct limit in now. It will get forgotten about otherwise. When your data volume gets beyond the 110GB limit, pay closer attention to the servers free memory. If you consistently have additional GB to spare you may consider raising the limit by a few GB. Other than that your only other fine tuning options are with trace flags, which should be treated with the caution they deserve. Test, test and test some more. The three candidates I can think of that would make sense are: 
+
+You mentioned that the XML file contains "additional information on the data". Is there any benefit in modelling that metadata in a relational database, for the purposes of interrogation perhaps? If so, there may be a case for extracting the relevant data and persisting the remaining XML as an XML document type. 
+
+If I've missed the point, you can hopefully at least use the following script for creating some test data :) 
+
+The second query. But why are you comparing them? They may return the same data but they are answering two different questions. The first retrieves all records from where a record exists in with . The second retrieves all records from doctors with regardless of whether a record exists in . In the absence of a foreign key constraint between the two tables, the queries are not comparable. 
+
+Edit: So what's your point then? @AndrewBickerton mentioned in a comment that I've not answered the original question so I'll try and summarise "Why should I use Visual Studio 2010 over SSMS for my database development?" here. 
+
+If the index is covering it's likely it will be used in conjuction with a sort operation in the query plan to reverse the order. Edit: Following a little more thought! It will depend on whether this is a trivial query or involves joins. If trivial: 
+
+Any OLE/COM components loaded in SQL Server. Extended Stored Procedures (use sys.dm_os_loaded_modules to identify the module loaded in sqlserver process space). SQL Mail.. Prepared documents using sp_xml_preparedocument. Linked Server Providers. Large Plans stored in Procedure Cache. Very frequent Backups also may cause MTL area depletion. SQL CLR. 
+
+A SQL Server bit field can be 0, 1 or NULL, so I'm unsure where the -1 part of your question features. Skipping past that, the most appropriate solution for "sticky threads" in a forum database is to use a separate filtered index. Flag a sticky thread as and create a filtered index along the lines of: 
+
+If you can't remove permissions from the base table, need to enforce integrity by other means and are using SQL2008, you could make use of a filtered unique index: 
+
+As @Denny pointed out, schemas are always in the PRIMARY filegroup. There are potential availability benefits to having just schema in PRIMARY and data elsewhere, if you can make use of Partial Availability & Piecemeal Restore. The usefullness of this depends on the nature of your data and if you have tables that are suitable for partitioning. For example, if your biggest tables contained Orders and OrderLines which are partitioned by OrderDate across quarterly filegroups and your remaining tables are relatively small by comparison, in the event of failure you would 
+
+Brent's recent article offers an updated perspective on one of his previous series, Index Fragmentation Findings. The older article highlights statistics from much older studies on the damaging effects of fragmentation, the more recent makes a case for mitigating a large percentage of the performance downsides by ensuring your database is fully cached. Ram is now so comically cheap that it is probably the cheapest, easiest, lowest risk solution to a heavily fragmented database. Especially if the nature of the database design is such that it will naturally become fragmented despite maintenance efforts. 
+
+There was also a recent article on SimpleTalk discussing these flags, Statistics on Ascending Columns. 
+
+This question currently reads like a solution looking for a problem. You've decided that a RAM disk is the solution and you want someone to validate that choice. Sorry, not going to happen. If you have measured and observed a spill to tempdb, it will almost certainly be due to a sort or hash operation and an insufficient query memory grant. Depending on the volume of data to be processed this may be inevitable but good odds the query and/or indexing could be improved to avoid it. Take a look at Buffer Management to better understand how SQL Server manages memory and SQL Server Memory Management Explained for some basic tools and DMV queries to understand where your memory is allocated. 
+
+You won't get a true picture of memory usage from Task Manager if the account the service is running under has the lock pages in memory privilege (edit: as per Mark Rasmussen's comment/link). To determine how much memory is being used you can look at: 
+
+I guess you could include the repair mechanisms of DBCC CHECKDB under the self-healing banner and Page Checksums under self-protection. Clustering, mirroring and the new HADRON features in SQL Server 2012 are arguably relevant topics also. 
+
+SQLQueryStress is a great tool for small scale concurrency testing but it isn't really up to the job of load testing. A surprisingly little known toolset is available for free, from Microsoft, that can cope with most SQL Server stress testing scenarios, the RML Utilities. A very brief outline of the tools: 
+
+The entire database is read only so you cannot add indexes or views. No locking required so no locks are taken for any query other than a shared database lock. Obviously means that no blocking will occur either. Not as such no. None that I can suggest. 
+
+As described on Craig Freedman's blog the sequential read ahead mechanism tries to ensure that pages are in memory before they're requested by the query processor, which is why you see zero or a lower than expected physical read count reported. 
+
+and Google or a reference list of SQL Server versions. SQLServerBuilds is the popular unofficial list, KB321185 is the official list. I'm not aware of any way to obtain a complete list of all patches that have ever been applied to an instance. It's likely buried in the registry somewhere but I haven't fished for it. 
+
+Transacted. The binary data is tied to it's metadata, not exposed by a filesystem, safe from accidental deletion. Reduced backup overhead. 1 million records in a 5GB file vs 1 million 5kb files. The natural companion to 2), faster restore. 
+
+Distributed cache solutions (memcached et al) could help here but you'd be violating the service independence principles. This would be comparable to having two services communicating with each other directly, or worse having a service access anothers data store, bypassing the service interface altogether. Inevitably data will be related and will be handed between services by the calling platform, the tricky decisions tend to be around which service will own which pieces of data. StackOverflow or Programmers sites might be better placed to help with the more general SOA issues. 
+
+There are commercial (Redgate for example) and free products that will do this for you as part of the backup. $URL$ 
+
+In reality, high availability and disaster recovery are a trade off between uptime, Recovery Point Objective, Recovery Time Objective and cost. Zero data loss and zero downtime is expensive, complicated to setup and complicated to maintain. There is no free lunch. 
+
+Weigh up the pro's and con's for Filestream and see if it fits in your case. In our case, we've taken a different route and opted for partitioning the database so we can make use of partial availability/piecemeal restore. One option that wasn't available to us, which you may have, is to mark older/archive filegroups as read-only. The read-only filegroup(s) can then be backed up infrequently. If your stuck on 2005 Standard (partitioning is an Enterprise edition feature) and you have the option of read-only for history, you could tackle this the old fashioned way. 
+
+TempDB (assuming that's what you're referring to) has absolutely nothing to do with SQL Servers execution of transactions. Are you confusing the role of TempDB in snapshot isolation levels? 
+
+Despite this question having already being answered and the answer accepted, I'm going to try and make a case for the contrary approach... DO NOT EVER BLINDLY KILL A SPID Unless you know what work that SPID has done, you have no understanding of the scale of the rollback you're about to initiate. The worst kind of blocking chains are those which have unexpectedly brought your 24/7 system to its knees. 99% of the time, the query at the head of that blocking chain is going to be a plain old select query gone awry, queueing up any and all write activity behind it. In these circumstances, a KILL will save the day. The other 1% of the time, that rogue query will be the last step in a long running transaction that will take as long to rollback as it did to get to the stage it's at now. Taking a moment to understand how you got here will 99% of the time be unnecessary. 1% of the time, you could be saving minutes/hours/days of downtime.

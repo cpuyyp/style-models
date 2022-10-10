@@ -1,0 +1,57 @@
+I would change the interface to specifically take a unique_ptr that way people know that you are taking ownership of the object. 
+
+Since is a char. Any numbers can only be single digit. So using atoi() seems a waste. But it is also wrong. Because atoi() expects a terminated C-String (you have not provided this you need a second character set to 
+
+This is because it is no longer needed as we always make a copy. Sure this makes it less efficient when we do self assignment (add it back in if you really want). But self assignment though possible is actually very rare. So you are optimizing for a very rare condition at the expense of the normal operation. So normal operations are slowed down (the thing that happens all the time) while we optimize for things that are unlikely to happen. 
+
+Your destructor is automatically noexcept unless specific conditions are met so the compiler will work it out correctly for you. 
+
+I can read the code which because of good function naming actually tells me more than the comment. Writing bad/useless comments is actually much worse than writing no comments as you now have to maintain the comments and make sure they are the same as the code. When writing comments do not explain what a line of code does. The code is usually better than the comment. Use your comments to explain WHY you are doing something or explain an algorithm. Don't explain the code (the code explains its self). Simplify the delete. You have deleted a node. Because of the way you hold the tree (an array) you must fill that node. The invariant you must maintain is that all nodes on the left are smaller and all nodes on the right are larger. A simple trick is: look at the left tree. Then find the largest value in that subtree. It will be bigger than all the other values on the left yet smaller than all the values on the right. You can then use it as the node to replace the current node. If the left tree is empty. You can use the same trick on the right (just pick the smallest node on the right). 
+
+Recursive Converting a loop into recursion requires an extra function to cope with the extra variable used for last. So the main recursion looks like this (it just calls the actually recursive function setting up the last parameter). You should have this wrapper function to help users of the code from calling the recursive part of the function incorrectly. 
+
+Yes I know this is stupid. But the point is people get into weird situations and it may happen. It is your responsibility to prevent your class from being used incorrectly. A couple of solutions, make it privately inherited (as you have done), or the method I would use is to make a member (rather than a parent) to control the ring. Then your class can not be abused (and you do not need to make the destructor virtual). I personally (but this one is a personal opinion) don't like the use of a pointer in join: 
+
+Also prefer not to use when all you are doing is returning true/false. Just return the value you were testing. 
+
+Your copy assignment is very close to being correct. Just one common mistake. You destroy the state of the current object then assign the new state. 
+
+I think that is obvious. But you are not manipulating in the function so not a problem and you make a copy when you put it on the stack. Don't like the usless else 
+
+The only difference is b (which just needs to be made zero for the second case then) you can yank it out of the conditional. Why store the results? 
+
+Also rather than pointing at the first and last elements iterator ranges use a first and one past the last. This makes calculating sizes easier. Code Review Don't use to represent a divide by 2. The point of high level code is to write it so that it is easy for humans to read. That is not obvious. Also the compiler can do these micro optimizations much better than you. So don't try and confuse it. Just write code in the most readable way possible. Don't use it is so easy to break as array collapse into pointers at the drop of a hat. Use which works for arrays/containers but will fail to compile for pointers (which is what you want). But if you switch to using based interface then you should use and . Style Your bracing style is uncommon. But not so egregious that I would complain about. Normally brace style is defined by a local style guide. So if you are in a compnany or project just check that. 
+
+Personally I would use a doubly linked list and sentinel values (thus you don't need to check for NULL). This makes both inserting and removing the values very simple. 
+
+So I have to create a thread to use your class. That breaks the rule of making it obvious to use. Your class is a timer class why am I making the thread. The call to run() should start a thread to do the dirty work then return immediately. The destructor should wait for the thread to exit (potentially sending a kill signal to the thread). I see you are using a singeltong to try and prevent too many actual Timer objects (and thus threads) being created. But I think your design of the singelton for each period will actually result in many more timers being created. I would have made the queue inside the Timer object a priority queue. With the job needing to go first at the head of the list. Then the timer sleeps until this jobs needs to be done executes it and moves it to the back of the list (or the appropriate place in the list). You then examine the next job and see if you need to sleep before executing again. Comments on changed code: You fixed the constructor/assignment operator. You fixed the RAII locking. You have not got the singelton correct. You have just moved the problem. 
+
+Error messages should be sent to the user by a piece of code that understands the context under which the code is being used. If this code is being used as a server nobody will ever see this message. If this code is being used as a windows application nobody will ever see this message. Throw an exception if this is unrecoverable (with the message). Some higher level piece of code will get the message and put it in the appropriate place (log file std::cerr etc). Not all write errors are unrecoverable 
+
+Plug for me. I wrote up a detailed description of all the issues with writing a smart pointer here: unique ptr shared ptr constructor 
+
+Your code is C++03 like (ie there are no move constructors or move assignment operators). You should definitely think about updating your class to be move aware. The first thing about the interface is that the assignment operator is not close to the constructors. Since these are highly linked I like to place the assignment operators very close to the constructors (see rule of three/five). Using as a prefix is a bad idea. You don't break any rules (but was this on purpose or just an accident?). The rules are sufficiently complex that prefix on identifiers is a bad idea for user space code. Others have suggested a prefix like personally I think that is old school advice. As long as the naming is clear there should be no issues. My personal convention with identifiers is that anything that can be an object starts with a lowercase letter. Anything that is a type begins with an uppercase letter. Others will disagree with this convention as the standard does not follow it and this can lead to other conflicts. Here is one of those exceptions to my rules. 
+
+True and slightly outdated. Every call to new requires a call to delete. BUT usually the delete is automated by using a smart pointer, or alternatively you don't use new/delete directly but store objects in a container (and the container handles the memory management aspects for you. Modern C++ has very few direct calls (as this is not exception safe). 
+
+wRecently needed to swap keys with a colleague on the other side of the country. This script encrypts a file using the other persons public key that is stored on github. It outputs a script that will re-generate the original message (if you have the private key). 
+
+Don't include header files you don't need in header files. Hide Internal Types You should not define types that are public that you don't want people to use directly. 
+
+In C++03 I would have a std::stringstream object that I now use (which can then be used in the same place as the std::string object). 
+
+If you use just braces your force POD types to be zero. While user defined types get default constructed. 
+
+don't look like they should be part of this structrue. They are not used by it and only really manipulated by functions outside the structure. Member methods declared inside the class declaration are automatically inline. So there is no need to actually specify this: 
+
+Why do you need a getter? When you see a class that has a bunch of getters. That get information from the class do some operation then put a value back into the class it is usally better to put that functionality into the class (as a method). In your case you only have a getter for printing. So it would be better to have a printing function. 
+
+Variable Names I am sure you can come up with better names for your variables. The whole point is to try and make the code readable for the next person. So think up some meaningful names. Layout Declare one variable per line. Just before you use it. Its even better if you initialize it as you declare it. It looks neater and is easy to read. 
+
+You should also check to see if they actually worked and returned a good value. One of the major problems with C code is forgetting to check the result of a call to make sure it actually worked. Scanning. This fails if the input is an empty line. (it will not remove the on empty lines. 
+
+Though I will sometimes put one liners in the header file I still usually prefer to put all methods into the source file (let the compiler worry about the inline optimization you have more important things to do). Technically this is not allowed: 
+
+If you call the destructor on an object you want to keep, you must call the constructor to make the object live again. You can do this with placement new. 
+
+Missing functionality. I don't seem move assignment. Since you have move construction and copy assignment that seems a bit strange. Also I don't see a swap function. This becomes really useful when you use you object with containers. Also it makes implementing the move semantics so much more obvious. Exceptions Normally you want to mark the move operators (and swap) as . This allows for certain optimizations when your object is used by the standard containers. Identifiers Prefer not to start identifiers with an underscore. The rules about this are complicated and even if you know them most people don't. In your case the identifier is reserved for use by the implementation. $URL$ Protected Avoid the use of protected. There is no real reason for it. Also in your case the class is marked so you can't derive from it so the provides no extra visability. Just mark all members . Usage Usally I am not a fan of auto conversion. But fro wrapper classes it makes some sense. If you have this wrapper object and you want to use it in standard calls you currently need to call to get the value. I find it easier to provide a conversion operator so I can use it directly.

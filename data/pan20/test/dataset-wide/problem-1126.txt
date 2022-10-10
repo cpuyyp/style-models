@@ -1,0 +1,45 @@
+I would like to implement full-text search on the article title and body. The complication is that the title and body can be in one of six languages, indicated by the "lang" column. I see there are noise word files for several languages, so depending on the currently set language, I would like to use the appropriate noise file when searching. Does this require one catalog per language? If separate catalogs are used, is it possible to, for example, not include French articles in the English catalog? 
+
+So, I will use one catalog and one index on the multi-lingual table using a neutral language resource. Then I'll use the appropriate language setting when searching so everything is parsed correctly. 
+
+I am using Oracle 11g. I have a requirement to drop a partition and rebuild global indexes. The query below does job well but BLOCKS all DML operations on the table until the indexes are rebuilt. 
+
+My ordering application uses Oracle 11g Database. This DB has a primary table ORDERS and multiple child tables like ORDER_DETAILS, PLAN etc. ORDERS table is LIST partitioned on STATUS column and all other tables are referenced partitioned with ORDERID as a foreign key. At peak load, when order status is changed and ORDERS table row is moved from one partition to another, Oracle performs row migration for all the child tables referenced partitioned by ORDERS table. Due to many tables that depend on ORDERS table, large number of row movements happen causing a deadlock in one of the child table. My question is, how to resolve a deadlock caused in the ORACLE's internal row migration step? Here is an example setup: ORDERS table: 
+
+This returns a 3-record result set containing 1423, 2743 & 4832 from your example data. Parentheses can also make your SQL queries more readable and maintainable. 
+
+As recommended by Mikael Eriksson, I'd do the import without dropping/disabling the Foreign Keys. The downside to this is if you want to delete any records who's values are referenced by an FK or want to update values such that the original value is no longer in the table and referenced by an FK. In these cases you'd need to keep track of any such issues and decide how to handle each "conflict" (don't update/delete, alter the data in the other table or some other solution). This will be quicker, easier and ensure data integrity compared to dropping/disabling the FKs, importing and then restoring the FKs. 
+
+Then, when doing a search using FREETEXT or FREETEXTTABLE, once again use the "LANGUAGE" argument. Microsoft defines the "LANGUAGE" argument as follows: 
+
+Or, should it be designed with an active flag? This would involve a single insert for each setting, followed by several updates. 
+
+Setting history is not really important to me, so I wouldn't need to see if the active flag was ever used. Is it best to use a smaller table and insert, delete, insert, delete, etc., or is it best to add that extra bit, and insert, update, update, update? I'm running SQL Server 2005. 
+
+Each user can choose to apply the settings, or not. The interface allows them to quickly toggle the settings on or off. The setting is by default off. I'm looking for best practice on the table. Should it be designed such that only active settings are included in the table? This would involve a lot of inserts and deletes on the table. 
+
+I am using Postgres 9.5 I have tables with date column. All tables are partitioned based on the date column. Table setup: Example of current partitioned tables are like below 
+
+Current Setup: My application uses Java (Spring) and Oracle 11g and has functionality where logical locks are placed on an object before updates are made in the table. For example there are 2 tables EMPLOYEE and EMPLOYEE_LOCK. When any update is made to employee, an entry is inserted into EMPLOYEE_LOCK table to indicate that for next 30 seconds a particular employee is locked. So EMPLOYEE_LOCK table looks like below (as of 10AM) 
+
+My primary goal (with this question) was to see if Oracle can give me some way to identify this expiration time trigger and initiate an activity rather than Application server initiating one. 
+
+Always use a WHERE clause (unless you REALLY want the entire table), this is a different issue to the SELECT * issue. If you don't control the schema, listing columns will keep network traffic as low and predictable as possible if someone adds a varbinary(max) field to the table for storing images/PDF file or whatever. 
+
+This seems to be one of those "rules" that have come about to stop people reading an entire 400+ column tables into memory. In my experience, as long as the table is fairly small (in terms of columns) and you really do need all the data, let the highly-optimized DB take the hit while you concentrate on maintainability and compatibility and other benefits to yourself and your users. 
+
+I'm using SQL Server 2005. I have two tables that contain aggregate information. The information is constantly being updated, generating almost 5GB of log data a day. (That's larger than the entire database!) I'd like to disable logging on these tables, as rolling back is not really necessary. I would however like to keep logging on the other tables in the database. Is it possible to disable logging on certain tables within the database? If not, can I place the two tables in the same schema, then disable logging on the schema? Is the only option to move the two tables to a separate database, and disable logging there? Update: I guess I'll explain why I really don't need to log the activity on these tables. The two tables are filled with GPS data, so they get quite large. The first table is capturing raw locations from six Android tables in the field. New data from each of the tablets comes in every 5-10 seconds. That information is then aggregated as locationA, locationB, travelTime. The goal is to ultimately have the shortest travel times between all locations, based on actual driving data. The data is only for a small city, and only accurate to four decimal places, so it is manageable. However, as new raw data comes in, there are slower travel times that need to be updated, and new ones that need to be inserted. Once the raw data is aggregated, it is purged. We're not going backwards to longer travel times, so that is why rolling back does not matter so much in these tables. 
+
+Not really, there'll be a minor performance hit but the simplified logic and compatibility more than make up for this. I believe the SELECT * gets replaced with a list of all fields in the table which the DB engine has to look up before it can run the SQL, this is where the performance hit comes from. However, I've never seen an noticeable performance decrease and in my opinion the simplified maintenance and compatibility make up for this. 
+
+As ypercube and marc_s pointed out, it's best to have a 2-column "mapping" table to store which questions are used by which general exams. This approach provides the following benefits: 
+
+Can some one suggest some approach where Oracle some how notifies application server when lock expiration time is reached? Edit (To answer questions raised by Gil Shabtai) Its probably my bad that I tried leaving some of the points from the discussion which I thought were irrelevant to the question I was asking. Here are the answers to your issues / questions raised 
+
+But If I break the query into 2 parts and rebuilt indexes with ONLINE option separately, DML queries DOES NOT get blocked while indexes are being rebuilt 
+
+I have confirmed that OrderID column (Foreign Key column) in the PLAN table has index on it. Tried increasing PCTFREE parameter on the table. 
+
+If the number of questions for each topic on each course varies from one General Exam to another, then yes, you want a structure like this (which is pretty much what you have): 
+
+Arguments can be made either way depending on whether you want to handle populating these tables using triggers or the application(s). I think this depends on what exactly you want to store in these logging tables, if you're logging anything specific to your 3 "data" tables then you'd be better off with 3 logging tables (1 logging table per "data" table which will be easier to populate using triggers), otherwise you can store everything in 1 table (with 1 field to reference each data table) which will make reporting easier. As regards referential integrity, if you're actually deleting the original data record (rather than just marking it as deleted) then your Foreign Key will have nothing to link to anyway. This is one of these situations where I de-normalize to gain centralized reporting and application logic (though triggers could be used for this, depending what you're storing).

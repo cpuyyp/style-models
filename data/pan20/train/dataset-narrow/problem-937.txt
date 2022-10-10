@@ -1,0 +1,73 @@
+This doesn't look very efficient - you allocate all this memory up front, and I couldn't really see where you are using it... Your is also not very defensive - you don't close your stream in case of an exception (you should use block to make sure of that), and you never validate that is valid, so there is a decent chance that your code will not run as expected. Idioms You should use the idioms relevant for the language you use, for example - instead of Another example - don't wrap with simply use 
+
+This has, again the same complexity of \$O(n) * (O(i) + O(f))\$, but in this case \$O(i)\$ and \$O(f)\$ are \$O(1)\$ - so the total complexity is \$O(n)\$. 
+
+Use correct data structures - in you manage a , but it never has more than one element! You the current node and the next... Simply using would be sufficient - and more readable 
+
+- could be replaced by , which is, again, more readable, and less error-prone to future maintainers of your code. The pattern: 
+
+Either counts on the helper - in which case a will occur and fail the test, or Does not need the helper, in which case there is no need to mock it... 
+
+One last point, regarding your and classes, I personally don't see any utility in having them, since they add no logic besides a construction convenience, and may even confuse, since their name implies they support only one scale or the other... So now, your class will look like this: 
+
+Read with batches Looping over is very memory greedy (it reads everything to memory before starting to process it). You will be far better off using batches: 
+
+but you should choose one style and stick with it, to prevent reading errors, and general head-ache by code readers... 
+
+I agree completely with everything @200_success said, but if you do want a sensitive info solution, I would suggest something more in the lines of - a specialized string which is makes by default, and only shown when explicitly requested: 
+
+It seems that you fill only when the program starts, and never again, which means that each time you run you read the same (stale) data. When you you call , and when you you also call . You never use though... In your main loop you , between iterations, which means you sleep 60,000 seconds - about 17 hours. This means you will miss some of the check points you intended to run. Generally speaking, maybe running this indefinitely for a couple of check points a day is not recommended, and better way would be to use jobs to run at 0100 and at 2300. Encapsulation - you seem to have a lot of instance members in your code, some of which need to be maintained manually (like ), some maintenance is neglected (like ), and some are forgotten (like , which is never used). To prevent this, you need to think which members are actually part of your state, and which are not. If there is no good reason to keep them - don't: 
+
+Naming naming naming Your code is very intimidating - it is filled with single letter variable and members (...). Those which are not single letter are generic and unhelpful (, , ...). This makes your code very unreadable. You also use a lot of literal numbers (...) which make no sense to a person who is not familiar with your algorithm. Use constants to make your code more readable. Your comments are also not useful for someone to read and understand your code. If you want a serious code review, you must make your code readable, break large methods () into smaller ones, etc. 
+
+You code looks nice, my main problem with it is naming: Don't use single letters as member names, unless they are trivial. I couldn't figure out what and stand for until I read your code a couple of times (length? range?). Even more so, don't ever use the letter as a variable name - it is much too similar to , and is notoriously known to obfuscate code. Don't re-use too familiar names for different purposes - is a well known method in ruby enumerables. Using this name for your code, especially when it involves arrays is very confusing. Don't do that. Call it or . Expressiveness goes a long way - works perfectly, but is hard to read, a much more readable way would be if you had a helper method . Even better might look to implement it into Use the power of ruby - instead of , use non-inclusive range operator - So, my version may look a little more verbose, but I believe it is much more readable. It did teach me a lot about quicksort :-) 
+
+This is a very misleading indentation, since you indent at the same level as the . A more readable way to put it should be: 
+
+Since in ruby returns the last element in the array (), there is no exception! If the computer chose (id ) and the human chose - computer will beat human, since . In short: 
+
+Your algorithm is also unclear - you create a list on each iteration, which always contains exactly two elements - and - is it a bug? Meaningful naming - use names which convey the correct meaning - does not convey what the list is used for, is confusing - since it is used in the current level, not the next... 
+
+Consistent style You kind of mixing your styles with curly braces - your indentation is inconsistent, and for two duplicate s with single statement you once omit the braces, and on the other not. Choose a style, and stick to it - it will make your code more readable Magic numbers You made a curious choice to omit the from you start and end indicators, which made you add the mysterious to your calculation. This is a major maintenance issue, since tomorrow you will want to extract with unescaped text, where the will be reduced to , and your code will stop working... Use the powers of the tools at hand Your solution could be much simpler if you used to solve it: 
+
+Indenting and spacing Java's indentation conventions are no more than four spaces in a block. Also don't overdo spacing inside your parentheses and between braces. See here for more conventions: 
+
+You should also consider extracting some of the hard computational lines to helper methods, and name them so that the reader will better understand your code: 
+
+What are nested classes? What are subclasses? You ask whether you should use of , but your example shows neither. A is a class which inherits from another class, and then looks and behaves just like it, plus some other functionality, which makes it a special case of its parent: 
+
+Redundant operations returns a list of strings. There is no point in calling on its children. String concatenation implicitly calls on all non-string elements you concat, so calling after the rounding is also redundant. You assign twice, totally ignoring the first assignment - that line is totally redundant. Don't re-use variables by changing their meaning One side-effect of meaningless variable names is that you might be tempted to re-use them 
+
+Also, some of the properties which don't change (like processor architecture), you might want to cache your answers: 
+
+and it will just work... Code Encapsulation A ruby file should contain a single class. It should not contain any floating methods. Actually, there should not be any floating methods. Create a different class, or a module, which will contain the , , and . This will also force you to name the module, and make it more obvious what is its role in your application. 
+
+Exception Handling You wrap the with a try catch block, but if an error occurs, you simply write a line to the console, and continue... in the very next line you call , which will result in a ... Morale of the story is - if you don't have anything smart to do in your catch block - it is better to let the exception bubble up to where it can be handled, or otherwise stop the application completely, notifying the user what exactly was the problems (that's what exceptions are for...) Documentation The only documentation you have is for the method, and it is full of reiterations on how this methods returns a random number between a min and a max number. This kind of documentation does not help anyone - the signature of the method is self-explanatory. Documentation has a nasty habit of rotting - since you tend not to maintain it as you maintain the code, and it becomes inaccurate and ultimately misleading. Documentation would be needed when the method's signature does not convey what the method is doing (like in ), but I would sooner change the name (and the content) of the method before writing documentation, as suggested in the other answer here, since I believe that comments are a code-smell, and that self-explanatory code is an indicator for better design. 
+
+Redundant code is exactly the same as . Be consistent In different places in your code you check equality either as or as - choose one way - and stick to it. *Adding @Marc-Andre's observation: You should also be consistent with your indentations and braces locations. Although Oracle's suggestion is to put the opening brace at the end of the line, 
+
+As I read the code, it seems that what the method does is control the business flow as defined in the specifications. Since all it does (at least as it is written here) is delegate the actual actions to other methods, I don't think 'it does too much' - its single responsibility is to control the flow of the registration process. To answer your concerns about future maintenance, I see two possible kinds of new features - features that should affect all the service consumers, and features that affect only a single (or part) of the consumers, but not all. In the first case - there is no problem - do your change in the code, and it will affect all consumers (if you move the code to the controllers that won't be true, since you'd need to change all the controllers...) In the second case, it should be easy enough to create a new register method for that use case. Since all it does is delegate, the new method itself will be just as simple as the old one, with maybe a delegation to a new method, something like this: 
+
+Variable Naming Also hindering readability is your choice to use an alllower variable naming convention. is much more readable than , all the more so vs. . You also tend to use lazy shortcuts like , , , , etc. which might seem meaningful to you, but to an outside reader the names might be less helpful. Something must be missing... 
+
+Also see above how I've avoided the in the above using a guard condition () Code Duplication You've got several methods, which do essentially the same thing. Making a method which takes the duplicate code will remove the need for them entirely - something like: 
+
+My observations: Use properties - do not expose raw members - your implementation exposes raw members. You should use getters and setters instead. Unused parameters - in your constructor you declare 4 parameters, but you always pass only one which is not (the ), the other parameters are unnecessary. 
+
+Don't change the meaning of a variable When you set a variable with one type, for one usage, but then set the same variable with another type, for a different usage - you are confusing yourself, and future code-readers, and make your code very brittle. This goes double for instance variables, and triple for instance variables exposed to the outside - what do you think a user will expect from this code: 
+
+Now all we need to do is multiply them with each other! Method naming Your names are very verbose, which is a good thing, but ruby idiom frowns upon prefixes. Also, prefer using verbs already in the language () over those which are not in the language () So now the code will look like: 
+
+Unclear algorithm - in your method you create a variable, which is half the length of the item list. This suggests you might do something binary (recurse the first half of the list, then the other half, or something like that). Actually, you are going over the list item by item linearly. This creates a very unreadable code, and it took me quite a while to understand what it actually does. If you are iterating over the list - use an : 
+
+One more general guideline - although you can have an construct, it is not recommended. Better to reverse the conditional: 
+
+Someone reading your code might not understand how it works, since it missed the point where you change the value. More seriously - if you decide to remove the printing, you might forget that it changes something, and simply comment it out or delete it. 
+
+Assertions? Assertions are used by some languages to make some development checks where a condition is assumed to be always true. This methodology is not longer en-vogue in most places, and even where it is - it is also disabled in production: 
+
+Meaningful Names Again, in most cases, you are doing fine, and there may even be good arguments to say that and are clear enough in context, but there really is no reason not to call them and . is also a quirk you should fix... When things don't change After you create a instance, its and values will never change, so there is no reason why you should continue to calculate them - simply store the result in the appropriate member: 
+
+You are interested in how to use classes properly, so let's talk about it. Design your classes Why did you choose to split the functionality as you did? Does you have any stand alone value? Does it have any re-use value? In ruby it is very easy to arbitrarily break functionality into different classes, because you can call methods and members which are not there, and only in runtime they are checked. This does not mean you should arbitrarily break functionality into different classes - quite the opposite! It is the developers responsibility to design his classes well. How should you design this? What are the actors in this exercise? 
+
+DRY your code In every place where you used copy+paste - you should check whether you could refactor it to re-use the code you've written. Aside from making the code shorter and easier on the eyes, it also makes it more maintainable, as if you need to fix something, you don't need to fix it for every copy of the code. @Simon already addressed the Polymorphism of the classes, but it is not all about OOP, for example, to prompt the user for the second fraction, you've copied the code from the first fraction. Your error handling there is also copied from one prompt to another - since you stop the program after each failure, you don't need to catch each one in flow - one catch at the end of the prompting it enough:

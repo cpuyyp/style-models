@@ -1,0 +1,95 @@
+By default, the ASA randomizes the sequence numbers in the handshake (to prevent session hijacks). So your sequence numbers don't actually match. You can turn off that feature. 
+
+DRs exist on broadcast media (like a VLAN), so I'm not sure what you mean by "not directly connected." Non-DR routers ( on the same VLAN) maintain full adjacency with the DR and BDR only. So when they receive LSAs from other routers, they only forward it to the DR/BDR. 
+
+The result is the network portion of the IP address (also called the network number). This is exactly what your router and PC do to determine which network to use to transmit the packet. 
+
+EDIT: I can't tell which interface is Fa0/5, but I also notice you haven't applied the ACL to any interface. if you want to use a standard ACL, you can apply ACL 1 on VLAN outbound: 
+
+You don't need a routing protocol, but you do need to add some static routes to make things work. You don't mention what kind of router is your Internet gateway, but assuming it is a Cisco router, you need to add this command on it: 
+
+You can't do that, but you can configure the router so it prompts for name/password at login, and based on the user's privilege, they will be in enable mode or not. So instead of a two-step login, they login once and are put in the proper mode. 
+
+This is a case of an AS being a transit AS. That is, AS 100 provides connectivity between AS 300 and 400. Many ISPs (who provide transit) run BGP on all their routers, so RTE would also be a BGP speaker. Synchronization is turned off in many cases. The vast majority of ISPs run MPLS in their core. This is a different paradigm than using an IGP to advertise reachability within the AS. 
+
+Yes, they can. Since they are all in the same AS, iBGP will peer across multiple hops. And as you are probably aware, you need all the BGP speakers in a full mesh. 
+
+You need to understand the difference between tagged and untagged frames. Tagged frames use the 802.1q frame format, which is different than "standard" ethernet. Other than switches, few devices understand 802.1q format. When server B sends a frame on VLAN2, it sends it as a standard Ethernet (i.e. untagged) frame. But because you have configured port 1 to tag VLAN 2, the frame will exit port 1 in 802.1q format. Server A doesn't understand that format and ignores the frame. A port can have only one untagged VLAN, but many tagged VLANs. 
+
+There is no particular security advantage. RFC3021 cites addressing efficiency as the motivation for implementing /31's 
+
+First, you can't do link aggregation unless the carrier is also doing it on their end. But you can load balance between all three 100 m connections. It's best if you can run a routing protocol with your carrier, so you know that each link is available. Your routers can certainly do that. IMO the dsl lines are not needed if you have 300 Mb spread over three connections. You could save yourself some money. 
+
+In the diagram you posted, the provider network is in fact a label switched network. The "P" designation on the routers usually implies that they are LSRs. It is depicted as a cloud because from the customer's point of view, the physical connections between the provider routers are unimportant. Pseudowires and other tunneling modes are accomplished through label switching. 
+
+If you goal is to have one primary link and a backup link, oyu can either use BGP routing from your ISP to inject a default route, or you can configure IP SLA and inject a route that way. 
+
+An unmanaged network is analogous to a car that has no gauges and you never have it serviced -- until it stops working. You don't know if it's going too fast, too slow, is about to run out of gas, etc. The fan belts could be frayed, your tires could be bald, or your brakes could be worn, but you wouldn't know until something bad happens. 
+
+Your echo request didn't reach the target, because of a network failure, congestion, filtering or some combination. The request reached the target, but the target couldn't respond because of a failure or misconfiguration of the target itself. The echo reply didn't get back to you due to a network failure, congestion or filtering. 
+
+If the port is a trunk port (a port with more than one VLAN), then it should be tagged. Otherwise, No. Most Important!! Doing all this will not solve your security problem UNLESS you also apply an access-list on your router to restrict your guest VLAN. 
+
+A switch learns the source MAC from the sender. If the destination is not in the CAM table, the switch floods the frame out all ports. So if the receiver never responds, the switch will never learn the receiver's MAC and it will always flood the frame. 
+
+Here's one way to think about it: A port with more than one VLAN associated with it is called a Trunk. A Trunk can have exactly ONE untagged vlan (also called the Native VLAN), and one or more Tagged VLANS. If you set a VLAN to be untagged on a port, there is no PVID associated with it; there is no PVID field in the Ethernet frame. If a trunk port is configured with VLAN1 untagged, and VLAN 2 tagged, then all devices that use untagged frames (PCs etc) will communicate on VLAN 1 and be blissfully unaware of any other VLANs. If a device can tag frames with a PVID =2, then it can communicate on VLAN 2. 
+
+As someone who interviews candidates, I can tell you that the specifics of the the network design are the least important part of the answer. What the interviewer wants to know is how you would organize and execute the project. He/she wants to know if you can identify the missing information (lots) and identify the steps get it. He wants to know if you can identify the resources you need to to get the job done. Remember, they want a basic outline of the project. The interviewer was laying a trap to see if you'd dive into the technical design instead of all the project issues. Unfortunately, it seems you took the bait. 
+
+Yes, if you need to segment the VMs for security or QoS. Or if you have an MPLS network. But if not, then no. A smart (managed) switch will let you monitor performance in either case, if that's important to you. 
+
+The radiated power of WiFi transmitters is limited by regulation, so there are legal limits to how much you can transmit. The maximum radiated power is dependent on both the radio and the antenna, so if you increase your antenna gain, you might have to decrease your transmitter power to stay within limits. Here are the limits for the US: 
+
+If you're asking if you can measure latency using TCP or UDP packets, the answer is a qualified yes. There is software you can install on servers that will generate TCP/UDP flows, and you can measure the latency from that. If you have newer Cisco routers, you can use a feature called IP SLA where the routers will generate traffic. All these assume you can install software on the target server, or you have access to the routers. The advantage of Ping is that no additional software is needed. You can also capture live traffic with Wireshark or something similar and analyze the packet flows to calculate latency. All the caveats that @ronmaupin mentions still hold true -- latency continuously varies as traffic conditions change. Unless the servers you use are dedicated for this purpose, their changing load can influence your results. 
+
+Access lists do not use an ordinary subnet mask. They use a "wildcard " mask. A wildcard mask is the ones complement of the subnet mask. So 255.255.255.0 becomes 0.0.0.255 
+
+Having more than one subnet on a LAN used to be more common than it is today. You can configure the router interface with a secondary* address. This will allow the router to be the gateway for both subnets, and it will be able to route between them. Depending on the type of router and software version, some features may not be available on the secondary interface. For example, Cisco routers would not establish OSPF or EIGRP neighbor relationships on secondary addresses. *You can have more than just two subnets on a LAN. Cisco refers to them all as secondary addresses although they technically should be called tertiary, quartenary, etc. 
+
+Note that although the router ID is written in dotted decimal like an IP address, it is not an address -- it's just a number. Pick any unique number you like. Alternatively, you can create a loopback interface. The router will use this address as the router ID. Since it's a virtual interface, it never goes down. 
+
+To be more precise, in an IPv4 (sub)network, all the hosts can directly address each other and can respond to broadcasts. Hosts outside the subnet can be reached through a gateway. The network portion of the address identifies the topological location of the host. 
+
+The amber/green lights on the interfaces show whether the port is forwarding traffic or not. Since that is a layer2 function based on STP, it is completely independent of HSRP, which is a layer 3 feature. In other words, the state of HSRP has no bearing on whether the ports are forwarding or not. I can't think of any visual indication on the switch that would show you the state of HSRP. 
+
+As you've drawn this, you can't do it. You can't have the same subnet in two locations (separated by a layer 3 link). To make this work, you need 4 VLANS, two at each site. You can make the ones on the left 192.168.1.0/25 and 192.168.2.0/25, and the ones on the right 192.168.1.128/25 and 192.168.2.128/25. The lower two routers will have a subinterface on each VLAN/subnet. The switch will trunk both VLANs to the router. You can apply any security filtering to the /24 block as needed. If this were a real network, ask yourself why would you need to have the same subnet in both locations? There are rarely any strong reasons for doing so. 
+
+A router participates in DR/BDRs elections when the interface type is set to broadcast. This happens for every interface that is set to broadcast. It doesn't matter what the actual media is. Elections do not take place on p2p links (if they are configured as such). In either case, the area ID has no bearing on whether the election takes place or not. 
+
+Since neither peer is an authority, they will both adjust their clocks to the midpoint of the difference between them. 
+
+So the best summarization of the first two routes is 129.10.64.0/18. (the rest is left as a exercise for the reader) 
+
+The apparent "hanging" is caused by the delay in doing name resolution (DNS) lookups. If you don't have name resolution available, you can disable the lookup with the command 
+
+Your algorithm is roughly implemented in BGP, which by default performs “hot potato” routing. All other things being equal, the route with the lowest IGP metric will be chosen. 
+
+We've received a /48 allocation from ARIN, and want to advertise smaller blocks from different sites in our organization. I tried advertising a /56 from each site, but ISP is telling me they won't advertise anything smaller than a /48. So each site would have to have its own /48. Has anyone else run into a similar issue with their ISP? 
+
+Yes, it's a compromise (You will see that a lot in your networking career). The DR prevents routers on a shared medium (like a VLAN) from having to peer with all the other routers on the same segment. This was developed at a time when processing power and memory for routers was in short supply. 
+
+Impossible to tell without knowing more details about your network: Device types, WAN bandwidth, expected performance, etc. 
+
+Not quite. A packet received from another interface will have the MAC address of the router, not the MAC address of the end host (note: there are rare exceptions, but you can ignore that for now). When a router receives a datagram from any subnet, the first thing it does is strip away the layer 2 information and throw it away. Then it uses the layer 3 information (i.e., IP address) to determine which interface to use, and if the host is directly connected. 
+
+1.2.3.4 is your PC's address. EDIT: You could include the addresses of your DNS server and the website 
+
+It's just a model -- that is, a mental construct It was developed by a committee No protocols (in use) actually follow it 
+
+First, tagging a VLAN applies only to a particular port. A VLAN can be tagged on one port, but untagged on another. Second, if two devices are connected via a trunk, then the VLAN tagging should match on both devices. 
+
+That is because there is no "right" answer. Each network has different requirements, so the answer will depend on several factors that vary from network to network. What is right for my network may not be for yours. For that reason, I can't answer your last question (besides it's not clear what your topology is). I don't know what you're trying to accomplish. Remember that routers communicate with each other, so it isn't necessary to have "failover" pairs, because the routing protocols cam make adjustments if a device fails (that's an advantage over ASAs). Switches and ASA (without routing) don't have that feature, so they have failover, stacking, or other features to add redundancy. 
+
+Create two VLANS on your switch (100 and 200). All users go in vlan 100. Your gateway connects to vlan 200. Your firewall connects to both vlans. 
+
+There are many things you can to do improve the manageability and reliability of your network. I would start with breaking up the large and geographically diverse layer 2 network (10.10.10.0) into smaller layer 3 subnets and route between. But to answer your specific question, if the traffic flows through the MPLS router to the WAN network, then the interface speed may be a factor, depending on the WAN bandwidth. But if traffic goes through one of the firewalls, then the MPLS router should issue a redirect to the host so it will send traffic directly to the firewall. In that case the router is not involved in the traffic flow. 
+
+Since VLANs are layer 2 and IP is layer 3, they operate independently of each other. VLANs don't know about subnets, and IP doesn't know about VLAN tags. 
+
+Go back to static VPNs. The SAs are always up. Find some way to generate traffic on the 192.168.50.0 network. Anything will do. Readdress your networks so that you have one ACL entry that covers both networks at the remote end. You will have only one SA, which will be created as soon as traffic flows. 
+
+There are several ways to accomplish this, depending on what your ultimate goal is. If you simply want a list of server IP addresses, you can filter on your host address, then use the statistical tools in Wireshark. For example, after you capture the data, choose 
+
+The IP address you made up is actually in the multicast address range. Currently those are not routed over the Internet. Ignoring that for the moment: You could, in theory set up a web server on your network. Your ISP may have policies to prevent that, but from a networking perspective, it will work fine. Your gateway already knows how to route packets to your host. Otherwise how could you browse the web? (i.e., How would all those funny cat videos get to you?) You can ignore this for the moment, but it's highly probable that your host is behind a router that is performing Network Address Translation, or NAT. You can read more about that, but briefly the router translates your IP address from a private one to one assigned by the ISP. This is usually done dynamically. You will need to set up a static translation. It appears that you're hung up on the idea of "subnets." Subnets are just networks. From a routing perspective, "networks" and "subnetworks" are the same thing. 
+
+In a nutshell, the designated router is the one responsible for synchronizing the LS databases of all routers on the network and flooding LS updates to all other routers. If one of the spokes is the designated router, then all database synchronization and LS update traffic must flow down the spoke link to the DR and then back to the hub and then to the other spoke routers. This is very inefficient and will likely overload the spoke link. In addition, often spoke routers are small with limited memory and processing ability, and may not be able to process all the LS traffic. We set the spokes' priority to 0 to prevent them from accidentally becoming the DR. I recommend you read OSPF and IS-IS by Jeff Doyle. He goes into much more detail on the role of designated routers and their operation.

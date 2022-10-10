@@ -1,0 +1,85 @@
+It looks like your code is inefficient because you are trying to do a lot of low-level work yourselves instead of relying on existing functionality available in .NET framework, which is most likely optimized for low-level work. Here are the classes/methods I would try: 
+
+Naming. Methods should use verb phrases to denote the action they perform and try to be specific. So your method should become something like , or just if kind of dates is obvious in your case. Test naming. Do spend some time on composing a name for your unit test method that describes what exactly is being verified. does not provide any information except that it deals with method somehow. Incorrect responsibilities. Let's look at interface. It is an interface to obtain a list of dates (probably). And this functionality may be used in different places, not just to render this list in the HTML. But instead of returning or any other type of collection, it returns , which is only useful for HTTP communication. The only class that knows about specifics of how the list of dates should be used - is your class. And in your case (no special HTTP response or different HTTP codes) - method can return as well. Do use method when you perform read-only queries. Test expected resulting behavior instead of the way it was done. If your class manages to satisfy all your tests without calling the mocked instance, then either result of the mocked instance call is insignificant, or you should improve tests by adding new test(s) to verify the change in behavior depending on outcome of the call to mocked instance. Your test currently expose such a problem, as the only thing that it verifies is that controller calls to render the output. Instead, you should setup to return some list, and verify that the return value of the controller method returns the data in expected way. If the class under test does not call the mocked instance - it will fail such a verification anyway. In general the usage of is not recommended. 
+
+I know it's not a direct answer to your question, but I'm trying to get to the roots of the problem rather than giving correct answer to issue caused by potential misuse... In your code what you are actually trying to do is to write a cache with time-based expiration of items. Even though is thread-safe, it's not quite appropriate structure for frequent element scans like you do. Moreover, in your code you remove items, then add them back in case when they have been updated in the middle. It causes side effects for other threads that may try to read the value in-between. Correct solution would be to use a proper data structure. If by any chance you are using .NET 4.0 or later .NET has already provided you with proper solution - class, otherwise I would recommend creating a lock-based class that maintains 2 indexes for entries - a for storing key-value pairs, and a for storing expiration timestamp-key mapping. In this case you'll always know upfront when the next expiration will happen so timer can be set to specific , and you don't have to scan through all cache entries to find expired ones. 
+
+Any chance you are using .NET 4.5? It contains the method that does exactly what you need: Task.WhenAll. 
+
+I'm afraid there is no such thing as general "proper" architecture. Relevant architecture is the one that enables/assists developers in implementing new functionality or adjusting your solution to new requirements. In your implementation I don't see the reason to define your own logging and repository/UoW patterns: 
+
+Then, in order to properly cover you code with tests, you would need to write unit tests for business logic and add integration tests for the implementation of . 
+
+Starting from minor issues - please follow naming conventions (variables should be camelCased and methods PascalCased, do add access modifiers, give variables meaningful names). Your design breaks Open-Closed principle: Queue knows all the possible commands it can handle. In case when you need to add a new command you'll have to change the queue rather than add new code. Also it breaks Single Responsibility Principle since queue knows not only about scheduling the execution but also serves as a repository for all possible actions to be run for commands. Both issues as well as those you have mentioned (type casting, different signatures) can be easily solved if you create a separate class per command type. Command will encapsulate parameters required for execution as well as the action to be executed: 
+
+It seems that you have a global static logger methods. It is not a good practice, as you're loosing the possibility to tune logging levels for different areas of your application (e.g. setting log level for to while keeping level everywhere else. I recommend to follow the logging patterns suggested for your logging framework (see Creating loggers for NLog for example). The code is not thread-safe, so you may get issues if your application publishes, subscribes or unsubscribes in different threads. Use either locking around collection or ‎. logging level should be used only when the application encounters a critical error after which it usually cannot continue to run. In your case I would suggest to use log level when email cannot be sent. is static, which means that you will have a strong dependencies in your code on this class. I suggest to introduce IoC framework (check out Autofac or StructureMap). The response of is not used, so it can be . Your current code requires spinning up threads per each observer per each notification. I suggest to switch to asynchronous processing model, changing the return type of to . Most likely you would want to wrap the notification of each listener in to avoid side effects when buggy subscribes to your service 
+
+What you have implemented is a sort of Active Record where the record itself knows how to communicate with the storage. What is bad about your design is that this kind of code will be extremely hard to unit test. Imagine that you need to write a unit test for a class that uses objects. How can you prevent it from calling ? The proper solution for your problem depends on use cases. 
+
+You have missed the Entity Framework and/or NHibernate :), both of them are good data layers that are mature enough. If you want to have a good data layer - the best you can do is start using one of them, and stop designing a wheel. Out of those two I would prefer NHibernate, but Entity Framework may be easier for beginner. Concerning your code - properties should not represent factories (like you do in ), in other words repeating calls to the property getter is assumed to return the same value. To fix that replace property with method Also you are missing the notion of transactions and unit-of-work here, and a whole object mappings story. 
+
+Do use descriptive name for the variables and parameters, all those , , do not tell anything. Reversing the list using recursion should not rely on 'external' variables as you do with . Given that linked list after reversal should have the last element at its head, I would suggest to pass it through the recursive chain hierarchy as a return value. Having a loop makes recursion useless, as you walk through the list via loops instead of recursion. Try to come up with the approach where you do not need loops to get the head of the resulting linked list. 
+
+Instead of creating a task to check the queue every second it's probably better to just to create it once and wait for the data (errors) to arrive. will help here to provide automated blocking until the new data is available. I've simplified file operations here (each log entry will cause the file to be opened/closed), and it might be acceptable if you don't expect lots of exceptions from your application (as for me that's a reasonable assumption). With a bit of more advanced code (e.g. using ) you could add a logic to keep the file opened for certain period, but I would initially go with simple solution, and change it only when it becomes the bottleneck.... P.S. I strongly dislike creation of exception in order to log the fact of disposition. It shows that your log doesn't contain exceptions only, so you should consider having exception object as an optional parameter in log entry. 
+
+I would use Linq methods to simplify the code. Also I've extracted 2 methods to simplify the main method. And please rename to whatever your find appropriate :). 
+
+It's probably a bit too heavyweight for your task, but have you considered using knockoutJS for it? It's a quite powerful MVVM javascript framework that uses the notion of Observables to keep UI in sync with underlying data model. 
+
+Your code is absolutely correct in case when you want to start workflows only when all of them are configured. But if you want to start each workflow once it's configured (independently from other workflows) then it might be a good idea to use continuations... In .NET 4.5 it would look like this: 
+
+The SQL Server query analyzer is smart enough to understand that these queries are identical (given that is unique in for a certain doctorID/favType pair). They should yield exactly the same execution plan, and thus they are equal in terms of performance. I would prefer second variant though... 
+
+Apply .NET naming conventions (don't use Hungarian notation in particular). method: use the keyword for all disposable objects () + you can initialise logWriter with a single line: 
+
+That will make your code decoupled, different graph traversal methods would be independent from others, and code would be much easier to read and understand. Example of and implementation: 
+
+In order to simplify nesting I reordered conditions so that you can deal with simplest cases first, and return result as soon as you know it instead of capturing it in variable. Also ternary operator looks like a good choice here... 
+
+Correct. See good article Await, SynchronizationContext, and Console Apps that describes in details the behavior of . 
+
+As you see users of this interface don't know about those request-reply wrappers that you have in the underlying communication protocol, they are dealing with business entities. And implementation of this interface may look like this (just as example): 
+
+Solution can be optimized even further in terms of readability, with the same level of performance as "manually create a HashSet and populate it with items": 
+
+There is no way to simplify generic parameters if you want to keep Entity class generic, as noted by @svick. The only thing I can suggest as alternative here is to remove generic parameter from . I don't think you need 10 different types for field, most likely you'll have or , so you can create 
+
+Note that your code will perform better than this one (you'll notice that only if you run it thousands times a second) since you're using the fact that there are only 10 sequential values present in . 
+
+So, based on your update it looks like you've switched to reading from - good decision. A bit simplified/cleaner approach for reading int is: 
+
+What kind of performance requirements do you have? Have you tested regexp performance before writing this parsing? Do you know that regexp allows expressions to be compiled and reused, thus it may have similar performance to the parsing code written manually. I would prefer to try something already available (e.g. $URL$ and write something myself only if I'm not satisfied with it... Regarding your code: 
+
+It's absolutely fine to have such a helper. If you want to hear my opinion - I would rather simplify your original code as following: 
+
+If you cannot use the cached results (your current logic), then the implementation can look like this: 
+
+I'm not sure if you need declaration in your interface... Do you have special use cases where is not enough? If I'm right and all you need is just method then you can go ahead and make method private, thus you'll make it an implementation specific that doesn't need to be tested separately, you'll test it by testing . If you do need method, then I would go with a different approach: since is just an additional feature on top of , you can remove it from interface and rewrite as an extension method like this: 
+
+UPDATE: To hide the details, and express the locking behaviour even further you can wrap the like this: 
+
+Note that will never be true, because you create a new , and it does not implement interface. In addition to @mjolka's description why you have a 50% CPU load, I would like to suggest how you can avoid it. Currently you have a central place that manages all sockets in one place. I suggest to do it differently - have each endpoint handle the data on its own, and manage all sockets only as a collection of ongoing processing (tasks) like this: 
+
+The main issue in your code is that you don't control proper combination of units in operations, e.g. you allow summing up speeds with kilograms. I would rather create a class (or maybe better a struct?) that is aware of unit types as well, and create a number of static/extension methods/operator overloads to convert the value from different units... Example out of my head (not tested since don't have VS at hand): 
+
+always returns so it won't help you in parsing different line endings. If your task is to count the number of lines then it would be much easier just to do smth. like: 
+
+Since we are talking about sets, it's probably better to use collection types that represent a set: and . Another improvement you can make is to keep track of the boxes you've added to current set at the last iteration (horizon of your expansion), and try to match candidate boxes only with them. Note that resulting solution doesn't use the knowledge about box matching logic, so it might be a good idea to extract the interface that defines the connection between elements (i.e. a method that checks for the presence of link between nodes). As a result I've got the following solution: 
+
+Now back to your original question - " can do everything a can do without having to reimplement every method": 
+
+Instead of shuffling items yourselves it's easier to apply random sort. So your logic can be rewritten in a single statement: 
+
+is what you're looking for. Otherwise, if you do need to use , try using to run comments retrieval in parallel: 
+
+Unfortunately you haven't described specific use cases for your pub/sub requirement so it's hard to show this solution on specific example 
+
+You are still using the UI thread to do the project parsing , because will return the execution back to UI thread. If this call may take significant time, I would suggest to replace it with . It looks like you should get exceptions in , as you're updating the UI from non-UI thread. See the fix below. What you do with event is actually reporting progress. .NET has a built-in support for asynchronous progress reporting via and , which properly handles the synchronization with UI thread. See description of how to use them here: Enabling Progress and Cancellation in Async APIs Instead of and then you can just use the method to create and run the task. Don't use as it blocks the thread until all tasks complete. Use instead. 
+
+As a result, I would try to have a single structure/class that provides required functionality. If you want to be able to reference the functionality without explicit reference to , consider switching from to and define an interface for functionality. 
+
+I preserved counting the number of term occurrences within document even though it is never used in your code, because most likely you would want to use it at some point later. I removed method (it's used only in one place, and it basically does the same as , so there is no need in separate method. Note how dictionary and are dynamically populated in as we find new terms in documents. 
+
+Yes, your understanding is correct. Note that you're not using provided to . If your operations are cancellable and/or you're using other asynchronous API that accepts s it's highly recommended to pass it through the code, otherwise just don't create the . Following your comments: 
+
+Nice thing in participating/answering in forums like this is that you learn while you answer questions. I haven't heard about SpecsFor framework. Looks a bit tricky, but will definitely have a look later. Ok, back to your question :) About your first question, setting up the mock - you can definitely do that, there are a number of overloaded methods accepting delegate/lambda, depending on the number of parameters in the method being setup (here I setup the method to always return the same query regardless of the query passed:

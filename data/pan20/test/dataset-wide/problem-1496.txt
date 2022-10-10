@@ -1,0 +1,107 @@
+This looks pretty good. I don't have any deal-breaker comments, just a bunch of minor ones. Prefer Just straight up instead of . Raw arrays are broken. There's not really any real difference for the purposes of your use-case, but it's just a more pleasant type to deal with in general. Throwing and non-throwing For functions that throw, there's an extra mechanism that needs to exist to support that use-case. Plus even an always-predicted branch is going to be more code that no branch. To that end the standard containers offer throwing and non-throwing functions. If you rewrite your two s to be non-throwing: 
+
+Either way, avoiding unnecessary variables is a plus. Spacing Don't add so many blank statements between lines. Taking up too much vertical space makes it harder to read. Proposed implementation The following addresses all of my points: 
+
+Refactor The whole function would read better if you factored out the inner part into its own function. That way the outer is: 
+
+By treating the ranges as one-sided, it's easy to organize the code to actually look like we're looking for ranges. Winter simply appears on both ends for simplicity. 
+
+is super useful. So are its close relatives and . The way you wrote is fine and works, but doesn't make it easier to write the other two. A good way of writing these out is to use @Columbo's trick: 
+
+This means that just returns and just returns . Other Overloads Python also allows for something like , so that's just: 
+
+Yeah, that's pretty obvious. Other code comments for member functions is not very common - I would strongly suggest either or . is searching for a given entity that matches a name. In other words, you're finding an entity if the name matches. Let's just use ! Also, take your argument by reference to const to avoid an unnecessary copy: 
+
+And is memoized already (from the 16th triangular number). So we did one division. That time difference adds up. The full solution I present later in this answer takes just under 1.0s (when run 10x) if I factor each factor independently, but 4.46s when I factor the whole number. That is a lot slower. And when you find yourself doing a counting loop, you should really use so that the main loop becomes: 
+
+Since you're on a C++14 compiler, the simplest solution is just to stick in front of your runtime algorithm: 
+
+You can sprinkle in your prime count and sum in there as appropriate, this is just the general idea. This runs about 10x faster than checking divisibility for each prime. 
+
+That builds up the whole list before we then print them one by one. We don't need the whole list in one go, so we can just return a generator: 
+
+Once you fix those, there are other issues with your code: Limits on Types When you construct like this: 
+
+There's a few design issues with your code I think. Copying Copying your performs a shallow copy. I think that would be counter-intuitive to anybody using your data structure. Typically in C++, copies are deep copies. On the one hand, using means you don't have to write any of the special member functions, so well done there (although you wrote the default constructor? Unnecessary, use ). But now you're missing functionality. Also on the copying front, you're enforcing that is copy-assignable. Why? There is nothing inherent in LinkedList that requires this. You're artificially constraining the usability of your container. Don't. Ultimately, I would use raw pointers (yep!) in both places where you have , and write out all the special member functions. Perfect Forwarding The reason that you required copy-assignment is because you wrote this way: 
+
+Drop the Intermediate String You're allocating and ing into it just so that you can use . But instead, there's also , which lets you compare from the original string directly: Fix the loop condition You're not really looping from to , you're looping from to . Splitting up those concerns in two is confusing. Adjusting You have: 
+
+Note that we didn't need any global variables here! It's easy to see where this is coming from. We had a full deck of cards, we shuffled it, and split it in half. NO RELIANCE ON INTERNAL MEMBERS In Python, everything is public. But that doesn't mean that you should rely on this. You are relying very explicitly on the members and their types. There had better be a that's a list. Much better to hide the implementation behind an interface that just has a few key operations. Which operations? Well, we need the pop off the top card: 
+
+There is no way that anybody will know what does here. I didn't until I read the implementation. A much better name for this would be . But I'll get back to implementation in a moment. First, let's start with: 
+
+This is on the order of 25 lines and far easier to understand. One Loop Of course if we really want to reduce the line count, we can do it in one loop. I wouldn't recommend this, since it's harder to discern, although it's not too bad. The key is just to see at one point we flip from going up by 2s to down by 2s: 
+
+If the user doesn't care, they can always the items in and avoid the copy. Naming Typically, naming are used for classes (e.g. ). Functions and variables are typically either (with the first letter lower) or . So I'd prefer 
+
+Note that I'm changing your return type from list to list of lists. Now this will return a list of all the possible transformation lists. Of course, we'd need a sensible default . Let's avoid the user having to come up with one: 
+
+Department of Redundancy Department There's a lot of unnecessary variables here, so cleaning that up is going to be a good way to go. Your comments indicate this pretty clearly: 
+
+And then you it. There is no reason to shuffle it twice, by the way. But then the way you "deal" from the deck is repeatedly taking the first element and deleting it. This is inefficient - erasing from the front of a list is \$O(n)\$. We don't need to erase anything at all though. Just iterate through the deck! First, let's separate the "deck creation" from the "hand dealing": 
+
+reads a bit better. Your doesn't actually do anything useful either, you can drop it completely. Exceptions exceptions exceptions Exception are expensive. Most of your time is spent here: 
+
+Same idea, just more direct. For that matter, we don't even need the ! is an expensive type to construct at compile-time, so it's best to avoid it entirely. Just pass in the types as a pack (though the following doesn't compile on gcc - though even there you don't need , just use a light wrapper like ) 
+
+Dropping Floats Floating point arithmetic is always slow. We could do a bit better by keeping everything integral: 
+
+You started the player off with just the one card, but you start with two in BlackJack. Also, you want to give the computer a hand too, so that you know how to play: 
+
+I guess if you really want you'd do it this way (not using ES6 because I don't know how to get freecodecamp to use it): 
+
+Default values Be very wary of having default values that are mutable. The canonical counterexample is something like: 
+
+The idea that should be a 2x2x2 is a little too magical. If people want a 2x2x2 grid, they can write 2 three times. If they want a 2x2x2x....2 grid, they can write a metafunction themselves. But that's just a minor quibble compared to... HOLY SIZE, BATMAN! 
+
+RGB There's a few things worth saying about this class, even if it's pretty straightforward. Some of these things apply to as well. 
+
+Class I/O in C++ The way you make classes streamable in C++ is with , not a function named . The reason for this is so you can write: 
+
+Next, the important thing to see is that we have two largely identical loops. We iterate on over some range, and then if , we iterate over in some range by steps of up to setting to false. As a function: 
+
+Treatment of Keys You're doing a whole lot of extra work - both in terms of actual operations and code - the way you're treating keys. You're copying the entire maze everytime you get a key, and doing a whole separate search. That is unnecessary effort. Consider the canonical breadth-first-search double loop: 
+
+This function doesn't modify its input - you take a copy, reverse it, and then compare the two. But actually you're making two copies of the input - one into and the other into . If you took the argument by reference-to-const, you save yourself a copy for free: 
+
+should definitely be a with public attributes, yes. It's a private, internal struct to , nothing in the outside world needs to know about it. It'll make your life much easier. Plus, adding getters and setters for every attribute is questionable design. This is fine: 
+
+Pass this difference onto your users. They should be aware that for floating point s, it will be open on the top end. Make your implementation always open on top end of the distribution. 
+
+That you can call that will give you the result. All your logic for determining the solution is in . The various parts are split up into individual functions, which is good, but the whole thing needs to be separate too. Note that I'm taking the second argument by value as we're going to destroy it as we go. How many winners? You need at least half the votes + 1, so there will only ever be one winner. Rather than doing floating point arithmetic, you can check that . This works for both even/odd numbers of candidates. Finding losers Finding losers should return the losers: 
+
+Separate your concerns Think of it this way - as we walk through the input, we do one of two things. If the next thing is a list, we recurse. If it's not a list, we do the equality checking. You're doing everything in one check, which makes it a little hard to follow. Let's just define a maybe-swap: 
+
+Keeping a Count You implemented to keep a count which you use for equality comparisons. This works, but involves a really awkward formula for getting the count right. Instead, it would be simpler to just round to be one past the last one, so that sets to and to . This would make only require two members, and to just compare the 's. Wrong Type dereferences to , but should be . Usage This is awkward: 
+
+is referenced nowhere - which is good becasue it's always and completely unnecessary. You're making your path a doubly linked list, which is very inefficient. It would be better to simply store it as: 
+
+This is basically the same thing you were doing in your loop, except substituting the pair for two s. Now, we can just rewrite your original function to use this helper and the goes away: 
+
+You misspelled optimal. Also, this whole loop could use some work. You made a that you're constantly popping and pushing. This is unnecessary extra work. The recursive approach makes sense, but rather than use a container to recurse, let's use iterators: 
+
+What if it's not found? You should have an error case, if , you should return . Otherwise, you have infinite recursion. Full solution: 
+
+Bounds Checking You introduce a macro for whether or not to do bounds checking. However, convention from the standard library suggests that we just provide functions that DO range checking and functions that don't. should throw , and should never throw: 
+
+is still almost instantaneous. The algorithm is actually going to come from an idea in Python's itertools. What we want to do is walk our typelist N at a time (where N is the match length), and just use to compare. That is, taking the original problem's list: 
+
+Separate Your Concerns The function at the moment does two things: finds matching customers and checks that it's nonempty. Let's instead add a default checker: 
+
+Overly Complicated Algorithm! I'm not sure why you have three for loops or why even division is a special case of the algorithm... Also I'm pretty sure that special case is wrong. Consider a range of size 15 dividing into 3 chunks, so it divides evenly. We'd start with , but then we decrement it to 4, and add the first range of: 
+
+At this point, we have and . We know one of those two is the minimum, and we know which one that is. So let's use that information: 
+
+I'm going to throw out a fairly complicated solution here by breaking the problem into lots of smaller parts. The end result is that the compilation of the following: 
+
+Better Algorithm But ultimately, this isn't a great algorithm for finding all the primes. The most common would be the Sieve of Eratosthenes. We make an array up front for our candidates: 
+
+People who don't know what those mean likely won't understand anything about the makefile anyway, not sure the comments will help. Those are very commonly used. 
+
+runtime error checking What if the input streaming fails? How do we indicate that? Maybe we just don't and leave it as "easy". 
+
+You have a constructor but you'll never be able to use this as a core constant expression anyway, so I don't see the point. You're also incurring an unnecessary copy to construct your , and the alias isn't particularly useful. Prefer to let the function be constructed from anything: 
+
+Friend Operators Rather than forward declaring template functions, then friending them, prefer to write these operators as non-member non-template friends. So would be: 
+
+This won't affect performance, but your return choice for is odd. Since everything in python is a reference, you don't need to return . It's unnecessary, you could just return . Then on the call side:

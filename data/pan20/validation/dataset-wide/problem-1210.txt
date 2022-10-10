@@ -1,0 +1,63 @@
+a byte[16] column two bigint/long(64 bits) columns a CHAR(36) column - 32 hex digits + 4 dashes. a UUID database specific column, if db supports it 
+
+But this type of UPDATE might not always benefit from batch updates or statement caching when different properties are changed for different rows. 
+
+From an indexing point of view which of those are the most efficient? If the db doesn't support a dedicated uuid type which of 1, 2, 3 are the best candidates? 
+
+So, the query is using an index and executing in 15 ms. However, on the Java side, after the ResultSet is fetched and processed, the time measurement indicates that it took 90 ms. The only explanation would be that the Explain Analyze doe snot consider the fetch time and fetching 34880 records takes 50-60 ms. Is this correct? 
+
+Now, assuming that we have an index on the property as well, shouldn't the DB realize that the value hasn't changed anyway? In this article, Markus Winand says: 
+
+When it comes to updating a row, many ORM tools issue an UPDATE statement that sets every column associated to that particular entity. The advantage is that you can easily batch the update statements since the statement is the same no matter what entity attribute you change. More, you can even use server-side and client-side statement caching as well. So, if I load an entity and only set a single property: 
+
+While testing the Oracle XE connection establishing mechanism I bumped into the following issue. Although connections are closed on each iteration, after 50-100 connections Oracle starts throwing intermittently the following exception: 
+
+I wanted to know if this is some sort of bug or is it simply just how Oracle is designed to work. Update On Oracle 11g Enterprise Edition, it works just fine so it's an XE limitation. Fix Using connection pooling is probably the best way of fixing this issue, which also reduces the connection acquisition time and levels-up traffic spikes. 
+
+I wonder why is this overhead since the database loads the associated data page from disk into memory and so it can figure out whether a column value needs to be changed or not. Even for indexes, it does not to re-balance anything since the index values don't change for the columns that haven't changed, yet they were included in the UPDATE. Is it that the B+ Tree indexes associated to the redundant unchanged columns need to be navigated as well, only for the database to realize that the leaf value is still the same? Of course, some ORM tools allow you to UPDATE just the changed properties: 
+
+SQL Server Management Studio that comes with SQL Server? If you need to run on non-Windows, then look at SQuireeL 
+
+I've not seen this (an open txn) at work (still SQL Server 2005 SP3) and got the details from a local SQL Server 2008 on a VM. Could be version related. Edit: just seen the Q update Using SET XACT_ABORT ON will force a rollback anyway 
+
+If you have 30 codes to lookup you will have 30 lookup tables: this is correct. If you insist on OTLT you'll have to add extra columns to store type in Assets and FK them to your OTLT. I wouldn't do this. 
+
+No. Only the database by . A connection isn't scriptable. SSMS 2008 (?) and other tools offer the ability to "run on multiple servers". Sorry, I don't use this feature in my current role so don't have this problem. 
+
+Check out the free data models at databaseanswers.org for inspiration. Once you've attempted something yourself, we can help fine tune it. 
+
+Taking your examples, these are normally different queries if c2 is a child of c1 (a.k.a many rows in c2 per row in c1). Which is the usual case unless you only have 1:1 relationships. 
+
+Did you use RAISERROR with severity 16? This is "user defined error" and should be picked up by SQL Server agent Did you set the job step to retry ( and ) Finally, is the error terminating (severity 20) such that the CATCH block isn't hit? 
+
+The refers to the internal name of that file, not the database name. Run this to see what I mean. You're looking at the name column 
+
+Assumed convention states that the ProductHistoryID becomes the PK, but you can leave the PK on (ProductNo, CreatedDateTime): it will just be non-clustered. Which leads to indexes: 
+
+With no indexes or keys, you can't defragment it normally. You can add/drop a clustered index, or do something like this 
+
+12GB, leave 4GB for the OS. This 12GB is for the various caches. The binaries and various out-of-process calls will use the 4GB, along with the OS. 
+
+This matches your current logic (untested), but see my comment on question. What I've done is reverse the filter to exclude unwanted rows: now you can index and separately (of course you need url too in the index unless you have a PK that can substitute) I'd suggest this for SQL Server 2005+ 
+
+Is there any way to free memory without restarting SQL? Could it be the issue with memory leak as described in: Memory leak occurs... ? 
+
+They seem to have max_memory set, but MEMORYCLERK_XE is taking around 9GB of memory (the server itself has 16GB). Version of SQL Server is: 
+
+I have SQL Server 2008 R2 server with SP3 installed - build version is 10.50.6000. There are few updates available to this version: 10.50.6220 3045316 MS15-058: Description of the security update for SQL Server 2008 R2 Service Pack 3 GDR: July 14, 2015 July 14, 2015 10.50.6525 3033860 An on-demand hotfix update package is available for SQL Server 2008 R2 Service Pack 3 (SP3) February 9, 2015 10.50.6529 3045314 MS15-058: Description of the security update for SQL Server 2008 R2 Service Pack 3 QFE: July 14, 2015 July 14, 2015 10.50.6537 TLS 1.2 support for SQL Server 2008 R2 SP3 January 27, 2016 10.50.6542 Intermittent service terminations occur after you install any SQL Server 2008 or SQL Server 2008 R2 versions from KB3135244 March 3, 2016 From my understanging: If I don't want to use TLS 1.2 support and don't suffer from errors fixed in 10.50.6525 I should upgrade to 10.50.6220 If I don't want to use TLS 1.2 support and suffer from errors fixed in 10.50.6525 I should upgrade to 10.50.6529 But what if I want to use TLS 1.2 support? Should I install 10.50.6542 and this includes fixes from 10.50.6529?Or perhaps I need to install 10.50.6529 first and then upgrade to 10.50.6542? I tried to find this information but with no luck. 
+
+We need to move SQL Server instalation from physical cluster (SQL Server 2005 SP3 ans 2008 R2) to virtual non-cluster enviroment. As this is very old instalation (several databases with unknown purposes) the plan is to create enviroment as similar as possible to the old one (same SQL versions, components etc.), move user databases and in some point turn off old cluster and change IP addresses/names on the new machine to match the old one. The problem we have are system databases. I believe we could transfer (backup/restore or attach/detach) msdb database (I did it few times in the past) to transfer all jobs. But what about master database? Is the same approach has even chance to work? In the past all I done was just transfering logins but this time there are many user defined objects in master database. Also we are affraid that moving master database from cluster to non-cluster enviroment would cause problems in the future. 
+
+Licensing shouldn't stop you adding views to your first database. Every place I've been in has custom objects for reporting etc that extend the functionality of the 3rd party product. Saying that, it is possible to have 3 part object names in views in your own database 
+
+The 2nd bit will fix your issue with implied schema. This happens if don't qualify schema (eg dbo) because SQL Server 2000 has pretty much no user-schema separation like later versions Note: you can't rename users in SQL Server 2000 IIRC: need to run sp_revokedbaccess then sp_grantdbaccess. If you own objects because of your implied schema then you'll need sp_changeobjectowner. I think SQL EM will prompt you. That is, you should always qualify schema in SQL Server. 
+
+I've seen an issue where you can't . However, I'm not sure of all details and I saw it on 5.5/Solaris My comment above and your response indicates that this may apply here. That is, you can GRANT everything except permissions 
+
+The simple version would be to generate a hash from the CLOB and use this as a key. This key will fit into the allowed key width for your engine (900 SQL Server, 767 InnoDB, 1000 MyISAM etc). The hash can be generated by the engine as a computed column, trigger, or by some ETL process, or by the application There is a faint chance of collision (birthday problem) but this would only matter for many records and poor choice of hashing algorithm 
+
+As well as Marian's answer which is SQL Server Instance level, you can use ALTER DATABASE to set it individually. You can also use it on the model database so that all new databases inherit the setting 
+
+rights allow the use of things like and the stored procs which can affect the underlying OS, but it depends on the service account used If you limit the service account permissions (eg not local system, not local admin and certainly not domain admin) then it's pretty much OK. The SQL installer limits the permissions of the service account during install, of course this assumes you don't escalate permissions yourself. 
+
+I would suggest SQuirreL (free) but Informix doesn't appear to be supported A Google search shows some older pages though so YMMV

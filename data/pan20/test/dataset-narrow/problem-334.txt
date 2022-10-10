@@ -1,0 +1,77 @@
+Not only buffer pool and query plans but almost all components which require memory will now be catered from max server memory setting. Specially SQLCLR, memory to this is now allocated from max server memory setting previously in SQL Server 2008 R2 and before memory was allocated from outside max server memory setting. 
+
+Please note that if you change compatibility level of database to lower compatibility level you may not be able to use some features available in newer version. For changing compatibility level and understanding its after effect please read View And Change Compatibility Level 
+
+ALCSQMFG instance is at patch level 2047 and is 64 bit standard edition MSSQLSERVER instance is at patch level 5069 and is 32 bit Standard edition. 
+
+Yes there would be some outage during cluster failover.. During failover SQL Server is stopped on current node and failedover/moved to other node. After this SQL Server is brought online on the node to which it is failed over. Sometime this is so quick that application users might not notice. But the fact that SQL Server is restarted means you should always keep in mind that there might be some outage 
+
+Yes it is possible. You have to just use below query to change the compatibility level of he database 
+
+What is type of mirroring Sync or Async Yes there would be impact and impact would be in terms of amount of transaction log being generated. Delete logs each row which is being deleted so logging will be heavy. Your approach should be to delete in batches this would minimize lock escalation, blocking and thus would not hamper concurrency much. You should also consider performing this activity when load is relatively less How strong is your network connecting principal and mirror. You are going to put heavy load on it if you delete 100G table so becareful with that aspect also its good to ask network team to have a look on network during this period of time you would not like your mirror to lag behind principal. Can you truncate the tables or selectively truncate tables, it is super quick and logging is very very less as compared to delete but NOTE there are limitations with truncate table and before proceeding please read below Microsoft documentation $URL$ 
+
+Stop using sys.sysprocesses is legacy view and MS does not recommends it to use. Instead use You can get worker thread count for each scheduler using DMV sys.dm_os_scheduler 
+
+I would suggest you follow what the recommended. You can change the option to . Checksum might be able to detect more problem that torn_page. Torn page allows you to detect whether page was successfully written to disk or not. It would not check what is inconsistency inside the page. While checksum performs more thorough checks. Having said all this you must know . What Paul said, quoting from This SQLServercentral link 
+
+You can see the for large number of queries are approx 5G, this is large memory grant, ideally it should be few MB's. Do note that is just around 5 MB and is NULL this is because due to memory pressure SQL Server is just able to provide minimum memory to start the query but not able to provide additional memory for query execution resulting query to fail with OOM error. The query costs for queries requesting huge memory is also high which leads me to believe that either statistics are skewed or queries are written poorly. Other possibility would be query not supported by proper index. Number of queries requesting such a huge memory grant is good in number. 
+
+SQLServer:Buffer Manager--CheckpointPages/sec: SQLServer:Buffer Manager--Memory Grants Pending: SQLServer:Buffer Manager--Target Server Memory: SQLServer:Buffer Manager--Total Server memory SQLServer:Buffer Manager--Free Pages SQLServer:Buffer Manager--Free List Stall/sec SQLServer:Buffer Manager--Page Life expectancy 
+
+If it completes successfully its great now restore this backup on DIFFERENT server again using option continue_after_error(read official documentation) if all goes well and you are restore of database completes successfully run 
+
+No whole table might or might not be kept into buffer cache depending on size and whether SQL Server finds all such pages during read ahead reads. SQL Server would try to bring as much page as possible which it can do with read ahead reads. The amount of read ahead pages SQL Server can read in enterprise edition is much more and efficient than standard edition. So its quite possible that SQL Server would read not only page that holds row but more such pages so it might not do any but since most pages which belong to table are bought into memory (by read ahead) and since index is not present SQL Server will do some good amount of logical reads to find the row Example: I run a query like below on Developer edition which is same like Enterprise edition. Table T1 has no index 
+
+Session ID 210 was granted 19G of memory. This is blunder. just consider a scenario if 5-10 such queries start running. Can you also add output of 
+
+Yes its recommended not shrink log file. You need to make sure you do not run any transaction which does data manipulations. You can do whatever data manipulation you like but make sure amount of rows this manipulation is dealing is not . Log file just reacts to what you are running so you have control in it. Make sure after each data manipulation you manually run checkpoints SQL Server will never shrink data and log files by itself for that you have command. 
+
+Just have a look at REQUEST_MAX_MEMORY_GRANT_PERCENT=100 now this seems a very wrong configuration to me. According to BOL document 
+
+First please note logins and users are both different thing. You need a valid login for a user to make changes into database. User is anyone authorized to perform ceratin actions on database while they use to Log into the SQL Server. 
+
+I must say this is normal and nothing to worry about. This blog tells how target server memory calculated. Please see the forumula below 
+
+So you can see it is not the free space present in pages allocated to Heap but the varying sequence of pages that creates the fragmentation. This can be demonstrated by small test. Let us create a Heap Table and insert some records in it and then check the fragmentation. 
+
+The account which user selected on Server Configuration page window ( during installation) is somehow not able to bring SQL Server database engine services online. Either is lacks privilege or it is corrupted. During installation of database engine services SQL Server tries to bring online database services as a internal process but due to startup account either corrupt or not having appropriate privileges it fails to do so and ultimately installation fails. Other reason is when installation fails first time due to some reason and user uninstall failed installation from add remove program, the un-installation leaves account in broken state so any further attempt to install flashes this error message. The reason can be also that SQL Server installation was successful in installing SQL Server and its services but due to some other limitation in system or other system related errors SQL Server is not able to come online. 
+
+Memory allocated is memory given to SQL Server for doing various processing. Allocation is wide terms which means providing memory you should not attach any specific meaning to it. You are correct committed memory is physical memory used because committed memory is backed by physical memory while reserved memory is memory reserved by process which it thinks it might need it may necessarily not be committed. 
+
+This is happening because you have configured LAB03 listener to listen on port 1433 which is default port of default SQL Server instance, that is why when you connect using the listener it is connecting to SQL Server which is listening on port 1433. While Microsoft allows you to use default port 1433 for listener but this is not a correct thing to do specially when you have multiple instances and listeners. To get around this problem you have to change the port number of listener 
+
+Yes if you are going with Always ON Availability Groups the shared disk(in some form) is a requirement. From BOL I will quote 
+
+From your description it seems like things are fine for you even when LPIM privilege is their for SQL Server service account. If things are fine why do you want to change it I suggest you keep it like this. Now LPIM protects paging of SQL Server process, so unless you have mis-configured VM host or some other applications running on OS which can leak or "Pull" memory from OS LPIM is actually not required. I as well believe that normally on VMware SQL Server should not be given LPIM unless required and forced by Ballooning or other application pulling memory unnecessarily. VMware ballooning is feature which should not be disabled but the VM host should be configured such that memory is balanced most of the time. Quoting From Vmware Online Doc 
+
+So from output you can see when Node 1 is primary replica read only connections will go to Node 2 as first preference and vice versa 
+
+I am sure you are running shrink job by changing database recovery model to simple and then changing it back to full and then shrinking it. This would break log chain and you would need full backup again to start the log chain. That is why log backup is failing 
+
+Buffer pool is always there starting from when plan is created to when query executes. Buffer pool is allocating memory for any . 
+
+First and foremost thing, SQL Server in picture is which is not supported by Microsoft in any way please apply SQL Server 2008 R2 SP3 to at least get extended support 
+
+If Column shows a non zero value then also SQL Server service account has Locked pages in memory privilege. And The "Memory Manager" section of the output will show a nonzero value for the "AWE Allocated" or if SQL Server service account has Locked pages in memory privilege NOTE: If SQL Server service account is running with Local System( NT Authority\System) account, by Default SQL Server will have Locked pages in memory privilege. Update: Before SQL Server 2012 for standard edition we need to enable trace flag t -845 to take advantage of LPIM. Even if you are running SQl Server with account having LPIM privilege the SQL Server would not actually use LPIM advantage unless the trace flag is enabled. From 2012 onward we don't need to enable trace flag in standard edition to take LPIM advantage. 
+
+Yep that is quite possible. You can have 3 node(let us use node instead of server) cluster with each SQL Server instance on one node A and Node B respectively and 3rd node is their in case of failover. You can also have two instances running on same node(suppose Node A) and other node(Node B) acting as passive node. But such configuration is not a best one which you should go with. 
+
+You cannot rebuild index when database is offline, the database has to be online to rebuild the index. The widely accepted parameter for rebuilding is if fragmentation >30 % rebuild it and if fragmentation lies between 10 and 30 % reorganize it. You can use your own script, maintenance plan or Ola Hallengren script or My script. If you have time I would suggest you to create your own. 
+
+No not as such, unless someone is doing testing I have hardly seen people manually doing a rollback. The rollback is specified in stored procedures or transactions in which you either want complete change to be entered or nothing at all. 
+
+I am not aware about any significant changes in backup code for various versions, such things are not documented. I only know about the enhancement introduced in enable backup and restore from the Windows Azure Blob storage service from SQL Server using TSQL or SMO. Read here 
+
+requested_memory_kb will tell you memory which query requested granted_memory_kb will tell you what actually was granted to the query. I strongly suggest you to read Understanding query Memory Grants to know about how memory is granted during life cycle of a query 
+
+You can query DMV sys.dm_db_persisted_sku_features to see what all enterprise features you are using. 
+
+You have not added screenshot but when you query sys.dm_os_memory_clerks whatever clerks information come they all track memory allocated to various components and would fall under max server memory limit category (58 G limit category). 
+
+pagefile.sys % Usage shows total system committed not what currently is utilized. This value can increase due to load when system finds out it has to back process with more page file. Have a look at below link for detailed explanation $URL$ I would like to know what problem you are facing 
+
+Personally I will try to post this dump to one of my MS friend if he is free he might have a look, but dont expect much. 
+
+You can create a login using below acript and map it to user and then grant necessary privileges to user. Granting privilege to SQL server user is complex topic and you must read this article and this for understanding it. SQL Server, requires ALTER ANY LOGIN permission on the server or membership in the securityadmin fixed server role to create login. 
+
+There is corruption in your SQL Server database column is LOB and may have VRCHAR datatype. Index ID 1 indicated problem with Clustered index so I guess minimum repiar options repair allow data loss might delete data to recover database. Dropping and recreating index will not help.Please dont run repair first. Do you have latest valid backup of SQL server database ? Best possible solution here is to restore from valid backup. How big is your database. Please run restore verifyonly before restoring the backup to check that backup you are restoring is consistent. Although restore only will guarantee that backup is complete and valid in all format. Please read SQL Server errorlog and windows event viewer to find out reason why corruption happened and then take steps to fix it. if you dont have valid backup you might as well try to repair the database using below command

@@ -1,0 +1,53 @@
+- Bonus To complete the picture, here's how a uni-directional BFS looks based on the same building blocks (, ): 
+
+Note this is still basically exactly the same algorithm (modulo the bug you had in the condition), but it is now much clearer what is happening, and why. Note that I moved the logic to check for previously-visited actors inside to avoid duplicating that logic: when reviewing your code I had to think really hard whether this block of code was actually necessary/correct: 
+
+What happened here? I extracted the logic that was in the loop. I will admit I only did this after implementing a non-bidirectional version of the BF search. The looks like your original code: 
+
+A bug in your line 97 (the should be ); your code might never complete, for some inputs The birectional search does not in practice improve the speed (note; worst-case behaviour will be improved, but at the cost of complexity) yields significant speed up (on average, there are <=10 relations per vertex) Destructing the maps takes significant time. This is one of those rare occasions where I'd suggest purposefully leaking the memory since you know the program will be terminating anyways. 
+
+Big ideas I noticed that "Stopwatch" was a bit of a "God Object" antipattern. It does too many things (you can't really usefully do a countdown and a lap time simultaneously).¹ I reckoned it would be nice to simply have tasks (without any UI) that expose duration measurements, and views that can display them as they update. This is akin to a publish/subscribe pattern. To demonstrate this, I made not only the views generic, but also the tasks. The UI will be an interactive terminal application that supports the following short cut keys: 
+
+OPTIMIZING Two optimizations applied: Using for the adjacency containers Because many actors will have played in < 10 movies, it may make sense to cut down on memory allocation costs there. is a nice candidate as it gracefully degrades to allocating behaviour if required. 
+
+Implementing the various timer operations on this is peanuts. Let's for example do a random durations generator in 3 lines of code: 
+
+The isn't actually much more complicated. I dropped the in favour of more obviously readable code. It has the added benefit of making the code short (except for the constants of course). Functionally, we show 
+
+How "big" is "big byte array"? How fast is "very fast" ? Can we take 20 Hz as a design assumption? Should data be appended in-order? What is the expected overall size for a given file? 
+
+Magic numbers and string: Move'm aside. What's with that ? Is that a cosmic constant, or something your boss may change tomorrow? Make it or . Defend your code. Your creation method is allowed to return , but you don't null-check your input. Code duplication - encrypt/decrypt coordinates are almost the same. Consider combining. 
+
+Well this is a well known 'brain teaser', and your solution is incorrect. You assume (and test by that assumption), that the input is ordered. Since this isn't mentioned in the question, the algorithm is incorrect - fix it first. 
+
+Yes I think it's great. Sure. Lacking meaningful 'default object', you don't have many alternatives. This is probably the main issue here, and the hardest to answer. I have some doubts about returning a non-cancellable . I suspect if the object to be serialized has changed completely, the user may want to cancel the serialization. 
+
+What is the expected logic for inserting the first node to an empty list? Is just a typedef to , or you used the 'dummy node' approach? If it is , you cannot move your there - you should be 'in the list', and check next/prev for null-ness. 
+
+Why is this good? Because by the time it fails, you'll be smart enough to answer 1-4, and then we would design something else based on real understanding of the problem. 
+
+EDIT: Seems to be ~0.2% faster ~2 times slower than Adam Wagner's (for ) The infamous 'test the unit test' problem. 
+
+Just for the taste of it, appending 4MB to a file, on my 10 YO machine, takes less than 10 ms. A modern SSD and CPU will outdo this by an order of magnitude. Anyway, knowing nothing, I would start with the most simple imaginable scheme, which is completely synchronous, and let it fail: 
+
+You should an over . I wouldn't bother passing a to a - that's none of his business. Let the serializer if he's not happy. Fix some typo in names and messages ("Deserialse" and so). I somewhat doubt the whole concept of async serialization. I take serialized data to be an object snapshot in a known 'time point'. But if it's useful for you go for it. 
+
+You had these conversions anyways, but here they are in "functional style" (specifically, side-effect free). You'll notice how much this uncomplicates the stopwatch tasks below. 
+
+The foundation of our task class hierarchy. Note that the most generic base class doesn't even presuppose any published events, which makes the framework extensible to tasks other than time measurement. Our time-related tasks share the following abstract base: 
+
+The remainder is the setup for the DemoApp, which includes rather boring stuff like generating random view positions. 
+
+The BFS State I've defined this as simply the "grouping" of things you have prefixed in and flavours. 
+
+A simple view to implement would be the digital timer view. We already have the and utilities. Let's decide that the view should show the total elapsed time regardless of lap-times and it should indicate how many laps have been recorded: 
+
+¹ I am aware of the usual implementation in hardware stopwatch devices where the operation modes form a state machine. I also realize that the implementation in code tried to mimick this. Unfortunately, not only did it fall short, it also conflated things with the UI side of things. Consider this answer a finger exercise on my part. 
+
+Post Scriptum These are random notes. Specifically, I didn't mention important things (like brace style, const-correctness, use of raw arrays etc.) 
+
+Using Memory Mapped Files And Spirit Taking the approach from my answer over at [SO]: $URL$ I changed the implementation of into the equivalent: 
+
+Behold, a thing of beauty. One should never underestimate the value of self-explanatory code (if only the constants here). The Main Application All that remains to be done is the demo application itself. It sets up some factories, and starts an input event loop to receive keyboard shortcuts. Handling them is pretty straightforward. The stopwatch-specific operations ( and ) are the only mildly complicated ones because they will have to filter for any running tasks that might be stopwatch tasks. Launching a task without selecting one or more views to connect up will result in a and nothing happening. Note how clearing the or automatically destroys the right subscriptions (due to the use of ). 
+
+As in the last comment on the old answer, we'll be using to create an interactive terminal UI (TUI).

@@ -1,0 +1,91 @@
+first define a window with . This window could have a 24 hour duration and repeat every day so that it is always open. modify your job submission so that they run under this window (parameter of the procedure). when you need to enter maintenance and/or release resource, use . When your maintenance is done, use . 
+
+This is an expected and normal behaviour, Oracle wants to protect you from yourself since Oracle guarantees: 
+
+If for some reason this grant has been removed, you would need to regrant the rights to either or a specific user (with a DBA account): 
+
+You can use the legacy (but still supported) utility to export a table/schema/DB to your local computer, and then use to import the data on another instance. 
+
+If is unique, you can use referential integrity with a virtual column (11g+) to make it conditional: 
+
+I suppose you want to create an APEX administrator account. They are workspace administrator of the special workspace "Administration" that you can create following the standard APEX account creation. 
+
+Replace 1000 by the maximum number of elements (or calculate it with an inner subquery). Each row will only be queried n times (where n is the number of commas). Also if performance is critical, use and instead of . 
+
+I agree the Oracle docs can be a bit bland, however they are in general very complete. Once you learn how to locate the relevant piece of information you're looking for, they are often the best resource you can find online. In your case I would suggest you take a look at the PL/SQL Packages and Types Reference book, where you will find the complete documentation of all standard packages. The chapter, contains a collection of examples, in particular how to set up your directories to enable access. Once you have setup your directory object, you can create a file in PL/SQL with something like the following : 
+
+Most likely your tables have up-to-date statistics but sometimes the optimizer is baffled because it oversimplifies the cardinality estimation. This seems to be a good candidate for dynamic sampling. In its default value (2 in 10g and 11g), dynamic sampling will only be used if one of the table has no statistics. In your case you would need to change its value to be able to let the optimizer collect statistics to build a better plan. I suggest you use the hint that will let you modify the optimizer behaviour for a single query. I tested with a subquery and you need to use one of the following syntax: 
+
+The jobs submitted while the window is closed should be queued and run later when the window is opened. 
+
+This shows that we have lost data during the second step: the century was lost! The third step has to make up for it and uses the default rule of : 
+
+I think there are restrictions and you should probably use a workaround such as a local view that references the remote table or a local synonym. In any case this should remain an exception, obviously the best place to store a procedure is in the database where the data is stored. If you find that a program frequently needs access to several databases, it might be a good idea to merge those databases. 
+
+The APEX administrator accounts are not linked to a database schema. Reciprocally, creating a database schema won't create an APEX account. You'll have to create the administrator account via the web interface. 
+
+In Oracle, a binary tree index on a NOT NULL column can be used to answer a COUNT(*). It will be faster in most cases than a FULL TABLE SCAN because indexes are usually smaller than their base table. However, a regular binary tree index will still be huge with 157 Mrows. If your table is not updated concurrently (ie. only batch load process), then you might want to use a bitmap index instead. The smallest bitmap index would be something like this: 
+
+So your two clauses are not equivalent at all. The second one selects the whole day feb, 15th whereas the first one only selects the first second of the day. I suggest you use the following constructions when writing date range: 
+
+Most likely when you write this kind of trigger you would expect the query (2) to see the row inserted on (1). This would be in contradiction with both points above since the update is not finished yet (there could be more rows to be inserted). Oracle could return the result consistent with a point in time just before the beginning of the statement but from most of the examples I have seen that try to implement this logic, people see a multi-row statement as a serie of successive steps and expect the statement [2] to see the changes made by the previous steps. Oracle can not return the expected result and therefore throws the error. For further reading: "mutating table" on Ask Tom. If as I suspect the cause of the mutating table error is a trigger, one way to avoid the error is to move the logic out of the trigger into procedures. 
+
+Your requirements look like a good case for Oracle's Flashback Data Archive (Total Recall) feature. Disclaimer: I haven't used this feature yet. The description reads: 
+
+In Oracle, DDL on remote database is not permitted. One likely reason is that a distributed transaction commit can not be initiated at the remote site (you can't ) and since DDL statements include a commit they are not permitted. You would get an with other DDL statements: 
+
+You can create the database link by connecting directly to the remote database. As suggested in the askTom discussion, you can also use or to create a distinct remote transaction that can initiate the DDL statement. 
+
+Aside from that, I don't see anything wrong with using in an exception clause (in fact you can't use it anywhere else). 
+
+If you grant an object type privilege (without ) such as to a role, all users of this role will be able to assert this privilege on their own schema. Consequently you can grant these privileges to a role and the users will inherit such rights (on their own schema) when they are granted the role. 
+
+The type is a nested table of , so you need to build a set of objects to get the list. The following query works on 11.2: 
+
+If the row is locked, you will receive an ORA-00054 which is in most cases preferable to indefinite waiting. 
+
+A function-based index adds a virtual column to the table (This column is then indexed). Dropping the index removes the virtual column, which leads to a cleanup that takes time (same amount of work as the removal of a non-virtual column). 
+
+First of all export is not backup. You will not recover a physical copy of a database from exp-dump, only an unconsistent copy of its data (you can make them consistent but the option is rarely used). I'm really not sure you can apply the contents of logMiner on such a copy. Your best bet would be to apply undo statements to your current copy of the DB to return it to its original state, such as described in the documentation: 
+
+Both functions and take three arguments. The two last arguments take a default value if they are unspecified. The second argument is the format. It will default to your session parameter value. Since you will potentially lose information during the conversion, there is no reason to assume that the two functions are the inverse of one another. Let's take an example with the default poor choice of format : 
+
+The most likely cause of a mutating table error is the misuse of triggers. Here is a typical example: 
+
+you select only all date up to the at midnight. All rows later that day won't be selected. What is happening is that when you use on a date, it will be converted to VARCHAR2 and then converted back to a date. The net effect will be a truncation to your date format as shown: 
+
+This will wait 10 seconds before giving up. The WAIT instruction has been available for a long time (9i) for DML: 
+
+You can't use interval partitioning with reference partitioning, however, It's possible to mix range partitioning and reference partitioning, as shown in the example of reference partitioning in the 11g doc: 
+
+When you do DML on a table, Oracle may make the changes to the base table almost immediately, even if you don't commit. The other sessions don't see these changes yet thanks to multiversion read consistency but the actual physical block may already be overwritten with your uncommited work. This is done because Oracle is optimized for commit. Most sessions should rarely rollback so Oracle anticipates by writing preemptively the changes. This is also one of the reasons that allows Oracle to have arbitrarily large transactions (limited only by the size of the undo tablespace). The changes are not delayed (much). This is also why you almost never wait for a commit in Oracle, even for multimillion-row DML. One of the consequences is that rollback needs to undo the changes. The uncommited transaction is read back from the undo tablespace and each and every change is undone in reverse order. This can take longer than the initial DML for several reasons: 
+
+You can enable it at the table level. You can specify an undo retention ; although I can't find the limit it is probably larger than you need since the goal is to keep records for legal purposes. There is an example of a scenario that might apply to your specific case: Using Flashback Data Archive to Recover Data. Oracle Total Recall is part of the Advanced Compression Option, available on the enterprise edition. 
+
+The record is still there (with a flag set). If we look at the actual binary data (just before the section, we see that the data has not yet been overwritten: 
+
+You can use hints with subqueries, after having them qualified with the hint for example. In this case however a simple hint should be ok. Here's my setup: 
+
+This will delete the rows from sale that are present in split and replace them with their appropriate split products. You could also write it: 
+
+There seems to be something wrong here: the 0 cost on the index full scan is suspicious and if I had to guess I would say that you're missing something: probably the stats on the index. This in turn leads the optimizer to believe that it can run the FULL INDEX SCAN "for free" and goes on with a suboptimal plan. This could also be a rounding error problem, since there is very little data (1k tiny rows, probably fits in a single block!). So either there is some stats missing, or too little data to be meaningful. Interestingly, if we run your test with a large sample (say 1M rows), the optimizer is happy to go with an index scan. If we insert some data instead and do a standard stats analyze, we find a more logical plan (11.2.0.3): 
+
+You can reference a remote table in a procedure or a package. Here's an example with a loopback link: 
+
+You're updating lots of rows. It will take time no matter what. You could try to update the join though (since we have an on the lookup table), it will surely work better than an inline index loop: 
+
+Most likely using a cluster for this query won't be beneficial. A cluster in Oracle allows data from multiple tables to be stored physically close when they share a common key (here I suppose). This allows some query to perform better but a cluster will intrinsically consume more space than standard heap tables because for each key there will be some unused space. Insert-only heap tables on the other hand are one of the most efficient way to store data space-wise, since the rows fill all blocks nicely up to the HWM. In your case since you don't have a filter so all rows will be read, producing a FULL SCAN of the data. Because the rows are stored in a more compact manner in heap tables, the cost will be less than the cost for the cluster. The cluster, however, should have an edge when you look for a specific key, but this will also depend on the distribution of the data (number of rows per key), and on the length of the rows. You could build an example where the heap tables with regular B-Tree indexes will outperform a cluster for single-key queries. In conclusion, clustering tables in Oracle will help for some queries, but will also be hurtful to others, it has restrictions and drawbacks, it is not a silver bullet for optimal performance. Heap tables are the default for a good reason: they have good performance for most queries. 
+
+Your database character set is , it doesn't have the sign. Either use or change your database character set (export, reinstall with a character set that supports the euro sign like or , and import). Here's an example of : 
+
+This index will only ever index a single row at most. Knowing this index fact, you can also implement the bit column slightly differently: 
+
+If you're locked on inserts, it usually means that you're trying to insert rows that have the same values for a set of columns that are UNIQUE, for example: 
+
+The queries are an order of magnitude different ! The access paths themselves shouldn't have such an impact but you're comparing the simplest aggregation function () to one of the most complex () ! Furthermore, you have specified an clause in your , this will force Oracle to sort, which explains the optimizer decision to ignore your hint (this hint is also undocumented as far as I can tell). If you wish to compare the different access paths, use the exact same query with different hints, eg: 
+
+Also don't use or format in your code since they are dependent upon language. Don't use since this can be confusing (ever heard of the Y2k bug?). Both formats are ok to display information to your users of course. 
+
+All dates in Oracle have a time component. I'm pretty sure you want all rows between the 13th and the 15th included. However, when you write: 
+
+In an extreme case such as this one, where the optimizer makes a poor choice of plan or can not build a plan in a reasonable amount of time, you could try to force the plan yourself with the use of hints. In a scenario similar to yours with a legacy app and an old version database, I've managed to work around an apparent bug of the optimizer by following the method described in the post Full Hinting by Jonathan Lewis.

@@ -1,0 +1,85 @@
+In my version of Python 2 the module is called Tkinter (upper case initial T). In my version of Python 3 the module is called tkinter (lower case initial t). For Python 3 I had to additionally install tk (). 
+
+EDITED TO ADD I should say it's probably trivial in bare metal. But then you are just using the Pi as a dumb microprocessor. So why not just use a microprocessor? 
+
+It would be simpler if you didn't have this breadboard add on that presumably covers the expansion header. What is that for? To control the relay you'd connect a Pi 5V pin to VCC, a Pi ground pin to GND, and two gpios of your choice to IN1 and IN2. Set the gpios as outputs. Setting a gpio high should operate the relay. It should work from the Pi as it claims to work with an MSP430 which is also a 3V3 device. For the reed switches connect one end to ground and the other end to gpios of your choice. Set the gpios as inputs with their internal pull-ups to 3V3 enabled. The gpios will normally read back as 1 but will read back as 0 when the corresponding reed switch is closed. It might be safer to connect all the gpios via 300 ohm resistors. I.e. between each gpio and IN1/2 and between each gpio and its corresponding reed switch. This will provide a level of protection if you misconfigure the gpio settings. 
+
+For the highest performance write your program in C and link with the pigpio library. At any one time only one such program may be running and such a program automatically becomes the pigpio daemon. For the second best performance write your program in C and link with the pigpiod_if2 library to interface with the running pigpio daemon. For ease of coding write in Python to interface with the running pigpio daemon. There may or may not be a slight performance hit in terms of option 2. 
+
+You could try powering the device from 5V. You would still need to pull the data line up to 3V3 though. 
+
+I'm not sure that you can set the internal pull-up/pull-downs via the sysfs interface. I have never done so, but I don't often use sysfs. From the command line there are many methods. The following examples assume Broadcom gpio 4. pigpio 
+
+Note that there is no natural connection between mode and value. For details of the permissible modes see BCM2835 ARM Peripherals page 102. 
+
+It has a 5V power rail because it is powered from 5V. The availability of the rail allows powering from the expansion header as well as the microUSB socket. A 5V power rail is also convenient to power the hundreds of thousands of components which can be connected to the Pi and require 5V. Similarly a 3V3 rail is provided for those components which require 3V3. It is clearly documented that the Pi's GPIO are 3V3. 
+
+May I suggest you try some other software which will work provided you have connected the DHT11 correctly. Try my DHTXXD software. It requires the pigpio daemon to be running (e.g. sudo pigpiod). The DHT11 (and other DHT models) require accurate timing of pulses a few tens of microseconds long. pigpio is one way of getting accurate times. 
+
+The DHT22 is a digital temperature and humidity sensor. It uses a proprietary so called one wire system to communicate with a computer. The system is incompatible with the (Dallas) 1-wire bus. An Arduino solution will be of little use on the Pi because of the tight timing required. See $URL$ for a C implementation (likely to be the most reliable on the Pi). The TMP102 and HTU21D are digital sensors. They communicate using the standard I2C bus. The Arduino implementation is quirky and is probably not a good model to use on the Pi. Googling for Linux and the sensors should reveal standard C solutions. 
+
+You should only connect Pi gpios to the pins labelled ENA, IN1, IN2, IN3, IN4, and ENB. Behind ENA/ENB are jumper pins marked in red. These pins carry 5V and should NEVER be connected to a Pi gpio. They are a convenience. If you do not want to have ENA/ENB under software control you can enable ENA/ENB by connecting a jumper between the jumper and enable pin (as shown in the image). 
+
+I suggest you always use packages from the official Raspbian repositories when possible. They will have been tested and will be compatible with the other installed libraries. shows a number of results. For Python 2 use. 
+
+a partition with the files needed for boot formatted as FAT (so it's readable from a PC) a partition used to store the operating system and application programs and any files you create. This is formatted as ext4 which is not readable by a Windows PC (although you can get add on software which will read/write ext4 format). 
+
+Have you tried using a different library to control the GPIO? I don't see why Adafruit should care what other libraries are doing. E.g. try my pigpio or wiringPi etc. 
+
+The early Pi's with the 26 pin expansion header have one available hardware PWM pin (connected to GPIO 18). The recent Pi's with the 40 pin expansion header have four available hardware PWM pins (connected to GPIO 12/13/18/19). Although recent Pi's have 4 pins there are only two channels as 12 has the same setting as 18 and 13 has the same setting as 19. This means that effectively there are only two hardware PWM pins available. However software timed PWM is available on all GPIO and may be adequate to control simple motors. The overhead of software timing may impact on processing time depending on the frequency used. As an alternative my pigpio library will generate hardware timed PWM on all accessible GPIO. This type of PWM is very similar to that provided on the Arduino. On the Pi it defaults to 800Hz with 250 steps between off and fully on. See set_PWM_dutycycle. This PWM does not utilise CPU time. 
+
+You may be following an out of date tutorial and installing screen software which is no longer relevant. Support for at least some Adafruit 2.8" touchscreen displays is built in to the later versions of Raspbian with a recent kernel. Look in /boot/overlays/README on your Pi. Mine contains 
+
+It's quite easy to use the DS18B20 temperature sensor on the Pi. An entry in /boot/config.txt such as the following (using the non-standard GPIO24) is enough if you want to use the kernel drivers. 
+
+Software at risk are web browsers You can check whether your browser is vulnerable using the FREAK Client Test Tool. 
+
+If it works on GPIO 4 with dtoverlay=w1-gpio,gpiopin=4 then it should work just as well on any other. It certainly used to work as I've done this in the past. Choose the GPIO you want to use, wire it up, change /boot/config.txt and reboot. If it still doesn't work post a photo of your set-up. 
+
+I think the best chance you will have of achieving this on the Pi is my pigpio library or possibly RPIO.GPIO (not RPi.GPIO). Both allow for the construction of arbitrary waveforms using the DMA engine. With pigpio you would use a functionality called waves (C, Python). Waves are an arbitrary sequence of GPIO level changes. They can be repeated indefinitely or a set number of times using wave chains. For an example (not stepper) see $URL$ 
+
+Just split the wire. You can power as many 5V devices as you want from the Pi, provided you don't use more current than is being supplied. The current is typically limited by the 1 amp or 2 amp polyfuse at the microUSB socket. The fuse fitted depends on the Pi model, those with a 40 pin expansion header will have a 2 amp fuse. 
+
+In Python 3 print is a function. In Python 2 you could do print "hello". In Python 3 you must do print("hello"). 
+
+The RPi.GPIO Python module only works on a Raspberry Pi. It accesses the Raspberry Pi's GPIO and expects to be running under a Linux environment. 
+
+It's far easier with a keyboard and screen. I don't know how a NOOBs install will work. If you have the Raspbian image written to the SD card you could try the following. 
+
+You should timeout both whiles. Otherwise occasionally the echo will have come and gone by the time the first while is executed which means it will spin on pin is 0 for eternity. 
+
+There is no way to repair damaged GPIO. You can check the current state of the GPIO by using the following two tests. Both tests should be run with nothing connected to the expansion header. 
+
+You can't bridge GPIO in the way you suggest. The Pi does not contain the hardware to act as a telephone exchange type switch. The best you can do is monitor the state of one GPIO and mirror that state on another. In Python terms: 
+
+Presumably this is a permissions problem. Try adding to the group. This may be enough to allow it to manipulate the GPIO. You will probably have to restart the web server for the permission change to take effect. 
+
+By MAC address I guess you mean the MAC address of the on-board Ethernet controller. The answer is no, the MAC is not printed on the Pi2. I suppose you could ask the manufacturers to start printing the information on the Pi or the delivery package. I believe the address is held within OTP memory on the PI2. The device needs to be booted for you to get the MAC. 
+
+Yes, you can power all your Pis from one power supply with sufficient capacity. You lose the polarity and fuse protection of powering via the microUSB socket. You can mitigate any risks by adding your own in-line fuse per Pi and taking care you plug 5V into a 5V pin and ground into a ground pin. 
+
+My interpretation of the Cortex-A7 MPCore ™ is that there is an FPU per core. In particular section 1.5 of the Technical Reference Manual says the FPU can be configured per core but goes on to say that if the core has NEON the core has an FPU. I believe all the cores have NEON so all have an FPU. $URL$ Your interpretation may differ. As regards your second question I cross-compile for a Raspbian (hard float) B+ on a laptop. The same images work on the Pi 2. 
+
+It may be a bug. May be worth checking at $URL$ However I doubt that what you are doing is the intended usage for the wait_for_edge function. I'd try with the RPi.GPIO module's callback function and in the callback simply increment a global counter. I give an example using my pigpio Python module. 
+
+pigpio (from V57) now supports the Raspberry Pi acting as a I2C slave device. The core function is the C bsc_xfer. The Python wrapper bsc_i2c provides an I2C slave interface. As a test between a Pi3 and an Arduino Pro Mini I used the following code. On the Pi3. 
+
+That's a known bug with that code. It seems to be copied with the bug included again and again. If you think about it you will hit that bug sooner or later. Both those while loops are faulty. You need to guard each with a timeout or similar. 
+
+MCP23017 are I2C port expanders. Each has 16 GPIO. You can have up to 8 on one I2C bus as they have three address pins. You need to give each chip a different I2C address, which you do by using a different combination of address pins connected to 3V3 (or 5V) and ground for each chip. You don't daisy chain the chips as such. You just connect all the SDA pins to the Pi's SDA pin and all the SCL pins to the Pi's SCL pin. You can do this any way you choose. E.g. separate wire from each chip SDA to Pi SDA, or wire from chip SDA to the next chip SDA etc. to Pi SDA, or any combination thereof. 
+
+You need a complete kernel framework to build a kernel module. Search for Raspberry PI compiling kernel modules and you should get the drift. Every time you update the kernel you will have to re-compile the module. I'm going to guess you have a Mediatek wireless dongle. Luckily, I think MrEngman publishes an up to date kernel module. Find your kernel with the following command 
+
+The Pi's GPIO are all 3V3. Exposing them to 5V can damage the GPIO and/or the Pi. The Pi's I2C bus operates at 3V3 - to that end hard wired 1k8 resistors are wired between GPIO 2/3 (SDA/SCL) and 3V3. 
+
+The Raspberry Pi does do not have an I2C bus 2, it has an I2C bus 0 and an I2C bus 1. Are you using a Raspberry Pi? You can't write to an I2C device which doesn't exist. There is no evidence that a device exists at address 0x77. That is why the write fails. 
+
+On recent kernel releases (post 3.18) device tree is used to load hardware kernel modules. The device tree settings are configured in /boot/config.txt 
+
+I don't know if any of the wires should be twisted for best performance. The pdf only says to use high quality shielded cable. When powered from 5V the output pin will be at 5V. The voltage divider is needed to cut the 5V data output to a Pi gpio safe 3V3. 
+
+You should have a zero error rate on all the GPIO at the data rates you mention. GPIO4 is not special, but it is significant it is the default 1-wire bus GPIO which can confuse the issue if 1-wire is enabled. Make sure the following command shows no active entries. 
+
+You need to create a circuit for electricity to flow from the Pi to the servos and then back to the PI. You control servos by sending 1-2 ms pulses along the control wire at 50-60 Hz. If you don't have a ground wire between the servos and the Pi there is no circuit for the pulses. 
+
+The Raspberry Pi is not an ASIC, it is a general purpose computer like your regular every day PC. It is a Linux rather than Windows or Mac box. It would be easier to run your application using the Raspberry Pi OS, i.e. boot into the OS and then start your application. The Raspberry Pi has no BIOS or usable internal ROM. The OS is loaded and run from SD card. It is important that the SD card is not corrupted. The Pi runs from 5V. You will need a 12V+ to 5V converter. Perhaps a UBEC would be sensible to allow for the variable 12V+ voltage. Powering-up isn't a problem. It is sensible to shut down the OS before powering down to ensure that the SD card is in a stable state. It probably won't be safe just to cut the power. You will have to come up with a method of safely shutting down the Pi. Be aware that after being shut down the Pi will still draw something like 125mA at 5V. You will have to electrically isolate the Pi from the supply to prevent this drain.

@@ -1,0 +1,49 @@
+Automounting the Drive To mount the drive on boot, it is recommended that you use fdisk. This allows the system to perform the action before anything else is active. Before going forward, you must understand that this is not permanent, but could cause problems if there are programs dependant on this drive. 
+
+Requirements 1 x Raspberry Pi - Min requirements: ARM7 processor or better 1 x WiFi Network connection, or Ethernet Connection (if wifi is embedded [like 0W or 3] don't worry about it) 1 x External Hard Drive or NAS formatted in a UNIX friendly FileSystem Remote or local access to the server. 
+
+ugh. this is not going to be easy to figure out which port is tripped. I only want to notify if it's port 17 on my switch, not the rest of them (the above is port 39 and 35, respectively).. I have to somehow figure out how to strip that info out, but I have no idea how to do that with bash scripting. (again, I know enough about bash scripting to be dangerous) Python, however, I like Python, so maybe I can export the results to a little Python script and see what sort of packaging is being used here. It sort of looks like it's somewhat of a JSON package or something, I could not find any documentation on what sort encapsulation the MIB is using under the hood. So... enter a tiny python3 script that should run through each chunk of $vars, and write the contents on a single line to a text file: 
+
+If you are running Jessie, there is a bit of a difference of where your webserver will hold its data. In Wheezy it is located at , Jessie locates it at Go to whichever directory by typing then type . While in this directory, create a new file called "index.html". You may do this by typing , then adding the content located in code below. All links may be edited. index.html 
+
+Create folder in the /mnt/ folder so that you can mount your network share in that folder: $sudo mkdir mountfoldername Two Ways to access 
+
+I created the /usr/local/bin/snmp/snmpdisco.sh file with just the following in it, echoing the results to a text file so I could try to make sense of it: 
+
+Full disclosure: I know next to nothing about snmp in a large sense. "just enough to be dangerous" so I left the log and net in the community. I could probably get away with just the execute for the WLDLifesnmp community, but it works so I left it. The most important part was finding the exact OID that was being tripped when that particular port on the switch disconnected. So I manually ran snmptrapd from the command line, just to watch what came through: 
+
+Closing Notes: For any reason, should you want to shut down Plex, you can either just stop it, or remove it by running or for complete removal. If you want to stop the redirector, you may type , or you can just remove it by running after running the stop command. Both of these will start on boot. If you are going to use this as a low power server for while on the go, do not login. Sources: Personal Experience, Samba instructions Raspbain Jessie 8 
+
+Before you go forward, also create a mount point. Mine is located at /mnt/PlexPi, but yours may be different. To create this point, type . For automount, see below. The output from the first command should be something like shown below. Enter via ssh or terminal, and be sure to not the UUID of the drive you are trying to mount. 
+
+I have a basic system with a normally closed switch I need to monitor. If I run the program with the following setup, it works: 
+
+Then I re-ran from the command line the snmptrapd function, unplugged and replugged a few network cables on the switch to see what I'd get... if anything. Hopefully something. I DID! I got the following mess in the /var/log/snmptest.log file: 
+
+I've got a fun little problem that I have hacked together a solution for, but I'm thinking there's probably a more elegant way of going about it. (I also had one heck of a time googling any information on the hurdles I had to face, so while I'm looking for suggestions on cleaning this up, I also hope this may be of help to others who are trying to do the same sort of thing) My managed switch has quite a lot of capabilities, but what it doesn't have is the ability to email me when one of my network drops disconnects. (It's for a wildlife camera that I have a long ethernet cable to, and I want to know immediately if it is ever stolen or drops offline or whatever.) Of course, I immediately thought "Sounds like a Raspberry Pi project!" So I configured the switch to kick out an snmptrap packet to the IP Address of my Raspberry Pi, gave it a custom community ID of WLDLifesnmp, and just turned on the 'link down' notification in the management interface of the switch. On the Pi: 
+
+To answer you first question: Plex can be installed without the OS RasPlex installed (RasPlex is actually a client, not a server). All that is needed is Raspbian (I did it on Jessie 8), and a few instructions to be followed, which are included below. I have down this 4 times, and has worked every time. A note for those who may be oblivious: This will not support transcoding, as it is not a powerful server, so make sure all of your media is encoded in the appropriate codec for multi-device playback [usually an MP4 or similar]. Note: ensure you have formatted the external hard drive in one of the following ways: NTFS, exFAT, or Extended Linux. When you are done, you may want to run for a reboot. 
+
+The above installs everything I needed, (maybe even more than I needed, not sure) and the next step was to tweak the default snmptrapd.conf file in /etc/snmp/ 
+
+check out tvservice it should give you information on the connection status of the HDMI. tvservice -n Will show you the name of the device connected. (by the way, why mode 2? That's only 480p) Otherwise, it could be totally unrelated to the Pi. Bad HDMI cable, wrong input on the TV... 
+
+I can't for the life of me figure out why the 'try' doesn't allow the edge_detection to register. Any ideas? EDIT: I've also just tried to take the main code chunk that runs under the main logic check, and created itself in its own function: 
+
+We need to edit the /etc/fstab file, Run the following command to edit the /etc/fstab file $sudo nano /etc/fstab Append the following to the /etc/fstab file For Guest Login //WindowsPC/Share1 /mnt/mountfoldername cifs guest 0 0 
+
+Setting Up Plex Navigate a web browser to $URL$ if you are on the pi, or to $URL$ if it is in your home network. The web interface will guide you from here. All Plex updates can be done by running in the command line. 
+
+A Simple Redirector If you are wanting it so people can just go to $URL$ to access the site, you could whip together an html document that auto redirects to the Plex address. I have included how to do this below Install Apache 2 
+
+The key to this whole process is that last line in the snmptrapd.conf file: the traphandle. Once I could see the OID that was being triggered from the connection/disconnection, I could add the capture to the conf file: (connection is ' OID: iso.1.3.6.1.6.3.1.1.5.4' disconnection is ' OID: iso.1.3.6.1.6.3.1.1.5.3') 
+
+However, if I wrap the same statement into a 'try/except' (in order to add the GPIO.cleanup() to the end). It doesn't trip when when the switch opens and the GPIO falls. 
+
+Now, maybe I can export the results from the bash script over to the python script instead, and parse through whatever is being sent, so I can at least sort of reverse engineer the capsule to see how I can grab that port number: Tail end of the snmpdisco.sh script: 
+
+Installing Plex Enter the following commands, one after the other until you have completed the list. 
+
+Note that the UUID of my drive has been copied to the file above the commented , beside it, use the tab key to add the mount point (mine is /mnt/PlexPi, but yours can be different). Press control x to exit, then Y to save the nano document. Based on the format of the drive, (mine is exfat, yours may be different), add that beside the mount point after a tab, then add the rest 
+
+Note the UUID of the last drive, which will be mounted at /dev/sda1 if it is the only one, then enter to edit the file for automounting. The file should look something like this:

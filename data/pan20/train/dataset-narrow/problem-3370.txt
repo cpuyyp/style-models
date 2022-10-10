@@ -1,0 +1,61 @@
+My pigpio library will let you generate repeating waveforms with a resolution of microseconds. If you need less than microseconds you'll need to find another solution. Python 
+
+The kernel has drivers for the bmp085 and bmp18x digital barometric pressure and temperature sensors from Bosch Sensortec. 
+
+The simplest way I know of is to use my pigpio Python module. I would use i2c_write_device to select the register to read and then i2c_read_device to read two bytes. There are other ways from Python involving IOCTLs which will also work. 
+
+That would allow you to publish the event (take photo) on one machine and have your Pi's subscribed to that event. This would be a programming solution. I'm not sure if there is a bash interface to the publish/subscribe methods. I HAVE NOT used it. I'm aware of it simply because I see it often recommended for this sort of task. You give no indication of any timing constraints, e.g. how closely the photos must be synchronised in time. EDITED TO ADD I have had a quick play with mosquitto 
+
+Yes, you can write a program to do this. I'm not aware of any existing programs which do what you want, possibly because it seems an odd way to go about doing things. 
+
+Why not just connect Pi ground to one relay contact and a GPIO set as an input to the other. Then set the internal pull-up GPIO resistor. The GPIO would then read high when the relay is open and low when the relay is closed. You need no other circuit components. 
+
+The only scenario I can think of is if RAM buffers fill up during the copy. That might trigger the system to move a program or data to swap space (on the SD card). I do not think that likely, even if it is possible. I suppose you could discount that possibilty completely by disabling swap space. 
+
+You might have to use variations of the package name or just a few letters if you are unsure of the spelling. In this case 
+
+You don't have to do anything. The PL011 UART is enabled by default as device /dev/ttyAMA0. The Linux driver handles the FIFOs and has additional buffering. 
+
+It may work with the internal pull-ups enabled. You'll have to try and see. Use 3V3 operation so connect DHT11 pin 1 to Pi 3V3 (say pin 1) and DHT11 pin 4 to a Pi ground (say pin 6). Connect DHT11 pin 2 to any Pi GPIO. $URL$ will read the sensor but you'll have to set the pull-up outside the program (or edit the code). If you connect to GPIO4 (pin 7) you can set the pull-up with the following command. sudo pigpiod # Start daemon pigs pud 4 u # set internal pull up 
+
+EDITED TO ADD As I say which GPIO you use is fairly arbitrary. You can use any you are not using for another purpose. As it happens I have 5 (4-phase) steppers using ULN2003A as drivers set up on a Pi B+. I am using the following GPIO 
+
+A stepper motor can rotate continuously, unlike most servos. As far as I am aware a stepper won't hold its position against an opposing force without power. The power through the coils is needed for a stepper to maintain its torque. You need some sort of motor driver board for a stepper. Simplest would be something based on a ULN2003A or equivalent, or perhaps a L9110S. A bulkier alternative would be a board based on the L298N. You will need to make sure that the solution you opt for can handle the desired voltages and current. A Pi can not drive a motor directly. The GPIOs are rated for 3V3 and a few milliamps, nowhere near enough to drive a motor. The GPIOs can drive a motor driver board. Typically for a bi-polar stepper you connect 4 GPIOs to 4 pins on the driver board and then pulse the stepper by setting the GPIOs high and low in a defined pattern. There are plenty of examples on the www. The only motor you can drive directly from the Pi is a servo, simple because a servo generally has an in-built motor driver board. Google for Raspberry Pi blind control. It seems to be a fairly popular project. 
+
+It is certainly possible as I test from the command line regularly, although I use (my) pigs rather than gpio. The simplest way to check is to connect a wire from a spare GPIO to the GPIO under test and then use the command line utility. That way means you aren't trying to overwrite any GPIO settings made by the program under test. E.g. if you directly write to a GPIO it will be set to OUTPUT mode even though the program under test had set it as an INPUT. In your case I would connect a wire between GPIO 22 and GPIO 23 (pins 15/16) and use the command 
+
+EDITED TO ADD I used my piscope to capture the start and end of the waveform. It won't capture any detail at those rates (default 5 µs sampling) but the overall edges are found reliably enough. I repeated the above by sending 1000 "A"s. That is 10000 bits at the default 8N1. That should take 10000/4000000 seconds, or 2500 µs. 
+
+To add to @Milliways answer. pigpio is a perfect fit for this type of application (I am the author so treat what I say with normal scepticism). A piece of software called pigpiod needs to be running on each Pi. pigpiod allows control of the Pi's GPIO locally or from over the network. pigpiod uses a socket interface which is supported by all programming languages. Wrappers for Python and C/C++ are provided. Python scripts are probably the easiest interface. The controlling script(s) may be on a Pi or any other machine capable of running Python. E.g. Windows, Macs, Linux, Android etc. The script can control its own GPIO (if running on a Pi) as well as any other Pis. gpiozero provides a wrapper around pigpio (as well as other Python GPIO libraries) and has a wealth of resources. 
+
+I'm going to guess you are trying to do this from Linux userland. You need to pass the DMA hardware the bus address of the memory you want to transfer. These are physical addresses. You have to remember that the Pi has multiple MMU (Memory Management Unit). The memory used by a Linux userland process is logical memory. You have no control of where that logical memory is in the physical address space. You need to map the logical memory address to a physical address. You do that by opening the page map file for your user process and finding the corresponding entry for the memory you are interested in. That entry tells you the physical address. You then need to map that physical address to a bus address. On single core Pis you could do that by adding 0x40000000 to the physical address. You also need to find the address of the DMA hardware. You do that by using the mmap function. This isn't trivial. Have a look at servoblaster useland variant code which is probably the simplest complete example you will find. I suggest you now use the mailbox interface to grab DMA memory. It's a simpler process than the above, but will only work on the Pi. Again have a look at servoblaster or my pigpio.c code. 
+
+Here is some code which uses my pigpio library to monitor the data and clocks. It assumes you are using standard shift register signal levels. Three values are printed per latch. 
+
+There are two possibilities (given that if there was a bug in nano or Raspbian there would be several thousand reports). 
+
+It would work and would probably be a cleaner solution than just buying the six MCP23017 you need and sticking them on a breadboard. The only thing to be concerened about is the latency of detecting the key press. You'll need to research how long that will take in Python over the I2C bus. 
+
+EDITED TO ADD Each gpio may be independently set to one of eight modes. Not all modes perform a useful function. Some modes are used for debugging and may generate very high frequency signals on the gpio. The modes are named INPUT, OUTPUT, ALT0, ALT1, ALT2, ALT3, ALT4, and ALT5. The machine values to set the mode (and the value returned by get mode) are 
+
+I suggest you try with my example DHTXX code. Extract the zip to a directory and then compile/link with 
+
+All the GPIO may be used as inputs or outputs. They are called modes, the GPIO is in input mode or in output mode. In addition some GPIO may be configured to be in other useful modes. BCM2835 ARM Peripherals page 102 shows the modes that individual GPIO may use. Unless you have a compute module only GPIO 0 to 27 are of any interest. In TXD/RXD mode the GPIO may be used as a serial link (many devices can communicate via a serial link). In I2C mode the GPIO may be used to implement an I2C bus (many sensors, e.g. RTC (Real Time Clock), can communicate via I2C). In SPI mode the GPIO may be used to implement a SPI bus (many sensors, e.g. ADC (Analog Digital Converter), can communicate via SPI). Other potentially useful modes are CLK (for generating a clock signal) and PWM (Pulse Width Modulation) for setting motor speed, driving servos, dimming LEDs etc. 
+
+Unless you have a very good reason it is best to install software from an official repository. You can then be sure that the software has been tested and is consistent with the other packages from that repository. In the case of opencv you can install from the repositories with the following commands. 
+
+Ignore all those outdated instructions and UNDO any changes you made. Add the following to and reboot. 
+
+The Arduino GPIOs will be fine. Some Arduinos are 3V3, most are 5V. Either way their GPIO will not be damaged by a 3V3 signal from the Pi. 
+
+It's converting the first four bytes received by read_i2c_block_data() to a long assuming the data is stored most significant byte first. I guess read_i2c_block_data() returns a list rather than a string. If it returned a string I'd use the more natural 
+
+In Python pass means do nothing, it's like a NOP (no operation) in assembler. It's used where the language syntax requires a statement but there is nothing to be done. You could use dummy = 1 instead. Is the Recharge function meant to be recursive? I'd have thought not. You'll have to experiment to get the timings right. The code is timing how long it takes to charge a capacitor through a variable resistance. Depending on your components this might take anywhere between a microsecond and a second. As I say you will need to experiment. I have no idea of the timing granularity which can be achieved by Windows IoT or the number of gpio reads which can be made per second. 
+
+Save the file as read_write.py and make executable (chmod +x read_write.py). To run make sure the pigpio daemon is running (sudo pigpiod) then enter 
+
+You only need to use a library such as pigpio if you need accurate PWM. For motors software PWM may well be good enough in which case just use RPi.GPIO. If you do need pigpio you need to run and connect to the daemon as described in Usage at abyz.co.uk/rpi/pigpio/python.html Usage The pigpio Python module uses the services of the C pigpio library. pigpio must be running on the Pi(s) whose gpios are to be manipulated (which may be any networked Pi). The normal way to start pigpio is as a daemon (during system start). sudo pigpiod Your Python program must import pigpio and create one or more instances of the pigpio.pi class. This class gives access to a specified Pi's gpios. 
+
+My pigpio lets you control the GPIO of one or more Pis from your laptop. Your Python script talks over the network to the pigpio daemon which needs to be running on the Pis. You can write C programs as well if your laptop is Linux. The pigpio daemon uses /dev/mem rather than /dev/gpiomem (it allows access to more than just the GPIO). Alternatively you could just launch a command on the Pi with ssh. 
+
+Both the Pi and an Arduino should be able to handle the decision making. The Pi will be better once the decision making becomes more complicated. The Pi is just as good as an Arduino at controlling motors. Neither the Pi nor an Arduino can control a DC motor directly. They both need the support of external hardware to safely switch the currents involved. I suggest you look at L9110S or L298N based motor driver boards. Both can control a pair of DC motors and require either 4 or 6 GPIO per board depending on how you choose to drive them. If you want a chip based solution a L293D might be worth considering (power requirement might be tight) or you could design your own controller from discrete components. The above will allow you to independently turn the motors clockwise or counterclockwise and control the motor speed by applying PWM to the GPIO.

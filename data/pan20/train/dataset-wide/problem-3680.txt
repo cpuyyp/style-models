@@ -1,0 +1,61 @@
+Edited: Provided better example. As far as 'effective permissions' showing the 'share' limitation, try using an actual user account instead of a group. 
+
+I prefer to verify permissions using 'net share' and 'icacls'. Make sure the share path and file path match, and that you see Everyone and FULL permissions: 
+
+Have you followed this guide: RRAS Migration: Migrating Routing and Remote Access Service specifically the import and Powershell cmds 
+
+Blast this 50 rep for comments - anyways TomTom is correct. These properties were being updated too often and it was causing too much replication traffic, back when bandwidth was expensive. LastLogon is updated per DC and does not replicate. LastLogonTimestamp is also updated per DC and replicates only after it's beyond 14 days in it's own database. So you used to have to query LastLogon for all DCs to find the true lastlogon date. Now, using LastLogonTimestamp you only have to query 1 DC, as long as you're not looking for the last logon within the past 14 days. For the count properties it tracks the number per DC and is not replicated, you'll have to combine those counts from all the DCs, although it isn't entirely accurate if you've ever had to decomission a DC - those counts are gone forever. Here's how I verify there are no replication errors: 
+
+Computer Browser service is disabled by default starting with Windows Server 2008 R2. If you can't turn on Network Discovery, follow the resolutions in this support article: You cannot turn on Network Discovery in Network and Sharing Center in Windows Server 2008, Windows Server 2008 R2, or Windows Server 2012 
+
+Since NetBIOS works on an anonymous broadcast and response, it is easy to use tools to discover the resources on the network. This led to disabling NetBIOS. This is disabled by blocking incoming requests at the firewall, it doesn't block outgoing which is why you'll still get your own registrations. NetBIOS protocol is used by other services still which is why it isn't disabled outright. Short answer is NetBIOS is used by many services and is only blocked incoming at the firewall to prevent network discovery attacks. 
+
+It doesn't care as long as the path includes WindowsImageBackup. When we were attempting a restore we created an ISO and the name of the CD was WindowsImageBackup - we re-burned it with the folder WindowsImageBackup as the root and it showed up in the wizard. I've done this via CD, mounted ISO, and UNC. 
+
+I have multiple psobjects that I've made. They are all the same object types with noteproperty props. I exported the sample objects into CSV, they can be created by directly importing the file into an object 
+
+Did you check this answer from StackOverflow? If these are PowerShell commands, have you tried appending to the CMDlet? This will output a dialog box the technician has to click 'Yes' to continue. 
+
+Share permissions: "Authenticated Users", Full Root folder: Disable inheritancel, "Authenticated Users":Traverse folder / execute file Folder One: Disable inheritance, Group1:FULL Folder Two: Disable inheritance, Group2:FULL 
+
+4521 is a failure to load an AD integrated DNS zone. Since it's occurring every 3 minutes, I doubt it has successfully loaded some its last reboot. If no other DNS servers are viable, you should rebuild the whole DNS infrastructure following this guide: How to reinstall a dynamic DNS Active Directory-integrated zone 
+
+Nobody will be able to view the share, but they will be able to directly access their shares. GROUP 1: 
+
+Yes this is software raid. Windows uses drivers installed for the drives and doesn't support hot swap. To break the raid to into disk management, right click the volume and select 
+
+There was an issue where the credentials were sent multiple times and locked out the account. This hotfix addresses that. 
+
+If you can move the reboot to the end of the VMware script, then you could use the parameter and reboot at the end. Else, you can check the logfile using the parameter to check when it's finished. There's no reliable way to know when the system is at the login screen. The best way is to check for the availability of services. I use this to check if systems are ready: 
+
+This sounds like classic port exhaustion problem. You're running this command multiple times on an older OS which had less ports available 1024-5000. On the Windows machine run a 'netstat -ano'. Look for connections to the same IP address with multiple ports, if lots of those are in "TIME_WAIT", it's another indication. Also, use Task Manager to check for high memory utilization, this usually presents along with port exhaustion. 
+
+You're talking about Delegated Permissions. Create a Security Group for each permission: Write Users and Read OUs Use the Delegated Permissions wizard and apply those individual permissions to their respective group. Add the user to both groups. 
+
+You need to add the new group to the "Allow log on through Remote Desktop Services" user right under: 
+
+on your Domain Controllers GPO. By default you should have the . I suggest adding a new GPO and linking it highest with the new change. Edit: Re-wrote answer based on community feedback 
+
+Then end result is one object with all the properties that I can export to CSV for Excel manipulation. While I only gave you 3 objects, I have 5 object types with 197 total objects. I plan on using the process here to loop through the rest. 
+
+It doesn't matter if it's in the Local or Group policy, once it's been imported the server sees it in it's local store. Since this is Server 2008 R2 with POSHv2, we're limited to using the commands, however I wrapped the output inside PowerShell to make objects that I could export for analysis on a remote computer. 
+
+One of my favorites "DNS is the answer, the question doesn't matter". Group Policies are stored in the FQDN\Sysvol\FQDN\Policies folder - if you can't resolve your FQDN from your DNS solution, GPO processing will fail. An Active Directory domain needs DNS, it doesn't have to be AD Integrated DNS (installing the DNS server role on the Domain Controller), but it is easier to administer. If you do this you can point all your domain computers to the Domain Controller for DNS and be done. The Domain Controller should have a single static IP, this is listed as a best practice and typically all servers, due to their nature of being online to service requests, use static IPs. With this in mind, IPs shouldn't be changing. If the IP does change, there are tons of scripts for programmatically changing member computer DNS server IPs, do a search. How does the computer join vbs script work? It needs DNS to resolve the domain name to join. Provided the script works, then the computer is already pointing to a DNS server that points to the domain and Group Policy processing should be fine. Warning: you may get a "successful" join without actually joining thanks to Microsoft's genius decision to incorporate "offline domain join" to reduce the appearance of errors. The best way to test this is to login with an actual domain account. If you get an error along the lines of the 'the domain is not reachable', then you probably still have a DNS issue. 
+
+Tell them they're forcing you into a hybrid-cloud environment which is more expensive and errorprone than being a "server-less", cloud-first company. Tell them other companies are trying to get to the place where you are now. Your wifi infrastructure is already using DHCP and DNS, just get a switch and connect it that infrastructure for your hardwired comps. Ask them what they're really worried about, what problem do they think a server will solve? 
+
+The error is straightforward - enable PowerShell remoting. Tip: Enable and Use Remote Commands in Windows PowerShell 
+
+NetBIOS is a network communication protocol that was designed over 30 years ago. WINS was developed to use this as an alternative to running a dedicated DNS service. A server would take the first 16 characters of it's name as it's NetBIOS name; when you create a new Active Directory name, one of the things you define is the domain's NetBIOS name. Once it has its NetBIOS name, it then broadcasts that to everyone on its network. If none send a reject message saying it's already in use, then it broadcasts it again as a registration. This means every computer on that network would get register that computers NetBIOS name in it's local cache. You can see this by running 
+
+Find the event ID of a successful VPN connection from your vendor, then create a scheduled task script that waits a few seconds and runs a gpupdate or maps to the login script. 
+
+That's what I do for scripts given to field technicians, so they can't say 'I didn't know what would happen' 
+
+No, one you change it, it becomes static and will not be scavenged or updated unless you set scavenging to anything other than 0, or you specifically give the server permissions to the a record, respectively 
+
+The vendor doesn't want to highlight their own limitations to a client, you'd need somebody on the inside to air their dirty laundry. However, you can infer based on what the Vendor does and what they don't say. In this case, Microsoft created a whole new set of performance counters in the Hyper-V Hypervisor and Virtual categories. Then you find this documentation from 2017 that specifies where to look for performance bottlenecks. Only 2 of those categories, Memory and Storage, reference counters inside the virtual machine. So perfmon should be accurate for storage performance. 
+
+Try these switches, individually and combination, or else open the MSI with Orca and change the EULA variable. 
+
+The HomeDrive attribute is not deprecated and will probably not ever be removed. The reason it's popular is because it was the first attribute that removed the requirement of using logon scripts to map a user's drive. Admins could now specify the home drive during user creation programmatically and not worry about maintaining a logon script. For small organizations with simple administration, this worked out well. For larger organizations, business needs dictated that not all user accounts were equal and some needed to be separated from others. These organizations either continued to use or created large, complex, logon scripts usually checking the members group memberships to determine what drives to map where, to include their home drives. These logon scripts execute during... wait for it... logon and if something went wrong, such as a network path was unreachable or access denied, they would hang. The default timeout for Group Policy processing is 10 minutes. This is where the whole 'login to your computer and go make yourself a cup of coffee while you wait' came from. So now you've got perceived performance problems and reliability problems because Group Policy errored out and didn't finish processing correctly. This of course generated support calls for Microsoft, a lot of calls spent troublshooting logon scripts for primarily mapped network drives. And then magic, new Group Policy Preferences appeared with the Drive Map extension! The drive map extension also supports Item-Level Targeting for such thing as Group Membership. Now, all those support calls for drive mapping logon script errors could automatically be "resolved" by transitioning them to this extension. Since it's part of Group Policy, the extension is offically supported by Microsoft, while logon scripts were given a best effort. Organizations now have a Microsoft Supported way to map network drives based upon group memberships, Microsoft reduced their support calls and time troubleshooting logon scripts, and admins could manage it all from Group Policy, wins all the way around. And, btw, you can use Drive Maps for mapping user's home drive, (use %logonuser%).

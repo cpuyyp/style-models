@@ -1,0 +1,43 @@
+Not with the native tools. Thinking about it, I can see how somebody could write a tool to do it, but there's nothing off-the-shelf. 
+
+Yes, this is possible with some manual work. You can take database snapshots on AlwaysOn Availability Group replicas, and remove those snapshots as well. You could automate the creation of snapshots every X minutes, and then tearing them back down periodically. It will add storage overhead - it will require additional space that will depend on the change rate of the data in the database. 
+
+Your comments note that you're specifically talking about full-text indexing. You can indeed query the database while a full-text index is being created. Full text indexes are created in the background on SQL Server 2005, 2008, and 2008R2. You can continue to query the database using the LIKE operator, although of course the queries won't be as fast as a full text index, and your database server's performance may be degraded while the index is being created. 
+
+Step 2: Cardinality and left most prefix. On each field you will be installing an index, I would advise you to test how much of that field needs to be in the index for it to be effective and slim at the same time. I wrote a small statement to do just that. Replace the with your table name and the with your field name. i.e. for the field on the table : 
+
+The microsecond fractional part of your DDL (I.e. The (6)) is only supported from MySQL 5.6 onward. Most likely a compatibility issue I'm afraid. 
+
+@Decebal, Please consider the following, as the current answer is incomplete, flawed and built on an assumption. First I will attempt to explain my previous statement. 1.) Incomplete (cardinality, prefixing and data types): Composite indexes and indexes in general need to remain lean to fit in memory, actually benefit performance and not over complicate nor confuse things. Therefor the only complete answer would be to test cardinality on your table in order to utilize an efficient index prefix length. The next step of completeness is to slim down your data types. It matters for sorting and other explicit/implicit MEMORY engine usage. 2.) Flawed (null-able UNIQUE composite indexes): The `contact_info_ndx` UNIQUE composite index in Rolando's answer contains null-able fields. This will effectively enforce a partial UNIQUE constraint. Any composite containing a NULL in one of the three fields will allow for duplicates, a NULL effectively breaks the constraint. MySQL doesn't know what a NULL is and therefor cannot judge it. 3.) Assumption (Necessity of UNIQUE constraints): This is quite an impacting assumption as a UNIQUE constraint should be avoided unless absolutely necessary. It add's overhead, circumvents an important performance enhancing mechanism (i.e. change buffer) and increases the probability of dead-locks through gap locks on the UNIQUE key when inserting in batches. With that said, here are the steps that I would advise: Step 1: Data type(s). (Not sure if this step is necessary as you mentioned that the table in your question is "similar" to that of your actual User table.) 
+
+Start with sp_BlitzLock. It's a free open source stored procedure written by Erik Darling that examines the built-in System Health Extended Events session in SQL Server 2012 & newer. You can download it from the First Responder Kit Github repository. To install it, just run sp_BlitzLock.sql to install the stored procedure, then run: 
+
+You could in theory do this, but it would require building the update statement with dynamic SQL. Basically, you declare a string variable, build it with metadata from the database, and then execute that string. Erland Sommarskog has an epic post on this: The Curse and Blessings of Dynamic SQL. However, that's gonna require a lot of work and a lot of debugging. Plus, for performance reasons, you don't really wanna fire a new OPENROWSET for every row of a table you're updating. Instead, I'd suggest doing a single OPENROWSET call to pull all of the file contents into a temp table, and then doing your update statement from the temp table. 
+
+For those who still need this. May try using binlog puller module by percona folks. It works perfect and you may add a watchdog for it. 
+
+If usage means you can only connect to the DB Server and not anything else. Whereas in this case REPLICATION SLAVE will require to read and pull binlog events from Master. To Fix this: On Master Execute: 
+
+On Slave keep old data. Set this kind of automated/manual job every week to drop old partition on Master. You might have to once verify the selects going on Master. 
+
+I haven't tested this but this seems to be a working command, ensure that you have $URL$ - Build 14332 fixed to have prctl system call supported on Windows. 
+
+Now this is your final data set : /backup/2017-06-01_18-01-52/2017-06-01_18-22-29/* , replace data dir to this data set -> Ensure every 1 to 4 steps had no errors and completed OK is found on all outputs. Test the result incremental backup data on a Test DB and Restore it to see if the server starts without any error messages 
+
+No triggers on system DMVs, sorry. Besides, you wouldn't really want to do this: that DMV is updated every time a query is run with a missing index request. That could be hundreds or thousands of times per second - and performance matters there. Instead, consider running an Agent job every 5-15 minutes to capture the data you're looking for. 
+
+However, this only reflects what your current storage is able to deliver, not what your server would rather have. Think about it as drinking water through a small straw. If I ask how fast you want to drink, and I measure your consumption through that tiny straw, it doesn't tell me how fast you could actually drink if you weren't constrained by such a small straw. Instead, I need to hook you up to a pipe (or straw) with unlimited throughput, and then measure how much you actually consume - and then use that to size the storage you need. (Or want, anyway.) 
+
+Sure, put a clustered index on it. Tables with a clustered index will automatically deallocate space. Otherwise, you're looking at: 
+
+I'd say highly unlikely. During the network partition, when switch was pulled, (on an equally weighted quorum calculation) quorum cannot be achieved and the two node cluster loses primary component status. Exactly the reason not to have an equally weighted two node setup. When there's no prim component, there's no DML. After the situation is fixed the nodes find each other to form prim component and continue synchronous replication. Highly unlikely that they get out of sync this way. 
+
+That is a default option in mysqldump. As the name states it only disables the foreign key check, which is necessary. If you don't disable the check, you'll almost certainly run into foreign keys errors, unless the restore, coincidentally, honors the parent/child relationships in the sequence that it restored the tables in. Extremely unlikely. Mysqldump doesn't account for this. Look at it this way. If your dump restore tries to restore a child table before its parent, it will see the rows as orphan records and the check will give an error. As ypercube said. The dump file will contain a set command at the end to turn the check back on. It's also a session based variable. To address your concern. No. The set command does not remove foreign keys from your tables. 
+
+I do know a consultant who does this kind of work, but it's nowhere near cheap - think mid-five-figures to start the project, paid in advance. It's not for the faint of heart and you only want to go that route as a last resort. 
+
+Whenever you've got a performance problem, start by asking, "What's my top wait type?" Wait stats tell you what SQL Server is waiting on. I like measuring waits with sp_BlitzFirst (disclaimer: I wrote it.) It's a free, open source, MIT licensed script that you can call to take a sample of your waits, like this: 
+
+In 30 seconds, your queries spent 1,655 seconds waiting on storage. Your storage is probably slow - if you skip down to the next section in sp_BlitzFirst's output, it will show which data and log files SQL Server was waiting on, and for how long. However, before you leap to playing Pin The Blame On The SAN Administrator, consider: 
+
+By default, the DTA doesn't recommend clustered indexes. In addition, check out the documentation for even more things it doesn't do. If you do want recommendations for clustered indexes, click the radio button for "Do not keep any existing PDS" as shown in the below screenshot:

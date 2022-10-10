@@ -1,0 +1,75 @@
+Asynchronous methods should return or , the former being for traditional methods and the latter being for methods with return type. The reason for this is that a method cannot be awaited (since it doesn't return a ) and will in effect be a fire-and-forget kind of thing: it will start executing your asynchronous code on a separate thread and continue doing business as normal. However once the main thread reaches its end, the application will exit regardless of whether or not your asynchronous code has finished as well. This obviously leads to nasty bugs. You won't notice this in this case because you're using a GUI which means there will always be a main thread active (as long as the application runs). However in case you ever want to re-use this code for a console application or just in a class library where you don't know the client, I would suggest making it just for good measure. The only exception to this are asynchronous event handlers since they have to adhere to the convention that event handlers return . This also explains why events are "dangerous" to use in asynchronous code. 
+
+When I read this, I ask myself the question "Why did the location of that score get changed?". This is an excellent opportunity for you to add a comment why that is: 
+
+You shouldn't have to use this outside of the class so make it private. Furthermore I would turn it into a property and set it from the static constructor -- that way you avoid having to query your configuration each time you want to make a new call. This is assuming you don't do it deliberately like this so you can change the connectionstring without halting the application. 
+
+Your class is mimicking an which is exactly that: a dynamic array. Use this instead of reinventing the wheel. 
+
+This will throw a runtime exception because it cannot find an argument for the second placeholder. What my analyzer does is evaluate the format, looks at the eligible placeholders and compares that with the amount of arguments that have been passed in. When it determines that the format is invalid for the given arguments, it will underline the format and report an error-level diagnostic. Note that the purpose of this analyzer should be the above scenario. Other things like placeholders being in a non-lexical order or unused placeholders are handled separately. There are a few restrictions in place: 
+
+Essentially you're looping twice. I don't know how many entries you expect but if it's a sizable amount, you might want to consider using an old-fashioned for-loop instead of LINQ. 
+
+Although you could, for clarity purposes, also store the two conditions into variables (my variable names are examples). 
+
+Yes, it's okay. If you need to catch any exception then you should essentially catch them all. The reason you typically avoid this and use the most concrete exceptions possible is to provide exception-specific behaviour: an accurate log message or a different continuation once it has been logged. If all your exceptions are handled the same way then you can just use the catch-all. Note that you can always add a specific handler afterwards because the catch clauses are evaluated linearly. 
+
+Yes, I think it can be simpler. You basically want to generate from the minimum value to the maximum value while padding zeros to make sure everything is the same length as . I think you would be better off doing something like this: 
+
+The DateTime API is an external system, just like a database, the filesystem or a network operation. In unit testing these are typically stubbed out so you work with data entirely under your control. In your case this isn't a problem because the only DateTime used is the one you pass in. However should this not be the case, you should inject a proper datetime service which you can stub from your tests (if you're following along: this will be part of post 3 of my blogseries). 
+
+You have an . This doesn't quite tell me anything, consider using an enum to clarify what each value means in human language (if applicable ofcourse, maybe it is domain-specific). 
+
+You're right, we can clean things up a little bit. First of all the method naming: I like to use a schema which tells me the unit under test, the scenario I test and the expected outcome. More specifically: . This would turn something like this: 
+
+What's that, commandtext? Something more descriptive would be helpful, perhaps just "command" or "query" would be okay. 
+
+While reading my code for the bazillionth time, I noticed a logical error which would make it possible for very specific exotic scenarios to pop this up expectedly. At the very start of the analyzer there is a check to see whether or not we're dealing with a call: 
+
+By calling for each string to compare (4 times for each iteration), you create 4 new strings each time. If you have a lot of (long) strings, this will create a lot of garbage for no reason. In your case you use so you can mimic this by using : 
+
+The first one will always be more readable. If you want to start building collections that contain your previous collections, you'll add another layer of abstraction to your code for no reason: this will hurt readability a lot. One of the limitations of the loop is that it can only iterate one collection at a time. Working around this might seem interesting but I doubt there will be any solution that's more readable. 
+
+You are right in that you want to avoid reflection: it is extremely expensive. I don't know the exact performance impact of attributes you could create a custom attribute to specify the name instead of having to fiddle around with the type arguments. 
+
+You're having a fall-through statement in code that is very weakly connected: a small mistake in one of several places and suddenly you have a really hard to track bug. Use an explicit branch and add a fall-through exception. 
+
+I made a small example to show you that all your worries are in the past. Before you implement this yourself though, keep Mat's remarks in mind: I made this as a quick sketch and separating the mappings from the context, naming conventions, etc are important for your code's clarity. That being said, this small setup shows you how you can change it: 
+
+You have too much whitespace in your .java file for my taste; don't leave these empty lines after ///methods/etc. It just makes it harder to digest because the information is spread out too much. 
+
+All things considered, I believe inline initializing to be better. There is no functional difference but it doesn't have the possibility of the constructor chaining overlook. Aside from that, it also keeps the declaration and the initialization together which improves readability. Comments When I look at a variable called , a comment that says factory of powershell runtimes doesn't add any value. Comments like this are a lot more important: 
+
+I will note this right now: your code used a self-defined ID () only to mimic : you retrieve the highest ID and increment it for each entry. Get rid of all this and simply use the Identity generated option. This goes for books, topics and authors. 
+
+Which brings me to this: by using at the start you no longer have a collection on which you perform but a single object. This makes sure you can drop the remaining since the will already return a single object. 
+
+Don't do any (useless?) output from your calculator. That's a job for whatever classes consumes your calculator. 
+
+You've got a lot of properties with explicit backing values when that isn't needed. I assume you do this because you want to instantiate the collections? When you don't have any additional logic you can just use the automatically implemented properties and instantiate them in the constructor: 
+
+I assume is defined on instance level? Naming conventions for private instance level fields are either or with the latter version the kind I prefer myself and more common. Aside from this I would also pay attention to your naming: methods should describe the action being performed in it. This means there is always a verb in the name. In your case this would become . Notice how I left out "Date" because that is already specified by the return type. 
+
+There are definitely some things to say about this. As far as I can tell you're making things harder than they should be and by changing some things you can make your code a lot more readable. I'll work through your code first and look at your approach afterwards (mainly because I haven't read through it carefully yet). 
+
+This method shouldn't be called from a context since all communication with this method should go through the controller in the first place. 
+
+Notice how the return statement falls outside the else block? Always use parenthesis to properly denote a block and avoid confusion/logical errors. 
+
+Considering there is almost no code to review, this will be purely stylistic. Remember that criticism is a sign of love. 
+
+Welcome to CodeReview! Class naming Maybe it's a term I'm not familiar with but does not seem to ring a bell. Is it supposed to identify a "creator of matrixes"? Is it the name of your project? If you haven't made a conscious decision for this name, I would suggest turning it into something "universally" descriptive like (pretty much anything that contains the essence of what your class is supposed to achieve). Indentation Several places are indented incorrectly/inconsistently. Use a tab (4 spaces) for each new block level. I would also layout code like your like this: 
+
+Code fixes are typically boring though. Show us the analyzer! Analyzers are where the real work is done and where all the edge cases popup. I can see many edge cases: 
+
+This might be a result of the mathematical nature of your code but try to keep variable names descriptive (mainly & ). Then again, if it's an acceptable usage in the problem domain it's fine of course. For loops, is often used and perfectly acceptable. on the other hand is less common and when you mix it in with a and some mathematical expressions, finding an issue (should there be one) is a hassle. 
+
+You're creating a new task, starting it and then you synchronously block the current thread by calling . A new thread isn't created just by creating a object, that's what async/await is for. Instead, change your method as such (omitting cursor and try/catch for clarity): 
+
+Note that this returns you a string value like , which is the representation of a binary number. In your code you store them as string representations and in separate entries in your collection, which is not the way a number should be stored. It's like creating an array with values "1" and "2" to represent the number 12. If this is your intention then you can always work towards that of course but it might be an indication that something else is wrong for needing it like that. 
+
+Can you see yourself busy when your author has 20 fields? I would suggest using a mapper tool like AutoMapper to create a new object or at least move the responsibility of this to a method on your class. 
+
+Consider it is just an initializer and will only be used this once, there is no need to make it explicitly return the data when you can just set it directly. Therefore the second approach would be my approach as well. Naming Method names are UpperCamelCase in C# so this 
+
+I have tested this code with inputs , and . If you'd want to take your approach after all, a few remarks:

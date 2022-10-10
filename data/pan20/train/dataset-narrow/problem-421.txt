@@ -1,0 +1,45 @@
+Of course, will be zero(0) since is defined . YOUR ACTUAL QUESTION In order to nail down these counts dynamically, you need INFORMATION_SCHEMA.COLUMNS. Let's start with a query that tells you which columns allow for 
+
+The delay comes when building a brand new Clustered Index (home of PRIMARY KEY entries) If you want to totally automate the conversion of just one table, you need this: 
+
+This might do it for you CAVEAT : Remember, this is a hack. Should mysql not be able to start for you, I will disavow any knowledge of your actions going forward. 
+
+If you have any tables with FULLTEXT indexes already in place, you must drop those FULLTEXT indexes and create them again. QUERY Here is a little known fact about MySQL queries using a Full Table Index: There are occasions when the MySQL Query Optimizer stops using FULLTEXT indexes altogether and perform full table scans. Here is an example: 
+
+MySQL RDS allows you to do two options OPTION #1 You set up a Read Slave. Then, run the reports from it. There is a tool in the RDS CLI called to create a Read Slave from a Running RDS instance. The following are done under the hood: 
+
+You can move it to another folder without disturbing any other DB activity Here is how Step01) Create the Target Database on ServerB with this command 
+
+I think you problem is the version of MySQL you are using. You have MySQL 5.6.17 but the Change Log for MySQL 5.6.19 has this: 
+
+The output for diffcount of 1 shows how many are not represented To see the unused records, run this 
+
+Since you are looking to INSERT an entire file into a single column. You need the LOAD_FILE function: 
+
+then, mysqld blows up and crashes. OK, ENOUGH OF THE GORY STUFF. WHAT NOW ??? If you have a mysqldump of that table, you could load it into the new database we created (). If you have the original command, you can execute it in the new database. I will leave the details of reloading it s data to you. If you do not have the original command, you are going to need to do is get the table structure from the file. How ??? Run this query: Let's say, for this example, that datadir is Go to the OS and go to the database folder with the 
+
+Look in the upper left hand corner where you see the buffer pool. There is a section of it called the "Insert Buffer Part". The purpose of the Insert Buffer is to populate changes to non-unique indexes into the Insert Buffer inside the system tablespace file (a.k.a. ibdata1). From the diagram, up to 50% of the Buffer Pool can be used to manage the Insert Buffer. That being the case, it would be in your best interests to assign a lot more memory to the Buffer Pool. With a data set of 60M, 256M would be a great place to start, 
+
+Step 04) Move the general_log file to a huge disk volume that can accommodate a fast growing log table Example: If you have the following disk layout 
+
+OK That takes care of unnecessary indexes. Are there any indexes that have low cardinality? Here is the way to determine that: Run the following queries: 
+
+It's OK to max out the to 1G. Whenever a MySQL Packet is constructed, it will not jump to 1G from the start. Why? First you need to know what a MySQL Packet. Page 99 of the Book 
+
+Your only recourse would be to activate the slow log and use it as a MyISAM table. By default, the slow log would normally be a text file. However, a general_log table was provided in newer release of MySQL as a CSV table. 
+
+Perhaps you can create a DB user whose sole purpose in life is to collect the processlist. Your error message indicates that zabbix does not have the PROCESS privilege. Without the PROCESS privilege, zabbix can only view the processlist of zabbix users. Not much fun, eh? But WAIT, you said 
+
+Count the distinct userids Refactor each subquery on the inline subquery for users Index the tables to better support the term_to columns 
+
+The idea is to have the other invocation of poll every 0.1 seconds until the lock is free. Then acquire the lock and release it when done. GIVE IT A TRY !!! 
+
+You need to examine the cardinality of the columns individually and collectively by running these queries: 
+
+As shown, (where stored procedures and functions are stored) is supposed to remain as MyISAM. I have mentioned these table counts before (see the subheading "CAVEAT FOR MySQL 5.6/5.7 users" in my answer Will hacking away ibdata1 destroy databases with only MyISAM tables?) LESSON HERE You should never convert any table in the schema into any storage engine. Changing them only made matters worse. The solution to this problem may have been as simple as executing . 
+
+When rpl_semi_sync_master_timeout (Default is 10000 or 10 seconds) is set to 5000, Replication should switch a Master from SemiSync to Async if no acknowledgement is received from the Slave in 5 seconds (5000 milliseconds). You may want to lower this even less than 5000. You may need to check your network performance. As long as you not doing geographic distance replication, you should the following: On a Separate NIC, use a crossover cable over 192.168.xx.xx so as not have faster replication response. Also, check the switch for dropped packets. You should not have to restart the server every time. As a quick-and-dirty band-aid, make up this SQL script: 
+
+Since you are using MySQL 5.0, the 'fast index creation' enhancements of MySQL 5.1 InnoDB Plugin and MySQL 5.5 are not available to you. Moving the tmp folder outside of the main data volume could be a little taxing on disk I/O when shifting tmp table data from disk to disk. Try performing the index creation by hand as follows: 
+
+This directive forces are VARCHARs to have the fixed amount of space allocate like that of a CHAR. I did this at my previous job back in 2007 and took a 300GB table and sped up index lookups by 20%. Of course, by changing the ROW_FORMAT to FIXED, you will be double the MyISAM table's size in the worst case scenario. If you choose to do this, make sure you have sufficient diskspace. PERSPECTIVE #3 : Limits on the Number of Open Files from mysqld's vantage point. Whenever you startup mysqld, many variables are set based on /etc/my.cnf. The rare exception is the option open_files_limit. If my.cnf does not have this setting, mysqld will attempt to compute the best number for this option such that mysqld can still operate and leave whatever files handles available to the OS. You can set this number higher strictly at your own risk. PERSPECTIVE #4 : Disk Considerations Since your storage engine of choice is MyISAM, you must have fast reading disks since data pages are never cached. Please use RAID10 sets. They are easier to do disk maintenances on than other setups. You can could also go with SSD drives. Whatever you choose, prepare for aging disks and periodic disk maintenances. Make sure your RAID cards have the latest firmware upgrades. SUMMARY All the information you supplied must be examined from these 4 perspectives. You must strike a good balance and may have to make concessions on your choices based on either budget, available hardware, amount of diskspace, and overall limitations of MyISAM that you have not anticipated.

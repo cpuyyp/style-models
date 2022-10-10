@@ -1,0 +1,85 @@
+The moment you start copy-pasting code and only changing one small thing, it's time to move that code to a method. 
+
+Considering the default value of a boolean is , you are in danger of unexpectedly adding a query filter. IMHO you should use only nullable booleans in a filter like this. To me the default behavior when sending an "unconfigured" filter to this method -- e.g. without setting any property -- is that a query is constructed without a single clause. 
+
+Avoid writing ADO.NET by hand; instead use an ORM like Dapper or Entity Framework and work with classes. 
+
+isn't a good class name. A class represents an object, and thus a plural name should be avoided. I don't see the point in how you use it here anyway: why create a 250+ line class when you really should have a class and separate , , etc. classes (and thus files) that inherit from . Surely you'll agree that isn't looking very nice. Keep classes small and clean; the moment you've got a class that hundreds of lines long you probably need to start refactoring. isn't a good name for a property. Microsoft's rule is to use Pascal case or camel case for acronyms more than two characters long, and to avoid abbreviations in identifiers or parameter names (if you must use abbreviations, use camel case for abbreviations that consist of more than two characters). Those same rules also apply to and . , , , : DO NOT use underscores, hyphens, or any other nonalphanumeric characters. The rules for acronyms and abbreviations (remark #2) also apply. Like @Heslacher said in his review: is a confusing name for a class. : see remark #2. : see remarks #2 and #4. is a plural name, and thus to be avoided as a class name. : properties should use PascalCase. 
+
+This class was inspired from Microsoft's array_view. It intended to use with mmap-ed memory for easily check bounds and so on. I probably will need to throw exceptions, but this is not my usual way of working. Any comments are welcome. I left some casts like C-style casts because I see Alexandrescu is using the same and I am not alone :) I also added a method for relative as(). It uses pointer and pointer arithmetic. First here is some real usage: 
+
+Everything looks good enough. Code style is OK. You are using , so it will be quite fast and there is nothing you can do in the code to speed it up. You may or may not need to check this: 
+
+You . This is first time I see this line in PHP. Just remove the statement. Session is already made in constructor. If is not will not help at all. Actually, in constructor, you can the result of into some class property and use it instead of . SESSION_handler::session_expired() should be something like this? 
+
+I changed the definitions to be functions that take the max size instead of infinite lists in order to prevent memoization from breaking the benchmarks. Here are the results I got: 
+
+The big thing I can see is that you don't seem to know why to use a mutable structure in Haskell. They're not automatically faster. In fact, they have some GC-related overhead that exceeds that of immutable structures in GHC. Mutable structures in GHC are only a win if they can actually reduce the amount of allocation, and this implementation looks like it allocates a lot. When you consider using a mutable structure, you need to examine how mutability will reduce total allocation. If it doesn't reduce allocation (and usually by an asymptotic factor) it's unlikely that mutability alone is going to help performance. 
+
+turns out to just pass off the heavy lifting to and . is pretty simple, so the interesting part happens in sequence: 
+
+So is this better? Well - it depends. It should be better when the cost of allocating the suffixes is higher than the cost of keeping them around. The memory use of keeping them in memory isn't insignificant. Eventually it starts to really make a difference. Here's a new set of benchmarks: 
+
+I'm a bit baffled by the casting of IDs to classes, e.g. or . That feels... odd. And counter-intuitive. 
+
+Don't put all of your code in . IMHO that file's method should basically do one thing: call a method in a class you wrote yourself. 
+
+If your Handler becomes too complicated, move code to dedicated classes. Same for code you need to re-use -- also consider Extensions. 
+
+Four capital letters in a row -- as in "SQLPlus" -- goes against Microsoft's coding guidelines. It is expressed at length in the old version: 
+
+My main problem is that you'll need to maintain a class that's currently 100+ lines long for a few simple actions that an ORM like NHibernate can easily handle in far less code. Sure, your "WHERE xxx NOT IN" would require a named query, but that's still not that much extra effort. Based on your code right now using an ORM is looking like overkill. But I doubt the above will remain the only functionality. Suppose you'll need to maintain additional tables: that would require you to add another 100+ line class featuring much of the same functionality, so you copy-paste the existing class and change things... But then you feel that perhaps you can make this more abstract and pretty soon you're writing your own ORM which you really should not do. Imagine how much code you'll need to change if will get an additional field. Using Dapper could already reduce your code, although I suppose it isn't that useful if you need to do s and s -- though that's possible of course. 
+
+I do not see much thing to review, except . Code style... ...is OK. I will suggest to be no more than 10-15 lines, unless you doing something that can not be separated, such preparing parameters for SQL database or things like this. issue You should avoid at all costs. Remember in there are operators such , here is an example: 
+
+In your case, I would suggest to do two functions, and instead of , use . I can not be sure if this code will work, but this is the idea: 
+
+Once again I decided to beat system function. This time I decided to use a template and to "precompile" all cases from 0 to 31 bytes. Result is 400% improvement - from about 1:15 min to 0:25 min. Finally I had rewritten with naive looking for statement and I noticed that the compiler can optimize it as well. However I did not tested with random data, so I am not sure what role the cache line and branch predictor plays in the tests. Here is the code: 
+
+I was suspicious that your initial code was basically as good as possible. It's already algorithmically better than your second example. is immutable linked list. There's no way sorting values is better than just generating the correct values in the first place. So, I decided to benchmark your initial version vs a hand-fused version that is guaranteed to allocate only exactly what it needs. 
+
+Note that I do a round of benchmarks forcing smaller values fully into memory, and then do a second round of benchmarks with a much larger value that I only care about the last entry of. Here are the results: 
+
+As for being idiomatic, the only thing I'd change is the use of the variable to . Using when is available as a name is like using when is available. There is significant redundancy in , though. A sufficient implementation looks like this: 
+
+If you want the laziness of , you'll need to write this using . Doing that requires a trick - the same trick as is involved in writing as . I wrote in some detail of my derivation of how that trick works here. For what it's worth, using that trick to write using looks like this: 
+
+You should look at database normalization. Your current db structure looks simple, but in reality it obscuring a far more complicated one. Hence the rather forced way you first create s and then create s that are linked to that . You loop through the same twice in doing so, which should be a warning sign. 
+
+Why do and ? will create the file if it doesn't exist Do you want to clear the file in case it exists? Then use instead of for the parameter of your constructor. Matter of fact, considering you're using the default encoding and considering you're overwriting the existing contents if the file exists, why not use a simpler constructor? 
+
+, , , etc. are meaningless. It would be far better to convert each line into a class with properly named properties. 
+
+But that still seems cluttered and too elaborate for what it does. Let's rework that some more, for instance by moving the assignation to the end and some other small improvements: 
+
+Names like , , ,... are bad names for classes; if possible change them to more descriptive names (and use PascalCase). My guess is that the entire body of your button click event handlers can be abstracted into a single method, considering that also seems to be pretty generic. Look at that method and check how it handles the various types of forms and filters. 
+
+Code is way too complicated, but let me try: Style you should NOT use names starting with underscore. I did same error in the near past. If you want to emphasize that those are , add the underscore at the end. Mixed case file names You should avoid capital letters in file names. and support case insensitive file names, but and most -es - do not. Imagine someone compress the code using or and when you un-compress it - surprise - capital/small letters are lost. Once I lost all small letters on huge Java project - file names became all-caps - it was easy fixable since all I needed to do is to rename everything with small letters. Keep class names with capital letter, but make files with small letters. allow this, do not. This is huge problem in world, but nobody speaking about it. Factory.h no need to provide default c-tor. it can be removed. Number.h I don't think this compiles. 
+
+depends from where this comes, you probably need to sanitize it somehow. see (1) In same place you overwrite the . see (2) You probably want this: 
+
+Avoid names like and , especially considering neither of them is an , they're . Why is assigned? It isn't used anywhere. as a variable name? 
+
+I just noticed your edit, and I'm wondering whether the NULL checks are even necessary, since I don't see any NULLs in your sample output. I also agree with the comments that this code indicates issues elsewhere, and that simply focusing on this method is not enough. 
+
+: In general it is recommended to use the types specific to the language, so instead of , instead of , etc. 
+
+Except for I don't see how this isn't handled by the logic inside . Of course you need to rethink and , but that seems a more elegant solution than the 10+ lines required to add a first entry to . 
+
+Your comment style is inconsistent. I'd put the on the line above the method, not next to it on the same line or below in the method's body. Also, is it even necessary? 
+
+Your method starts of with a dozen "definitions": that's usually a bad sign. In this case it's a bunch of data that seems to belong together: so put them in a class of their own and pass that class to other methods. 
+
+You could argue that your second pattern was an optimization in the case that the second list is empty, but the tradeoff is adding O(n) overhead every time the second list isn't empty. There's a reason doesn't do that check for . The third case was pure overhead, and always an improvement to remove. 
+
+Wow, my machine is noisy. I don't really know why it's that bad, but moving on.. The version that explicitly shares tails performs better in the small test, by a notable margin. At those sizes, the memory use doesn't have a significant performance impact. But in the larger test, it's notably slower. At that size, the cost of the additional memory use is visible. A side note from the larger test is that the performance difference between the naive version and my hand-fused version has become significant, and the hand-fused version is slower. I'm not as good of an optimizer as GHC! (I suspect that the issue is that I'm counting up and comparing against a non-zero value in my loops. I could test, but that's getting pretty far-afield.) In summary, I'd use the naive version. It might be a little slower in small cases, but when things get big, it starts to get ahead. And it definitely has better properties about memory use at any size. Sometimes duplicating work is faster than caching it. 
+
+Is this conversion or just check if class is Integer / Number? Naming is unfortunate. Change it it or change return type to . What is ? If it is a pointer, change it to or if you are using to . Number.cpp way too big, skipping for the moment. Fraction.h once again this will not be compilled, because you are using unknown . must initialize the and . I suggest following: 
+
+Finally, if you have C++11, you can clean up things some more, including you might remove constructor and use default generated constructor. 
+
+return 0 from main() In latest C++, from is optional. Since is there, do not remove it. const method 
+
+Make for list elements. Currently the list is using . If you decide to use or , you need to change it in 100 places in the code. Make some or (C++11) so you to be able to change the type from one place. It could be inside the class: 
+
+I agree with Loki, but hare are some more things: Destructor I do not see the destructor. What happen when you destroy / the class? Answer is huge memory leak. You definitely need to have to release the memory and prevent memory leak. If I read the code correctly you need following or something very similar to:

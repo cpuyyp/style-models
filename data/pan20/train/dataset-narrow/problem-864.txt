@@ -1,0 +1,75 @@
+My review will mainly be readable code When you have lots of button, I am used to regroup the code in a single listener. This have the advantage to regroup the code in one place (but the inconvenient to have the code in one place ;) ). In general, I use the activity or the Fragment to implements the listener and manager itself the buttons. In your case, you use the same logic for a lot of buttons (numerics to set the value). Why not use a logic that will works for all. Let's start step by step First step, I would use an array of Resource ID to recover the buttons to remove this big block of Buttons attribution. 
+
+Both are correct but cost memory. I usually add the in the instance if I know that I will need it later (to recover more data for a specific instance). 
+
+It is the best to prevent any mistake, of course if you are going to call n times a CRUD method, this will cost some time so you could create the CRUD to take a varargs parameter `(Book... books) to be able to pass one or many values to a method. Then this is use like an Array so you loop on each to to the job (mainly for insert, update and delete). Using a PreparedStatement for these will reduce the compile time of the query. 
+
+PS : I could update the code to match your List but to prevent any typo, I prefer to show you the logic I used with the API I can use. 
+
+For the code itself, I did not really check so I will leave other to do it ;) PS : I am open to suggestion, I tried to stay simple and explicit but I am still a beginner in Code Review ;) 
+
+Then, instead of using one listener per button, you use one listener (I use the Activity in this case but you could create a class). This means you don't need to store the Button in a variable, you set the listener directly like this : 
+
+This means that all the calculating codes are in this listener, this is better than to have to scroll in a lot of lines just reading the signature of the methods ;) This is of course just an esthetic choice. This doesn't improve performance. The code will look like 
+
+Your handler is the DAO a was talking about. Regrouping the methods for a class or a group of class. In those, you can just call the methods ann not . 
+
+If you close it correctly, you are the only one to have the access. So unless you are doint multithreading, this should not crash. 
+
+Then you regroup the code in the one method and manage the code to execute by check the ID of the button (the view received). 
+
+I think you will end up with a locked database if you don't close it correctly. I had this error not so long ago because of this I think. This is probably an open door to memory leak too. 
+
+Using the predicates in your case could be expensive for big list since you use 3 meaning 3 complete iteration on the list. Here is a small update of you code (I can't use the Java 8 API since I only have the Java 6 at the office ...) to do the same check but without predicate (or if else) 
+
+Const correctness: A lot of variables are only initialized and never changed afterwards - make them const range based for: You could use more range based for loops (e.g. when joining the threads, creating the seed, or some loops that go over the array of the random number engine. 
+
+Using STL algorithms If you want to advance an iterator by a certain number, you can use std::advance instead of a loop: 
+
+Aside from general advice of how to improve my class (I bet, there is a lot), I'd especially like to know if 
+
+I know, there are a few implementations of immutable strings out there, but my focus seems to be a little different. My goal was to have a type that provided value semantics, but didn't incur the cost of dynamic memory allocation when constructed from a string literal which is already guaranteed to exist during the whole program runtime. After refactoring, I ended up with two classes: 
+
+Whether that is easier to understand than your version is up for discussion, but it should be a little more efficient. can be simplified by using an STL algorithm: 
+
+I also made the deliberate design choice, to not provide a virtual destructor due to the overhead it would incur and the fact that I don't see any use case, where I would want to destruct const_string via a pointer to . Still this goes against best practices and might be suprising for other people using that code - would you accept such a code in your codebase? I haven't finished documentation and the unit tests yet (I hope the code is readable enough), but here is some sample code to play around with: 
+
+Upon construction, no actual nodes are created, but only properly aligned memory is reserved, on which you later call the assignment operator. I believe (although I'm not sure) this is OK if T is a POD, but if not, then (move) assigning values to them is definitively not allowed, because custom move assignment operators usually assume that points to a valid, initialized object. So in general, I see two possibilities: 
+
+First of all, as DarthGizka mentioned, your code is mostly easy to read and understand and except for the memory leak I mentioned in the comments I don't see any errors. I can't really contribute on the general question, of how effective skiplists are or what would be the best algorithm to determine the height of each node, however, I think there are still a few things that can be improved in your current implementation: General Interface I believe this is more of a proof-of-concept, but on if you go on with it, you should probably strive to make a interface more similar to STL-like associative containers. Meaning in particular: providing iterators, template the class on the member (and key type), providing the typical typedefs and functions (e.g. ) etc. As mentioned by others, this would also make it easier to compare it to other data structures. Making a nested class Skip_Node is an implementation detail that should not be visible outside of the class, so you can just make it an nested class of . Const correctness and static member functions You have a few member functions that should be specified const (, ) or even static (, ). Structure It seems that you assume, that you will never add an item to the container with the same key as the key. If that is the case, you should probably document and assert that. However, this also means, that there is no need to treat the node in a special way. More to the point: The main reason for using dedicated and nodes is so that your member functions don't have to care about empty lists, or whether a new node is the first or last node in the list. If you embrace this concept, then you can e.g. make a one liner that simply returns the size of the vector. Also, insert and erase seem a little long to me and share a nontrivial amount of code, so you might want to refactor the common functionality in a separate function. Finally, seems to be a pretty heavy member for the list nodes (due to the size overhead and the additional memory allocation). If the maximum level is a compiletime constant, you could try e.g. a member array instead (possibly using multiple different node classes of different sizes, as suggested by DarthGizka). Dead Code With the above in mind and when you carefully think, about what invariants hold at each line of code, you might see, that there is a lot of test that always evaluate to true or false and code that never gets executed. Comments Nice to see a thoroughly commented code. Personally I would write the function documentation at the point of declaration (in the class definition) and I also try to avoid to write comments basically repeat the code the code. After reviewing and refactoring your code, I ended up with the following (some of the changes are just personal style): 
+
+Please review the following Bash script that uses to establish a "lightweight" Ubuntu-Nginx server environment mainly aimed to run small WordPress sites (about 5 plugins, about 25 webpages, about 25 images) on a cloud hosting platform. The heredocument sets aliases for personal scripts I already have and might use me later on. 
+
+Changing the PMA path to something unintuitive and likely uncomfortable (instead of ). Using a permanent IP (what if you're traveling between countries)? Login through a recognized VPN. What if you don't have a free time to seriously learn VPN basics in some era of your life? Loging with some kind of authentication certificate. What if don't have one? Using mod_security for Apache users. What if you don't use Apache? Using a captcha. What if you login frequently? This might be a bit annoying. Future PMA versions starting from V 4.8.0 are planned to include support for IPSs like , via uthentication logging. Future PMA versions starting from V 4.8.0 are also planned to include 2factorAuthentication. 
+
+I run it this way , or with a Bash alias . Note: stands for document root, which is in my case and defined in . I'd like to know what you think of the code I've written (especially, do you see any way to shorten it)?. 
+
+I found myself another way which is personal and comfortable (I don't recommend any company with customers to use this way in the form I'll describe below): SSH tunneling through port 80 to port 80 via Putty/OpenSSH, and use PMA securely and temporarily for 2 hours in a session (It is extremely unlikely that anyone could BFA PMA with a decent varied password in just 2 hours). Each time I want to use PMA I run this code: 
+
+The following code is aimed to establish a WSL based LAMP environment. This is instead XAMPP or WAMPP based LAMP environment which doesn't allow Bash. The script includes a cat heredocument called "AWSM" (Apache Webapp Substrate Maker) that is used to make an Apache conf file for the app, as well as a mySQL user and DB with the same name (you can then run it with your domain as an argument (for example, the domain of the actual site your run in WSL as a test version): 
+
+I use a Ubuntu 16.04 Nginx server environment with phpmyadmin (PMA). All my ports are closed besides 22, 25, 80, 443, 9000 (for PHP-FPM). A common criticism of the good software (PMA) as of 2018, is that it doesn't have good defense from Brute Force Attacks (BFAs). There are different common ways to cope with this and I admit I dislike all of them: 
+
+I've created the following Nix cron for daily and weekly scripts for a minimal Nginx server environment (as part of my larger script). The daily cronjob updates WordPress and brings back original permissions (that are changed by WordPress in its update). The weekly task clears accumilated WordPress cache, make local backups, and delete old backups. I wonder where this script could be shortened. 
+
+I would like to have your opinion on the entire code as I might lack some security there (maybe I must delete OpenSSH, do some other stuff). 
+
+Update I should clarify that I don't have XAMPP/WAMP or even individual Apache or PHP on Windows outside of WSL; I aim to have only 1 LAMP stack in my Windows, inside WSL. Besides having a fully functional WSL LAMP stack on Windows, the end state is to be able to access it from in any Windows browser so I could easily test the sites and access PHPmyadmin locally. Also, anyone is more than welcome to contribute directly in Github 
+
+A final remark: although, you said error checking is not necessary, I'd probably at least put an assert into place, that checks that the indices in p don't exceed the size of the list you want to print elements from. 
+
+As mentioned before, I'd replace the class member with a local in and pass the array as a const ref parameter to . This gets rid of the mutable problem and might even increase performance. I'd write the function a little different: 
+
+You default construct all nodes upon construction of the stack and destruct them when stack is destructed, in which case is unnecessary. One can just use an array of nodes and pass it to the unique_ptr. In this case you also don't need a destructor for . Obviously that only works with default constructable 's and makes only sense, if T doesn't hold any resources after it has been moved from. You actually create and delete objects upon calls to push and pop, in which case you have to use placement new () and manually call the destructor (not ) 
+
+On my 4 Core machine with VS2015U3, this reduced the execution time from 120 to 20 Seconds and reduced the error roughly by a factor of two. Small style tips: 
+
+Padding I just want to point out that aside from the false sharing between and , which is avoided via padding, any thread calling push or pop will access both variables anyway and afterwards you still have false sharing between the actual nodes. Performance This code contains a lot of micro optimizations, which might or might not be worth the effort if the code gets reused in different contexts (its definitively not worth for handling a worker pool). However, I'd suggest, to write at least few small benchmarks to ensure that those optimizations are in fact improving and not hurting performance. Also I want to repeat my warning from the comments that for some reason, VS2013 (and also 2015RT) seems to be unable to implement in a lock-free manner, in which case the whole structure is probably much slower than a normal stack with a mutex. 
+
+There is no need for , just put the (inverted) check into the loop condition (this will then also enable you to process empty lists). You can write your outer loop as a simpler (semantically equivalent) for loop: 
+
+In response to the comment about multithreading: You can (more or less) trivially parallelize by letting each thread generate the new cells for a slice of the world (e.g. a quarter of the rows on a 4-Core machine). There are many parallel loop implementations out there that can make that Task even easier. Obviously this is only sensible for very large grids. 
+
+The only thing you share among the codes is just define it as an atomic (). Even Better: Don't share anything: Let each task use it's own hit counter and sum them up at the end (easiest way to do this would be to use std::async). Create and seed a separate random number engine for each thread 
+
+The general push/pop logic of the stack looks fine. The memory management however is somewhat flawed: Missing Destructor From the perspective of the unique ptr, the stack doesn't contain Nodes, but uninitialized memory (effectively a char array). So at destruction of the stack object, it won't call the destructor of the individual nodes, which in turn won't call the destructor of . In order to correct that, one could write a destructor for that traverses the nodes and manually calls the destructor on them. Assignment into uninitialized variables

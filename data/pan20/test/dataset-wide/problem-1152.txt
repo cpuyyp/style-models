@@ -1,0 +1,91 @@
+The Cardinality Estimation logic was updated for SQL Server 2014 and could potentially be a reason. You would have to test the same queries with the old cardinality estimator and compare performance metrics. You could do this by lowering the compatibility level to <120. I would perform all this testing on a test server and not in production. $URL$ $URL$ 
+
+No, you can run a two node Always On failover cluster instance using Standard Edition. See the "RDBMS High Availability" section of $URL$ 
+
+Found the answer. The login event is correct and the network protocol is exposed via the options_text action. options_text was always blank for me previously and this needs to be set on via SET collect_options_text=(1). An example session might be: - 
+
+If using SQL Server 2016, use the STRING_SPLIT function. If using a version prior to 2016, this great article has all the information you need $URL$ 
+
+You can drop all views on the instance via the following PowerShell script. Edit YourInstanceName before running. This will drop all views with DoNotNeed_ in the name from all databases on the instance. This script could easily be extended to do the same against hundreds of instances by adding another level of iteration. 
+
+At the top of your script, then you don't get a result. You do get a result as you describe if you specify . The reason for the different behaviour is the second example "replacing with " contains a syntax error i.e. the EXEC batch is parsed, syntax error discovered and the batch is not run. The EXEC is a separate batch (this is the reason you cannot define variables outside of EXEC and reference them inside) and processing continues with the rest of the transaction. For the first example "", this is valid syntax, so the batch parses correctly. The error is only found at run time and processing continues if but stops if . 
+
+Do you have the option to create the new columns outside of this stored procedure via change control? Alternatively, you could use default constraints if your business requirements allow the columns to be not null: 
+
+There is no setting to force SqlClient to always set ARITHABORT on, you have to set this as you describe. Interestingly from the Microsoft documentation for SET ARITHABORT: - 
+
+Take a look at sys.dm_db_partition_stats ($URL$ There are some sample queries at that link and also at $URL$ You can modify to suit your needs i.e. filter in/out non-clustered indexes. Multiply page count by 8 to get size in KB, then divide by 2^10 (=1024) to convert to MB if required. sp_spaceused ($URL$ will also give table size information. 
+
+Those permissions are specific to an individual database. What that login doesn't have, is permissions in other databases (unless granted separately) or server level permissions. Server level permissions would be granted by adding the login to a server level role or by granting specific server level permissions. 
+
+Note that the filter on cal.[name] is not sargable. This means that even if that column is indexed, the index will not be used for a seek due to the leading "%" in the predicate. 
+
+Maybe log file contention or latency as you are performing 1,000 separate inserts. Far better to perform one set-based insert of 1,000 rows. You can achieve this by creating a numbers table and performing the insert via: - 
+
+Will return 1 if the guest user is a member of the db_datareader database role and will return 0 otherwise. 
+
+Yes, you can use Always On Failover Cluster Instances for local high availability and Always On Availability Groups for remote disaster recovery. An example might be if you use replication, you can't currently make the Distribution database highly available using Always On Availability Groups. In this scenario, you might want to continue to use Always On Failover Cluster Instances for your local high availability solution where the whole instance fails over. See the mssqltips article Adding SQL Server AlwaysOn Availability Groups to existing Failover Clusters. Scenario 2 in that link describes your configuration - Failover Cluster in Primary and Availability Group on a Failover Cluster in Secondary 
+
+If this is a production database, you should remove developer's access rights to create tables. This can be achieved via the REVOKE command. You may have further work to do if the developers are adminstrators. Developers should then create new tables in a developement database and these are migrated to production via the DBA team following a code review and test cycle. Alternatively, you could create a DDL trigger that could stop users creating tables via a ROLLBACK and create a warning message for the developers as you suggest. Finally, to clean up test tables, you will need some method to identify them (table name pattern, owner etc). You can then automate a script to drop such tables. 
+
+That makes your life easier, negating the triple hop from 7-2000-2008-2014. Still not a great solution however. I would invest the time in writing a PowerShell script to automate this process. 
+
+You can create a SQL Server Extended Events Session. Monitor the sql_batch_completed and sql_statement_completed events, add a filter for your stored procedure name and include client_app_name in your global fields to return. You can also collect a host of other information that may be relevant for your needs such as nt_username. 
+
+This answer assumes you can only have one entry per tournament in each of the Winner1Test, Winner2Test, RunnerUp1 and RunnerUp2 tables. You should contrain this with a unique constraint. 
+
+You can create a partitioned table to horizontally partition you data. Partitioned tables is an Enterprise edition feature, if you are on a lesser edition you could alternatively create a partitioned view, see this link for an example $URL$ If you are using SQL Server 2016, you could also put all the data in one table and use Row-Level Security to expose the correct data to the relevant customers. 
+
+In an OLTP system, they should be kept as two separate tables with appropriate indexing on the ID columns. In a data warehouse star schema design it would be perfectly legitimate to denormalise Color into the Car dimension. I am assuming here that Car would be a dimension, supprting facts such as Journey or CarSale etc. The denormalisation would be handled by your ETL process during import to the warehouse from your OLTP system. This would usually be done via intermediate staging tables. 
+
+I don't believe the issue is concerning the encryption. You are doing two sub-queries either of which could contain multiple rows, hence the error. If both source tables are the same, you can re-write as: - 
+
+You should create a SQL Agent job. This can poll your column and fire your stored procedure when the datetime exceeds a specified value. Alternatively, if your stored procedure needs to run at exactly the specified time, schedule a SQL Agent job to fire at that exact time and don't poll. You can do this programmatically via the sp_add_jobschedule system stored procedure, or manually depending on your requirements. Using the latter method you could remove the logic that writes the desired time to a table. If that table value is still required however, you could create a trigger on that table that invokes sp_add_jobschedule to create a job schedule. 
+
+You can create a For Loop Container. For an example, see the mssqltips article Configure the SQL Server Integration Services For Loop Container. 
+
+Have you considered creating nonclustered columnstore indexes on your subscription. Columnstore indexes will give you the benefit of massive compression rates. I have just tested this with SQL Server 2016 Developer edition and it allowed me to create nonclustered columnstore indexes on my subscription. 
+
+You can also edit this for your needs to only do an individual database. The logging you require can be achieved by specifiying the LogToTable parameter. As a final point. Remember you don't have to update statistics if you are rebuilding your indexes. Rebuiliding your indexes during your weekly maintenance window might be your best option. Again you can use the Ola Hallengren solution for this. 
+
+I am using SQL Server 2012 (11.0.5058.0) extended events, and wish to know the network protocol used by each connection (TCP/IP, shared memory etc). Event session created for the login event via: - 
+
+If a stored procedure is maxing out your CPU, you really need to tune that query to fix the root cause rather than working around it. Analyse the query plan using native SSMS or SQL Sentry Plan Explorer. Some things to look out for to improve the query plan from $URL$ are 
+
+I would start with looking at wait stats to try and see what SQL Server is waiting on. With that information you can diagnose the root cause and implement a solution. This will help with looking at your wait stats $URL$ You can use a query from the SQL Server Diagnostic Information Queries to look at disk latency, such as: - 
+
+I would use the free Ola Hallengren maintenance solution to update statistics. See Example C from the above link, where you can update the statistics in all user databases via: - C. Update statistics on all user databases 
+
+Does your standard maintenance plan also rebuild all indexes? This can generate lots of transaction log writes. I would: 
+
+See the article "Dynamic Search Conditions in T‑SQL" from Erland Sommarskog at $URL$ This explains in detail your options for dynamic searching and the performance implications of doing so. 
+
+Lastly, you could use sp_executesql to perform the updates. You are not introducing a SQL injection risk as the update values are not parameterised. 
+
+In short, you can't do this unless you configure some logon auditing in advance. Your options to do that are: 
+
+Do you have budget for a third party monitoring tool such as SQL Sentry? This will monitor your SQL Server instance for you, far easier than attempting to create your own solution. You can also create additional Advisory Conditions to alert you for any changes you choose. 
+
+Logging occurs in all recovery models. The log is retained in bulk logged and full recovery models until the log is backed up. Bulk logged only minimally logs certain actions e.g. an index rebuild, meaning you can't do point in time restores when using bulk logged. As you are using simple recovery model, changing to bulk logged will be of no benefit to reducing log size. It would make your setup more complex actually as you would have to start taking regular log backups. If you have a large transaction in simple recovery model, this transaction will still be logged and cause your log file to grow. This is what allows you to rollback the transaction in any recovery model. If you left that transaction open (don't commit or rollback) your log would grow and grow. Once committed (or rolled back) that logging information no longer has to be retained in simple recovery model and SQL server will reuse the log in a cyclic nature. Your solution would be to minimise the size of your ETL insert transactions. You could perform smaller inserts in batches and commit those (if that is appropriate for data consistency). You could also look at transaction handling in your ETL tool. SSIS for example allows all inserts in a package to be part of the same transaction, you could change this behaviour so each transformation has it's own transaction. 
+
+Take a look at tSQLt ($URL$ which is a great free tool to create unit tests in SQL Server. You can fake tables (by executing tSQLt.FakeTable) within your tests and then create mock data as you describe. Tests are themselves stored procedures and any changes made as part of your testing suite are rolled back post test. You run your tests by executing the tSQLt.RunAll stored procedure and it gives you visual feedback summary of your test results. To get started, navigate to $URL$ and download. Running Example.sql will create an example database called [tSQLt_Example], create the testing framework and some example tests to see what is possible. Also available is the Redgate paid product SQL Test ($URL$ This is a GUI wrapper around tSQLt but is not required to use tSQLt. 
+
+Your configuration is fine. 24GB total RAM, 19GB for SQL Server leaving 5GB for the OS. SQL Server is memory hungry and will consume all the 19GB available, that is perfectly normal. You could lower the max server memory from 19GB. I wouldn't do that however, if you were experiencing memory pressure with 12GB of memory. The question would be what other roles is that server performing that would use the memory you would potentially deallocate from SQL Server? Can those roles (maybe SSIS, SSRS, SSAS etc) be moved to an alternative server? 
+
+If my assumption is incorrect and each table can have multiple entries per tournament, then you would need to use outer apply (top 1) rather than outer join. 
+
+Have you looked at a third party tool such as SQL Compare from Redgate? This is designed to compare schemas and ease the process of deploying changes. I don't think SSIS is the most appropriate tool for this task. 
+
+Download and install the dbo.sp_WhoIsActive stored procedure from $URL$ Run this procedure and it will tell you what is currently running. It will also tell you a host of further information such as what the current sessions are waiting on and where they originate from. To answer the title of your question. To reduce the number of VLF, you need to shrink your log file using DBCC SHRINKFILE, then grow your log file back to 64GB in 16GB increments to give you 64 VLF. 
+
+Also, this should return 1 if you have configured the user to be a member of the db_owner role correctly: - 
+
+And yet the .Net connection is hard-coded to set this off by default? As another point, you have to be very careful when diagnosing performance issues with this setting. Different set options will result in different query plans for the same query. Your .Net code could experience a performance issue (SET ARITHABORT OFF) and yet when you run the same TSQL query in SSMS (SET ARITHABORT ON by default) it could be fine. This is because the .Net query plan will not be reused and a new plan generated. This could potentially eliminate a parameter sniffing problem for example and give much better performance. 
+
+I have added all available actions for the login event (SELECT * FROM sys.dm_xe_objects WHERE package_guid = '655FD93F-3364-40D5-B2BA-330F7FFB6491' AND object_type = 'action' ORDER BY name) but none appear to give the network protocol. It may be of course that Login is not the correct event to give this information, but I can't see a connection event (or similar) within the XE DMV. To confirm, I want an extended event session to expose the net_transport information that is returned by dm_exec_connections: - 
+
+It depends on your business case, Temporal tables and change data capture offer different functionality. Temporal tables are used to provide a version of your table at a point in time. A use case might be a slowly changing dimension where you want to track the changes in dimension attributes and report them from any moment in time. Change data capture might be used on an OLTP table, to allow you to easily facilitate the export to a data mart. It logs all changes to a separate table, so you can easily view changed rows since your last export LSN point. 
+
+Is your database online during your release or do you have a maintenance window? If you have a maintenance window and are running Enterprise Edition you could create a database snapshot pre-deployment. Then you can easily revert to the snapshot if your release process does not execute properly. 
+
+An alternative would be to use virtualisation and maintain separate instances on the same physical host. The benefit in doing this is each instance maintains its own dedicated allocation of CPU and memory that can be scaled up or down as necessary. If you merge all instances as you describe, then all databases will be competing for the same CPU and memory. In addition, a shared plan cache will now mean plans from one database can age out plans from another. If you maintain separate instances in VM, then you can retain the same linked servers and not have to make any database or software changes. Performance monitoring is also far easier with multiple instances. It is simple to see which VM are contributing to peaks in resource usage. In order to use maximum virtualisation described, each core of the physical host must be licensed for SQL Server enterprise edition. Valid software assurance is also a condition of this licensing model.

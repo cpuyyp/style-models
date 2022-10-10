@@ -1,0 +1,71 @@
+Your entire question starts and stops right there. The IPS/IDS within IOS is not designed for out-of-band traffic inspection. The router must be inline to inspect it. Put simply, IOS is not SNORT. If you want SNORT, run SNORT. (Also, the IPS/IDS within IOS is very slow -- being done entirely in the way under powered router CPU -- and often incomplete. You'll need a support contract to keep it remotely up to date.) 
+
+Faster? Maybe. More reliable? My money is on "no." It will, however, be much harder to troubleshoot, and depending on the wiring setup (same phase?, same circuit?) it may not work at all. In the long run, you're much better off paying someone to string some wires. 
+
+As long as the MAC is statically assigned to the port, it will always appear in the tables. As far as the switch is concerned, it's always "active". The only way to know it's there is to ping it, check the dhcp snooping tables, etc. MAC port learning will not work. 
+
+In WiFi, there are two types of devices: Access Point (ap), and Station (sta). In simple terms, "router" would be the AP, and the client systems are STA. Stations know an AP exists and is in range because the AP broadcasts "beacons" -- by default every 100ms (10 beacons per second.) Within the beacon there's an (optional) informational element listing the SSIDs the AP handles. Only one radio (transmitter) can be active at a time. So there is no "continuous" signal. This is true of any RF system... CB radio, walkie-talkie, etc. When the beacons stop, clients know the AP is dead -- or rapidly moved out of range. If the AP is rebooted or otherwise gracefully shutdown, it can send "deauth" frames to each station to force them to disassociate (disconnect) from the AP. 
+
+Indeed, a hospital originated VPN would be the only way to do it. What device and where it connects would be "too broad" for NE, but many routers (even "home" hardware) support IPSec -- from what I can tell, the GlobeSurfer does as well. In general, when network management is outsourced, the VPN would naturally terminate with the company doing that management. 
+
+It doesn't work because (the L3 interface) isn't within the dhcp pool (10.10.10.0/24) Your updated is, but unless you have something upstream of here doing NAT, there won't be any internet access. 
+
+Technically, the firewall would be the "router" in this case. Multiple subnets can coexist on one layer-2 broadcast domain. Each subnet will function as if the others aren't there. 
+
+I've post this before: $URL$ I think your issue is with the multiple snmpset's. You have to start by creating the entry to do this. [14.xxx = 5 (createAndWait)] Then you can setup the entry as necessary before setting the rowStatus to "1" (active). [Note: My scripts are decades old, so they're tuned for tftp.] 
+
+No. That is the licensed limit for the 5555-X platform. Only Cisco can change that "hard" limit. (and why would they when there's a more expensive "upgrade") 
+
+The RP (running various routing protocol processes) builds the FIB and publishes it to all linecards. There's one FIB, but it's replicated on every linecard. (yes, sometimes they get out of sync.) 
+
+(BOOTP exists within DHCP these days) The process starts with the client sending a broadcast request as it generally will not know any server address(es) -- src ip will be zero, since it doesn't have an address yet. The server will look up the MAC within the request to form an answer. How that answer gets back requires a bit more thought. If the server sends a simple unicast reply, it will need an arp cache entry to know where to send it. The normal ARP discovery mechanism won't work because the client doesn't have its address yet. So, the server must either update it's ARP cache prior to sending the answer, or send the answer as a broadcast message. (or bypass the host layer-3/4 processing by forming it's own layer-2 packet and sending it directly) Furthermore, the server cannot assume the client is on the same wire. So, the answer must be sent to where ever the request came from -- i.e. any possible relay agent, not the hardware address within the request. 
+
+That's the quickest way to find the correct ifIndex for an interface on an IOS router. (That information is also found in the IF-MIB tables.) Note: make sure is in your config, or the indexs could change after a reload. 
+
+The DOCSIS Service Profile within the configuration downloaded when it registers on the network tells the modem (and headend) how much bandwidth an individual modem is allowed. Exactly how the modem (or headend) polices this is implementation specific. 
+
+Jumbo means any frame with an MTU greater than the 802.3 spec of 1500. There is no set, specified number. It is a generally accepted spec to support "9000", but each manufacturer is free to call "jumbo" whatever they wish. (I've seen some as low as 5k (realtek) and others as high as 16k (broadcom)) IEEE refuses to add it because it breaks backwards compatibility. And there's no "should" about it. A frame larger than the set max will be dropped by the NIC -- it's an error, and the OS will never know about it. (an oversized frame counter will click up, but that's all.) 
+
+VLANs create isolated segments. The only way anything on port 1 (vlan 100) can talk to anything on port 2 (vlan 101) is for something in both VLANs (port 5) to pass the traffic along. I'll go out on a (very short) limb and say there's a router on port 5 that's handling inter-vlan traffic. (note: the switch has a dynamic address on vlan 100 and no address on vlan 101, so it isn't the router) 
+
+Routers are predominantly designed to run routing protocols that regularly alter the path of traffic. They also handle numerous high-touch features such as NAT, QoS, security, VRF, etc. Outside the high-end market, routers are partially or totally software platforms. For example, it's easy to take a commodity PC with a few NICs, load linux on it, and *poof* it's a router. No matter how much you hit it with the spice-weasel, it'll never be a switch. 
+
+What you want is called "port isolation". Dell PowerConnect switches do this via Private VLAN Edge (PVE). Under the port configuration (near the bottom) is the selector for the "uplink". Unfortunately, it has to be a gig port, but that shouldn't be much of an issue. Attach the cablemodem to "g1" and set all ports to PVE uplink of "g1". 
+
+Simple. You have three (3) prefixes -- a "/0" (traditional default), and two "/64"s. IPv6 supports multiple routers (and thus prefixes) per interface. In this case, they do all go to the same place. 
+
+In general, it's probably safe to block on the WAN. I wouldn't be surprise to find an application is using TFTP over the internet, but it would be rare.[*] The real question is do you know what your users need? Will those users understand why Application Foo is broken because TFTP is blocked? (do they know what TFTP is?) [*] Netopia used to "support" this. I always thought it was stupid, and rarely worked, but you could tell your netopia device to fetch images directly from netopia. 
+
+An ATM cell is 53 bytes. Using AAL5, there's 48 bytes of payload. With the minimum ethernet frame of 64 bytes, you are unlikely to ever find an MTU smaller than an ATM cell. Even if you did, every protocol I know of with a fixed minimum includes padding to get to the minimum. MTU is an interface setting. It is not negotiated. It does not change over time. Your MTU will be what you set it to (or some default (1500, 4470, etc.)) until you change it. 
+
+An AP is broadcasting beacons as long as the radio is enabled. (every 100ms by default) So it will cause interference as long as it's on, regardless of the number of clients associated. (Hiding the SSID doesn't stop beacons; it only keeps the SSID(s) out of those beacons.) 
+
+For starters, they aren't identical: 1718.1, 1718.2, 1718.3 There will be one security association ("tunnel") per ACL rule. 
+
+While it may be acceptable to write or speak that way, very few systems will accept an address entered that way. Ultimately, no engineer will enter an address like that, so there's little point coding your software to accept it. (for example, what does 10.1/8 mean? In CIDR, it's nonsense. In a classful system, that would be network == 10, host == 1, or 10.0.0.1.) 
+
+Electrically, yes, it's just that simple. (in theory) The AC component (the ethernet signals) will cross the transformer without issue. The DC component won't affect anything, and can be collected from the taps, minus any resistance of the coil which is normally very low. (Ron's link covers the finer details of signaling, etc. Wikipedia is a good reference as well.) 
+
+(This is more a security SE question) In networking circles (like this one), you should never, ever, see a packet with zero as an address. Anyone sending "zero" across the internet is (a) broken, or (b) trying to break something. A machine talking to itself will use a loopback address (eg. 127.0.0.1) 
+
+If you're talking Cisco, each acl record is it's own SA (tunnel). FWIW, the Cisco PIX/ASA will not allow an "any" rule. (which is why an IOS tunnel interface cannot terminate to a PIX/ASA.) What sort of instability are you seeing? If one rule works, they should all work. Yes, there will be a delay if the SA isn't setup yet. The only issue I can think of would be where IPsec is passing through a NAT device that cannot keep track of multiple streams. 
+
+You've confirmed the system is not "Restricted(R)" -- unlimited interfaces and users. That's the most common reason for the failure mode you've described. (It stops allowing new connections.) Threat-detection could also result in new connections being dropped. Neither of these should cause traffic to stop for existing xlates. needs a follow up to completely clear everything. If it's not clearing them, then there's something else wrong. (or they're being recreated instantly.) Cisco documents the 5510 as supporting up to 50k (130k for a secplus license) concurrent connections. I'd be very surprised if you've hit that wall. ( and look at the "most used". would be logged if you did.) Beyond that, if it's not logging any reason(s) for dropping/refusing connections, I'm at a loss where else to look. 
+
+That is what's causing the error. As you can see in the firewall output, the DST is 2.5, not 2.15. And there's no port 80 translation in the table. [Further Update] There is no way to make a Cisco IOS device NAT a UDP port range. It'll work perfectly for TCP, but completely ignores UDP. (nice of Cisco to do that.) If you attempt to use route-maps with an acl that specifies ports, it generates an error matching the acl. (turn on various debug's to see it) Inside destination NAT ignores the UDP part. 
+
+I'm looping over ...10.111 (state) while it's "running". I suspect you've never deleted your "111" entry. Those are otherwise your exact sequence of s against a 2960S with the ssh server of a linux box. (as my prompt suggests, a debian box.) 
+
+A layer-2 switch needs only one address for management -- most will not even allow more than one. As VLAN 2 in your setup is the internet, you almost certainly DO NOT want I live IP address on that VLAN. (1 - it wastes an address, and 2 - you don't need your switch attacked by everything else on the internet.) 
+
+We controlled exactly what was broadcast using . Null routes a) prevent flapping (when there's an actual interface for that network -- eg. customer provided block), and b) put networks in the route table that wouldn't be there otherwise. 
+
+Cisco IOS has no default username and/or password. The admin (or whatever setup wizard used) has to configure authentication to have (and check) user and password. Without a password set on the vty -- or AAA configuration, the only allowed access is via the console. And the console will require no authentication. (that's how you got to the CLI setup in the first place.) The CLI does not create users. (unless Cisco changed it in the 15.x line) 
+
+(unless you've switched to ACLs) Of course, that's going to be 90% of the entire configuration anyway. (more if pdm isn't enabled, thus flooding the config with pdm location ...) 
+
+The fiber is split in the downstream (OLT to ONT) and combined in the upstream. Only the OLT will see what any end transmits. You could, in theory, jam the upstream since that's the only signal you generate. High enough power could damage equipment. Keep in mind, the operator can rather trivially tell who does this. And it would be highly illegal almost everywhere. 
+
+The most basic license (read: cheapest) has only basic IP level functions. It'll do NAT and you can setup ACLs (filters), but there's no "firewall" or "IPS/IDS" (intrusion detection.) It this regard, it's the same as a $50 Linksys: you are "protected" by NAT. (which isn't real security) 
+
+That would suggest this traffic is actually within a VLAN. So even if it is broadcast (or multicast), it's only going to go where that VLAN goes. has a rather annoying feature of not showing vlan tags unless you get rather verbose with it. Use wireshark (or ) and look at the complete contents (every. single. bit.) in each frame. Also note, many modern NICs process the vlan tag internally, so the OS doesn't normally see them -- the interface must be in promiscuous mode to turn that off. (and some drivers continue to eat them even then.)

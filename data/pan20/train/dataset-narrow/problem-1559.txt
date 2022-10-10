@@ -1,0 +1,61 @@
+Now, to create a clustered VG, I've enabled fencing on all 3 nodes in my cluster (with IPMI if that matters). 
+
+I am not familiar with NetworkManager. Personally I prefer "old-fashioned" direct approach with iproute2/brctl/vconfig tools. But I've found this bug report & errata: $URL$ which are very related to your problem. You are just having issue with adding VLAN to a bridge instead of bond interface like there. But a workaround from that bug report will work too. Instead of adding (which will fail because you already have device associated with connection!), you must edit properties to make it slave to . I've tried to reproduce a configuration similar to yours. But without teaming, because seems like you don't have issues with that part as you can ping from team0. I've created a bridge and vlan id 24 on my NIC enp2s0. The link above suggests then to modify bonding (VLAN in our case) connection like like this: 
+
+First of all it is actually a bad idea to run system commands from web-server PHP script and even store your password in a php script with a plaintext. Imagine you are getting some user input to pass it to , now if you miss some checks there you will allow a malicious user to craft user parameters to run any arbitrary command on your system. Next why you can't actually do this is most likely because out of 2 things: 
+
+If you are running a 3 or more node cluster with cman/corosync and you have some sort of shared block storage (SAN) connected only to some nodes in the cluster how can you enable CLVM on that storage device? In my example I'm running a 3 node cluster, there 2 nodes are "main workload" and 1 node are used for backups & archives. Main nodes are connected with FC HBA with multipath to a SAN. Everything works fine, I was able to initialize PV on that device and can see it on both nodes: 
+
+By considering random VPS vs dedicated server with NVMe storage, you are comparing a ride on a bus with buying a sportcar. And no, Virtuozzo, implementing container virtualization here aren't the bottleneck. Instead containers usually introduce less overhead over full virtualization technologies. But as you are renting the VPS your don't really have control over the physical node. And can't even know how much it's subsystems like I/O and CPU are loaded. Overselling VPS are pretty common practice, especially with cheap VPS. I mean the things inside your VPS/container might be optimized but you are getting the latency because other customers on the same physical node are overloading it's I/O or CPU. But it has nothing to do with Virtuaozzo itself. Contrary to that a dedicated server will give you full control over the resources there. So you will exactly know your resource usage. But something like wordpress blog with 500 visitors/day shouldn't require a dedicated server to run smoothly. You can check & test other VPS providers. Just make to sure to rent from a reliable provider who won't oversell their nodes. 
+
+Beside the rather general approach with there is a nice device mapper target (ioband) which allows precise control over the bandwidth to a (DM) block device. Unfortunately it is not part of the standard kernel. Furthermore you can probably speed up tar by 
+
+Here does write the downloaded content to stdout. obviously results in no output if there are no lines containing both "foo" and "bar". 
+
+There is no technical difference (your own ones are not less secure) just an organizational one: Your CA's certificate is not part of the browsers standard installation. This makes it uncomfortable for most people to connect to your certificate. But it would not make sense to buy a certificate for an internal network. 
+
+Isn't your LAN test server on at least a 100Mbits network...? However: Traffic shaping does not influence the network on layer 2. Your NIC will continue to accept packets at 100Mbit/s. But every traffic (of the shaped type) above the configured limit will be thrown away by the shaper. This gets detected (so far the theory) on higher levels (TCP or the UDP application) so that the communication partners reduce the amount of data they send respectively. 
+
+You are asked just once. You can copy the respective entry from the file to the same file for other users. Or you put it into then it's valid for all users. 
+
+make a file system on the LV (e.g. mount the volume () shutdown the VM copy the image file () adapt the VM configuration to the new path (rename the old image file to be sure) restart the VM 
+
+I think the easiest solution is to add another system (can be an old, slow one) in Network1. This system detects the breakdown of server1 (either by itself or it gets notified by server2 when it takes over) and takes over the floating IP. It also does NAT for this IP so that all traffic for server1 is forwarded to server2. I have no experience with heartbeat. This would work only if the apps don't care about the IP address. And if there is enough available bandwidth between the subnets. The address problem could be solved by having another NAT system in Network2. More points of failure, of course. 
+
+PS: Just noticed this question are actually from 2015 and was bumped due to bounty by other user. Still my answer solves this issue, as I did reproduced this situation and had the same "No suitable device found for this connection." issue as OP before I've tried this solution. 
+
+If you don't want to able to log in on serv2 without password when you don't set your non-default identity with '-i' option, you have to remove your default identity stored on serv2 at . It should be the same line as your local key. 
+
+Do you run it on shared hosting? Has you tried reaching your hosting provider support on that? You might also test it with services like webpagetest.org to see if it also lags from other locations. Besides you can get some or sort of webserver test suites, and temporary place it on your web server to see where the problem is. But if thats a shared hosting I say thats not your problem, just ask them to check and solve it. 
+
+But you actually don't need to change your user to run a system program. Besides most likely your distro has that www-data user to run web server under it (using system means) and every PHP script you run on your webserver are already running under that user privileges. Just run your command without doing su and that should work. Something like this: 
+
+But I cannot create LV on that VG now, because 3rd node in the cluster doesn't have FC HBA, and don't "see" that PV at all: 
+
+Then it is not possible. Your question doesn't specify if you need 2-way connections (i.e. having "black boxes" accessible from the Internet) or not, but anyways this would require at least iptables for SNAT and advanced policy-based routing with iproute2. Added after original question was edited: Yes, something like this could work. But that is strongly dependent on your OpenVPN settings. Those local IPs from the VPN subnetwork (10.8.0.0/24) should be set up on your Server A and routed through VPN tunnel. Also do not forget to allow related packets coming back. This is usually done with something like this rule: 
+
+Your www-data user most likely doesn't has any password set. This disallows logging in with and that user. Your www-data user shell are most likely set to something like which makes sense as this user aren't supposed to log into the system as real user. 
+
+The VMWare KB and multiple blogs state that long running snapshots are bad for both performance reasons and integrity. They have valid points. Granted this is not with ESXi but rather Workstation\VirtualBox on a *NIX server I do see many blogs touting using LVM (or even ZFS) snapshots. Assuming LVM they essentially store their VMDKs on an LVM volume and take all the snapshots they want. I don't see how this solution is practically any different than simply using the VMDK snapshots but VMWare mentions nothing bad about it from a performance or integrity perspective. A lot of blogs tout this as a snapshoting solution. With that being said are Long running VMWare snapshots bad if they are not true VMWare snapshots but rather the VMDK on an LVM\ZFS volume? Clarification A long-running snapshot is a snapshot that runs for a long time, even continuously. Let's assume I set up a few Windows VMs, snapshot them at the LVM level, and run them for a few weeks or months (perhaps even shapshotting throughout). When I want to roll back I simply roll back the snapshot to return to a previous version. The VMWare KB specifically states (for native VMWare snapshots) "Use no single snapshot for more than 24-72 hours. Snapshots should not be maintained over long periods of time for application or Virtual Machine version control purposes." As we all know people run LVM\ZFS snapshots for enormous amounts of time with no ill effects. 
+
+I pretty much spend all of my time on Linux\Networking however I am trying to set up a multi-site AD configuration. There is no root site or anything like that, I simply have two DCs in SiteA and one DC in SiteB. They all replicate to each other. I am physically in SiteB. Before I actually set up the sites in Active Directory Sites and Services my test machine would bounce between , , and . After setting this up (both sites and subnets) my SiteA machines are using the SiteA DCs and my SiteB machines are using my SiteB DCs. I confirm this by issuing an . This is all well and good but.... What happens when SiteB's DC goes down? To simulate this I took down SiteB's DC and the clients in SiteB complained that . I have tried creating an additional record in to no avail. I set the priority of the SiteB DC as 0 and the SiteA DC as 1. Is this the correct way to do this? Additionally, what are the differences between all of the different SRV record locations? I couldn't find much documentation I have: 
+
+Every file system tree which those users can write to must be mounted . You can block access to all binaries for them by creating a group for them and add an ACL enry to , , [...] which prevents this group from accessing this directory: 
+
+I don't know Vyatta but it seems to be a regular Linux. It's not clear to me whether your question is 
+
+You need advanced routing, source routing in this case. You need two routing tables (one for each ISP) and at least one rule for table selection. 
+
+This may work with the socked FD in , too. Furthermore socat supports FIFOs (named pipes). Edit 2: It does work with FIFOs, too: 
+
+You have to change the boot loader configuration. That is probably Grub or Grub2. There is a kernel parameter with the device name, device ID, file system label or file system UUID. You have to change that to the new partition. On you have to change the entry in . 
+
+This makes sense only if you ensure that your PVs are aligned to the RAID chunk size (LVs should be automatically). You can check that by 
+
+Check with tcpdump on the LAN interface whether the Debian server routes the VPN traffic to the LAN. If it does then check whether the Debian server is the gateway for the LAN or whether the seperate gateway knows about the VPN address range and routes it to the Debian server. If that works check whether the LAN systems have firewall settings which prevent access from the VPN address range (probably from everywhere except the LAN scope). 
+
+I guess avoiding a bridge and using host-only networking with routing makes the configuration easier to understand. If the guests are Linux systems then I recommend to configure them with a serial console (which can be accessed by ). 
+
+Whyever the BPDUs are sent: If you have VMs then you probably have bridge interfaces and (rather as a workaround than a solution) on these you can drop the BPDUs with ebtables. 
+
+some network event (that does not open a connection) which is logged by Netfilter () a wget call which is triggered by the logging and gets the file from some web server (the OpenPGP file probably needs to always have the same name then)

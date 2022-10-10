@@ -1,0 +1,51 @@
+I wouldn't go the route, simply because you need to handle the "what if I'm at the start/end" problem. Instead, simply collect the "URL_translated" key-value pairs into an and then apply . If you're working in .NET Core, Microsoft does all the lifting for you. Here's how they do it. 
+
+First of all: why a Windows Forms application? IMHO it's outdated technology, and you should look at WPF and beyond. 
+
+Let's try to rewrite your logic, which unfortunately intertwines various processes. Starting with the , which can be simplified to this: 
+
+I would strongly advise you use something like NDesk.Options when you need to deal with so many parameters in a console application. 
+
+What if the grid changes and the userName isn't the third column? What if the images are moved from to another location? And then there's this: 
+
+Also, why does return a which you then immediately have to convert using ? Avoid working with the likes of and instead convert data from your database to custom classes as soon as possible. Why not use an ORM like Entity Framework or NHibernate etc.? That way you also don't need to have ugly code like (yay, magic strings!). 
+
+Classes that implement like should be used inside statements. Even better: look into using an ORM like NHibernate or Entity Framework instead of "raw ADO". That way you don't have to repeatedly write code that involves etc. Moreover: 
+
+is a collection of commands? That variable name doesn't suggest so at all. No wonder you need to preface it with . If it is a list of commands, call it . Or considering the context, . 
+
+Isn't it possible to keep this logic, as well as the ... in the and have the various checks return an or a that you then can use, so you'd end up with something like this: 
+
+Your method starts of with a dozen "definitions": that's usually a bad sign. In this case it's a bunch of data that seems to belong together: so put them in a class of their own and pass that class to other methods. 
+
+Why are and even seperate? Why isn't there a property on that exposes its ? I don't understand why is even called a "Connection", since it does so much more than a ? just look very odd to me. 
+
+That is far clearer code that doesn't require someone to figure out which parameter of the constructor corresponds to which property. I also wouldn't use an for , I'd go for or even or . 
+
+Note that these are some ideas I quickly whipped up now, so don't just blindly copy-paste them. They need to be considered because right now there's too much repetition. Ideally I'd like to stick with s, but perhaps there's more "profit" to be had by having one method that contains the concatenation logic, combined with a class with some useful s. The most important message is: move away from magic strings, especially if they're used repeatedly. 
+
+does a lot of things. Consider splitting it up into smaller methods, each handling a specific task. Of course, first you need to convert to a class of its own before you can do so. 
+
+Then you could use that class, i.e; fill it with the necessary data, call and pass that class as the param, and use the method when you call . 
+
+I would move the logic to , to avoid repeating the same thing with only a parameter change as you're doing here: 
+
+If one of them changes, you now have to change its name in two places, which is a recipe for disaster. Also note that contains a typo, it should be .) 
+
+I get your logic, but throwing an exception when not being able to parse a certain value is a bad pattern, IMHO. 
+
+Zer0's improvements can be further reduced: there's no need to create a , then fill it using and then return it. Simply do all that in one go: 
+
+I can't help but feel that this is a hacky way of something that should be done with for instance and etc; Consider this (I'm assuming is a global variable of the class that contains all of the code in the ): 
+
+I'm bothered by . Are you certain you don't want to know that something went wrong, and what exactly went wrong? 
+
+Each of these classes is small and easily maintainable. That's what you should strive for: make it easy for the next person to look at your code to figure out what happens where. Having an class where you to the retrieval from SharePoint and return a which gets converted to s in the code-behind of a UI class is a maintenance nightmare. 
+
+In the end you've given us not enough to work with, and I feel your code has far worse problems than 200 lines of s. That long list is likely a result of bad design elsewhere, and moving the logic of each of those s to a separate class as proposed by @CharlesNRice is merely painting over a bad spot. That approach is still a valid one, but you need to fix the issues in first. 
+
+: In general it is recommended to use the types specific to the language, so instead of , instead of , etc. 
+
+is a method and thus should be in PascalCase. Same for . : Microsoft's rule is to use Pascal case or camel case for acronyms more than two characters long, and to avoid abbreviations in identifiers or parameter names (if you must use abbreviations, use camel case for abbreviations that consist of more than two characters). Is a global field in this class? If so, why do you pass it to ; can't that method not simply use the global field? , , : TextBox is a compound word and the first letter of each subsequent concatenated word needs to be capitalized. 
+
+But I'm more worried by the logic of the code: process the three types of data separately into s, and then combine them at the end. I'm not familiar with the code of the page you're parsing, but I'd be surprised if each of the three elements you need isn't contained in one block (a for instance, or a ). Then you could focus on extracting the relevant data for one entry from said block, thus ensuring it does belong together. Because right now you have no clue why you'd get "The three arrays do not have the same length." and you would need to investigate which of the entries on the page doesn't follow the expected format. Whereas if you know that the culprit is one particular block, you wouldn't waste time on finding the source of your problem: you could immediately focus on the problematic block. You wouldn't even need to change that much: identify the tag that "defines" such a block and then use HtmlElement.GetElementsByTagName to retrieve its parts instead of HtmlDocument.GetElementsByTagName. Store the resulting data in a custom class:

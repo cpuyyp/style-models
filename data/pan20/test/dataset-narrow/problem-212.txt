@@ -1,0 +1,71 @@
+Then wait for an interval of your preferred length, and then re-run the query, and store the difference somewhere. (Obviously, running the query itself is a SELECT, so it will influence the result, as will an INSERT query be if you store the results in the same MySQL instance.) For reference: Server Status Variables: Com_xxx 
+
+You'll need to use something like or for the character set to display letters like "É". At the same time you may also want to set the collation to something similar, e.g. or (although these are the default collations for their respective character sets). You can set this like below in your my.cnf (in the appropriate sections), then restart the MySQL instance: 
+
+I don't think there is any such feature in MariaDB or MySQL themselves at the moment (MariaDB 10.3, MySQL 5.7, 8.0). So the only way I can imagine actually detecting support for specific data types and built-in functions on-the-fly would be to try using the data type or funtion, and then catching the exception, if any. It's also possible that certain software libraries can give you a hint as to what features the underlying RDBMS can offer. If so, this is probably done by storing a list of features associated with each RDBMS version inside the software library. 
+
+One way to achieve this could be by using pluggable authentication. This way the password is stored externally and therefore can't be changed from within mysql. This allows you to use PAM, LDAP or other authentication services. For PAM, assuming you have configured PAM already in your OS (assuming Linux below), then in MySQL do: 
+
+Unfortunately, there is no equivalent for . You can do (which first deletes the existing row if one exists and then inserts a new row), but that's probably not useful to you. A few other maybe useful optimizations: 
+
+Yes, I think this could be the way to go as I don't think there are any stats in MySQL for historic status variables. 
+
+And the warning is code 1411 . ANSI_QUOTES is not enabled, and I get the same warning if I use single-quotes. From what I understand reading the documentation, the query should work: 
+
+(Disclaimer: I'm not familiar with WordPress and I haven't used phpmyadmin very much.) If there is new data in each database since the "split", i.e. each database has some unique new data not found in the other one, then I don't think there is an easy path for merging them just using standard MySQL commands or tools. There will be records in one database with the same primary key values as in the other database, but with different data in the other columns in those records. If there aren't a lot of such records, then you may be able to merge this "manually", record by record, but it will likely be labour intensive and you need to know what you're doing. E.g. when you give a record a new primary key value to avoid a collision with the other database, you also need to make sure to update every foreign key that refers to it. That said, there are special WordPress plugins for exporting and importing WP databases, and I'd be surprised if these didn't allow you to merge two databases. See e.g. wp-exporter and wordpress-importer. But that is probably outside of the scope for this site. See also this question on stackoverflow: How do I merge two Wordpress SQL databases in phpmyadmin? 
+
+So it not the average receive queue size for the node's uptime, but since the last time you queried this status. 
+
+I think you've already established that the master server is running. You can check whether you're able to connect from the slave to the master with: 
+
+I would caution against using triggers where you should be using other methods. Triggers are nice for temporary fixes when you can't fix the application or database structure right away, but if you use them as an permanent and integral part of the workflow, things become confusing. You table structure doesn't seem right. Instead I'd suggest: product: 
+
+Maybe consider if the geometry types (POINT) would be useful instead of your , doubles. Geometry types are indexable in InnoDB as of MariaDB 10.2. Looking at your configuration, I think your query cache is set quite large. (Though it might make sense in your specific case, I don't know.) This can result in degraded performance due to lock contention, as the query cache is locked while it's updated. I can see how the query cache might make sense in your use case if you're not writing to the database all that frequently. Note however that MySQL is retiring support for the query cache in MySQL 8.0. I don't know what the fate of the query cache is on the MariaDB side. 
+
+For some use-cases, the (usually) small delay before the data appears on the slave isn't a problem. For "critical" reads, you could send them to the master only. Another solution would be to use so-called synchronous replication, though actual synchronous replication doesn't really exist. The technology used in Galera Cluster (used by MariaDB Cluster and Percona XtraDB Cluster) is virtually synchronous. The same is true for MySQL's InnoDB Cluster. 
+
+(Use if you want to change it for the global scope rather than just the session.) If you want to set in the MySQL config file, then I think you'll just have to "hard-code" it, i.e. just find out what the default modes are for the version you're using, remove the undesired modes, and add the resulting string e.g. to the section of the .cnf file: 
+
+This is just a warning, and in itself isn't a cause for concern. I think it's unlikely that this caused the node to stop. See also Percona's blog post about it. And then: 
+
+The most common solution is, as commented by @Akina, to store images in the file system, and just store some kind of reference (file path or similar) in the database that allows you to uniquely identify the image in the file system. However, there are also use cases where it makes sense to store the images directly in the database. Maybe you don't have permissions to store files on the file system. Maybe you have a lot of RAM and you don't expect the images to take up all that much space, and putting the files in the database means you only have to backup the database and not have to worry about a separate backup of the file system. One of the big disadvantages of storing the images in the database is obviously that they can make your database grow to an unmaintainable size where backups take a long time and you may have to take special steps to avoid disrupting users (i.e. to avoid locking) for very long while running the backup. Maybe you can also no longer fit the whole database in RAM, which will lead to slowness. In addition, images usually require columns, and these come with their own set of disadvantages. 
+
+Thanks to the auto-incrementing component of the primary key, you don't have to worry about populating that. 
+
+The SQL:2011 standard has a feature known as temporal tables or system-versioned tables which might be helpful for this type of use-case. Basically, whenever you update or delete a record in the database, the database automatically holds on to the previous version of the record, including the time period when it was valid. PostgreSQL doesn't support this feature natively, but there's an extension called temporal_tables. A tutorial can be found here. A few other DBMSes support temporal tables natively, including SQL Server 2016 and MariaDB 10.3. 
+
+There is a bug in a script in 10.2.13 which prevents SST from working, see MDEV-15254. So you need to either get the scripts and from the previous version (which is what I did) or use the bug-fixed scripts attached to MDEV-15254. 
+
+You have another .cnf file where the variable is being set to 4895. The MariaDB Systemd unit file (or SysV init script on older Linux versions) is overwriting the variable value you've set. You're running a non-standard MariaDB server that's been compiled with a hard-coded value for . (Unlikely!) 
+
+This seems like a problem with mysql-workbench (tested with version 6.3.9 on Fedora and MySQL 5.7 (CentOS)) where emojis are not converted to the correct unicode. In the command-line client the emojis get converted to codes when they're pasted in, so the query 
+
+And the column is indeed created as bigint(10). MySQL 8.0, both the default strict and non-strict sql_mode 
+
+(That should respond with something about "REPLICATION SLAVE ON *.*") It might also be worth checking out the documentation on bind-address. In the command, note that there is obviously a difference between local and external IP addresses, and you should use the external IP address here since you're replicating across the Internet. (On that note, once you've sorted out the replication problem, it probably makes sense to enable encryption.) 
+
+... so you may not need a specialized DBMS for this sort of thing. This type of statement is known as 'merge' (as in the SQL standard) or 'upsert'. See this Wikipedia article for more info, including details about the implementation in other relational database systems. 
+
+Then make an alias (assuming Linux-like OS - depending on shell, you can perhaps put the alias in ): 
+
+You can specify a different AUTO_INCREMENT position when you create the tables for each individual employee's database so that there is a range of IDs allocated for each employee. E.g. 
+
+Maybe would be sufficient for your purposes? Instead of giving individual columns for each member in a group, it would give a single column with comma-separated lists of members. In your case I think it would be something like: 
+
+... where refers to a file . If the user then tries to set their password (I've tested this only on MariaDB with the unix_socket plugin): 
+
+Additionally, for warning messages, the log_warnings variable need to be > 0. There are different warning levels, and the higher the value of log_warnings, the more kinds of warning messages are logged. For details, see the documentation for the log_warnings variable. To see you current setting, run: 
+
+Not much useful info in the log extracts provided, I'm afraid. Anyway, with just the info you've provided, this looks a lot like a question I answered previously where the ownership and permissions of the datadir ( in your case) of the new node were not set correctly. The clue is the line . So: 
+
+Re-design the primary keys so that they become composite keys with one auto-incrementing key as you have already and one key that is unique for each employee. E.g..: 
+
+It's not easy to say anything for certain, but one thing I noticed is that you're also using an old version of the galera RPM (25.3.12). Version 25.3.20 is the one distributed with the version of MariaDB you're using (10.2.10). 
+
+XtraDB (which is InnoDB with a few patches from Percona) is a tried and tested technology, and XtraDB / InnoDB is the default storage engine in MySQL, Percona and MariaDB. InnoDB is being developed and supported by MySQL (owned by Oracle). TokuDB is newer, it doesn't have as many years of usage and development. If I understand correctly, TokuDB is developed by Tokutek, now owned by Percona. With these considerations, in a choice between these two technologies for a system for financial transaction data, I would probably go with XtraDB. 
+
+Source: Multi-Master Replication (Percona XtraDB Cluster - this page also has a diagram which explains the problem). Another approach is to define one of the nodes as the 'master', and then write only to that node. Critical reads should then also be directed at the 'master' node, whereas less-critical reads can go to any node. PS: Note that if you plan to write to all the nodes, you might find the following article useful: Galera’s big gotcha for MySQL users. 
+
+Xtrabackup is a physical backup tool, and is meant to backup and restore to the same MySQL (or MariaDB) version. It's not designed to work with migrations. It might work, it might not. So if possible, if you want to restore the backup to a new instance, I think the best approach is to restore it to another MySQL 5.6 instance, and then upgrade that instance to 5.7 afterwards. 
+
+Have you tried creating the /var/run/mysqld directory, with rwx permissions for the mysql user? Judging by the error messages, that seems to be a good place to start. The other error message should probably also be addressed, regarding not writing to syslog and the mysql error log at the same time. I'd suggest inspecting your MySQL config files under /etc/ to see if you can disable the syslog option. Also, it looks a bit strange that you're using mysql-wsrep-5.6 with MySQL 5.7. Is there a mysql-wsrep-5.7? If not, perhaps you need to use MySQL 5.6.

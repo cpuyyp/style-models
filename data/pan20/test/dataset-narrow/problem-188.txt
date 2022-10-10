@@ -1,0 +1,55 @@
+SUGGESTION #2 : Stop using You should try to get the MyISAM imported out into a new table without using . 
+
+To clarify, when a Slave is initialized with all 6 options for the first time, then you can give it a command with just and . Using --master-data does not supply host, port, username and password. Even with MySQL 5.7, supplies and . Still, username and password are not. 
+
+Looks like it works. Give it a Try !!! UPDATE 2013-12-23 12:34 EST Since TIME_TO_SEC cannot deal with minutes beyond 59, you need another comparison trick. I have a more simplistic method Remove the colon and compare the time like a decimal number The query would be 
+
+Remember you added two FLOATs ? This makes each row 8 bytes bigger. Each row will expand in the 16KB of the Data Page, leaving less room for BTREE information. What must InnoDB do to maintain the ? Create additional Data pages to accommodate wider rows along with the associated BTREE information. Since the PRIMARY KEY is a BTREE, you should expect O(n log n) growth in BTREE nodes, along with an overflow of InnoDB Data pages. Without doing any further math, I will show you how this is the case. MyISAM has data and indexes stored separately. Run the following 
+
+Actually, if you place an if then block in every trigger, you could effectively shutdown all triggers. Here is such a code block 
+
+Let's say the timestamp was "2013-09-03 01:23:45" STEP 05 : Find the timestamp of that position in the binary logs of ServerB Let's say the binary log on ServerB is master-bin.000004 STEP 06 : Dump position matching timestamp inside ServerB's binary log master-bin.000004 
+
+Then, you examine to see what commands were run and when. What if log-slave-updates was disabled ? This would be better because the binary logs on the Slave should never increase in size on a Slave unless someone or something ran locally. EXAMPLE: Let's say you ran on the Slave. For MySQL 5.6, you should see this: 
+
+Of course, don't stay out in that shell longer than the number of seconds listed in wait_timeout or interactive_timeout. 
+
+Please run Check every file mentioned UPDATE 2017-04-29 19:03 EDT The trick I mentioned in Set sql_mode “blank” after upgrading to MySQL 5.6 comes from a post written by Morgan Tocker under the heading "Changes in MySQL 5.6". This bait-and-switch method for sql_mode may not apply in this case since this is MySQL 5.7. As I mentioned in my earlier comment, I have successfully sql_mode by adding this to 
+
+Since COMMIT and ROLLBACK govern data visibility, READ COMMITTED and READ UNCOMMITTED would have to rely on structures and mechanisms that record changes 
+
+ISSUE #2 : DNS If you are connecting to mysql using DNS, this could be one possible source of issues if: 
+
+If you want to query in the INFORMATION_SCHEMA database I have the following: Total Storage By Database in MB 
+
+Given these facts, there can only be two possible causes: POSSIBLE CAUSE #1 In MySQL 5.1 and MySQL 5.5, values for global status are accessible via the INFORMATION-SCHEMA database 
+
+Option A Definitely the safest, but long downtime not necessary if is applied correctly. Your downtime would be based on collecting the incremental, not the initial load of the target server. This would be very short if the loading of incrementals are being done frequently. Option B This is good, provided the large tables are archive data only. If the large tables are active logs, go to Option C To ensure an rsync, mysqld should be down. To do so, run this 
+
+If the slave is not a master to other slaves, then you do not need binary logging on the slave To reclaim the space of those logs on the Slave immediately, run this 
+
+Depending on the hardware, the amount of data, and DB infrastructure, performance should still be a concern. CASE IN POINT I have a Web/DB Hosting client with the following hardware and DB Setup: Three DB Servers (192GB RAM, 2TB RAID10 SAS Drives, Dual HexaCore (12 CPUs)) 780 Databases (162 tables per database) total 480GB of Data and Indexes MySQL 5.5.9 configured with InnoDB (file per table,io threads set to 20000) Circular Replication amongst the three DB Servers 162GB Buffer Pool on Each DB Server The weakest link with this client's app and infrastructure is the RAM. Here is why : Even with 162GB forthe InnoDB Buffer Pool, wth proper load balancing at the application level, about 85% of the InnoDB Buffer Pool is full on the three servers. This works well because roughly one third of my client's customers ru on each server thus caching just that segment of customers on any given DB Server. This setup works in spite of having only 162GB of RAM per servers and about a total of 480GB of innodb data. Obviously, all the data could not fit in RAM. Scaling out accommodated the spread of the client's data for quick access. In the past the client was using smaller hardware 9 DB Servers MySQL 5.0.90 3 DRBD Clusters + Circular Replication Amongst DRBD Clusters 32GB RAM and DUal Quad Core (8 CPUs) 550 GB RAID 10 SAS 13GB InnoDB Buffer Pool In this old setup, the 13GB was 99% full all day. WIth 480GB of data, 13GB would thrash in and out of the buffer pool 24/7. There would be periods of intermittent replication lag due to this thrashing and without the presence of slow queries. Moving from this architecture into the new one mentioned above provided more speed (CPU and Disk). However, even 192GB of RAM still had to have accommodations made by adjusting other external factors. MORAL OF THE STORY The weakest link of any given DB infrastructure requires one of five things: 
+
+I have seen this problem victimize many developers, especially when it comes to MySQL Replication. For example, if you run , the SQL Thread will close. Any tables create with will be dropped. When you run , MySQL Replication breaks instantly because the table needed for INSERTs, UPDATEs, or DELETEs no longer exist. I have had to perform mysqlbinlog dumps on relay logs to locate the original statements, run them as in order for the table to remain accessible to other DB Connections, including the SQL Thread when is reissued. As for your Questions 
+
+This presents a daunting challenge for file handles depending on Storage Engine InnoDB There will be 8192 (1024 for older versions) file handles, that is one file handle for each file dedicated to the partition PER TABLE. The option innodb_open_files get autosized (default is 300 in older version). InnoDB will cache file handles rather decently. MyISAM There will be 16384 (2048 for older versions) file handles, that is one file handle for each file and one for each file dedicated to the partition PER TABLE. The option open_files_limit gets autosized and the maximum is 65535. This can present extreme challenges for those with several partitioned MyISAM tables. The only thing you can do is raise the OS ulimit to accommodate. Only then can you raise open_files_limit beyond 65535. CAVEAT Each time you access one or more partitions, you have to remember to explicitly close the file handles using to close open file handles you no longer need. This makes room for new file handles to be opened. You can identify which tables have open handles with . When doing these things, it becomes a little more manageable to have a table with a vast number of file handles. You just have to be very meticulous and scrupulous about closing unused open file handles often, even if touching just one partition. 
+
+and that was all. MySQL 5.6 There was a problem with the previous method (does not erase memory structures for replication, the ones that have the host, port, user, password). With that problem, you had run 
+
+Give it a Try and let us all know if this helps. UPDATE 2012-01-13 18:26 EDT This may sound very gross but you can pipe the output of mysqldump into sed as follows: 
+
+In light of all the things mentioned, it looks like the bottleneck is the join itself. ASPECT #1 : Join Buffer Size In all likelihood, your join_buffer_size is probably too low. According to the MySQL Documentation on How MySQL Uses the Join Buffer Cache 
+
+These are just skeleton scripts to detect changes. For option 1, you can do mysqlbinlog against the current binary log and see the SQL that was executed in whatever timeframe you need. For option 2, you can change the SQL to retrieve the datetime stamp of the last update for a given table. UPDATE 2011-06-29 06:30 EDT Option 3 : You Could Monitor the general log Interestingly, you could activate the general log. What's even more intriguing is that you can activate it a MySQL Table. The template to the general log as a table already exists in /var/lib/mysql/mysql as general_log.CSV. Here are the steps: Step 01) Add these to /etc/my.cnf 
+
+max_binlog_size With regards to max_binlog_size, what you are asking is not possible. Why ? On , I answered the question MySQL - Binary Log File size growing more than the maximum limit. I mentioned the following from the MySQL Documentation on max_binlog_size: 
+
+At this point, you may need to run FLUSH HOSTS and see if this unblocks. The MySQL Documentation says this about FLUSH HOSTS: 
+
+log_bin_trust_function_creators This is simply an ace in the hole when migrating Stored Procedures. The DETERMINISTIC property was added to to two things: 
+
+OK, now that represents 52 min 19 seconds. Since you are doing durations for MP3s, you will want format the string perfectly before running TIME_TO_SEC. so that you handle durations over an hour and under a minute. SUGGESTION Here is the query you need 
+
+This will give you a recommended size of key_buffe_size. Please you common sense when setting this value. Here is something else: I don't see a bulk_insert_buffer_size. The default is 8MB. Try setting it to 512MB: 
+
+In your DB Parameter Group change innodb_flush_log_at_trx_commit from 1 to 0. This should speed up the writes since the default value writes completed transactions to the Redo Log Files (ib_logfile0, ib_logilfe1). If you have binary logs enabled (when you enable Automated Backups), you can also change sync_binlog from 1 to 0. You will not need to reboot since these two options are dynamic. When your restore is complete, set them back their original values (innodb_flush_log_at_trx_commit back to 1, sync_binlog back to 1). Give it a Try !!! UPDATE 2018-02-02 14:27 EST The only other thing I can think of would to increase the threads the CPUs use If you look back at my 6.5 year old post Possible to make MySQL use more than one core?, I mention the following options:

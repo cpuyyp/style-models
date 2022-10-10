@@ -1,0 +1,97 @@
+If your list has items, and its max was , your original algorithm was doing operations, while this will keep that to . Putting the whole thing together for 2D arrays I would put all of the above in a function and then go with a dict comprehension that called it, so something like: 
+
+I wasn't aware that scipy's sparse matrices did not support broadcasting. What a shame that you can't simply do ! Your construction of can be sped up quite a bit, but you need to access the internals of the CSR matrix directly. If you aren't aware of the details, the wikipedia article has a good description of the format. In any case, you can construct as follows: 
+
+Your code is very hard to follow. Your variable names tell very little about what they are supposed to be, and there are mysterious things, like why is a 2-tuple, when only the second value in it is used. The very long lines make it hard to follow as well. It is also not obvious to figure out which of the values in every item is the weight and which the value. So while I am not really sure of what that code is doing, you only need to keep the full 2D array in memory if you want to backtrack over it to find out which items you should take with you. If you are only interested in knowing how much value can fit in the knapsack, you only need to have two rows of the array in memory. And that can be implemented much, much more compactly than what you have come up with: 
+
+This has a dreadful performance, \$O(n)\$ space and \$O(n^2)\$ time, because we are continuously rescanning the full array for the maximum. If we are only after the value of the maximum, and not the indices of the neighbors that produce it, we can minimize the overhead by keeping three numbers only, the previous maximum plus the last two entries: 
+
+I think you can write a linear time solution borrowing ideas from this. The idea is to keep a stack of decreasing maxima (SDM). Let's consider first the problem without taking into account the circularity... Say your input was . When you are processing the third item (), you want your SDM to be , where he second item in the tuple is the 1-based index of that item in the original array, as per your problem's description. You search the SDM for the last entry larger than the item being processed, which in this case is , so the index of the first item larger than to its left is . You then discard all items in the SDM to the right of this one, and insert the current value in it's position, so the SDM now becomes . Rinse, repeat, and you have all your first items larger than to the left. For the symmetric item to the right, do the same scanning from right to left. At first this may seem as an \$O(n^2)\$ algorithm, since you have to search a list that could potentially be as large as the array (e.g. if the input is monotonically decreasing) for every item. Because the SDM is sorted, you could try to use binary search to make that bound \$O(n\log n)\$, but that would actually slow down the process! You have to keep in mind that, as the stack is being searched sequentially, entries that aren't larger than the one being processed are being removed from the stack! So the more work an item requires to find it's answer, the easier it makes it for the ones remaining. A careful analysis of this shows that, on average, each item takes constant time to process, so the resulting time complexity is \$O(n)\$, which is basically as good as it gets. You can factor in the circularity of the problem into the above approach, by first finding the maximum, and always starting your circular iteration, whether to the left or right, from it, so that you will always have the maximum in your SDM. But enough talking, here's an implementation: 
+
+No, it's not very efficient... There are operations you typically want to minimize if you want a performing solution, and memory allocation is one of the top ones. But your function is creating a new list every time it gets called, which is not a good thing. An efficient implementation of mergesort will do the sorting in-place (with a copy of the list before if the original has to be kept unchanged), and will reuse the merge buffer for all merging operations. 
+
+If you are going to have a function that contains a single liner, you better give it a great, descriptive name. I don't think that really fits the bill. Perhaps or ? Alternatively, I think my preferred option here would be to get rid of the function altogether and let code speak by itself, writing the whole thing as two nested comprehensions: 
+
+This is only checking each position of the row once, rather than 4 times, so the algorithm is inherently more efficient. If rather than scanning row by row, you want to go with scanning from the last entered position, you could go with something like: 
+
+Don't use a dictionary. If your indices are consecutive integers, then a list is the right data structure. You already know that most of your entries are going to be , so why not initialize those in bulk and worry only about setting the s? 
+
+There are two almost identical blocks in that function that should probably be refactored into a common external function, but I felt it would better show what was going on to keep them separated. Anyway, when you run this you get the expected output: 
+
+Make sure you stress that you are not validating the input, you shouldn't use for that, but documenting the function's specification. I have also removed magic numbers from the above function: it is much clearer what stands for if you make it explicit that it is the number of letters in your alphabet. Try to stick to the conventions of the language, which for Python means PEP8: read it, learn it, love it. Especially if you end up coding on a whiteboard or a google doc, keeping your max. line width short is a great habit to have. And if you happen to be interviewed by a hardcore Python geek, it is probably good to avoid unnecessary parenthesis or missing spaces! While it is true that the worst case performance of look-up and insertion into hash tables, i.e. , is O(n), it is also true that they take constant time on average. The only practical drawbacks they have are malicious opponents (but this doesn't apply if your keys are single char ASCII strings), and the fact that dynamically resized hash tables will have the odd operation that does take linear time, so you probably don't want that data structure used in a blocking call in a pacemaker's firmware! But in many, many typical interview situations, the right answer to "can we do better?" is a hash table: for all practical purposes, your single-liner takes linear time and space, and you should make sure you convey that to the interviewer before trying anything more complicated. 
+
+So each of your recursive calls is creating a copy of half of the list before passing it down, which is not the best use of time. I think it is a much better approach to pass around the whole list, which simply passes a reference to it around, no copies involved, and a couple of indices marking the range you want to work on: 
+
+Ideally, you would already have your list of point in an array, not a list, which will speed things up a lot. 
+
+For a 3x3 tic-tac-toe board it hardly provides any real advantage, but if you where to play on an board, with consecutive same player marks determining a winner, you could do the following... 
+
+I think your method is unnecessarily cumbersome. It seems more straightforward to have a to which you append a reversed word whenever you find a space. And while I'm not an expert on Java internal workings, it will almost certainly be more efficient: 
+
+and then replace with , you will spare yourself a huge amount both of computations and memory accesses, which should boost performance by a lot. 
+
+Your code runs instantly on my system with 1 million randomly generated numbers. are you sure you are searching for in and not in ? Anyway, a couple of Python style pointers: 
+
+Setting aside the and checks you are doing, you then update with a value where cancels out, and you are basically doing: 
+
+is basically a dictionary with items as keys and counts as values, so you can build it yourself from more primitive Python types by doing something like: 
+
+Notice the micro-optimization of using the second argument of , so that the string is only split at the first occurrence if there is more than one. 
+
+You can optimize this quite a bit, e.g. by breaking early out of the loop if both and are false. And you can make your code more explicit by using explicit statements, rather than operators, which may feel a little too terse. 
+
+If you want to use numpy, then you can take advantage of it's many capabilities to make your code very sleek: 
+
+I think your algorithmic part is exceedingly verbose. One of the nicenesses of Python is how it can lead to code that reads almost like English. And for this particular problem, even leaving performance considerations aside, I think iteration is clearer than recursion. So I would rewrite things as: 
+
+This is an array of shape where is the number of rows of your data set. You can now proceed to do your whole calculation without any for loops as: 
+
+If you look at that code, you don't really need to store the whole array, since you are only using the last value. So you can get the same time complexity, \$O(\log n)\$, but with constant space, by doing: 
+
+That last code is a little too clever for its own good, so it should it should be heavily commented. By my timings, for your target size, is 5x faster than your implementation, and about 2-3x faster. 
+
+If you dig a little deeper in the math, it is very straightforward to realize that every third Fibonacci number can be computed with the formula: \$F_{n+6} = 4 F_{n+3} + F_{n}\$ You can reuse your function if you work the recursion backwards a couple of steps, and do something like: 
+
+For every edge in your graph, you are doing a BFS of the tree on one side of the edge to sum all of its vertex weights. It is not hard to see that you are doing a lot of work over an over again. Imagine that every vertex in your tree was connected to only 2 other vertices, so that it basically looked like a doubly linked list. If we store the list in an array, your code would be doing something akin to: 
+
+There is not much need for a class for what you are after. Storing all the conversion factors in a dictionary, you could simply do something like: 
+
+If you were to time each of your iterations advancing the board one move, you would notice that they get progressively slower, as more and more cells are non-zero and contribute to their neighbors. One way of mitigating this effect is to, rather than completing all moves from the source towards the destination, do half of them like this, and the rest from destination to source. If there are \$m\$ ways of getting from the source to a certain cell in half the moves, and \$n\$ ways of getting from the destination to the same cell in the remaining moves, then there are \$mn\$ ways of getting from source to destination. You could implement this like: 
+
+I think all that logic you are using to check which digits to multiply by 2 and which not to is a little overengineered. If you generate the digits from right to left, it's always the even positions that get doubled. You can also make your life simpler by generating the digits one at a time, rather than the whole number. If you do it like this, you don't even need to keep the digits in a list, as you can add them to the return number directly. Another possible optimization for the doubled digit result is to use a look-up table for the values. With these ideas in mind, I rewrote your code as: 
+
+This produces the correct result in a fraction of a second. Alternatively, you could use the fact that the prime counting function is bounded from above by the logarithmic integral, and do normal sieving up to that value. But that would take some of the algorithmic fun away from this problem. 
+
+Your first setting of all the even numbers to 0 is not very efficient, the whole point of sieving is to avoid those costly modulo operations. Try the following: 
+
+Descriptive variable names are good, but code that fits in a monitor's width is even better, and I think you are erring on the too long side. E.g. is probably descriptive enough, and for a method of such a class, is probably also good enough. variables can be compared directly, no need to go through the cumbersome process of finding their index in a list. I think your code is not doing what you want it to, as you are forgetting all history and characterizing the string by whatever order the last two characters follow. 
+
+If you are going to run this on large sets, you may want to memoize intermediate results to speed things up. 
+
+Taking advantage of the fact that objects can expand their capacity dynamically, there is no need to start with anything in it, or to give spaces unintended remove-me meanings, or to do costly \$O(n^2)\$ remove-and-shift operations: start with an empty one and append what you need as you go. You could get rid of the flag by replicating the logic inside the loop before it for the first char only. But you would then have to explicitly check that the string is not empty. My Python background makes me like this approach better, YMMV. 
+
+The actual creation of the mask looks perfect to me. You can streamline the rest of the code into a single-liner as: 
+
+Do not use the method explicitly. It is a relic of a time long gone, and you only need to know about it if subclassing objects written in CPython. Not your case. And your code can be written in an infinitely more readable form as: 
+
+When you go on to calculate , you are actually negating and then dividing it by a number that turns out to be , so you can calculate as 
+
+I wouldn't be surprised though if, this being Python, the explicit looping took longer than the previous version. But this would be preferred in a lower level language. Another possible optimization is to scan the left half of the array prior to the copying into the buffer, to avoid moving around items that are already in the right place: 
+
+Notice how the memoization cache is stored as an attribute of the function, which is the closest thing in Python to having a static variable inside a function. 
+
+This will not only make your code ~3x faster, but will render your other functions trivial to write. 
+
+The algorithm searching for the pair in the sorted list is \$O(n)\$, but the sorting is \$O(n \log n)\$, which dominates and is also the complexity of the full algorithm. 
+
+Boolean values are converted to 0 or 1 when used in an integer setting, so your adding of values is typically written as: 
+
+Project Euler says I solved this one about seven years ago, but that code is nowhere to be found. It wasn't all that hard to figure it out again... It should be obvious that performing several million factorizations is going to be very slow. Very often in Project Euler the solutions have to do with reformulating the problem in a way that avoids the obvious, slow operation. In your case, since you have contiguous ranges of numbers, it is relatively easy to figure out how many of those are multiples of a certain number: 
+
+If my math is good, this goes over each item in at most twice, so it will have \$O(n)\$ performance. Also, I have used a recursive approach to compute the depth, but if speed is your main goal, you will probably want to turn that into an iterative approach: 
+
+EDIT Note that the (now corrected) order of the parameters is reversed with respect to the OP's . Both expressions above require a list comprehension, because what gets returned is a generator. You may want to consider whether you really need the whole list of index pairs, or if you could consume them one by one. 
+
+If you are assuming things in your input, it is a very good idea to document those, rather than in a comment, with an statement. As an example, I would rewrite your function as: 
+
+You can make your current \$O(n^2)\$ algorithm run in \$O(n \log n)\$ time by first sorting the input intervals by interval start time, then do a linear scan of the sorted array:

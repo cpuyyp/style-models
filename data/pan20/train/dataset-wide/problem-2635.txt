@@ -1,0 +1,67 @@
+I don't have anything to add regarding performance, but I have some advice so that your program is easier to read. And programs easier to read are often easier to understand, and therefore easier to improve: 
+
+And the "default" values from the in-class member initializers will also be used to automatically initialize non-initialized members in the other constructors: 
+
+I am trying to write some string algorithms which I want to work for any kinds of strings and/or locale. I managed to get some results that do work, but I am not sure that what I am doing is idiomatic or anything. Here is a function: 
+
+Have a better look at the truth table From the big truth table we built, we can see that when \$ A = B = 0 \$, the only time when \$ S = 1 \$ is when \$ E_{old} = F_{old} = 1 \$. However, when \$ A = B = 0 \$, we can also see that \$ E_{new} \$ and \$ F_{new} \$ can never be \$1\$ at the same time. That means that once and are consumed, can change only one more time and only if is . Therefore, we can extract the part from the loop condition and apply exactly one assignment after the loop (I used a loop since the loop was becoming a bit messy for the job): 
+
+Now, lets have a look at the functions that you have reimplemented and that you can already find in the standard library (there is some overlap with other answers): 
+
+First of all, there is an error Not a fatal error though since the algorithm still sorts the collection properly, but it actually means that the algorithm doesn't perform as few comparisons as it should. The line advances the iterator one step too far, so the binary insertion is sometimes done in a main chain too big compared to what it should be (more than \$2^n-1\$ elements). The obvious solution is to advance the iterator by instead of ; however, removing from every element in is also a solution. We don't need to remove elements from Instead of erasing elements from once they have been inserted into , we can instead track the first used iterator in corresponding to a Jacobsthal diff, add the next Jacobsthal diff to find the next such iterator, and decrease that iterator until it encounters the previous remembered Jacobsthal diff iterator. Not having to remove the elements from means that we don't need to store s in a container supporting fast deletion from the beginning. Basically, since we don't remove anything, we can switch to an for . Use the original iterators Since we only have to add a Jacobsthal diff number to find the next element of , it means that we can perform the same operation on the original collection to find the iterator to insert into the main chain (every element with an even index in is a pend iterator). It means that we can drop this information from and only store an instead of an . The maximal size of the vector should be so we can directly reserve that amount of elements. We can insert the remaining elements in any order At first I thought that the remaining elements had to be inserted in reverse order (the elements left when the farthest pend element whose index corresponds to a Jacobsthal number has been inserted). However, it appears that we can insert them in any order thanks to the properties of binary search. Therefore, inserting them in ascending order shoud probably ease the CPU's task. Smaller things 
+
+Your solution If I wanted to do the obvious solution of squaring the array and sorting it it would look something like this: 
+
+Now you get more type checking and have less repetitive typing to do ( instead of ). I did not capitalize because it is not a macro-ish constant anymore. A side effect of this is that you cannot do anymore because does not decay into an like does. Instead you can define addition and subtraction operations such as this: 
+
+I don't like that you use to set the function. suggests that I can append a bunch of functions and they all get called when the event happens, which is not the case. would be better. It would make sense to take advantage of move semantics. The lambda that gets passed into is moved into and then copied into , when 2 moves would have been enough: 
+
+I dislike that your class mixes functionality (a mathematical vector) with memory management. A class should only do one of those. If I prefer I have to rewrite your whole class. There is actually a thing in C++ that is better than smart pointers, which is value semantics. People rarely screw up the lifetime management of an , it just works naturally. When you do tricky lifetime management try to mimic the way does it. The should be (as well as , and ). It should also work on s and not only on pointers. The standard way to add s is this: 
+
+That last line should not compile, but it does. Blame the that should not be there. Unfortunately you need to write 2 classes to get this right in C++, typically and . Looking at the list of things required to make a bidirectional iterator it seems like you are missing some, for example everything around std::iterator_traits which also explains 
+
+This one review will be a little bit tricky: I was trying to implement a template struct in C11. Of course, templates don't really exist in C11, so I used a few macros to get the desired interface. Here is the implementation of the core features, trying to mimick those of the c++ . Some are still missing though. First, the macro : 
+
+Since you are using end-of-line commands, I will assume that you are using at least C99 in this review (it may be a compiler extension to C89 though). 
+
+This answer is mostly about design and good practice, and not so much about the algorithms themselves. Therefore, I will mostly use in the examples. For the sake of completeness: a sorting algorithm with an array + size interface is really C-ish. A proper C++ algorithm would take a pair of iterators and would be templated: 
+
+There is at least one place where you may have problems with raw pointers. It has to do with exception safety and the piece of code I am talking about is the method (but it also applies to ): 
+
+Frankly, your solution is simple, short and elegant enough. I don't think there is much to add, but let's try a few tips an ideas: 
+
+Here is a minimal working code at Coliru. Is such a design reasonable or is it overkill to elegantly solve this problem? 
+
+The first thing that strikes me with your code are the comments: there are way too many comments. There are especially too many comments considering that your code rather well self-documented. For example, you could remove all the comments in the following snippets since they don't add any value to the code and provide no more information than the variables' names: 
+
+If your constructor initializes members the class initialization is treated as not existing (so no loss in performance for double-initializing), but if you forget or leave it out you get sane defaults. I would like to see and in the part of for encapsulation. If you let users access those types they will use them which I think is not intended. 
+
+That way you can also leave out the constructor. I dislike the name . The return value tells me if it searched or not? I would prefer so that the return value fits to the name. Your leaks memory. It creates s with but doesn't them unless you manually call for every single item. You have 2 options here: Insert a destructor that deletes all the nodes or just make , and s, which will delete the nodes automatically. If you go the route you will have to change the implementation code a bit, because you cannot copy a (then it wouldn't be unique anymore) and instead or them. Your can be copied but the copy does the wrong thing. Instead of a copy I get 2 trees using the same nodes (because it just makes a copy of the pointer). If I change one tree the other also changes. Instead you should write your own copy constructor that deep-copies the nodes. Same goes for the assignment operator. Also your would benefit from moving, so you should add a move-constructor and move-assignment, too. prints stuff. As a user of your class I don't want that. Or at least let me specify an where you should print it to. should be a function. Right now I cannot search for a value in a , but I should be able to. In you keep the , but it is not used for anything. You could simplify that function to something like this: 
+
+You will have to write many functions that look the same, but unless you use more macros to generate the code, this is how C works when you want genericity. You should consider factoring out the parts of the functions that are likely to be repeated, such as your error message: 
+
+Note that I am not sure whether the is needed or not, I coudn't find anything about it in less than 10 minutes. You can also create an equivalent deleter/pointer pair for and replace the raw pointers for and in by instances of and . Here, using function objects instead of function pointers for the custom deleter of has two advantages (besides all the benefits of automatic destruction thanks to RAII): 
+
+Do you think there are obvious design flaws in this code? I bet there are some in the mechanism, and it would be great if you could hilight some of them. 
+
+and correspond to the \$ i_{th} \$ bit of and . These bits do not depend on the loop (the loop does not change them) and can all be computed at once by performing before running the loop. Therefore, we can simplify the function by moving them out of the loop. If we store them directly in , we can even simplify the assignment to to a mere : 
+
+If you want to zero a , you can take advantage of its public data member, which is a good old C array. Then you can rely on the standard library algorithm to set every element of the matrix to ; the algorithm generally does static dispatch at compile time to call whenever possible. Using it should allow you to always be safe but also to be safe when possible: 
+
+Was it a requirement to not use the standard library? It saves you from some of the pain of implementing boring, difficult and error-prone things such as sorting-algorithms. My solution The problem with squaring the array is that negative numbers become positive, making the array not sorted anymore. My idea is to find the index of the first non-negative number and then squaring the whole array. The partial list is sorted in reverse order and the partial list is already correctly sorted. Two sorted lists can be efficiently d into a sorted list. The reverse ordering of the first list can be compensated by using a . 
+
+To print a matrix we would simply do this: . What you did is combine a container (holding multiple objects) together with input/output and the actual functionality of matrix operations. You should try to make each class only have a single purpose. The only purpose that should have is to do matrix operations. Instead of writing an example by hand I'll refer you to eigen where they did all of this plus some other neat tricks. Now imagine I did and my output said "The sum of 1 and 2 is 3". That would suck. Your shouldn't do that either. 
+
+After having criticized a lot let me say this: I would probably hire you. You show a good understanding of C++ and should be easy to shape into a good software developer. Good luck! 
+
+Note that this is a free function, not a member function of . Prefer free functions, because they work in more cases (like multiplying an to a ) and are thus more consistent. This allows you to do this: 
+
+That way, it even allows users to provide their own custom comparison functions if they need for example a weak order instead of a total order. It makes the function much more powerful without duplicating the code. 
+
+I was about to add more things to my answer on your previous post and noticed meanwhile that your already asked a following question (that's almost too fast! :o). I have done some additional reading about C++14 and integer sequences. And I have found some things in the standard that could help to improve your code again. I realized at some point that you were using as the of . However, you initialize your with the result of and returns a , not an . Then I remembered that, along with , there is a for which is called and which has been made to solve the kind of problem that your are trying to solve. Therefore, you should every occurrence of by and of by . 
+
+As you can see, these are really minor improvements. I also have some other remarks, but those will be opinions more than actual advice: 
+
+Make it work for any comparable type Turning this index-based algorithm to an iterator-based algorithm made me realize that there weren't any tricky things making use of the value of to be more efficient and that the key was only used for comparison. Therefore, you can also make the searched type generic instead of restricting it to . Actually, it is as simple as merely changing its signature and it works with any type: 
+
+Moreover, most of the standard library that deal with algorithms additionally accept an optional parameter so that you use use something else than to compare two elements. Assuming you have a C++14 compiler, you can use as a default:

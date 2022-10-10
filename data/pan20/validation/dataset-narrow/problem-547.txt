@@ -1,0 +1,69 @@
+which is, however, blocking, may result in delays, and makes the page unsuitable for offline testing. On another note, library such as async loader, does not seem to work with this particular script. 
+
+This property is either being created when it is defined, or else, the calls like will still fail. You may want to check for existence of that property instead when calling it. 
+
+You are re-defining , which is a bad practice. It will break the chain, forget all your previous properties and can lead to unintended effects if using (which isn't good idea too unless you know what you are doing). It is better to specify individual properties of it. 
+
+That way the original list is not in the Controller but the Service, and Controller simply asks for it. Here the jsbin to enjoy! 
+
+You define as array of anonymous functions, which is a bad practice in itself. You can't reliably test these functions as your index will change any time you update your array. A better way would be something like: 
+
+We'd usually make the solution more functional. That is, move the "fizzbuzz" logic into something that returns a string, and use that: 
+
+Looks ok. A is a more interesting way to do this, since you can then auto-close the resource. There's one thing I took an issue to: 
+
+The solutions given are simple but have quadratic complexity. I tried to improve upon it, while keeping it strictly functional. The solution I came up with is huge, though some of that resulted from breaking it up into smaller pieces for readability. While it is much faster, I'm not sure if that's due to an improved complexity, or just better heuristics detecting when no more palindromes are possible. I feel like it could be improved, perhaps with some Scalaz tricks. I see a couple places where I could remove some code by using an Scalaz abstraction, but not enough to be worth. On the other hand, I'm not particularly familiar with Scalaz. So, here it is: 
+
+There is no way I see here that this directive listens to an event and no clue what the event is. A better design would be: 
+
+Note. Your code looks cleaner without after function declarations. You watch and then update it upon change - this looks like a loop and may lead to your browser crash. Read best practices on using Angulars . 
+
+I know good naming is hard but maybe a name revealing more about what the Router is doing would make it easy to read your code. Also you don't seem to provide the files defining the routes and both links to Github seems to be dead (which is why you need to provide the files, not the links!). 
+
+Again, pure functions without side-effects are easier to test in isolation. Use the and methods on arrays for shorter and simpler code and libraries such as Ramda (my favourite) or Lodash. 
+
+UPDATE. Having another look I see better what you are trying to achieve. Still I would improve design by making the directive more re-usable. You basically want to throw any HTML inside the directive and pick the associated with event's target. The directive makes this available on the scope of your expression . Just like made available inside the . I would then mark this as something special like: 
+
+Finally (unless I missed something), the inside can be avoided simply by using multiple , and statements like this: 
+
+The on can be replaced by using . I'll let you work out for yourself how to do that, now that I called your attention to that method. And, yes, it that method works on as well, though it doesn't appear on Scaladoc for Scala up to 2.9.2 because it is added implicitly. I suggest you use the nightly scaladoc to look things up -- the documentation there is better, though it may show things not available on release versions, and so is the tool itself. 
+
+Scala has an unfortunate overhead compared to Haskell to do these things. Also, Scalaz will be able to do a bit more in the next version, but this works with 6.0. The gain with Scalaz is not, however, legibility or conciseness (in this code, anyway), but of composition. For instance, in the current Scalaz we can abstract most of the body of like this: 
+
+I am puzzled by how you use both inside and outside . Each iteration of has its own scope, so its own . For instance, if , which item do you mean to use inside ? The way it is used now, the seen by that function will be another on the outside scope. If this is the intention, this variable should be named differently: 
+
+Nice work! I presume the complicated way of getting the right element measurements is to cater for many browsers, won't comment on that. 
+
+This keeps my code DRYer and I don't need to worry misprinting or forgetting to return it (your does need a !) You don't handle errors (but you knew this already ;-) Your has way too many dependencies and responsibilities. The best practice is to keep your controllers "thin" with the sole responsibility to glue your data with its scope. Changing routes (states) looks like one job too much. Say you want to keep another sing-up form elsewhere with its own controller - will you really want to copy over all the logic? This is good for prototyping but is generally to be avoided in production: 
+
+That is, if used as you did. I'd make it an instead, and initialize it at creation. I'm not sure would help you here, but might. I just don't think it is a particular good fit for BFS, but it might just be ignorance on my part. 
+
+Each condition is a function. It might be that you could write it more concisely, but I think the code is clearer if you do this: 
+
+As to the objection: in idiomatic Scala, you don't use . If there's some API which might return you a string, then, at that point, you turn it into an , and handle the elsewhere as needed. Handling (or even ) at the method is misplaced. 
+
+This is longer, and handles nullness in two separate places, and doesn't protect against nullness, but I think it reads much better. To get more than this I need Scalaz: 
+
+This is a fold, not a scan. A scan produces something with the same number of elements, and change the elements. A fold produces something new. 
+
+Your code is manually recreating HTML, which is an anti-pattern. The Angular way is to supply separately HTML template and its data scope object. 
+
+Having looked at your code I can see one major problem - your directive hides but does not isolate its scope. That makes it vulnerable to both external and internal changes. Internally you may change a variable and forget to adjust it and suddenly your directive is using the same named variable from outside! Imagine all the bad things can happen to your directive! That makes the maintenance a nightmare - you can't even use reliable tests to catch the "leaky" variables that you forgot to declare. They will keep "sleeping" quietly deep inside your code until the wake-up explosion :) Your directive seems to be intended as encapsulated drop-in component. For which Angular's isolate scope is the best solution. The isolated declaration inside your directive tells you exactly which attributes are "allowed" inside and how are they named. You see it clearly right at the top of your directive, which makes your code more readable and maintainable. Now you can change the outside-inside coupling nicely inside that declaration. That also would make your code cleaner, shorter and DRYer. As side remark, I would generally try to avoid, if possible, the low-level "system functions" such as , etc. They are used by Angular internally to expose more user-friendly (and reader-friendly) API to you. Such as the isolated scope binding and using filters rather inside your templates (i.e. what it is meant to). 
+
+The first two being means this cannot be reused. However, if you turn them into , then will already return a valid iterator. 
+
+One could also keep a , then either use it alone when computing (instead of zipping stuff), or skip that altogether and put that computation on -- incurring the cost of computation O(nlogn) times instead of O(n) times. It would make the code shorter, but whether it would be faster or not is something I'd leave to a benchmark with a real application -- I'm guessing it would depend on actual sizes for . So, let's talk a bit about performance. Before Scala 2.10, if you want performance you should avoid methods added through implicits on critical paths. The code you wrote will probably get inlined by JIT. You can also reduce the number of computations by pre-computing , and if you make that , then you don't need . More specifically, views are not guarantees of speed, particularly if the computations are light, such as here. I'd not use them at all, unless I'm specifically optimizing the code. Doing a fixed size of multiple passes on small data structures is often not a problem. You are not changing the complexity, just losing memory locality. If the data is bigger, you can incur in gc overheads, which are more substantial. If maximum performance is required, just drop immutability and go to mutable arrays. Finally, is faster on than -- and, in this particular case, a would be way faster. Call it , however, since is a general method on traversables, while set's apply is a fundamental operation. If one of them is less than optimized, it will be . This is the most idiomatic beginner's code I have ever seen... do you come from another functional language? 
+
+First thing that strikes me is the inconsistency of naming. Why using different styles for constants? Your does not need to , see here. I would use something like instead of as Form has another meaning. As a personal preference I like to write my as 
+
+The last argument inside is too far away down, making the code hard to read. It is better to define your function separately, and use it a short line inside . Also executing your function inside is a recipe for errors and hard reading. 
+
+Then it is the job of the directive to pick the right model and make it available under this name. This way I can change to inside without breaking things, so the directive is more encapsulated and re-usable. 
+
+Warning. Keep in mind using inside HTML, that your code becomes invalid as soon as those s are not unique. This can easily happen by copy-paste and forgetting to change the . Unless you use reliable validators, and consider this a feature to help your validators, I would avoid using s whatsoever. Styling can be done merely with classes and is a recommended way. 
+
+The name of the identifiers here suck, and I could have written without trouble. I choose putting them in a because it shows how well it can scale. One could also make and chain them with , for the cases where you want only the first condition. You see this kind of thing used in web frameworks, such as BlueEyes, Lift or Unfiltered, for example. 
+
+And, yes, was a good start, and for new comers to FP it is not obvious to implement something that will stop at the first incorrect size in functional style -- at least on a strict language like Scala. You'd either throw an exception or use recursion. 
+
+I wanted to know how efficient all that set manipulation really was, so I benchmarked it all. My solution is two order of magnitude faster than the one in the question, and three than the accepted solution for the greplin input. Since the big-Oh is different, this would change depending on characteristics of the input and input size.

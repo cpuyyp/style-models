@@ -1,0 +1,87 @@
+So see how the ability to add products is far simpler, I know it does not have some of the nested menu features you had, but if you had some custom classes in there to store things and managed the state using a command/state pattern you could even do nested menus cleanly. Good luck! 
+
+Given @CantGenEnough 's comments that my previous suggestion didn't fit his needs I thought I'd try an alternate approach I was playing with. Instead of the above you could try a similar approach with a sort of a weighted calculator instead of the actual skill approach. So If you had a generic 
+
+Of course if any of those properties are required then the constructor is the way to go, but the lack of null validation makes me think they are not Also there is a lot of magic strings going on. At minimum, you should make those constants. I would personally just do an enum but that is a design choice: 
+
+You know, I love fluent interfaces. though I feel many misconstrue their purpose. some examples I see try to make their code a 'natural language'. but That is not the point, the point is to decrease complexity and aid understanding, often most easily done via Natural language. I can't help but feel the above has crossed the threshold into requiring more time to learn than a standard composition. If i was dead set on fluent I would sacrifice a small amount of natural sentence structure for brevity: 
+
+I'd use enums. My suggestion presumes you are able to refactor your existing code a bit. If your control can be modified to keep the position value in one property of the following enum type, this will work. 
+
+Property will expose the current value on postback by it self. You could also expose an event on your control that you refire in the ValueChanged event of the hidden field. 
+
+You aren't renaming it either, you're naming the parameter for the anonymous function the lambda expression represents. But if you don't like the lambda syntax, there's also overloads taking the property name as a string. 
+
+Here's a C# version using a cross of the template method pattern and the collector pattern. It'll pick up any issues from any derivative implementing the AddValidationIssues method. 
+
+Notice that I replaced your setter with an method. It's ususally good practice not to replace an entire encapsulated collection using a setter. Although you can validate the entries in the setter, a property should not do much logic other than returning or setting privates. If you have a look at the collections in the BCL, they all expose an method and a method to empty the collection. The method also gives you the option of adding multiple sets in turn. If you need different logic when stuff is added etc, have a look at the template method pattern: $URL$ If you need multiple base classes with differing logic, you could combine the inheritance with the extension methods, or another base class. :) 
+
+which will clean up your constructor call and allow a much easier one-stop-shop functionality change. So now your constructor goes: 
+
+just like the above separation of concern, Your quest handler is extremely aware of the session object. also the general web naming you have is rather confusing and unnecessary. client packets? notification composers? all of this could be easily wrapped in a 
+
+not make more sense? could the method not even be a method on a interface of some kind defining the rules for deciding relevancy? would that not separate your concerns, make testing easier and over all make it clearer what each piece of your code is doing? 
+
+so now, in the actual editor you just set "Bullets,False" - "Asteroids,True" and you can add new pool as easy as that. Nothing hardcoded. ...so yeah that's a small bit of homework if you want to make it more modular. 
+
+Personally I am less inclined towards this, more overhead in terms of building a fluent interface for your equation aggregation and a bit harder for newer people to grasp using but then again it reads better than any other solution at first glance regardless of ability. So if you were to package this as a modifier API for yourself it might be the way to go (but for api additions I tend to follow the rule of 3 uses so may be premature to do so); but as a problem solve for a particular project I would choose the more straightforward above method. 
+
+I don't immediately see any efficiency issues with your code. It's simple and concise. But I do notice that you don't follow all the best practices for plugin authoring described here: $URL$ I guess you'll do something else than alerting ten times in production? ;) 
+
+I wouldn't presume the metadata information gathered from reflection as mentioned by w0lf will be handled completely if you reference the Model property directly from the lambdas. 
+
+If you do this, you'll probably see some pattern emerge. I can already see two classes, or rather instances of a- instead of one. Maybe something like Strategy? 
+
+Or better yet, build the initial list based upon content in a dictionary. That way you don't run the risk of having typos in the switch or the initial setup: 
+
+This makes closed for modification (cannot change price / individual price), but open for extension (can add to price). (Naming and structure in my example could probably be improved, but it serves the purpose) The behavior is still possible to modify, though, so an even better solution would be to have some collection or set of rules you can add to, so you don't accidentaly override without calling . 
+
+I love me a good interface but...what's it for? you are not using that in any logically path i see. Hell your "Projectile class doesn't even implement ""! Maybe rethink the interface name if it refers to a fire type..... 
+
+I suggested the list as an example but as a personal preference If i am using a custom interfaced type i try not to use lists. instead i just have a single IModifier Modifier{ get; set; } The reason being the modifier is just like the above attribute. I could easily just pass it a 
+
+in your view means if you want to swap out logic/models you dont have to change references tied directly to the model instance. 
+
+Then in your Complete function you could throw an exception if is false. You would then have access to your composite different parameters in your complete method while keeping your abstraction, albeit with the caveat that your initialization is now a two stage process, that requires an initialization call; *ps, no I do not propose that to be an actual argument name! 
+
+so basically, if the pooledObjects doesn't exist, create it, then...return it. If it already exists...just return it. this is just me being a bit picky, (as i am a linq fan) but you can simplify the GetPooledObject to: 
+
+All good answers. I'd like to add my two cents to @deepee1's answer. If you keep the FoodItem class he provides (with a constructor), you can create a list of food items and then create everything else with completely DRY code. You can even easily move the definitions out of the code. Not to mention creating n different UI's with the same "logic". Here's what I'd do: (Forgive any mistakes, long time since WinForms :) ) 
+
+More on extensions methods here: $URL$ Inheritance Put these methods in a base class and have the behavior that differs in inherited classes. [edit]Updated to show how the base class can be generic[/edit] 
+
+You should use as predicates on your interface and have the implement that interface. By only using , you won't get translation to L2E etc, but will have to enumerate the entire DB table before you can evaluate the . The interface can be mocked, hence unit-tested without a physical db and also used with other ORMs. It's generally prefered to keep and the in a separate implementation. You can pass the to the repository constructor, which can access an internal property on the UOW exposing the . By doing that you can share the same between repositories, and batch updates to several entity roots of different type. You also keep fewer open connections, which are the most expensive resource you have when it comes to DBs. Not to forget they can share transactions. :) Hence you should not dispose the DbContext in the Repository, the Repository really doesn't need to be disposable at all. But the UnitOfWork / DbContext must be disposed by something. Also, ditch the predicate to . Since you return an , and use an for the predicate, you can keep building the Queryable after the call. For instance . It will still be translated to "select [fields] from [table] where [predicate] order by [orderprop]" when enumerated. Otherwise it looks good. Here's a couple of good examples: $URL$ $URL$ $URL$ And here's how I do it: Model / Common / Business assembly No references but BCL and other possible models (interfaces/dtos) 
+
+As for the other main question: re: lots of constructor arguments. you are right, this is a code smell. a clear indicator of complexity and shows too much of the guts of the internals. ..unfortunately it is the smell of cooking with IOC. which is somewhat unavoidable. that being said, it is an example of precisely why constructional design patterns are needed. you have a complex object with a number of components. but you only need a single entity, preconfigured. the solution is a combination of constructional patterns and configuration. Take all of those constructor parameters, figure out which are instance-specific vs domain specific. then make a factory to create those objects. e.g: 
+
+Well I would personally want to cut down on all of that exception handling code. The easiest way in my mind is to create your own exceptions. Now, I understand you seem to need a message and enum associated with each chunk there so why not make that as a base transactionException and overload each case. 
+
+Yeah I know you could effectively use the AAttribute for this one too again, the number comes fron a wrapped sub-attribute and not an actual base object so this is a tad cleaner. So now you have an attribute decorator, you can take a really complex , modified attribute which, through whatever combination may end up returning you something like -999 and break your game, so now you take that modifable attribute, wrap it in a Clamped decorator and all the values returned from it are safely clamped to a pre-defined acceptable range. Next, as for: 
+
+Put the contents, or all of each if and foreach into their own functions. Unit test the functions. Put everything else into small functions too. In the end your main function should read like a small story: 
+
+Entity Framework implementation assembly References Model and the Entity Framework / System.Data.Entity assemblies 
+
+I just re-read some comments and realize you need paging too. Add a private int page, and a private int pagesize, then add the multiplication of those to foods[i] in CreateButtons, and swap foods.Length with pagesize. You can have as big an array as you want then. 
+
+You could possibly swap with . If you can, you should generally try to avoid too many subqueries. At least attempt to indent them properly. You could also benefit from having a look at common table expressions. These can help you group up the subqueries in predefined results for your query. Makes it a lot easier to read. $URL$ 
+
+As a sidenote, I'd look for another name than "BaseClass". It doesn't say anything about what it does. 
+
+There's a couple of nice alternatives for you. Extensions If you don't need to encapsulate the instances, you could make your methods extensions for or whatever you've extended: 
+
+As for getting the prior state that is simply a matter of having a prior state variable and at the end of your update cycle set . P.s I robbed @ChrisWue 's very clean snippet for my example. 
+
+which has some nice features like auto deactivating the button when the CanExecute fails. and having the ability to have a canexecute is nice. Good separation of concerns. Also if you decide down the line to maybe go fill ViewModelLocator using the interface as a binding in your view allows some hot swapping of views/models. So what i mean by that is 
+
+onto the ObjectPool class: So, similar story with the private fields and so forth. aside form that, I have always hated the line: 
+
+The simplest example is, the creation of a thing has nothing to do with the using of a thing. a.k.a you don't need to know how the sausage was made. In your code, the sausage is the database. I know exactly how your data is stored, what format each field is and more dangerously, embedded in your code, how to delete things. embedded sql is always a red flag. Imagine a 
+
+AFAIK, you won't get client-side validation of VG2, but otherwise I can't see that it shouldn't work. (There is probably a client-side event and a method you could call to duplicate the behavior for the client) 
+
+Instead of wrapping the proxy creation in a concrete service proxy implementation, I'd write a concrete service factory instead which in turn uses the ChannelFactory. The service factory class could also use an interface for creation, so you can have multiple concrete factories. $URL$ That way your code can continue to depend on the interface only, and you can change the way the proxy is created without writing concrete proxies. You could also have a "local service factory" which doesn't go over the wire. Usage would be something like this instead: 
+
+Of course you can expand on that by employing the template pattern for the extra parameter settings. I would also look into extracting the parameters to a "parameter object" instead of several parameters. 
+
+It is very confusing to set a property just to discover that it returns something else just after you set it. Properties are supposed to keep the value you give them. (At least logically) And since your SkipSomeStuff property is public, you have no guarantee you won't access that property by accident before the intended recipient accesses it, and the stuff isn't skipped after all. How about keeping the skipSomeStuff member, but set it using a method called SkipStuffNextTime() or something like that? Nobody will misunderstand the intent of your code that way, and only the code it's relevant for will access and reset it.

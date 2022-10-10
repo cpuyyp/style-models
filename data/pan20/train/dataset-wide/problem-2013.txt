@@ -1,0 +1,65 @@
+Doing this in the database is easy with a trigger. However, it's all well and good doing this in the database, but we have no idea how the application itself works or will deal with this (if at all). For example, the application may display what the user has entered rather than the value that the trigger has automatically inserted. I think you're going to have to deal with this in the front-end, which is something we probably can't help you with. Anyway, here's how to write a trigger to do this. Test tables and data: 
+
+You have several choices. You can either create the tables without the constraints & add them afterwards, or create the tables with the foreign keys & them import the data with foreign key checks disabled - simply run in your session to temporarily disable them. For example: 
+
+I know that there have been many opinions/sides concerning values in a database. I have not understood though what is the best practice for this. I.e. if I have a relational table with an optional attribute i.e. it can take value -so we can end up with a table with many on that column- is it best to make the attribute a new relational table? What is the best approach on this? 
+
+What is the difference between setting the transaction isolation level in the client configuration and the server configuration? If I set the client isolation level to be serializable while the server's is read-repeatable what is the result for the transactions? Both of the same client and with transactions of other clients on the same tables? 
+
+Doing the initial part of this with a windowing function is trivial, it's adding the "missing" rows that I'm struggling with. 
+
+(Untested, but will test it when I have time - unsure if the end of the chain & job will again modify the .) I have tested the following, which works OK (but involves creating a new job): 
+
+Restart the database once done. This is an unusual situation to be in - Has the DB been recently upgraded? 
+
+Note that tablespaces are simply the place the object is stored in, and have no bearing in DML queries. 
+
+Basically, Oracle is assuming that all of the data in the source table may take up 3 bytes per character, due to characterset conversion. 
+
+The first thing you should configure is the innoDB buffer pool size. According to this blog entry by Percona, the ideal buffer pool size is 10% larger than your total data size. Other settings to add: InnoDB log file size, query cache size. 
+
+If you're just going to delete this extra data manually on the odd occasion, you can simply turn off the binary logging for the current session. On the MySQL prompt run the following: 
+
+You could quite easily write a simply Perl or PHP script, running on a cron, to periodically check the MySQL server and alert you to any problems. For example, I have the following Perl code in my setup: 
+
+I am migrating my company's database from an EC2 instance to an RDS instance. I have already migrated a snapshot of data and am now trying to set up replication to get the data that has been added since the snapshot. I am following the instructions at this link: $URL$ When I call , shows the following: 
+
+The Oracle documentation says that 512Mb of RAM is recommended to run Oracle XE, with 256Mb minimum required. In reality, with anything else running on the Linux box/VM, you're really going to struggle with just 256Mb. Make sure you've adhered to all of the pre-requisites in the documentation (kernel params, adding 2Gb of swap space) before you try and re-install. I've successfully had it running on a Digital Ocean VM with 512Mb of RAM - I just added a 4Gb swap file on the disk - and it ran like a dream. Well, a slow dream :-) 
+
+The documentation states the size of datatypes here. 0 (the number) is stored as 1 byte. Other single digit numbers will be stored in 2 bytes (one for the exponent, one for the mantissa). You can test this yourself by creating a test table and using the function on test data (doc link). A will be stored in bytes. I'd always store numbers in a . Unless you're dealing with trillions of rows, the space saving will not be significant enough. 
+
+From my Googling on the subject matter, I'm led to believe this is a network/firewall problem. I've checked that my RDS has a security group allowing all network traffic with the source machine (both private IP and Elastic IP) and the source machine has a security group allowing all network traffic with the RDS instance IP address. The master server has a user set up with replication privileges. I'm sure there must be something easy I'm missing here. I've tried running on the master server. How do I get the replication to proceed successfully? Some additional information: 
+
+I've tried setting on the master, creating a new replication user with a new, long hash format, but still can't get replication to start. The error I get is: 
+
+(The "*" in the above output denotes the maximum precision). is not a data type that can be used in table columns. It can only be used as a PL/SQL variable datatype. 
+
+It's easily tested. There are two possible scenarios. Scenario 1: Scenario 1 is creation of a PK using an existing index: 
+
+If you don't know all locations there are hacky ways of doing it, but they're not pretty. This Oracle forum thread has (hacky) examples that can be used when the columns aren't known. 
+
+What you have entered is 2 queries on a single line, which SQL*Plus will send to the RDBMS - Oracle will then try and parse the string sent as a single query and fail because it is not valid SQL. See the documentation for more details: $URL$ 
+
+But still the index is not used! What am I doing wrong here? Does it have to do with the fact that the index is ? BTW the last_name is Update requested by @RolandoMySQLDBA 
+
+I am trying to experiment a bit with the isolation level of MySQL in a test environment. I do the following: 
+
+When using a database server for monetary/financial data, I can only assume that using transactions is mandatory. But what I am not sure is which is usually the isolation level? Is a used? Or only a serialized level? 
+
+When we use an argument length with numerical data types, as far as I know this specifies the display width. I tried the following: 
+
+Then any query you enter won't be sent to the binary log, and thus won't be sent across to the slaves. Once you're finished, re-activate binary logging with 
+
+Yes, I believe this is the cause of your errors. Your method for introducing the new slave seems to be correct. It is quite strange in my opinion to define a table with a DATETIME field as the Primary Key. As you've quite rightly pointed out, the slave gets the replicated queries from the master and they will use the now() keyword in the queries, which will grab the timestamp from the local server. Really, the table should be defined with some other data type for the PK (such as INT or BIGINT) which can be guaranteed to be unique, unlike a timestamp inserted with now(). 
+
+Use with the or parameters, along with to export the schema at a consistent point in time. This is the same as using in the legacy utility. Examples here. If the data for the schema in question is in a tablespace of its own with no other objects from other schemas, you can use to do a tablespace point in time recovery. 
+
+Only thing I can think of is a trigger on each table that merges the :new values to another identical table if the user is "appserveraccount", which you then replicate using a Materialised View. But having said that, it may not fit your requirement because it would apply the new values rather than executing the statement. May I ask why do you need to do this? It seems very strange. 
+
+You can alter some values in your /etc/my.cnf file. Some important ones are innodb_buffer_pool_size (assuming you are using InnoDB) and also query_cache_size. You should try to set the innodb_buffer_pool_size to 10% larger than the size of your data if you can. The default of 8MB really is woeful for performance. 
+
+Firstly increase the default InnoDB Buffer Pool Size in my.cnf (I believe it default to 8MB) You should probably set this to 75% of your RAM size (in general) 
+
+which seems to relate to the authentication protocol. Do I need to completely restart the MySQL master server, with old_passwords=0 in the my.cnf file? 
+
+The master server is version 5.5.33 The slave server is version 5.6.13 The master server is using old_passwords=1 The slave server is using old_passwords=0

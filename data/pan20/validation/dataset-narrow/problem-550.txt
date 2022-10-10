@@ -1,0 +1,71 @@
+If I construct a time object with no explicit value I usually expect it to be the current time. So personally I may default minutes and seconds to zero but I would expect at least the hours to be set. I would then provide a default constructor that sets the object to the current time: 
+
+Organization of files. I normally put header and source files into the same directory. And I normally break these into directories based on libraries or executable. But I add an install target into to my makefile that uploads the to a build directory for other projects so they can use it. 
+
+I would do it like this: Note: this compiles and works on the one test I tried. But it has not been code reviewed or tested in any meaningful way and thus is liable to contain errors. 
+
+A very simple Thread pool: Any work added to the pool will be executed. The destructor will wait for all work to be finished before letting the threads stop. We then join all threads before letting the destructor exit. 
+
+That really depends a lot on the features and characteristics of your system. Do you care if you batch up requests? If the answer is no then I would definately look into and try the period logging approach. 
+
+In your implementation you add , and that does the actual work. Seems like these are really your virtual functions the others should just be implemented in the base class to use these virtual functions. I think I would implement like this: 
+
+Prefer to use the standard library which does all that memory management for you. It does it correctly no matter what people do in the code so it is hard to break. 
+
+I see you are using the to index into your array. Then its a VERY bad idea to put it on the public interface to your class. You should be working out where in the array to put the object not asking the user where the object goes (the internal state of you object is being messed with by external users thus you are breaking encapsulation). 
+
+I mention this last as it is just one of those quirks and it does not actually break your code. see: What are the rules about using an underscore in a C++ identifier? 
+
+The first code review of this code can be found here: Nisse Server: Part 3 Stream Layer After the bugs and points made by @Deduplicator (thank you) the code has changed significantly enough that a subsequent review is needed. Hopefully more people can help me out by providing input. SocketStream.h 
+
+atoi() is fast but non standard and not always available. An easier way is to just use the stream operators. This will always work and 99% of the time will be sufficiently fast. Only optimize out when you know it makes a difference. Also this code is so dense it is nearly unreadable. White space is your friend. 
+
+To show ownership in this case I would use std::unqiue_ptr. This is an object that takes a pointer and indicates that it ownes the pointer. 
+
+This is not really necessary. All your sub-classes just return . So just return it here so you don't need to have the same default implementation in all sub-classes. 
+
+So pass owner by reference to indicate this. Its OK to store as a pointer (as its hard to copy objects with references without additional work). But your interface should be as clean as possible so there is no misunderstanding. Pass by reference to indicate it can't be and that this object is NOT taking ownership. The setter value can be bound to an . But the parameter will not pass it on as an r-value reference. Named objects can not be r-value references. So you need to use to activate perfect forwarding. Otherwise you are just activating the copy constructor (not the move constructor). 
+
+The true part of the branch never returns. So the else is redundant. I like to keep validation logic (test that the pre-conditions are met) separate from the business logic of the class. Apart from that I can not spot anything wrong. Couple of additions (I mention in the first review). 
+
+The constructor does the initialization. It may defer to an initialize method but that should not be publicly available. But maybe you mean reset? Don't re-do work 
+
+Prefer pre-increment to post-increment. For fundamental types there is no advantage for either. But for object types there is a difference as the default implementation requires an extra copy construction for post-increment. Even though you are using a fundamental type here that may not always be the case (future extensions may change things) in which case you have to go and change your post-increment to pre-increment to stay effecient. So it is a good habbit to get into. 
+
+Check the version of your compiler. That should not happen in C++11 compliant compiler. So I suspect that this is something you are doing wrong. 
+
+Stop using this. It works out great for small programs but for large programs it becomes more of a problem. Getting in to the habit of not using it. I would avoid over use of std::endl everywhere. What it does is place a newline character then flush the stream. If you have lots of output then it will cause the output to perform sub-optimally. 
+
+You have sections of repeated code (the bit above). If you are repeating code you should break it into a separate function. Interface design: 
+
+Yes its still the observer pattern (details in my comment on the question). But there are a few implementation details that are bad for a C++ context. Good interface for your observer: 
+
+Standard algorithms Look at the standard algorithms and use them when you can. Alternatively use the for() syntax for looping over containers. Refactoring the main now looks like this: 
+
+Really. Please name them. How are you measuring that? Not convinced that it is actually significantly faster because of all the extra comparisons you are doing. But for certain types of trees it could be faster as you don't need to maintain a stack object. What you are doing is trading space for time (a common optimization). You are adding a parent pointer into each node to help you do the traversal more quickly. The other two techniques require you to build and maintain a stack (the state of the search (one explicitly and one implicitly in the call stack)) while the walk the edge has the information you need built into the graph. 
+
+Also note: Geters don't mutate the state of your object (or should not). So you should mark them as const. Since they are not going to mutate the state you can return a const reference to the internal member. 
+
+Not sure I like this. Is this because you have a const value and want to get around the constness of the object? Mutable objects are meant to represent objects that are not part of the full state of the object. i.e. a cached or computed part of the state that can be re-calculated. is very much part of the objects main state. So I would not mark it mutable. That of course means you have to remove the off the method. 
+
+The above is C++11. But it is easy to re-write for C++03. The main features of C++ here are syntactic sugar over well known easy to use C++03 ways of doing things (that take slightly more typing). Comments on your code: 
+
+This is not exception safe. Use RAII. Basically it looks like C code that happens to be wrapped in a class. As it stands not very good as it is easy to use incorrectly. The whole point of C++ is to design the class so it can not be misused (not just write C in a class). What I would expect as a C++ design. 
+
+Thats not a good excuse. The trouble with doing it for small programs is that it becomes a reflex and you then accidentally do it all the time. Best not to form bad habits in the first place. Also this code (if it had reviewed well) could have just been copied into a larger project and then polluted it. Using const reference consistency. Can you spot the issue here? 
+
+If you try uncompressing that you will get a different result. You either need to explicitly check there are no numbers or you need to add a delimiter between your value and your data. Why is the size human readable? Making the size a human readable number is very limiting and does not help in your compression. You could store the size as an integer value (encoded as a unsigned character). 
+
+When the last line does not have a '\n' character the return value will be -1. Which means it will not be printed because the main() function has. 
+
+When you give a pointer to a shared pointer you are asking it to take ownership. If it has ownership you should not have any copies of the pointer running around your code (otherwise what is the point of the shared pointer). So it seems that this is a logical error in your code. If somebody assigns a pointer to a shared pointer that happens to be the same as the already contained pointer there is something seriously wrong with the users code. I would prefer this test did not exist or if it does exist it throws an exception to indicate the enormity of the problem. The second reset 
+
+You make the assumption of random accesses iterators. It would be nice to be able to do this with any iterator (including input iterator) 
+
+Technically both functions exhibit undefined behavior (in C++ not sure about C). There is no return on successful completion. 
+
+This should probably be a . Once you do that the rest becomes irelavant and all memory management issues are solved. 
+
+I would go with the circular list (using sentinels). Also each time you add a value you must traverse the whole list to find the end. It would be easier to keep track of the last value using two pointers in List object; (points at the sentinel) and (points at the last inserted node (or at the sentinel if empty list)). Using a sentinel the insert becomes. 
+
+Thread A. Reaches point A Thread A is de-scheduled and is not currently running. Thread B. runs through the above code and works Thread B. destroyes the node it poped off the front. Thread A. Is re-scheduled to run. Thread A. Any use of is invalid as it points at a node that was deleted by Thread A. Even if the node was not destroyed it is no longer the head of the list. Thus any usage of next is suspect.

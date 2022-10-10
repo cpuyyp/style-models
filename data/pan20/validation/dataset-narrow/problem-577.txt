@@ -1,0 +1,85 @@
+I hope some of it is helpful. Please let me know. And thanks for sharing your Fortran code; I know at least one other R package that uses it: whose function for computing euclidean distances is extremely fast. I want to give a try one day. 
+
+With , this code runs in 0.015 seconds on my machine, versus 12+ seconds for your . It also scales pretty well as it takes less than 0.4 sec for . 
+
+How is that different from version 1? Here we are careful to read the file and process it line-by-line instead of reading the whole file in memory. Also, when processing each line, we are careful not to generate the vector in memory and pre-compute the output for all the values. Instead, we are counting from 1 to and processing each value one at a time. Because version 2 uses a loop in place of the vectorization happening in version 1, it will be slower. But it will use a lot less memory, especially if the file contains a large number of rows or large values for , both things could make version 1 fail. I hope this helps. Let me know if you have questions. 
+
+I feel the key to generalizing your code is to store your variables into a matrix. Then let vectorized functions (, , , etc.) do their magic: 
+
+Supposedly (from our comments), this would show that most of the computation time is spent creating the annotators. Since these are independent of the sole input of your function, you could save a lot of time by defining them outside your function and passing them as arguments: 
+
+returns a numeric so it needs to be passed through if you want to preserve an integer class for your index I used rather than the name of the function itself. This is preferred as it makes it easier to later rename your function: you will only have to change the function name in one place instead of three. Though this has no negative effect within the body of a function, I used the preferred bracing syntax where is put on the same line as the previous . Outside functions, especially when writing code at the terminal, this would otherwise throw an error. This is well explained in section 8.1.43 of the R inferno: $URL$ 
+
+Next, think of the assumptions your code is making: must be a square matrix with each row being an increasing vector of positive values ending with . must be an integer vector of length . All of these assumptions can be checked at the top of the function's body; I am only implementing a few of them here: 
+
+Look how shorter this is! And in the following, 1) your code will only use to refer to those or objects stored within 2) Someone stumbling upon in your environment will see exactly where it was created in your code. By all means, please never use again and erase that function from your memory! Next: 
+
+Then, using matrix multiplication between two such matrices, you get the number of gene matches for each possible combination of pathways. You then just have to compare that number of matches with the length of the pathway: . In the conversion of each input into a matrix of zero and ones, see this particular line of code: . This is what fills the ones in the matrix. It is completely vectorized, via a single call to . 
+
+Not to discourage you from using recursion, I think there is a much simple approach to your problem. If you build two vectors of ids and parent ids: 
+
+With a few XML files to read you could have done something like this to address your concerns, where the files are only read at once, but all loaded into memory at the same time: 
+
+This also makes your code robust to the special case where would have a single column (I let you see how your code would break in that case...) The second alternative would be to replace the double loop with a call to . It is a little slower but see how short and elegant your code becomes: 
+
+Still, not great. Similar to above, the best would be if could include a item in its output list. Last. What if instead of two sites and you had many more websites to use? How could you modify your code so you do not have to write or more than once and have to rely on creating too many objects? Maybe use some of the concepts I have shown you? Good luck! 
+
+Note that in R, matrices are stored using "Column Major", i.e. column by column. So it would be more natural to pick that the second row/col in corresponds to the item at row 2 and col 1 in . You chose the opposite (row 1 col 2) which forced me to start my code with . If you want to pick the more natural approach as I suggest, just replace that first line with . 
+
+First, let's download some data similar to yours (I assume). This csv available online has almost 7,000 airports: 
+
+Have a look at the function. To use the jargon, your data is in "long" format and you want to turn it to a "wide" format. Before using , you will need to add a column of 1, 2, 1, 2, etc. so it can be used as the "time" column. You can do that on the fly using the function. In all: 
+
+Edit: here is an idea I got for making it converge faster where you update both and at each iteration. I hope the math checks out and I did not leave a corner case: 
+
+If you look at the doc for , which you already use, you will see that it can take whole matrices, data.frames, and vectors as inputs. This means you can just do: 
+
+A matrix for the values at the local stations, where one dimension corresponds to the stations, the other to the time: 
+
+Apparently, already has a feature for padding data to a specific length, see for example $URL$ So you can do: 
+
+Some explanation: After we have found the list of unique genes across all pathways in the first argument (, , , ), we turn both arguments into a matrix where if the pathway contains the gene , or 0 otherwise. For , this matrix is : 
+
+It's recommended to use spaces to make your code easier on the eyes. Spaces also avoid ambiguous situations for people who are not experts in R's syntax rules; for example, when someone sees , is it assigning to , or is it asking if is less than ? Maybe another way to convince you is to make you notice that R's compiled code does contain spaces (run for example); it shows that R's authors agreed that code readability was more important than compactness. Now about the choice of arguments. Why not use the same argument names (and order) as since it is the main function being called here? So I'd recommend . Or maybe if it really helps knowing these are prices. 
+
+Disclaimer: I don't have an account to that rescuetime website so I was not able to fully test my code. If you find a mistake, please feel free to edit my post, I won't mind. Thanks for sharing your code, I like R and particularly enjoy seeing people use it to connect and analyze online databases like you did here. I hope my comments will help you. 
+
+You are using both the and operators for assignments. I'd recommend you pick the one you prefer and stick to it for consistency (for info, the community standard is to use ). returns a data.frame so was not needed. Your data is only numeric (even integer) so you could have chosen to store it into a matrix rather than a data.frame: . Matrices can make many operations faster, though not the ones you are using here. 
+
+So it will be up to you to decide based on your requirements. Note: I have added to all your functions in case, in the future, your functions allow differing arguments. As you mentioned, your functions currently all only require and so you can get rid of everywhere if you wish. 
+
+If I understand correctly, shouldn't be ? These details could be easily avoided if instead of writing your function to evaluate the fit with new data, you used . This is what I think the code should look like, making other small improvements I will comment about below: 
+
+I went from a script to a function. This way it is a lot easier to use and share. I have abstracted what I believe were all the right inputs and chosen sensible defaults. Of interest is the use of for the so the user can set it once for all by running . So now, all you have to do is source the file where this function will be stored, then call the function. A function, when executed, runs in its own environment so all the variables that are created at runtime are deleted as you exit the function. Your global environment is never polluted, which removes the need for your "clean up" section (which was otherwise pretty harmful as janos pointed out.) Like , forcing the install of packages via is a bit harmful. No, you just want to use and it will die right there, leaving the user with the decision of installing the package. There is a nice blog about why some people -me included- prefer over : $URL$ I made use of R's Date object wherever it made sense. I rewrote the way the api url is built, making use of a named vector for the arguments. With inline comments. I hope you'll agree the code is a bit more readable and easier to maintain, something you should always aim for. I replaced with . This way you don't get the prefix that comes with printing a vector. This has less to do with code reviewing but I thought that it would be more useful to see the total time spent on the website. Average time spent per day can be a little confusing: the user might be wondering if it is including all days or only those when the website was visited (you chose the latter.) While total time removes that ambiguity. Also, I thought it would be more useful to plot the data as a barplot with a real timescale, i.e. including holes for periods when the website was not visited. I used for that, see the picture below. The x-axis might look weird but you did spend six seconds on the website on July 1st so that's why it starts on that day, although you won't really notice there is a data point there. 
+
+What would happen if instead of 4 objects, you had 2000 objects? Do you see yourself typing ? No. Maybe you will find about the or function so you can do: 
+
+(I would even encourage you to drop the and keep a matrix of booleans). Also, since this is so easy to compute on the fly for any given threshold value, I would discourage you from storing the output in a file. You would only need to save the incidence matrix. This way, you will save disk space and read/write computation times. Next, 
+
+But wait. This is still abominable. For one reason, you could be creating thousands of such objects and "polluting" your environment with similar objects. Why not put them all into a single object? Also imagine someone coming across in your environment and searching for "TC1" through your code to find where it got created: no luck. Finally, having to use to indirectly refer to the objects is a bit complex, no? And you have to remember that the objects are labelled through ... So what is the alternative? Do not create objects but just one object: a list containing items. How? Use or : 
+
+What is slow is to create . Take the example where is 298,716,239: you are asking R to create a vector of nearly 300 million integers. It chokes. Instead of looping over sequences created in memory, it is easier to just keep the current value, increment and limit in memory. See for example: 
+
+if your data has fewer than rows to start with (see where I used ) if your data has a single column (see where I used ) make sure that the last page will always show 
+
+At this point, the code should be a lot faster. So fast that the repetitive checking via becomes relatively expensive so it makes sense to turn it off within the nested calls: 
+
+Now that you have your weights, computing the weighted averages for all main stations and all days is done in one simple matrix multiplication: 
+
+This code takes about 5~6 seconds on my machine with 19 variables. With 23 variables, it will have 16 times more combinations so it should still run in under 2 minutes. With many more variables, you will likely run out of memory trying to compute the weight matrix: you will have to adapt the code so it finds a good balance between memory usage and computation times. 
+
+use recursion use names instead of list indices, for example reads much better than and it is also more robust to data changes. use well-named variables so you code reads easily 
+
+the matrix where each row contains the and coordinates of each vertex. the matrix where each row contains the value at a vertex. 
+
+Have a look at the function . It is vectorized so it can treat all your dates in a single (fast) call. Your code should look something like this: 
+
+The code is quite inefficient for two reasons: a) the function is poorly written. I see at least three for loops (one inside and two calls inside ) that could have been replaced with faster alternatives b) but mostly, your algorithm duplicates many operations. For instance, in your example, the distance between your main station and each of the three local stations is repeated times. It also manifests itself by the fact that your data, in its current form, contains many id/lat/log/year/month/day duplicates. I would suggest you re-arrange your data as follows: A matrix of coordinates for the main stations: 
+
+See how the function returns a one row data.frame. Then you can call the function on all files via and bind all the outputs together: 
+
+I avoided duplicating the statements where and are reset, by creating an variable. The code computing the increment (of or ) has been moved to its own function. One improvement I've made is that the function will call itself again via in case the user entered something other than the expected or , i.e. it will prompt the user again. 
+
+Regardless, let's take a step back. The construction of the matrix is so simple once you have that you should just do the following all the way at the end: 
+
+Now let's have a look at your code. I will not review the math in , I'll assume it is correct. One beautiful thing about that function is that it is vectorized, i.e., you could give it -long vectors as inputs and it will compute distances in a single call. Unfortunately, the rest of your code does not take advantage of it. Instead, your double loop only calls with scalars at each time... Instead of a double loop, you should be using the function. Have a look at the doc () if you are not familiar with it. The typical usage is where and are vectors and is a vectorized function. The output is a matrix where is the result of . But what's brilliant about is that it does not call as many times as there are entries in (). No, it calls is only once. How? Because is vectorized (a requirement) and knows how to take advantage of it. So, here is how we can massage your data a bit so we can use . First, remember that loops on the pairwise combinations from two vectors. In our case, we could use the names of the airports:

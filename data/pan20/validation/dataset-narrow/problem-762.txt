@@ -1,0 +1,77 @@
+The report here says that it passed the test, but that QuickCheck didn't run as many tests as it wanted to because most of the random inputs it generated weren't in the desired range. (In fact, perhaps it's questionable to use QuickCheck at all for this, since there's only ten inputs of interest anyway!) By the way, this function (a partial version! boooo) exists also in : 
+
+As usual, the tests. Since the old function was pretty partial, we'll arrange to have inputs it knows how to handle, though our new one tries to give an answer even when you feed it garbage. 
+
+Now, we have this branch primarily because still isn't total (it can't handle an empty input list). Instead of protecting ourselves from calling in this case, we should just let deal with empty lists correctly. So: 
+
+We first need to fix up some typing issues, since we've changed the interface to and this is a caller. As before, we can do that just by putting in a ; as before, we'll spell the combination of and as . 
+
+Now, as we all know, building up a linked list by repeatedly appending to the end is a bit inefficient. Probably for such small lists as you'll be using in test cases here it won't matter, but it's a good idea to get in the habit of paying attention to some of the easiest stuff, so let's try to improve this a bit. We have a choice here: either we can keep the interface of this function as-is, that is, always output a list in the right order, or we can choose to change the interface, and change all the call-sites of this function. I think for this case we can keep the interface. The idea we'll take is to build up the list backwards, then reverse it at the very end. The name is traditional for local workers. 
+
+There's a few things I find more satisfying about this: our base-case input is , a common base for s; our base-case output is , a common base for s; and there's no duplicated code in the two branches of the . Finally, I think I'd choose to replace the -- with a pattern match, noting however that this function has a slightly different behavior for negative numbers. Since we were never really doing the right thing for negative numbers, this doesn't bother me too much. 
+
+Whoa, whoops! Can you figure out which refactoring above was the culprit? =) Now we have to decide whether we like the old behavior better or the new one. I think in this particular case we should like the old behavior better, since the goal is to show a number, and we'd like to show up as rather than as . It's a bit ugly, but we can special-case it. Since we like our future selves, we'll leave ourselves a note about this, too. 
+
+Actually, using and is also a code smell, for the same reason as the rest of the changes so far: is partial. Instead of protecting ourselves from calling on inputs it can't handle, we should write our code in a way that avoids partial functions. Here's how: 
+
+This isn't obviously better, since it still fails in all the same situations it used to fail, and it never returns multiple answers. So we should differentiate the two cases that lead us to the branch: 
+
+This now has the magical special form of recursion that can be turned into a . Let's do so! See if you can spot where each piece of code from the above ends up in the below. 
+
+Actually, most of the changes we made to can be done here, as well. In the interest of totality, we'll change the type, too; it will return a (which we happen to know will be a singleton list, if anything) instead of a . 
+
+(I've added a little creative whitespace to show parallels between the branches.) The only thing I'd change now is to pick a better name. For example, might be an okay name for this. I'll mention one more thing, which is that this can also be implemented quite beautifully as a list comprehension: 
+
+First of all, is not an appropriate choice of functional interface for this purpose. implementation should receive an instance of and return an instance of (although and still can be of same type). If there is no incoming type, this looks like a . If there is no returned type, it resembles a . If there are no types to specify, can be used, but it'd better be kept for its initial concurrent usage. So a dedicated functional interface can be created to solve the problem: 
+
+If we are speaking in terms of Clean Code, the entire method should be revised. Here are the main points that I can criticize: 
+
+But I'm not sure that from the point of view of design it's a good solution, because it looks like a violation of LoD. There should be a better approach to solve it. 2) the calculation of should be moved into a separate method, which will allow to eliminate the last remaining in this part of code. 
+
+Clearly, it is not very friendly with the SRP! Another question is why does it check if the pixel is already filled and if the color is available? I think that this validation should be produced outside. Colors and Coordinates The dedicated s for possible colors and coordinates look heavy, especially in the context when they are iterated, mapped or sorted on each call in different implementations of function. What improvements I can suggest: 
+
+The builder instance can be extracted into a dedicated reference and you'll be able to apply the common instructions on it only once, for example: 
+
+If you are using Java 8, there is no need to create a dedicated class for this purpose. Lambdas are helpful: 
+
+I'd also suggest removing fields at all from the test class and create instances of only in the methods that need to use this object. Calls like should be avoided, because they lack explicitness when there are test failures. It is more expressive when reformulated as , or even with an explanation/details message. If there is no way to avoid , like in , there should be an explanation message, for example: 
+
+Bug will return a correct result only on the first call. If you call it again with another prefix, it will return the same value, because it will not be recalculated. Different approaches can be used to fix it. Previous search prefix can be traced and checked, or even a Map of prefix -> nbResults can store already calculated values. Code Duplication in Comparator It's a good idea to normalize the output of method so as it returns in range [-1, 0, 1], but the implementation contains repetitions of same code. If I understand well the logic, the comparison of term query strings is made only for the substrings of the queries that do not exceed number of characters. To normalize the input strings, a shortcut method is useful: 
+
+2) Implement instead of creating an instance of from another. Calls of will thus be replaces with 3) Do not check for strict class equality in , but use : 
+
+Once this initial refactoring is done, it would be much easier to understand how the entire thing works and to review the details. 
+
+The main issue about this implementation is that is declared as , but indeed does not represent an enum: all the vals are constants, but not instances of the enumerated type. And this usage is not very appropriate. Well, enums in Scala are rather different from Java and we cannot easily associate items of an enum with methods: that is what you are trying to do with . Generally, it's OK, it works, it remains readable, but the type somehow disappears in the code. If you comment out some lines like this 
+
+You are right, the code looks messy. Here are some hints that concern only the fragments listed in the question (I looked briefly inside the project repo, but it's too huge to analyze here). 
+
+Equivalent of the original condition: we take only that match the required name. Each item is wrapped to a , which is a subset of the resulting map. Transformation of the stream of Maps into a stream of . Concatenation of streams of Sets into a single stream of . Unfortunately, we cannot join s so easily, that is why there is this intermediate transformation. Finally, the stream of entries is collected into a representing the result of the sequence. 
+
+Actually, this whole process at the very end is quite roundabout! If you squint, it looks like what we're really trying to implement here is a little function 
+
+This name sure leaves something to be desired! And it leaves another important thing to be desired, too: there's lots of inputs where it just crashes. Nasty! It turns out that you never call it on inputs of that form later, but totality is another good habit that you should get yourself into. It's just another tool in the mature programmer's defensive programming toolbelt. In our case, we'll want to handle cases like , or , or , etc. where there's no good answer to return. What should we return if that happens? One simple and quite common choice is to change our type from 
+
+As with waaaay back at the beginning, I find the choice of base case a bit odd. Let's try the trick from before of letting the "loop" run one more iteration (and this time hopefully the refactoring isn't wrong!). 
+
+In fact, there's even a function that squashes those two things together. Veteran Haskellers will prefer to spell this function in its infix, polymorphic form as 
+
+(If you haven't seen before, I encourage you to try to code it up yourself! Then check the Report and compare answers.) Additionally, we're going to have to change things up a little, since we've changed how works and calls . Before, we had and hence . Now, we have and hence . Since we expect each of the lists in the output of that to be singleton lists, we can smash them all together with : 
+
+but I think that's a bit short-sighted. Ignoring for the moment the inputs we know we're going to call this thing on, we've observed already that there's times when there's no good answer to return, and there's times when there is a good answer to return, so seems like a good start, but there's also times when there are two good answers -- or more! So let's use a type that reflects this scenario instead: 
+
+By the way, there are functions for this available, too; take a look at from (base-10 specific) and from (pick your favorite base). I won't try to write tests here, because the types of these functions are more informative (and more correct in many ways). Final result Barring the reuse of already-written functions, here's the final versions of all the functions. 
+
+The test for this one is a bit complicated; since the old implementation is partial, we have to restrict ourselves to those inputs that work. 
+
+Now, I wonder whether recomputing the power of ten each time is really the right thing to do. One thing we could do is to use and divide by 10 in each recursion. But division is slow, so let's take another plan: instead of computing the length of the list explicitly, let's do it implicitly by having also compute the appropriate power of ten. 
+
+There's something a bit funny about this base case to me. It seems like it's not the most basic one you could choose. If we let the "loop" run one more time... 
+
+which we can use to index into our lookup table with the digits of our integer. So let's try to write this directly! Taking a cue from the final implementation of above, we can write 
+
+If we're feeling fancy, we can choose to use instead of two separate calls to and ; and we can unroll the definition of ; but I think neither of these is terribly important. Nevertheless, they're idiomatic, so: 
+
+though this spelling is optional. In fact, everything is short enough now that I would even feel comfortable inlining the definitions: 
+
+First things first: you'll definitely want to learn a bit about precedence! Normally I'm in favor of adding some unnecessary parentheses if it helps disambiguate a strange situation or if the operators involved aren't often mixed, but too many of them can get in the way of readability. Also, take advantage of that sweet syntactic sugar for lists that the language provides! So iteration one of this function is

@@ -1,0 +1,51 @@
+There's no replication or out-of-the-box solution to your problem, particularly since you don't have that type of access to the remote machine. As other commenters here have noted, you're probably going to have to build your own ETL logic, perhaps in one of the following ways: 
+
+If re-creating the table is an option: If re-creating the table is an option for you, everything is a lot simpler: 
+
+Obviously, you should have an index on as well for this to work properly, but I'm guessing that's already taken care of. I've written this code for SQL Server, but since you haven't tagged your dbms, I can't be sure it'll work on your setup. 
+
+By default a login can see all the databases on a server. You can , after which a login can only see the databases where he has access. To verify what databases a login can see, try this when you're connected as an administrative user: 
+
+Look for a process where the "command" is something like "SELECT", "EXECUTE", "INSERT", etc, and where you have a high number in the CPUTime or DiskIO column. The SPID number for that process can be used with the KILL command to terminate that specific process: 
+
+It's easy to see when you look at the query plan. In your case, the plan just contains an additional Segment and Sequence Project operator to handle the row number. This type of operation only works when SQL Server actually can resolve the underlying table. Deleting from subqueries and CTEs is fully supported and very efficient, particularly for removing duplicates. I also seem to recall using it on older versions of SQL Server. More in an old blog post of mine. 
+
+This query would be functionally the same if you removed and . The point of having a nested transaction like that is that you can roll back some of the work if you want to (for instance, if you find something went wrong with your initial update). 
+
+And finally, reseed the column, so the next record's will resume after the highest existing number in the column: 
+
+For the record, renaming database objects or columns may lead to problems with existing views and other database objects. Find a time when the database load is at a minimum (ideally a service window) and perform the entire change within a transaction - it'll block those two tables for everyone else while it's running, but this prevents anybody else from changing any data while you're performing the schema changes. 
+
+As a matter of best practices, transactions should be kept as short as possible and never wait for user interaction; every time you perform some type of data or schema modification within a transaction, this places locks on the objects or rows that have been touched/modified, which keeps other users' queries waiting. This is turn can create chain effects that can bring your database server to a standstill. In the scenario you're describing, I would instead recommend you to make a copy of the data to separate "what-if" tables where you can make your modifications and review the results. Once happy with the results, use a transaction to merge the data of this table back into the original table(s). 
+
+Another issue with shrinking tempdb is that SQL Server keeps a lot of stuff in there, preventing it from shrinking. You'll find that even if you try to shrink tempdb, it just won't, unless you pretty much restart the server (either literally or by clearing all sorts of buffers, both of which can have a dramatic impact on your production environment). In summary 
+
+Try different isolation levels The isolation level determines how aggressively SQL Server takes out and holds locks. Obviously, the more aggressive locks are taken, the higher the risk of a deadlock. Add retry logic to the application By definition, you can't avoid deadlocks with 100% certainty. The application needs to have a built-in retry logic that re-runs the transaction if it is the victim of a deadlock. Further reading Some blog posts I've written on the subject: 
+
+You can use to "unpivot" multiple columns. This query will give you a list of orders (unpivoted). I've added a third column, which is the ing (i.e. next) OrderID, if there is any: 
+
+Also adding to the indexed columns (you can't INCLUDE it) is certainly not pretty, but if you're desperate, it'll probably help you. 
+
+If rows in can span multiple week, you may need to calculate some type of distribution of those. Here's a simple idea: 
+
+Short answer: No, you cannot partition by a column in another table, because that would cause problems whenever you change something in the "other" table - rows would magically have to move between partitions. Summarizing some of the views in the comments from Aaron, Kenneth and me on your question: 
+
+I would like to perform a similar process on a database in an Availability Group, but restoring from a backup or snapshot is not a desirable option because the database is fairly large and I'd have to take the database out of the AG first. Here's the ideal type of solution I am looking for: 
+
+While I don't know of a solution that solves your specific problem, you can search the raw source code of your stored procedures using the view. This, however, won't work with encrypted (i.e. ) procedures. 
+
+Another solution, that might scale/perform better, uses ordered window functions (available on SQL Server 2012 and 2014 as well as a few other database platforms, but not Azure). 
+
+.. or even numbers (). And because the numbers are "ordered" with the in the join, will always be the lowest and the highest. Any more advanced features (or tuning for that matter) will come down to what platform and dialect of SQL you're using. 
+
+This is an excellent idea, and the one I'd go for first. Except, SQL Server 2000 does not support INCLUDEd columns in indexes. Clustered/non-clustered indexes is a different discussion entirely - to put it simply, a clustered index is actually the physical storage "order" of the data (the index is the data), while a non-clustered index stands alone and references the data by pointers. You can think of it as a library, where the clustered index is the actual bookshelves (ordered by type, author, title) and a non-clustered index is just a "rolodex". If you design a non-clustered index so it already contains all the information your query needs (a so-called "covering index"), you won't have to make the lookup-trip to the data, which radically improves query performance. 
+
+I would agree with your findings. The pattern that your consultants wrote handles NULL values, and is also a really nice way to manage a very large number of comparison columns. But if the column cannot be NULL and performance suffers, I suppose there's no point in keeping it. Your test could be inaccurate in the following regards: 
+
+However, you should be aware that this is problematic for several reasons. The most obvious ones are: 
+
+To excercise control over the type or number of arguments passed, you can bind your xml variable to an xml schema. 
+
+This is a rolling average, which is a windowed function in SQL Server 2012 and newer. You could solve it like this: 
+
+The advantage of using the window function is that you eliminate all sorts of recursive solutions and improve performance dramatically. For best performance, you would use the following index on the table:

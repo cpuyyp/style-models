@@ -1,0 +1,67 @@
+C++ is not Java I cannot stress that enough. You're trying to shoehorn a Java thing into C++, and we end up with macros. Macros are an awful solution to just about every problem and unless you have a compelling reason to use one, don't. This is not a compelling reason. For instance, we could just write: 
+
+That one change takes your runtime over 10 iterations from to . Behold the power of not redoing a bunch of work. 
+
+Compilation First of all, you could simply add to your command line. There's no point in timing with optimizations off. That drops you from (on my box) 0.21s to 0.17s. Algorithm It's good that you're only testing primality against primes. However, you have this extra loop: 
+
+And it's confusing since you increment in the middle. Which happens to work, but I had to stop and really think about it to convince myself that it does. You could simply shift the into the : 
+
+is already a list in . In it's not, but you didn't tag the version, but you use parenthetical . Zero-indexing Python is zero-indexed. The first element of list is , not . When you pop the first element, you need to do not . Your loop is all off by one for that reason - you're starting with the second knight instead of the first. Improved solution 
+
+If you want error check, you can add the value error if you want (note only positive s are valid, you initially allowed for ... but what is the largest power of less than or equal to ?): 
+
+Better way of counting Rather than manually counting each divisor, remember the number of factors formula. If \$n = \prod_p p^i\$, then the sum of the factors is \$\prod_p (i+1)\$, so the number of odd factors if \$\prod_{p \neq 2} (i+1)\$. So let's find the prime factorization first. We'll just yield pairs of prime numbers and their exponents: 
+
+If you don't want to use , then you can at least use this framework to separate the "merge sorted iterables" concern from the "remove duplicates" concern. 
+
+Moving Issues There are several issues related to rvalues in your code. I'll start with the move constructor. The idea is that we're taking over the other guy's stack completely, and we want this to be as cheap as possible. Rather than move each node, we just take over the root: 
+
+That's it. Sure, I have to show you what is. But this is the power of C++11. We use RAII for locking (no or ), keep the mutex in a map, and don't need macros. That is super cool. We just need some other utilities: 
+
+That said, I doubt any version of this (unless it's particularly egregious) wil end up being a bottleneck in the performance of your code. 
+
+since then I'd have to write , which is quite unnatural. While we're add it, I don't want to have to spell out either and would much rather be able to write: 
+
+Dependency Propagation One thing that's missing is dependency propagation. So each file will be recompiled only if its corresponding file has changed. This is good, I don't want to have to recompile just because I changed . However, what if both and include some other file , and you changed some of the function signatures. Currently, neither nor will be recompiled! This is bad. However, you don't want to manually have to go through and add: 
+
+That's it. Our now points to 's , and we cleared that one out so that it thinks it's empty. The move assignment has two big problems. Self-assignment clears the stack, and it returns a copy instead of a reference. You could just swap the pointers: 
+
+But is always the size of . That's just extra stuff you have to keep track of. The best thing you can say about it is that it's error prone. You can drop and rewrite to simply be: 
+
+State should always be valid One of the main issues I see in your class design is that the state of your object is undefined most of the time. If I have a triangle, I want it to be... you know, a triangle. But when you start with: 
+
+building the aligned strings Since you have to go back-to-front to generate the aligned strings, you should just write them in reverse order and then reverse them. That will be much more efficient (O(N) instead of O(N2)). Just the space up front: 
+
+Prefer Variadics to Recursion As the above for lists should make clear, code that relies on variadic templates is more concise and easier to follow than code that relies on recursion. So do that whenever you can. As an example, we can write like so: 
+
+Returning for makes sense though - as you may want to support the else case as a temporary. On the other hand, will only ever return so it should return a reference. is for type erasure Throughout, you use . But is for type erasure. It's for those cases where you need to store a functor. In none of your usages do you need this feature. At the most basic, take . Just take it as template argument: 
+
+Really adding predicates is the way to handle calling after the was called. The wrapper is not a good solution to this in my opinion. 
+
+A Path != Best Path Depth-first search (what you're doing) will definitely find a path if it exists. But it won't necessary find the shortest one. Try out a few of the other path-finding algorithms. The direct corollary to DFS is Breadth-first search (which does exactly what it sounds like). And then there is a lot of room for optimization. 
+
+And then, with a default template parameter, our can just be a simple pack expansion. No need for separate cases for increasing/decreasing sequences, since that would be handled by simply having a negative for signed integral types: 
+
+Failure case Rather than using sentinel values, I prefer to use something like to indicate failure, so that: 
+
+You move it into , but then you copy it into the constructor anyway! Make sure you delay construction as far as possible. should just take whatever: 
+
+Spacing The ultimate Python style guide is PEP-8. Please use 4-space tabs throughout, not 8. That is too much spacing. No spacing between a function and the parens: 
+
+So drop it, and you get the correct answer, and it runs faster (or the same, within noise). Semicolons Semicolons are a C/C++/Java/etc. thing. While they're technically correct Python syntax, you don't need them, and they look weird, so you can simply drop them. Sieve Typically, we'd start our sieve with something like . It's a little weird to see it backwards, but I guess that's ok. More efficient sieving Let's take a look at the sieve part of your code, swapping bools like I suggested: 
+
+Repetition You have four s defined. All of them forward to the appropriate , which is good. But we still have to rewrite everything. We could make this a non-member template: 
+
+Macros and raw arrays are like the bastard stepchildren of C++. They kind of work, but they're basically broken and are much harder to use than they need to be. It's hard to iterate over a raw array, it's hard to copy a raw array, and is an insufficient name for this constant. Strongly prefer: 
+
+Note that will actually be constant through all of our calls, so now all we really have to do is produce the correct sequence for ! Loop Construction Anytime you want to do something times, you shouldn't use a loop. You should put the incrementing logic in a loop - that makes it easier to tell at a glance what's going on. Compare: 
+
+Now, there's two issues here. In Python 2.7, gives you a list. The full list. That's hugely wasteful since you never want the full list, only the next element one at a time. For that, there's . Just swapping out those two functions: 
+
+Now you don't even need a custom comparator, or have to worry about (which you don't have in your code btw), or worry about how to copy this into another container. using I'd be surprised if you saved any characters with all your using declarations as opposed to simply typing everywhere. Using namespaces really isn't bad. Especially when you're talking about five characters... stick to the using declarations when you actually solve a problem. Don't use them to avoid laziness. Also lots of the time, you're writing anyway so I'm just confused at the decision. Your algorithm I, truly, have no idea what you're doing. It doesn't help that you have 6 members in your merge sort class, 4 of which are iterators: 
+
+Extra s Neither nor should be allocating anything. You don't need to - you're just walking the list in both cases, without actually adding anything. You are careful to correctly, but simply deleting all the allocation code would make the functions still work and be even better. Example for : 
+
+As a truly recursive solution, divided neatly into base and recursive cases, I find it much easier to follow the logic. Debugging Rather than write a level-by-level comparison, you should simply write an method on (or, alternatively, a much more correct or ), and then use that to compare: 
+
+Looping You want to perform an action 10 times. The loop counter never matters for your code, you just need to ask 10 questions. The way you wrote the code, you have:

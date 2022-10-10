@@ -1,0 +1,81 @@
+I would agree with answer from @JosephtheDreamer that, as a beginner in javascript, this is probably a domain area you don't want to tackle unless your intent is just to deep clone simple array and object literal type data structures. A few thoughts on what you have beyond what Joseph pointed out: 
+
+Don't use . It can make your application fragile to DB schema changes and can result in unnecessary data being transferred between DB and application. 
+
+Then I would suggest that your Admin class should abstract away the details of user creation away from this script. Ideally this script could just have something like: 
+
+Not sure why you are using named function here. I would think typical Angular syntax (except for perhaps case where you are trying to define stateful filter), would look like this: 
+
+A comment about validation... You are doing a good job of trying to enforce typehints on your methods, however I do wonder if it might make sense for you to have classes defined which deal with say a collection of objects. These seem to be critical dependencies that can only be enforced to be an array via type-hinting, meaning that if you truly wanted to be able to validate that you have valid place objects in your array, you might have to go into undesirable approach of inspecting each array item to validate it. If instead of passing simple array, you passed or similar, you could be ensured that everything in that collection is a valid object. Certainly, this adds yet another bit of code to the overall system, so really only you can determine if it is worthwhile to do this depending on how you are planning to use this code. But it is something to consider when these are key items you are working with (vs. say optional configurations or similar). Do you need any error or exception handling here? Typically one of the things a factory would do is raise an exception if the dependencies that are passed are not valid (typehinting can do a lot of this for you) or to handle any underyling exceptions that might happen within method execution (i.e. can instantiation of a , , etc. object throw an exception?). I don't really see any consideration here in your code for error or edge conditions. It seems as if this is considering happy path only. 
+
+Could be simplified to (assuming of course you have created DateTimeZone object previously as mentioned above): 
+
+Where you can pass the parameters to a single method and get returned either a false (or structured error return information) or an array of fields that have all been validated (or perhaps even cleaned/sanitized if you want further extend the functionality of the class). 
+
+In an overall sense, session management in PHP is a bit painful. I have actually spent a good amount of time in this space and have created an open source PHP session library While you are free to use this library, I am hoping that at least some of the "Readme" information on the linked library page can point you in the right direction to literature related to proper session management in PHP. 
+
+Why are you using inside of your function? There is no object context here at all, and my guess is your code doesn't actually work right now. 
+
+In general, you should get in the habit of using exact comparisons (, ) instead of loose comparisions, unless there is some specific reason you need to perform a loose comparison. This will make your code more resilient against unexpected truthy/falsey evaluations. That time you spend in typing the extra characters is negligible in comparison to the time you will spent debugging a codebase full of loose comparisons. 
+
+If you were following this standard, your function definitions would be in a totally different file. 
+
+We will start with garbage collection. Since you are not getting long-lasting sessions, that fact that you want to collect session data files (or database records if one were to use a database to store the data) indefinitely, means that you are, in essence, accumulating attack vectors against your application. Ideally you should use an appropriate session lifetime and an aggressive approach to invalidating and pruning old records to minimize security risk. One comment from the section of the securing INI link above seems very pertinent here: 
+
+You should consider moving routing decisions out of this class if you want to make this class more re-usable (i.e. across different applications). Allow the caller to make routing decisions. The public methods on this class should return appropriate information to allow the caller to make those routing decisions. 
+
+This code is very happy path oriented. What happens if API doesn't respond? What if it responds with an error code? What if it returns empty result set? 
+
+If possible for your implementation, I would consider adding algorithmic information (including work factor info) to your result hash such that you can adaptively change your application configuration at some point in the future without having to change code. Say for example you decided to increase the iterations from 1000 to 10,000. At the point of password verification, you could catch cases with outdated encryption modes and proactively regenerate the password hash to meet your new standard (of course only for cases where the password verification is successful). 
+
+The first line clearly indicate this is insert query operating against users table. The second line defines the columns you are operating against The third line introduces a new SQL clause (this case being that you are now specifying the values for insert) The fourth line is written in a similar manner to the second line, so it is really easy to correlate the insert values to the columns. 
+
+Consider providing better validation for parameters passed to public methods. For example, validate input is non-zero length string. Particularly with something as critical to application operation as configuration, you want to take reasonable measures to make sure the class and its data are set up in an appropriate state and that other areas in application are interacting with it in a proper manner. 
+
+I am concerned about the mutability of many of the properties of your cookie. Should you really even expose methods to change cookie domain, path, security, session vs. long term persistence, prefix, etc. after the cookie has been instantiated from its configuration? That kind of renders your application configuration moot and could be enabling the caller to introduce some very odd (and potentially insecure) behaviors. 
+
+I would think you might benefit from the approach of defining individual callbacks to do whatever DOM manipulation you need done for each of your option values. That might look something like: 
+
+I also don't see how your framework will handle event delegation so as to allow for this approach to work with dynamically added elements. Also, since you are really not using any functionality in jQuery which is not available in regular javascript, you might want to consider dropping the jQuery dependency. 
+
+I think trying to implement a one query builder-fits all base method on your models is going to end up giving a TON of complexity and make you code hard to maintain. What columns are an play for a given concrete class become unclear. Why not simply make this abstract function that has to be implemented by all inheriting models? I know that this could lead to some extra code in your application, but I would rather have extra easy-to-read, easy-to-maintain lines of code in my app rather than something like this. Same concern for . 
+
+I am assuming that you have a directory structure something like this, which can be common in shared hosting environments: 
+
+If you are using PHP 7.1, consider using session_create_id() to establish better connection between indvidual user and their session id. This allows allows better usage of prefix index for database lookups if ever using a relational database as session storage medium. 
+
+You are leaking implementation details outside this class. Why would you be returning objects to the caller like in your method. If this class wants to be a mapper, it should ONLY be a mapper, not a general purposes class for preparing statements. 
+
+Database Class Your database class really holds little value. Typically one might implement a database class to do things such as: 
+
+The primary performance problem you have is that you have fallen into the anti-pattern of querying in loops. It looks like what you are doing is some sort of data migration. The chances are that this whole thing can be done based on a few queries. For example, let's look at using syntax to simplify this operation. To do this, let's assume that the email address / password combination from the source table is the main thing you are concerned about here. And let's also assume that your table is the primary table you are going to be migrating the data into Let's start with this. 
+
+I agree with comments on getting towards better application bootstrapping script. You don't want to keep repeating the basics of session start up, setting up dependencies, etc. on every single page. This would be a nightmare to maintain as size of application grows. Similarly, I am not sure why you have some many pages where these forms are defined. Seems like there might be opportunity for reuse here. 
+
+sorts an array in place, so no need to assign to new variable. No need to define a function here as you are just using default sort behavior. This line should probably just be: 
+
+You have an odd pattern of using these methods which seem like a paradigm from other languages you may have used in the past. has no special meaning in PHP. If there is code you want to be run upon object instantiation in PHP, that code needs to be in the constructor. Why make the caller set up objects in proper state? In other words, consider this using this sort of instantiation: 
+
+I question the overall approach of using scraping for this. While it appears imDB does not support an official API, it does appear there are a number of community-driven API's around imDB that may offer you better functionality via a simple integration. I would consider taking a look at these. If you want to stick with retrieving and manipulating the HTML document itself (whether this be for learning purposes or whatever), I would consider looking at and related classes to allow for more flexible DOM manipulation and information retrieval. I think @mdfst13 pointed out a number is areas for potential improvement, so I will add a few more thoughts in addition to those provided. 
+
+You should be doing field-level validation for all of your input fields before inserting into database (and possibly field-level validation in javascript to even help prevent POST from happening with invalid values). Sanitization and validation are two different things and both are probably applicable to your typical "input form which inserts into database" use case. The prepared statement will mitigate against SQL injection attacks and alleviate the need to escape characters for database insertion, but it will not do things such as: 
+
+You are taking a very standard approach to populating a multi-dimensional array from a results set that represents one-to-many relationships. I do question however if this is an appropriate approach given the fact that you are using LEFT JOINs here. As noted above, you could have null values for the contract group information and the phone number information. You don't seem to be considering this at all. This is especially critical given the fact that the contact group ID is the very first dimension in your array. Are you really intending to group on in this first dimension (technically such values would actually be assigned to an empty string array key)? 
+
+You are really handling sessions in an insecure manner. At a minimum you should be regenerating session id's across login/logout event boundaries, and when you want to destroy a session, there is more to it than just unsetting the superglobal. You are not calling any of the functions at all! As it stands this framework is likely ripe for session hijacking and fixation attacks. Please have a look at PHP's session management basics to get some better context on how you should be handling sessions in a more secure fashion. 
+
+First of all, changing between double and single quotes is going to make such a trivial difference, you would probably need to measure to microsecond precision to see any performance impact. Use quote styles that make your code most readable in whatever context you are forming strings. The main thing you can do to speed things up is to parallelize the requests against Google and then batch your update queries for each batch of requests. Using curl_multi may be a good approach. I actually have a simple REST library that leverages curl_multi that you are free to use if you find it helpful - $URL$ Obviously, making requests in parallel will consume more memory and CPU on your server, so you might need to play around with number of concurrent requests to get your desired compromise of run time vs. resource utilization. You also need to make sure you have an index on your Name field in the DB. Don't use root user in MySQL, and especially don't leave root user with empty password. 
+
+Why are you trying to start a transaction here? Shouldn't this class only be concerned with getting the connection established? Do you not trust that the return value of is valid? I don't see that you are working with transactions at all in your other code, so wouldn't the happy path execution of this code lead to a bunch of unnecessarily open transactions? 
+
+As pointed out in other answers, your data validation is a little odd. Consider using something like PHP's filter_input_array() which can give you more robust functionality in validating and sanitizing your input. There are also a number of PHP libraries out there that do this exact thing. Consider using one. 
+
+Why have all the calls to throughout the class? Since this is a critical dependency for this class, you should probably pass this dependency (i.e. a valid object) to the constructor. There should be no reason for this class to keep having to try to instantiate DB connections (even if perhaps you are using a singleton here). How about usage like: 
+
+This gives you a nice, clean visual presentation for your query in your code. I think your query as written is a little odd, in that you specify the table for but not for any of the other columns you are selecting. Some of your column names may be ambiguous across tables, so I try to make it a practice when writing join queries to specify the table names for ALL columns to remove ambiguity for the reader. I would also suggest aliasing the columns. If you want to refer to in your PHP code like you are doing, then you MUST alias to this like . Finally, you should consider meaningful table aliases if using them (I actually typically do not use them except for sub-selects that need to be aliased). What do , , and mean? Why not , , or similar? That could leave you with a query like: 
+
+Regardless of approach here, you need to understand if at some percentage of full result set, it might be faster to retrieve full array, shuffle and slice to get the desired result vs. random row retrieval. A few other thoughts in looking at your code: 
+
+I don't understand why is initialized as object literal when it is then overwritten by an array (mapped from ). 
+
+Note here that you could easily define multiple templates for totally different types of responses without having to make changes to the other classes in the application. So the primary takeaway for you is that this could certainly use some refactoring to separate these different concerns. Some other thoughts:

@@ -1,0 +1,93 @@
+Note that I haven't tried to compile this, so I make no promises regarding syntax errors, but the semantics are sound. Also, I've used a -clause join instead of a -clause join, as I'm not sure you can use the latter to join on . 
+
+(The directives allow the parser to distinguish between the end of a compound-statement trigger or procedure body and the ends of the individual simple statements it contains, and are only required by some MySQL clients.) 
+
+Triggers are procedural, so my inclination would be to perform the join and update as separate steps; this IMHO would make for simpler and more readable DML.This code should do what you want: 
+
+You need to have directives both before and after the statement, you need to end individual simple statements with semicolons, and you need to end the complete with the delimiter specified in the first directive: 
+
+is not part of the which precedes it, so the identifier does not refer to the column by that name but to a separate (undeclared) variable. The way to test whether the did anything or not is to test the implicit cursor attribute , as in 
+
+To distill, not changing the value of will almost certainly eventually cause you problems if you use Unicode characters outside the base character set. 
+
+With your in place, you're attempting to declare variables after you've begun "doing stuff", which isn't allowed. Move the after the last of your s, and things should work much better. 
+
+Jack up the security on the table so normal users can't directly access it at all, and remove the protecting trigger. Create an updatable view on the table which is accessible by normal users, and add an trigger to protect the column from updates (assuming you want it still visible; if not, simply omit it completely from the view definition.) Create a function with definer's rights which bypasses the view and directly updates the column in the base table. 
+
+MySQL is particular about the order in which you do things in a statement. I'll be burned if I can find it in the docs right now, beyond a cursory mention under Syntax, but the order MUST BE 
+
+You use in compound-statement syntax to declare a local variable, cursor, condition or handler. However, your variable is a session global variable due to the presence of the prefix, and it is an error to attempt to redeclare a global variable. Change the name of your variable from to , and then read up on MySQL variables. 
+
+I believe MySQL requires the statement to restate the column definition (datatype, default value, column constraints &c.) even if it's only the column name being changed. 
+
+However, in this case your entire trigger body is a single statement, so you can omit both the statements and the directives: 
+
+Your provides 2 sets of the data: - DB Size + Unallocated space - These numbers include BOTH: Data and log file; - Total statistics of RESERVED space for all objects within the database; I bet your 36 GB of free space are in the Log file. For real numbers use following query: 
+
+I'm not a replication guru, but record may be marked as deleted only in case when an update is generating Page Split. For the case of replication you can test it by looking at DBCC PAGE and look through transaction log. 
+
+Can see it only on my SQL2014 on Win8.1 VM. Error persists even when run query locally as local admin 
+
+So, the question is: How it is possible that procedure created with an option can be successfully executed while SQL Server login does not exist for that user? 
+
+That depends on a type of . If it is the impact is minimal, but it can be tremendous amount of I/O associated to a process and enormous amount of time. If you plan to do a then you need at least the same space in your data file and in a log file as the size of your index. In other words just triple size of your index. For instance: You have 1TB database with only one table which is also 1TB in size. If you want to build/rebuild clustered index on it you will need additional 1TB+ in data file and 1TB+ in a log file. Impact on TempDB is minimal. Be aware that there might be completely different results depending on current average page usage and on a new fillfactor. For instance if you have 60% average page usage and planning to fill pages 100% then for 1TB table you'll need only about 600GB of new space. Also, can have significantly lower impact on Log file when you use Simple logging with 0% fragmentation. If you don't like my answer, why wouldn't you test all your scenarios with at least 100GB table and post results here? 
+
+Items with big values in and are red flags, such as Table scans and Key Lookups. There can be because of bad indexing, statistics, etc. Wild guess: when you use Temp Table Variable SQL comes up with better query plan. 
+
+In your sample case SQL Server made very good choice. Here is what it was actually doing: - In the first set of data it extracts 10 rows from table based on the column. Then it extracts 10 corresponding IDs from table using kind of operation for each ID. - In the second scenario, when there are 100 matching rows in table SQL decided not to do operation, but use instead, which is much cheaper from the I/O perspective. Yes, you can use hints for your queries ($URL$ 
+
+If the parameters are defined as the correct length, SQL will throw an error when calling the procedure. If you always define as (max) then you'll have to manually handle passed parameters that are too long for the destination table column before any processing in the proc happens. So in a nutshell, more work on your end since you'll have to add error handling to the proc you didn't need before. 
+
+I think this really comes down to user preference as there's no real technological reason to do this. In fact, for simplicity sake, I say always use dbo unless your security requirements stipulate otherwise. Of course, you can always do it for just organizational purposes as well. 
+
+I wrote a TSQL script that will update the description based on the current version of the report. GitHub Gist 
+
+You could use a Document-oriented database for this. You could then create a program in your preferred language to import the existing documents into the db, parsing the folder structure for the metadata (customer, job#, etc). 
+
+I have a 2 node cluster (NODE-A & NODE-B) with 2 SQL instances spread between them. INST1 prefers NODE-A, INST2 prefers NODE-B. INST1 started generating errors then, failed over to NODE-B. Migrating INST1 back to NODE-A generates the connection errors after it logs a "Recovery is complete." message. Win 2008 R2 Ent. SQL 2008 R2 Ent. Errors from the Event Log after first failure: 
+
+You could make a case either way, but if the data is going to be used for analysis and you often want to see multiple columns from that data at the same time, go with the wide table. Make sure you know your databases column quantity and row size limits. Make sure you get the datatypes right. If many of the columns are null, SQL Server allows you to optimize the table for that. You could also consider using a NOSQL (Not Only SQL) solution for analysis of this type of data. If this data is going to be less for analysis, you might want to normalize it as stated in your question. 
+
+You could further normalize and have a row for each unique combination of game, team, & inning. This would allow you as many innings as the InningId datatype would allow. 
+
+It depends on what the queries are. ORMs are usually really good at CRUD, as they are usually simple. The more complex the query, the greater the chance of a bad query. You can tweak the generated queries by tweaking the LINQ statements. Sooner or later though, you'll get tired of fighting and use SQL queries or stored procedures for anything that is complex. 
+
+Have you tried using Adam Machanic's sp_whoisactive? There's an option to get the outer command to see if it really is within a proc. It could be the application is holding open a transaction instead of committing it. Try looking at DBCC OPENTRAN as well. 
+
+Might happen you still have some opened transactions, which hold you from shrinking individual files. See who hols them, close them. Reboot server if necessary. Shrink individual files while nobody accessing the database. switch it temporarily to Single User if necessary: 
+
+You did not get the point of SQL programming. You can have 1000 copies on multiple machines of a script to create/alter an object, but until one of those scripts is executed against a server, that object on that server will be unchanged. Yes, you can have multiple tabs/windows with the same procedure, but for SQL Server all of those are different/competing sessions and whoever is last - wins.On another hand: SSMS. You can have multiple copies of a script of the same object in different tabs, which is very handy - you can try different scenarios just by switching tabs. It is not job of SSMS to track your changes and keep records which script is a "Master Copy". That is YOUR responsibility. However, if you are in a project development, you and your boss can't completely rely only on your discipline. Project manager have to choose which way to do a source control. Here is a not full list of things, which can be done: - Implement Change Data Capture on the server; - Restrict permissions on Dev/Test and allow "playing" only on Dev or personal machine; - Use change tracking/deployment/source control tools, which will keep records of any changes. And do not be surprised with SQL. All developers are experiencing that issue with source control. See it here: $URL$ 
+
+Finally found an answer: You can create database user, which won't have a SQL Login and won't be able to authenticate, but will have permissions and can be specified in clause for stored procedures and functions. The simple way to create such a user is just to use clause during user creation: 
+
+There are 2 options: 1. Create clustered index by account_id. Delete all other indexes. 2. Add new column and create clustered index on that column. Create another non-clustered index on ONLY one column . The second option is more preferable because it is much faster. You join only by 4 bytes. While your current queries join by 40 bytes. That means your current operation is 10 times more expensive. Also, ask yourself couple of questions: - Do you really need have Account_ID as Unicode? - Can you convert Account_ID to INT or BIGINT? Hopefully, you've got my point. ADDITION: 
+
+You have to be very careful. Assuming your query is not restarting and you have a for that SPID. If you restart SQL Server it won't help, because transaction still would have to be rolled back. The problem with that is following: When you run a transaction in multi-CPU environment with not restricted degree of parallelism it most probably will generate parallel execution plan. Would say your transaction run for 10 minutes on 8 CPUs. When you Killed it, will be processed ONLY by ONE CPU. That means it might take up to 8 times longer to recover. 
+
+You could do this. It would allow good performance for normal duration games, while allowing you to also store long running games. 
+
+Both Microsoft and Amazon offer SQL databases in the cloud. GAE isn't an RDBMS, it's NoSQL in the cloud. If you just need an object data store, well someone has probably written a wrapper in the language you want, otherwise there's Python and Java. If you need an RDBMS, I suggest you check out either Microsoft's SQL Azure or Amazon's Amazon RDS. 
+
+You can only reference servers that are listed under Server Objects -> Linked Servers as well as the local server via what you get back from @@SERVERNAME. Four part naming does not trigger a NETBIOS / DNS lookup. If you are referencing the local machine anyway, why not just use three part naming? 
+
+You could also try at the beginning of the proc, setting isolation level to SNAPSHOT. More info available at: $URL$ You will incur some cost in tempdb for the row versioning. 
+
+Composite keys as primary keys also run into index size issues that can affect disk usage, io speeds, and backups. You might want to review Kimberly Tripp's posts about primary keys and clustered indexes here: $URL$ I too would suggest a surrogate key in this case instead of a natural one. 
+
+I'm trying to add the -Output parameter to my log reader agent for transactional replication and getting this error: 
+
+Using SSMS, you cannot chain a restore of the backups in one operation. You would have to do multiple restores. You'll want to use T-SQL in order to be more efficient. 
+
+Both of these guys authored several books, but I'm going to link to their blogs in case you want something more immediate. Louis Davidson: $URL$ Paul Nielsen: $URL$ 
+
+You can, but I wouldn't. You would always have to wrap the DB name with square brackets such as [MyApp.Sales]. So to recap: if you value your sanity, don't do it. 
+
+That's pretty much what you have to do. Since NULL + anything else is NULL, you have to wrap each column in its own isnull(), coalesce() or CASE. 
+
+If either $FreeSpace or $Size -eq $null, then it won't properly complete the query string. Either use command parameters just as you would in .NET (best method) or check for $null before insert. 
+
+I know LINQ queries are composable, but have you tried playing with the order of LINQ operations to see if it could affect the query generator? This question may be better served over on Stack Overflow. 
+
+Will not handle out of SQL references, but you might want to check out Redgate's SQL Dependency Tracker. It's a nice visualization tool. 
+
+$URL$ shows that -Output expects a path, not an integer as the error message says. Pub & Sub are both v9.0.4211, Dist is v10.0.2723 My Script (run at distributor):

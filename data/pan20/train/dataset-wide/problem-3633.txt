@@ -1,0 +1,53 @@
+Couple pointers: First, snapshots. Any backup operation (even an incremental backup, probably) is going to take a significant amount of time to complete. Unless you can lock your store while the backup is taking place, you will probably have a problem with inconsistent data. I suggest you investigate your fs and system possibilities for taking snapshots. You lock the store, take the snapshot (which should be very, very quick) and unlock the store. Your snapshot now contains a consistent replica of your store which can be backed at any pace you need. Look for volume shadow copies in Windows land, LVM snapshots in Linux, etc. Second, replication. Again, any backup job is probably going to take a decent chunk of IO and CPU performance away from the store. Either your main app's performance will be affected or your backup will take ages to complete. If you can keep your storage system continuously replicated to a second system, you'll be able to back up without worries of affecting your live, production system. This replica might also be useful to prevent downtime (if the main storage fails, switch to the replica). When using replication, you take the snapshots in the replicated system- needing only to pause the replication while the backup is taken. Third, once you have replication and snapshots, you just need to find a backup method which makes sense wrt. to bandwidth, storage and your requirements. First of all, figure out how back you want to go when recovering. Do you only need a copy of your storage as it was yesterday? 8 hours ago? Do you need to go back and recover files from last week? Last month? Last year? How long does a full copy of your storage take? How long does a copy of a daily increment take? This limits how often can you take full backups and incremental backups. If you are not deleting data from your store, a replica might be enough. Last, if you are moving huge volumes of data, you are probably using a SAN. And have a service contract. Your SAN probably has something builtin to handle backups, or at least the guys that support it should give you more specific ideas... 
+
+We have a client we host a web for (blog.foobar.es). We do not manage foobar.es's DNS setup, we just told them to point blog.foobar.es to our web server's IP. We have noticed that sometimes we cannot browse to blog.foobar.es, but we can browse to other sites on that server. Troubleshooting a bit using host(1) yields something funny: 
+
+Whatever POSIX says. I'm not up to stuff on this, but I would guess scripts using ps won't be very portable anyway. 
+
+If you just want to replicate a single system image across multiple boxes, I would look at the latter; you just configure one box "just the way you like it" and then either boot all boxes from the same image via the network or copy the same image easily to all boxes. Roughly, imaging is easier; netbooting tends to be more convenient. I guess Puppet is much more complex, but depending on what you are doing, it might be absolutely worthwhile. 
+
+If you want to setup clustering anyway- and in Postgres land I'm inclined to think it should be more for availability purposes than for performance- pgpool provides some tricks to replicate the databases with very little downtime ($URL$ 
+
+If you ever wish to separate services into different boxes, you'll want to use subdomains. Think about what happens when you run LDAP and a web server on mydomain.com and later on you decide to move the web server somewhere else, but LDAP stays in the same box. 
+
+I would suggest considering pros to using Arch Linux to one of those three and see if it's worth it. 
+
+SFTP + Winbind? It will let the users log in as their domain user via SSH and thus SFTP, and get the right permissions. 
+
+rsync can throttle bandwidth. You should also be able to run in at 9am throttled, stop it at 5pm, start it unthrottled and it should pick up where it stopped without much trouble. 
+
+, being 8.8.8.8 one of Google's public DNS servers. However, sometimes the same server resolves the name correctly (!). Another funny thing, is that our ISP's DNS servers sometimes say: 
+
+You could use log recovery in most RDBMS, but it is not as "easy" as Oracle's. Basically, all RDBMS can keep track of all executed queries. So you could use this on a separate server to replay executed queries from a full backup and restore the state of the database at any given point in time (i.e. you could see the state of the database at December 3rd, 13:53 after transaction xxx). You could also analyze the logs and see what happened. This is very limited and not very practical. Check PostgreSQL docs here: $URL$ 
+
+I'm using offlineimap + local dovecot server with some success for the same purpose. However, note that offlineimap is not really meant for multiuser usage. 
+
+Try activating verbose garbage collection and see if it's a garbage collection pause. I guess a huge heap, lots of object allocation and swap might cause a long pause, but that long sounds quite unusual. 
+
+... which I'm completely unfamiliar with. Ideas? We can't really do much as we do not control DNS, but we'd like to point our clients in the right direction... 
+
+Are you using DHCP on your LAN? If you do, and you are setting up the VMs to get their configuration from DHCP, ensure that the virtual NICs have different MAC addresses. If you don't have DHCP on your network, or you do but want to configure the boxes manually, ensure that you use different IPs for each box (and that they do not overlap with other boxes in the LAN or the DHCP pool). If possible, and esp. if you have control over DHCP, I would suggest using DHCP. 
+
+You should say how are you mounting the volume. I guess you are using some kind of GUI tool, such as Gnome's. There might be a way to make that work using your system, but I recommend changing the method of mounting the volume to something more "scriptable": 
+
+You have to think outside the box. As in, you can't really trust what's inside the box. For instance, get your provider to monitor outgoing traffic. Traffic you can't explain => assume the server has been compromised. Get an image of the hard drive (extracted using trusted binaries) and run forensics. 
+
+Make sure you are not running extraneous services. Run netstat -nap and check all processes that are listening on ports, make sure there's nothing there which is not strictly needed. Things that can listen just on loopback should do that. All publicly accessible non-public stuff should be protected by strong passwords or stronger measures (ssh keys, etc.). If you can, some measure against DoS would be nice. Throttling evil requests could be handy. 
+
+Unless you have great bandwidth between the nodes, I don't think this is going to fly. You could set up a distributed block device with drbd, for instance, and run a RAID setup over several boxes, mount the fs on a single node and run your database server. But the performance is going to suck unless you have LAN-level communications performance. What are you storing in your database which does not fit a single server? Is it really cheaper for you to buy multiple boxes vs. one big server? Have you looked into sharding? Are you storing files in your database? If you are, could you split those off? 
+
+$URL$ lets you set up restricted ssh so that only SFTP/SCP are run; it also helps setting up the chroot. As CarpeNoctem points out, FTPS sometimes is a better solution. ssh, SFTP, scp are very "low-level", FTPS (like the unsafe FTP) are normally higher-level (virtual directories, virtual users, etc.). I think for the scenario you describe, both approaches would work. 
+
+Wondershaper can do wonders, and it's quite easy to setup. Other than that, you can find some userland programs to do that. In Linux there's Trickle, there might be equivalents for Windows. But really, you want traffic shaping- people will forget to run the program, etc. Just limiting uploads to slightly less than your full capacity will probably do you a lot of good. 
+
+Do not allocate so much as to go into swap. Allocate enough so that the application does not run out of memory. Unless you have lots of activity, further tuning probably won't be very relevant. Other than that, you will have to strike a balance between devoting memory to Java (I believe the default garbage collector is the nonincremental one, so more memory for the JVM will mean less frequent, but longer pauses) or to disk cache (better IO performance if your working set fits into the cache). 
+
+Well, it goes both ways. You might have concurrency issues, typically locks. Write operations typically lock other writers (and sometimes, writers block readers, or even readers block other readers). If you have locking, concurrent users can slow others. On the other hand, you can have scenarios such that one users is performing I/O while another one is doing CPU work; these could be parallelized and you would be using your resources more efficiently. Most of the time, concurrency hits you, though. 
+
+Subscribe to debian-announce. No, really, you don't want to automate version upgrades, as by definition, things might break. 
+
+When the cost of switching to a dedicated server is lower than that of optimizing the code to get the required performance on your current system (when you have reached the limit of your hardware, it goes to infinity). 
+
+It depends, but basically, if they offer the service, is because they can. If this is a VPS, the upgrade is basically shutting down the VM, bumping up the VM configuration (adding more RAM), and perhaps moving the VM to another physical box. If this is a dedicated box, this is slightly more complicated, but it can be done. Managed hosting is probably even simpler than VPS. 
+
+Webmin, probably. Although it being a web-based application I'm not sure it will work gracefully with all network configuration changes.

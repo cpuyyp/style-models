@@ -1,0 +1,99 @@
+SVG paths have relative and absolute versions of the movement instructions. If you were to use the relative instead of the absolute you could eliminate the offsets, simplifying the code. Edit: to justify my claim that using relative movement rather than absolute simplifies the code, here's the full program using relative movement, minus the header comment: 
+
+is that some other library may have defined . It would be advisable to use the same boilerplate when invoking the plugin: 
+
+Thread-safety. This has no thread-safety whatsoever. Typing. If you're going to emulate C#'s events then don't just emulate the ungenericised . At the very least, emulate . Because Java's generics aren't reified this requires a bit of boilerplate: 
+
+is a bit odd. It seems to be saying "The structure here is very important and you might want to change it, but I won't document it for you". I would either use magic or pull out the parameters as with more descriptive names. 
+
+Separation of responsibilities: it would be cleaner to return a vector rather than to "return" with . 
+
+The test is unnecessary unless clearing a bit is significantly more expensive than testing. And once the test is removed, the bookkeeping can be done by , giving 
+
+What happened to the whitespace in ? A single space suffices. What do the names communicate and fail to communicate? The name communicates nothing: the type already says that. What purpose does this particular prime factorisation serve? The name doesn't really fit the context IMO: you're not accumulating to a . would make it crystal clear what the function does. 
+
+If then I think that should be or . Again, whichever way you finally decide, it should be clearly documented. Note that we've now called two methods which iterate partially or fully through . If it was a non-deterministic iterator we have problems. An example of a non-deterministic iterator would be 
+
+I deduce from this that you're using the sequences for a Lucas or Lucas-Lehmer primality test, but that comment seems a bit out of place. Having three cases also seems a bit overkill. Have you profiled the code to see how much of a difference the special cases make? You seem to mainly save a few multiplications by , and I'm not convinced that the maintenance effort is a worthwhile tradeoff if it's only a 2% speedup in a function which probably won't be the bottleneck anyway. 
+
+Use types consistently I prefer over , but it doesn't really matter which you use as long as it's consistent. Mixing them, though, means unnecessary cognitive load. Naming 
+
+One possible further optimisation would be a meet-in-the-middle approach. You can find more detailed descriptions of the principle in the context of e.g. Rubik's cube solving, but here's the basic idea. You want to find the least such that starting with the generators in you generate the (finite) group (here ). For the sake of simplicity, let's assume that the identity element is in . Then we're looking for such that for each element there is a sequence . The approach you're currently using builds up these sequences from one end. But you could equally well build them up from the other end. can equally well be written (and in this case, since each generator is self-inverse, ). That leads to the more complicated (and not tested - beware!) but perhaps more efficient 
+
+For my taste the code could use a lot more whitespace, but I'm going to try to stick to your style in the proposed changes. 
+
+If you first transform the string into a run-length encoded representation then these cases are all pretty simple to check. 
+
+I don't pretend to understand all of the code (some comments might help, particularly comments which indicate the types of variables and arguments), but I don't think it's really clustering. In fact, I strongly suspect that it's classifying the star locations into an icosahedral dissection of the sphere. If I'm correct then that points to an algorithm change which seems likely to give a good speed-up. Linear algebra is, in any case, rather heavyweight. The ray-triangle intersection calculation is unnecessary if all you want is to know whether the ray intersects the triangle. A spherical triangle is the intersection of three hemispheres: testing whether a point is in a hemisphere is a simple dot product and sign test, and testing whether it's in the intersection of three is three dot products and sign tests and two Boolean ANDs. That's worst case sixty dot products per star, and if the ANDs short-circuit then it will be fewer. However, if I'm correct about the isocahedron then it has a very useful property. It's a Voronoi triangulation. You can classify each star into the corresponding triangle by converting its coordinates to Cartesian, taking the dot product with the centre of each triangle, and picking the triangle which gives the largest dot product. That's twenty dot products per star, but further optimisation would be possible by exploiting the structure of the icosahedron to create a binary decision diagram. I haven't calculated whether it can be reduced to the information-theoretically optimal 4.33 (average) dot products per star, but I certainly expect it could be as few as six or seven. 
+
+Are you sure you want to keep ? It allows you to optimise some uses of the deck, but means that you have to ensure that it's kept up to date. At present the API doesn't do that. In particular, by exposing 
+
+When \$s = t^2\$, \$s + t = t(t+1)\$ so the first condition always succeeds. But when \$t\$ is that means we're testing , and that can give false negatives. 
+
+Is there any particular reason for not using expression-valued methods? Is there any particular reason for not following standard C# style and using UpperCamelCase for the method names? To me it seems a bit overkill to have three methods for each of left, right, and parent, but that's a question of style and I can see an argument that it's for readability of the upheap and downheap methods. On the other hand, why are all of these methods (and ) ? That's exposing far too much of the internal implementation. 
+
+The name is unhelpful: I think it would be better as . But that's a minor issue. The big issue which I see here is that 
+
+How many times does this loop execute for the largest possible input? How can you avoid a linear loop? (Hint: a certain Stirling analysed \$\log n!\$ ...) (Or, arguably cheating, there are only 21 decades in view, so you could hard-code a lookup.) 
+
+My first instinct was that this is buggy: I'm still not sure whether it's buggy or merely over-complicated. Let be the initial value of . If we enter the loop then it's because , so neither of the cases in the switch (which IMO should have an explicit for clarity) are ever executed, and will never change. Therefore the entire block could be removed without affecting the behaviour of the code. Should it be ? 
+
+I think that the last of these is the most transparent, but that's an issue of aesthetics and you may disagree. Note that I've assumed throughout, as you do, that the rectangles are closed (i.e. that they contain their edges). To make them open, change to and to . 
+
+I'm not a Pythonista, so I can't comment specifically on your use of Python. However, there's one language-independent issue which the existing answers don't mention. The algebraic solution of the quadratic equation is the textbook example of an issue in numerical analysis known as loss of signficance. The Wikipedia article on that topic goes into sufficient detail on this particular equation, but to summarise in case of link rot: When is much larger than and , is approximately equal to . That means that one of or will be subtracting two very similar numbers, and the result will only have a few bits of accuracy. The correct way to solve the quadratic equation in code is along the lines of 
+
+Why use and after pulling them out into variables with intelligible names? And why convert to doubles? Just rewrite as 
+
+Note that I prefer to use with manual synchronisation, although there's certainly an argument that if the body of throws an exception then we don't mind never loading the scene. I've made private because it should never be called except as a callback, and has access to it even as a private method. I'm also tempted to make abort with a fatal error if the number of incomplete actions is less than 0, because that indicates a major logic error which you want to catch before taking the project into production. 
+
+That's going to preclude an elegant solution (with or without Linq). In particular, uses O(n) space, so that's out. (So's ). Technically you could say 
+
+Firstly, your indentation seems broken here. Before pasting code into any StackExchange site you should ensure that it has no tabs or that your tabstop is 4 spaces, because the indentation will be forceably converted to spaces using that tabstop. This would be more readable with names for etc. Could be , , or anything simple and consistent. The correct way to avoid division by zero is to use instead of . 
+
+Should that be an error because is not a multiple of ? If not, what should it do? At present I think it outputs the value extrapolated for , without any warning that it's not the value for , and I think that's a bug. Types I'm surprised by the heavy use of . I would have expected . L10n Note that if you switch to using then you need to be wary when parsing the input because some cultures use as the decimal point. Library The YAMP changelog lists "Changed static to instance model" two versions ago, so you seem to have an outdated version of the library. For that change alone I would think it's worth updating. 
+
+Looks like the indentation went wrong on the second line, but more seriously: is actually useful? I think you could eliminate it entirely and just test whether is non-null. 
+
+I'm sure can be simplified further by someone who knows the Haskell standard library better than me. 
+
+If is longer than 80 characters, it will be silently truncated. I would think it advisable to check the length and throw an if it's too long. Similarly in the other method. 
+
+What output should I expect if I call ? What do I actually get? This bug can be fixed, and performance improved, as: 
+
+Why and not ? Well, ok, personally I'd split out and cases, but the point is that these look like exception conditions rather than "no solution" conditions. Why ? Would it not make more sense to require that the board size be exactly 9 x 9? 
+
+is absolutely not something you want to do on a production system unless you're also using to log it to somewhere private and ensure that the end user never sees the error messages. Similarly 
+
+Note: although I hinted in a comment that there's a solution, I'm deliberately not going to give it to you (and I hope that by bumping the question to the front page I don't cause someone else to) because in my opinion the point of challenge websites is for you to learn by doing, and you will learn more effectively by figuring it out yourself with hints than by getting the solution on a plate. However, I do have some comments on your code. 
+
+I could be missing something, but I don't see a need for this. If you're only using the minimum and maximum then you can find them in linear time rather than the quasilinear time which a sort requires. Although given your observations in your own answer about reusing values between loop iterations perhaps the optimal approach would be a binary heap to track the maximum and a separate variable to track the minimum. As far as C# style, the variable names should use camel case rather than underscores. And possibly I would use some Linq instead of some of those loops, but unless you're coming from a functional background that doesn't need to be your first priority. 
+
+This comment is better, but a reference or sketch proof for why this is the appropriate value would be good. Also, I'm not convinced that this is the best stopping condition in general. See below. 
+
+As to faster ways of testing primality, there must be hundreds of answers covering the topic already. I suggest reading top-voted answers in the primes tag. 
+
+Would be good to have better documentation: what's the relationship between and ? In my testing, the lookup didn't actually provide any speedup. I think this is mainly because it's such a big key. If I change and to be indices into , there is a speed saving. Obviously this also means changing , which is the only method which calls . 
+
+This is buggy. Add a unit test which inserts more than 100 elements into a heap, watch it turn red, and then fix it. 
+
+HSL is probably a good compromise between speed and linear perception, although if you want to focus on interpolation quality over speed you could look into XYZ and Lab*. 
+
+In order to make the number of elements variable, you're probably going to have to go beyond a single Linq expression. This is basically an adaptation of the standard problem of finding partitions of an integer, but you have addition constraints: no repetition, no use of the excluded values, and no exceeding . 
+
+If you use instead of then you give better hints as to how much underlying buffers might need to be increased: 
+
+This is also surprising. "Smallest" in what sense? It's unlikely that the smallest digit will coincidentally be the first one. 
+
+It's unnecessary to explicitly mention because extends it. Is there any reason for not making the constraint be ? 
+
+Tastes may vary as to which is the nicest implementation. You can test to see which is the fastest for your use cases. (Of course, for "serious" use as opposed to practice, itertools is your friend). 
+
+Why? I can just about understand including the version, although changing that is likely to break things. But the IV is implicitly verified by the MAC already without including it in the AAD. I'm not saying that you're wrong to include it, but it is surprising and therefore the reason should be documented, even if it's only with a link to a crypto.stackexchange.com answer which makes a case for including it. 
+
+The other way you could do this, noting that you don't actually use the return value of , is to have it return an error message or , along the lines of: 
+
+and eliminating reduced the time from about 9.7 secs to 7.9 secs. Replacing with a simple array and with reduced it further to 5.3 secs. And that doesn't yet address the biggest obvious problem: 
+
+which saves a multiplication in the exceptional cases and an addition in the primary case. Then since the calculations of both alpha and beta have a leading negation those can be removed along with the negation in that last : 
+
+Use of setter-only properties as methods. This can occasionally make sense where you need a property for binding purposes, but in general it's more obvious for methods to be methods.

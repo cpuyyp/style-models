@@ -1,0 +1,83 @@
+Since you seem focused on functional programming, the main suggestion I'll have is regarding the use of arguments. It is recommended functions use all their arguments (see how does not use ) and more importantly, that they only use variables that are either passed as arguments or defined inside their body (see how uses that is defined outside). Fixing for that and making other personal but minor changes, the final code would look like this: 
+
+Edit: And to handle a vector of as input, make these slight changes. It will return a list of matrices. 
+
+With thousands of files though, it makes more sense to process the files one by one and only keep the useful information before moving from one file to the next. It also makes sense to write a function to process each file. It could be: 
+
+I would use a matrix multiplication. It is both efficient and leads to much shorter code, as you can see: 
+
+is a data.frame (i.e. a list), so is also a data.frame (a sub-list). When you then do , the operator has to convert your one-column data.frame into a matrix before it can compare it to , which is very expensive. This is where the item at the top of your profile comes from. Instead, you meant to do: 
+
+You can improve your code by using vectorization to speed up the computation of Euclidean distances in the inner loop. The code would be: 
+
+I created a vector of TRUE/FALSE rather than a vector of indices like you did with . Both work but it is less typing without . See that I used so I did not have to type over and over. This also makes your code shorter and easier to read. I used instead of two statements separated by . That's another good function to know (imagine having many more than two allowed values...) Be careful that has higher priority than so what you had written was equivalent to which is not the same as what I think you had in mind: . Priority rules are documented under . As it stands, none of the rows in your example data match all the conditions you have specified so please let me know if I misunderstood something, I am sure it will be a simple fix. 
+
+is a little easy to misread. I'm always very tempted to use a loop for this kind of thing (also various kinds of pointer manipulation of a similar form) but it tends to end up being rather awkward. 
+
+Producing sample output on STDOUT, according to a command-line "count" parameter (this is not nice code, it's just here for reproducibility). Obviously, the performance of the filtering algorithm will depend not only on the number of sets, but also on the number of possible different names from which the sets are drawn, and the size of the sets. Smaller numbers of names make some approaches pathological; larger sets create more work for most approaches. Original program Your original program did not run as-is---it seemed to rely on a few parameters provided elsewhere, and a particular directory structure. So I modified it a little to accept a filename as its first argument, and output to STDOUT for easy testing. I also moved around the manipulation of the variable, as that seemed to either have the wrong indentation or be in the wrong place. 
+
+Bug: Check in is always true is a statically-allocated array. It will never be a null pointer, so this condition will always be true (high compiler warning levels should catch this). Usability issue: There are lots of platforms which are not windows or linux; exploding on those platforms because you can't work out what the path separator should be seems excessive. I would suggest wrapping that whole block in something like ; that way, you can define the macro using a compiler flag, and you don't have to care that you can't auto-detect this. If you were going to do that, I'd also suggest renaming to , as it has a kind of global scope (it's also a clearer name). Portability issue: only works on windows Strictly, I think that backslashes appearing in paths is undefined behaviour in some C standards. It certainly doesn't work right on Linux. On most platforms, should work if the file exists. If you were feeling really fussy about portability, you might also want to make it possible to get reasonable behaviour on systems which: 
+
+Here is an implementation of the ideas I had suggested in the comments: to store the output of so it is only called once, and to limit the expensive name comparisons to individuals that share the same initials. I hope it helps. 
+
+Instead of writing all the names in , you could get them from the file names. This would be particularly useful if you had many more employees: 
+
+I see nothing wrong with your implementation, in the sense it does exactly what you described in plain English, and somewhat efficiently. Here are however a few pieces of advice, mostly about improving your coding standards. 
+
+Update Taking into account the added details (in the comments and updated question), maybe this function will do? 
+
+This code has a baked-in assumption that there are four cutoffs. If you were to modify so its length is not four, then this would break. Instead, you could do: 
+
+Now about performance, since you mentioned it. Know that and are vectorized functions so unless you are handling many millions of rows or doing some high frequency trading, you should be fine :-) Minor speed improvements might be made by replacing the with in-place replacements (), I let you decide if this is more readable: 
+
+To fix that, you need to allow for some very small tolerance. You could mimic by setting that tolerance to : 
+
+I think you will know how to take it from here. Note that if your data is so large that you cannot handle all stations at the same time (i.e can't even compute ), you could loop on the main stations by bunches, e.g. 1000 main stations at a time. One remark: your earlier solution and the one I suggested here both use basic euclidean distance to compute distances. This will probably be fine if your data is restricted to a small region and far from where longitude jumps. Otherwise, you might want to look in a more appropriate function for computing the distance matrix. 
+
+the macros and get expanded to the filename of the containing C file, and the line in that file at which the macro appears; then you can pass them through to the function, which could then log something like: 
+
+(I'll mention how to generate this simply in a moment). You would then want to modify this to also pass through the row header, so you have the selector: 
+
+Your first pair of loops builds the list . The length of this list is \$O(n^2)\$ in the length of the input. In your second set of loops for each element in you all of to find those elements which match it. The runtime of this filter process is linear in the length of , and hence quadratic in the length of the input. You perform this quadratic process once for each member of the input list; the search loop is therefore cubic in the length of the input. Your algorithm as a whole is therefore \$O(n^3)\$ in the length of the input. To make the algorithm as a whole quadratic, you need to make the second (match) stage linear in the length of . Natural approaches would include: 
+
+Data storage If you change your typedef to be anything other than , your linked list implementation has to be copied and modified to handle multiple types (so it's less generic); on the other hand, you get better type safety. The tradeoff is probably in how you're going to use it. One thought: I would suggest looking at how the linux kernel does linked lists: they have a struct, which is then included inside the data types that you want to put into a list. So it looks something like (e.g., if you had a linked list of strings): 
+
+I leave that up to you but at this point, I think you would probably get even faster computation times if you replaced the recursion by a simple loop (since time is lost calling the function many times and maintaining a stack of function calls). 
+
+Then, it is also a good idea to write a separate function for each of the fixes you have. It makes your code easier to test and reuse. Also, when using appropriate function names, it makes your code self-explanatory and can replace all the comments: 
+
+Next, we map each value of to the "group number" it belongs to (here, belong to group #1 then belong to group #2): 
+
+2) Your choice of will not properly handle the . Also, it does handle the case properly but it is a bit of luck considering you are looping over ... The robust alternative to the operator is to use or . Or you could just have a near the top of your functions. 3) While on the topic of corner cases, your code assumes that is a numerical vector. You could be checking for that by adding: 
+
+This can be handled using matrix multiplication. Under the hood, matrix multiplication contains a for loop just like your code does, but it is a lot faster since it is all implemented in pre-compiled code. So first compute a matrix of and where each row corresponds to a combination and each column corresponds to one of your variables: 
+
+Improved version of original program To start with, I just applied some polish to the original program, maintaining the approach and spirit of the algorithm while tidying up the code. Starting immediately after the line: 
+
+you can then just print that list to print the (filtered) row. Note that you could also do this filtering yourself, using a list comprehension; however, has the twin advantages of being common (hence readable) and carefully optimized (hence fast). 
+
+Then, you have a bunch of linked-list functions which operate on pointers, and use an macro to get back from the to the enclosing structure. Not to say that this is better, but it's arguably a more type-safe way to get 'generic' linked lists in C. Both approaches are valid, though (and yours is more 'classic'). Const correctness I would generally say that things should be whenever possible, because it makes programs easier to reason about. I generally encounter the opposite problem to the one you're describing, though: something is conceptually const, but for incidental implementation reasons it needs to be mutable. DLL naming Well, 'dll' isn't the clearest name, because of the conceptual collision with Windows libraries. It probably isn't a big deal unless you're writing software on Windows and using dlls. I would be tempted to just call this module "list", or "ll", though. The only real constraint on the include guard macro is that it not collide with any other names in your program. I suspect that is probably fine. (Obviously, if you have some style guide or standard, that probably specifies a convention). Implementation This is pretty nice code overall. If I were feeling picky: 
+
+Note however that a loop is quite taxing on your CPU. Instead, you should use the friendlier function. It takes a number of seconds as input: 
+
+It is recommended you avoid variable names like and since they are very basic functions from R. Or you run the risk of shadowing them. and are not integers so using is a bit unpredictable. I feel it is better to use like I did, and with control over the grid density. I was not able to test my code because you did not mention the package name for so it is possible it will need some adjustment. In the future, please make sure to give us everything we need to run your code. 
+
+If you were to add a at the top of your function, you would find that your function is called 25 times, once for each combination (pair) of pathways. So yes, despite having used , it is still essentially a big old loop you have under the hood... Here is how I would write a vectorized function so the heavy-lifting function (, or in my case, ) is only called once or twice: 
+
+Here is how you would do it with no for loops. The function computes the distance between every pair of rows of a matrix. So you have to apply it to two matrices: 
+
+There are certainly more things that can be done. One thing that comes to mind is to use the package instead of data.frames since you have such a large data. But please let us know first how much faster this code is. Maybe it won't be worth the extra effort. 
+
+Static methods on RPNStack It is odd to write a class like with all static methods and fields; effectively, you have a single global stack, for no particularly good reason. The obvious thing to do would be to make all of those methods and fields instance methods/fields, and then create an instance of within . Output It isn't clear to me why would not be working for you where does; however, you aren't closing or flushing the file, and it may be the case that some subtle difference is causing the file to be flushed in one case and not in the other. I would expect that if you close your at the end of your program, it will work fine. Recognising symbols The obvious and lightweight way to recognise a small set of symbols like this would be to use a statement. If you have Java 7+ (which you really should) you can just use strings directly as labels; otherwise, you'd have to switch on characters (which would still work for your simple language). For a more complex language, you could consider a map from symbols to actions. Error There are kinds of errors which won't be caught by your . But I don't think you need to worry too much about those. The only bit of error handling I would consider adding is that it's possible for the user to enter an expression which causes a divide by zero error. As your program stands, this will throw an and terminate the program. I would suggest either catching the and recovering with an error message, or validating the operands you're passing to the division operator. Minor nitpicking 
+
+This way, each iteration will only have to search through $M = 2154$ rows instead of the 100k. But it is not fixing everything and I prefer rewriting your code with your more general goal in mind, where 
+
+You can indeed use vectorization. Create two vectors of indices (or booleans like I did) to identify the rows of the that need to be updated. To find the corresponding row from the , you can use the function like I did. 
+
+I'll give it a shot, as I read through from the top. I'll skip the comments but keep them, this is an excellent habit. You are doing well identifying your globals and leaving them at the top like you did: 
+
+The main thing to note is that your profit function only uses vectorized functions ( and ) so it is vectorized with respect to its four inputs. This means that you do not have to create loops; instead you can just feed the functions with vector(s): one vector for the variable that you are shocking, and scalars for the other three fixed inputs. Here is my suggested rewrite, having put everything into a function: 
+
+One thing that needs explanation is the use of . It is a little known use of the function documented as follows (you can access the doc by typing ) 
+
+the use of rather than looping over an unused argument the use of 's and arguments rather than the trick you used making an optional argument

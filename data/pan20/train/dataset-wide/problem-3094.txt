@@ -1,0 +1,83 @@
+Haskell can do a lot of optimization, but only if it has enough information. As it stands, will get a prefix like: 
+
+This is again basically your version using direct list construction. Only difference is that we now deal with whitespace once per token, which I feel is slightly more elegant. 
+
+GHC will not unroll these, which means that you have constructed a multiple-level loop doing trivial list concatenations in a completely predictable manner. If you for example wrote it as: 
+
+We know that the first character is even without looking at the rest of the string, whereas your function always needs to finish a complete token before it can return. And as we are programming in Haskell, we often like our functions as lazy as possible. Finally, a matching implementation: 
+
+Which is much easier to understand than trying to bend the fold to do the right thing. Also, just as a suggestion, here's implemented in a more "imperative" (read: monadic) style. After all, Haskell is said to be the best imperative language ever invented, so we can do that proudly: 
+
+This "grouped" hand representation has the nice property that you can write hand group checks like follows: 
+
+The reference solution is already a bit flawed: It depends on the fact that the standard library happens to use commas to separate elements when pretty-printing lists. That's the only reason it can just throw brackets on the string and then run it through (these functions reconstruct the data structure from its pretty-printed form, e.g. ). If the question was about a semicolon-separated list, this approach would need significant modification. Building on top of this is a complete waste, I would suggest you approach the problem with a fresh mind instead. Your problem isn't complicated - you get a list of s from , and want a list of s to pass to . Do you know how to read an from a ? Do you know how to apply an operation to all elements of a list? That's really all you need here. 
+
+I would suggest two refactorings: First note that you can indeed simply merge the four loops by giving them tuple results. After a few smaller changes I arrived at the following code: 
+
+Using as a guard mid-expression isn't a good idea. Using is pretty "evil" in the first place, you don't want to bury it like that. Putting the in the would allow you to say is simply . I'm not quite sure why you filter for that, to be honest. Wouldn't having in the list be a pretty elegant way to implement a default fallback value? I am actually quit struggling to understand the rest of your code. I am pretty sure that your usage of actually hurts more than it helps - generally when you start pattern-matching on the contents of a monad you are doing something wrong. Could you explain what you tried to do? 
+
+Why do in , then go back to again? You could simply use there. is very inefficient: the operation always iterates over all life cells, and you are calling it three times per existing cell! That's unneeded, as you only ever care about a handful of neighbourhood cells. 
+
+Edit: This answer was given when the reviewed code looked quite differently. Any specific questions? Here's what stands out for me: 
+
+The style is pretty good, I can just see two minor improvements you could do: Firstly, you can define in terms of your own in order to save a few keystrokes: 
+
+A good rule of thumb is that you should only ever use when you're really sure that your fold is not an instance of something simpler. In your case, the fold is doing pretty much exactly two things while traversing the pattern list: 
+
+Once more this trades for a bit of efficiency, as the traversal in makes it O(n²). Not sure whether that can be helped though without involving more complex data structures. 
+
+Find a library function that frees you from actually constructing the list yourself. But to be fair, for this examples I can't actually think of anything helpful myself. Use a data structure that copes better with it, such as from . First construct the list using just , then it at the end. That might seem inefficient, but given that is only O(n), it will never actually increase algorithmic complexity. Rebuild your function so it constructs the list in the right order right away. 
+
+Hm, this could probably be done using or similar, but that would require you to convert to and from lists. My first impulse would be to try to write the top-level of using Applicative style: 
+
+Why do you have so much redundant data in ? That just means you have to put a lot of effort into keeping everything up-to-date - which doesn't just make your program longer, but is also prone to mistakes. By eliminating all redundancy as well as replacing the explicit state variable by control flow, the function can be simplified down to pretty much the following: 
+
+depending on whether that seems like a good idea to you or not. The latter representation is better than it might appear at first - after all, the instance allows you to easily convert to and from numerical values using / , so you don't have to change your & instances much. 
+
+Which is also probably slightly less efficient, as it will construct at least a thunk for the rest of the . Concerning different approaches - you could make a recursive function that removes all duplicates: 
+
+You should try to isolate your simulation code as much as possible. Right now it is in "main.hs", which should normally just handle initialization and configuration. Splitting out the actual maths bits would be a pretty straightforward improvement. On a similar note, you already have a monad, but aren't using it as an encapsulation tool - your core simulation code still uses directly. Try to find out what "verbs" you are really using, then define some simple wrappers for those (say ?). After you have eliminated all direct access, you can then export the monad and all actions to its own module, newtype-wrap it and stop exporting its definition. Having this sort of infrastructure would for example make the switch to much easier. 
+
+My idea to fix issue 2 would be to build a of the neighbour count of every cell. If you represent the board as a with only cells in it, that can be done pretty efficiently using and : 
+
+Hm, but isn't your implementation actually quite incomplete? Right now, you can't distinguish between ace-high and jack-high straights, for example, or equal pairs with different kickers. Here's a quick (untested) sketch of how I think you could build the program to have all the mentioned features, using slightly more involved trickery: 
+
+So we first filter out all alternatives where the first element doesn't have as infix. Then we return the second element of the first remaining element, if any. Some random notes on your code: 
+
+To add one more suggestion - building records can be simplified quite a bit by using the extension, which automatically populates fields from visible names (see GHC docs). Personally, I consider it borderline essential for dealing with large records. I would probably write this like follows: 
+
+Meaning that it traverse the list, checks that it contains exactly three elements, and then unpacks every separately. By passing or your own you would give Haskell enough information to derive that it can skip all the heap allocation. 
+
+Admittedly, this does quite a bit of re-computation, especially on the "duds". Yet we can probably expect both words and game lengths to be small, therefore it is better to go with a more compact program. 
+
+I didn't test this, so apologies if I introduced a bug at some point. But this is the direction I would go into style-wise. Final note: Generally, when you find yourself passing in and out big tuples of things, it is often worthwhile to starting looking out whether a or monad might improve things. For example, you could have a monad tracking your current pots. However, the rest of your code doesn't look like it would benefit from this transformation, so I left it like this. Code can be found in my GitHub fork. 
+
+Now admittedly, this is a bit advanced. It might be easier to try to restructure or use a type solution. 
+
+The second should be easily recognisable as a - maybe less obvious is that the first can just be written as a with an enumeration: 
+
+Note that usage of is only safe because the order of coordinates doesn't change when we add a constant. Effectively, this means that the library can simply replace the concrete coordinates without any internal resorting. The iteration is then a simple matter of using , and over the result: 
+
+That would make a global constant that only gets evaluated once and would allow GHC to fuse the with the in , eliminating the intermediate list completely. 
+
+The second change I would propose comes from the observation that you have two getting passed back - as well as a number that is in two cases always zero! We could easily translate that into an algebraic data type: 
+
+Actually, I might have mis-interpreted the profile for point number two a bit - the following is actually a big no-no: 
+
+The key here is that we add the character using after the recursive call returns, and therefore to the front of the string. A notable advantage is that this version has better laziness properties: 
+
+But that doesn't work directly here, as you want each to know the of the last action. One way to realize this without breaking up the above structure would be to have a monad transformer take care of passing around the current : 
+
+Some more ideas - you could have an instance / derived without all the boilerplate if you defined either as 
+
+Heap profiling will not tell you much in this case - memory leaking is definitely not your problem. Using cost-centre profiling would probably be better suited for identification of the hot-spots. After looking at the profile a bit (using home-grown tools), the worst offenders seem to be: 
+
+At this point Haskell's typing even derives the type of for you, so you can lose the explicit annotations. Second, you should probably use instead of . That is not only shorter, but also updates the generator state, which means that you won't get the same result if you call it twice in the program. 
+
+Why do you need the element type to be a monad? The only point you require it is when you do in order to signal failure. I'd propose implementing a more general function 
+
+Now this is arguably nice code - even though I personally don't like overly tricky constructions or usage of the list monad in the first place (list comprehensions!). The performance problem here is that this becomes something like follows after desugaring: 
+
+Edit: If the position of the match end should take priority, I would propose going over the prefixes of the string and suffix-test the options: 
+
+Apart from general code layout I don't see much to improve - the only issue worth talking about is that you should never ever actually use something like . Your function is needlessly O(n²) for that reason alone. That might not sound like much here, but it is a good idea to shake this habit early. So let's talk about that a bit. Your options generally are:

@@ -1,0 +1,105 @@
+Not exactly what you are looking for but could perhaps be of interest to you. The query creates weeks with a comma separated string for the days used in each week. It then finds the islands of consecutive weeks that uses the same pattern in . 
+
+When you remove to your entire block of code is one batch. The you have terminates the batch and nothing more will be executed. When you have the in the code, execution will continue with the next batch when you do . 
+
+Instead of persisting to temp table you can use in a derived table to force SQL Server to evaluate the result from the joins before the UDF is called. Just use a really high number in the top making SQL Server have to count your rows for that part of the query before it can go on and use the UDF. 
+
+You should shred on in your second query as well and use a predicate against the node in the values clause and then get the value from node. 
+
+This will order all rows with first since the case returns if . All other rows will have a returned by the case. The clause makes the query return all rows that is a "tie" for the last place in the rows returned. Using in combination with will then return all rows that has the same value as the first row in expression used in the order by clause. Note, as Martin Smith pointed out in a comment, it will return all rows if you ask for a town that does not exist in the table. If you don't fear the XML things of databases you could make use of a predicate in the nodes() function. Borrowing the setup from Paul White. 
+
+You can split your query into two different queries allowing for two different covering indexes to help you find the rows faster. One query that checks and another that checks . 
+
+Not sure what you are seeing and not seeing in the event log but it works as expected for me (version 11.0.3000). The mistake you did with your extra path expressions is that you forgot in the path. Testing this with the extended events and looking at the execution plan for operator (there should be none), I found that one extra path is enough for your queries to make it use only the index to fetch the data . You can have in there as well and perhaps it will make a difference or not depending on what your XML look like. Note 1: You have mixed up the names of the columns in the index and your query. That might contribute to the problems you have with extended event. Note 2: The events for missing selective XML indexes is generated when the query is compiled. If the query plan is used from the cache you will not see any events. 
+
+The key factor here is the two rows in . You are joining to in the inner most query and with data like above you will get duplicate rows for each row in . Since you are not using any of the columns in you are only checking for existence of rows and that can be done with a clause instead and that will of course not create the duplicate rows. 
+
+The recovery process for OLE is implemented a bit differently. The resource manager has a list of prepared transactions and is responsible for reenlisting them in the DTC. Have a look at the Performing Recovery section of Implementing DTC Interfaces. 
+
+Some good advice already here but none that targets the question you have. You do a group by on in the main query and then do the concatenation in a subquery that filters on the from the main query. 
+
+If you are on 64-bit Enterprise, Developer, or Evaluation edition of SQL Server 2014 you can use In-Memory OLTP. The solution will not be a single scan and and will hardly use any window functions at all but it might add some value to this question and the algorithm used could possibly be used as inspiration to other solutions. First you need to enable In-Memory OLTP on AdventureWorks database. 
+
+There are a couple of connect items that might be relevant here. An INSERT statement using XML.nodes() is very very very slow in SQL2008 SP1 Poor xml performance with table variable Bad performance when inserting data from element-centric documents INSERT from .nodes with element-based XML has poor performance on SP2 with x64 I have not been able to reproduce what you see with your query so I can not say for sure what is happening for you but one issue was that there was an eager spool step in the query plan that was not needed. That eager spool can be removed by using a trace flag in the first fixed versions of SQL Server. I am not sure if that is needed in later versions. The eager spool was in there "due to a general halloween protection logic". That might explain why you see the bad performance when you insert to an already existing table. If you have a look at the query plans for both your queries you should see the difference if that is the case. There are also some workarounds suggested that you can try and I think you should try to specify the text node when you fetch . 
+
+Database in full recovery mode Take a full backup Make some changes Detach database Make a filecopy of the LDF-file Restore from full backup in step 2 Detach database Make a filecopy of the MDF-file Throw away the backup (important step) Delete the database Somehow make the MDF and LDF play together with the change made in step 3 still in place. 
+
+Since this is a SQL Server 2014 question I might as well add a natively compiled stored procedure version of a "cursor". Source table with some data: 
+
+If you don't do that SQL Server will aggregate all text values below . For your XML you probably don't see a difference in the result but if was a mixed content node with both text and sub nodes you would. 
+
+Update: A demonstration of the different sort orders for varchar columns using windows and sql collation. SQL Fiddle MS SQL Server 2014 Schema Setup: 
+
+You can use the trick to concatenate the strings you need directly in the recursive function. Something like this should do it for you: 
+
+You can easily test the performance yourself. Create a regular table that you can test your queries on. 
+
+Get the value from the XML as a string and do some string manipulation in a case statement. Example with simplified XML: 
+
+If you would like to create the view dynamically from the XML Schema you can extract the colors with this query. 
+
+The synonym is owned by the database so you can have the same synonym name in different databases pointing to tables in different archive databases. The stored procedure can then be the same in all databases using the synonym(s). You do of course have to create one synonym for each table in the archive db that you want to use from the SP. 
+
+Note: Your trigger will fail if you insert more than one row at a time. The trigger is executed once per insert statement, not once per row. 
+
+Aaron Bertrand blogged about some of the alternatives you have in Split strings the right way – or the next best way 
+
+SQL Fiddle calculates the for each team and match. finds the previous ordered by . generates a running sum ordered by keeping a a long as the is the same as the last value. Main query sums up the streaks where is . 
+
+The query you got from Forrest can be improved a bit. Using the parent axis is almost always a really bad idea in xQuery in SQL Server. You can avoid that by shredding on first and then use a cross apply to shred on . Also using is not a good idea. Better to make sure you only get one value out of the function by using . One extra thing for performance is to specify the node in the . 
+
+Not sure I get what you are want here but it could be that you can use a sort order value in your table expression and then use that in an order by clause. 
+
+You can make use of some XML to query columns that might be in the table. Build an XML from all columns per row in a cross apply and extract the value using the function. In this query ID is known so get it from the table directly. Col1 and Col2 might be there or not so get them using the XML. 
+
+It is a good thing in general to always specify the node. The query plan is simpler and more efficient. 
+
+The query above works from SQL Server 2005 even with compatibility SQL Server 2000 (80). If you find your way to SQL Server 2012 you can use lead and lag instead of simulating with an . 
+
+If your structure is only two levels deep you can use one nested query to build the sub branch part something like this. 
+
+Have a look at the blog post Split strings the right way – or the next best way by Aaron Bertrand for a couple of versions to choose from. 
+
+That is because union is trying to remove duplicate rows. If you don't need that you should use instead. If removing duplicates is what you want then you should add a the the query above. 
+
+You can use an instead of trigger instead where you do the update in before the delete in . The trigger could look something like this 
+
+You should be able to do this with some string manipulation using charindex() and substring(). It looks like you can use to find the start of the value you are looking for and to locate the end of a value. 
+
+You can change your column to a and update the value with a calculation using the values from the posts you want to end up between. Example: 
+
+You selected the default instance name as the name of your instance. Instance Configuration "If you specify MSSQLServer for the instance name, a default instance will be created. For SQL Server Express, if you specify SQLExpress for the instance name, a default instance will be created." To connect to the default instance you don't specify the instance name, only the server name. 
+
+Will give you one row returned but the estimated rows returned is 200. It will be 200 regardless of what XML or how much XML you stuff into the XML column for that one row. This is the query plan with the estimated row count displayed. A way to improve, or at least change, the estimates is to give the query optimizer some more information about the XML. In this case, because I know that really is a root node in the XML, I can rewrite the query like this. 
+
+SQL Fiddle BTW, your CTE version does not work either Another way to do what you do in this update statement a bit more efficiently (at least in my tests). 
+
+Because it does not always improve your query and if your data changes so the plan has to be adjusted accordingly you have basically limited the optimizers possibilities. 
+
+I have no idea why you see that. The query you have returns a count of 1 for the departments without employees. SQL Fiddle 
+
+You can filter out the rows you need to consider from the target table in a CTE and use the CTE as the target in the merge. 
+
+Another way is to extract the XML to an untyped XML variable, modify the variable and put it back to the table. 
+
+It looks like the speed of executing T-SQL is dependent on the latency of the network connection against the server. I assumed that if SQL Server has nothing to report back to the client about, it will just execute away until it is done but testing shows another story. 
+
+So when you create a PATH index, the first column in that index is the path expression and the second column is the value in that node. Actually, the path is stored in a kind of compressed format and reversed. That it is stored reversed is what makes it useful in searches using short path expressions. In your short path case you searched for , and . Since the path is stored reversed in the column, SQL Server can use a range seek with where is the path reversed. When you use a full path, there is no reason to use since the entire path is encoded in the column and the value can also be used in the seek predicate. Your questions: 
+
+The most complicated part of this query is probably the XQuery expression used to get the values for and . is a predicate that looks at the value for the node and returns true if it is . The rest is basic XML query stuff using nodes() to shred the XML on to get one row per detail element and value() to extract the values you want from your XML. 
+
+If you do you will get a element with an attribute. On the next line you add ot get the value of as the node value to the node you created on the line before. 
+
+It is not possible to validate XML against a DTD file using SQL Server. You can validate the XML with a XSD stored in a XML Schema Collection using a strong typed XML variable 
+
+Try to persist the result from cte searchresult to a temp table and use the temp table in the main query instead 
+
+You can use the get the and values and in the column list you can use to see if the gap is something other than one day. 
+
+When you do the query optimizer will build a plan that is built to fetch 1 row as fast as possible. When you use a local variable the value of the variable is unknown to the optimizer and instead builds a plan that is optimized to fetch 100 rows as fast as possible. In your case the query plan generated with a row goal of 100 is the better plan to use even when you only want one row. To verify you can try to add to your query with the variable. In that case SQL Server will use the current value of as a row goal and since that is 1 you should get the slow plan. 
+
+Scalar valued functions takes time to invoke and by the looks of it you are doing quite a few calls to . You could rewrite your function to a inline table valued function instead. 
+
+You can use backup/restore. Take a backup of your dev db and restore it on the live server. Should be a bit faster than 2 hours. 
+
+In the case where there is a tie for most common combination (SSN = 3) the above query will keep all the rows for the tie.

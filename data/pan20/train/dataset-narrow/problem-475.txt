@@ -1,0 +1,59 @@
+does not order groups randomly. is totally random. comes to mind but I need a new random order each time. How can this be done? 
+
+I'm not sure how to conclusively test which way it is. I'm not sure the Live Query Statistics output can be trusted in this way. Does anyone know how this works? 
+
+I learned that SQL Server can return the value of the (single) identity column of a table using the pseudo-column : 
+
+Does Azure SQL Database support indexed views? Does it support automatic indexed view matching without ? Does the answer depend on the pricing tier? I was unable to find definitive answers to these questions. The feature differences guide does not mention indexed views. The indexed view documentation does not contain the word "Azure". 
+
+Pull first probe row. Complete the operation if no row available (short-circuit). Match all probe rows against it. 
+
+I used the column to find indexes/partitions that have ghost records. I found a few that have one such record. I then tried to queue them up for processing by scanning all pages: 
+
+I'd like to keep rows with the same together in the result set. The groups themselves should be ordered randomly, though. is supposed to be the secondary sort criterion. Like this: 
+
+Row versioning maintains 14 bytes of internal versioning information for each row. But is this really a cost per row or is this a cost that also applies to each index on the table? It seems the 14 bytes must be added to all index records as well so that index-only scans (and other index-only accesses) can see the versioning information and perceive a point in time snapshot of the data. All information that I could find on the web only talks about a per row overhead of 14 bytes, though. 
+
+.. given that the table or common table expression contains 39 unique records with . You could add different filters for your purposes, like how many odd numbers: 
+
+I hope I've understood your question correctly. Also, note that this is ad-hoc coded, without testing. Let me know how it works out. 
+
+The permission is assigned to the server-level principal (the login, i.e. not the user, which is the database-level principal), and therefore, you'll need to apply it to each availability group replica. I would recommend that you apply (deny) this permission on a server role rather than individual users to keep it manageable. More detailed reading on the subject: $URL$ 
+
+The works as a "windowed group" and the does the ordering within the group. However, because you're using , you're effectively reducing your window to just a single row ( is performed before the windowed function). The average of a single row will be the value of that row, in your case . As for query 2, are you trying to create a running average or something? Not even sure what you would expect that query to return. If you remove and change to just , you'll see the difference. Here's an example that will hopefully explain the use of and/or : Random table: 
+
+The is like a regular , but without any conditions, so it produces a cartesian product (12 rows for each row in "t"). There are prettier (and faster) ways of writing the code on different platforms, but this syntax is ANSI SQL compatible. On a side-note: I wouldn't include "total" as a column, since that's calculated from the number of items multiplied by the item price. 
+
+The documentation calls out the behavior of and so I understand that part. But the operator seems to behave under a more complex set of rules. 
+
+This sometimes causes the query to abort. How can I disable IO timeouts on my dev box? Also, in case the query does not abort I sometimes get dump files. How can I disable those? 
+
+When you say in T-SQL and and are of a string type (e.g. or ): How is the resulting type determined? I found no clear rules for this when experimenting. It seems to depend on whether literals are involved. Also, how is the length determined? I found out that the type of is . Apparently, the length of the literal is being tracked. Here's a little experiment that I ran: 
+
+On my dev box I sometimes need to run very IO intensive queries such as index builds and . This can put so much load on the disk that it hardly can process anything else. This causes enormous lagging in other programs. For that reason I sometimes need to suspend using Process Explorer. If I do that for longer periods of time I sometimes get IO timeouts such as 
+
+I then waited at least 10 seconds to let the ghost cleanup task run. But the ghost records do not disappear. I also tried restarting the server. No ghost related trace flags are in use. This is not an actual problem that I'm having. I'm trying to understand ghost cleanup in general. Why do the counters not drop to zero in tables that have no writes? 
+
+Watching queries execute with Live Query Statistics I noticed that it seems SQL Server is lazily constructing a hash table from the build input of a hash join. This is a meaningful difference in the case of 0 probe rows. It potentially saves the entire build side tree. I always thought a hash ran like this: 
+
+As you can see, it contains an ugly self-referencing subquery and hard-coded columns. My recommendation is that you should probably look for ways to solve this problem in the application layer, by returning the table data properly sorted: 
+
+Clustered indexes include every column in the table, which automatically makes a clustered index a covering indexes. From here, I've updated your query to do three things: 
+
+You can build a view that "unpivots" the table and divides and by 12 for each row. The syntax would look something like this: 
+
+Without commenting on your encryption solution per se, storing a string or password in the database can be as trivial as creating a single-row, single-column table and properly restricting the permissions on that table. Another approach would be to create an encrypted view with a hard-coded column. 
+
+You could probably use an XML datatype to store the lists. This way, you'd preserve the ordering as well. Haven't done any extensive performance testing, but with typed XML (a schema) and an XML index on the column, this might work for you. As for insert performance, one advantage of this approach is that you only have to make an insert into a single table, which reduces the risks many deadlock and contention issues, particularly in transactions. Create the XML schema: 
+
+I would not make modifications like adding primary/unique or foreign key constraints to a legacy database that you haven't built yourself. Chances are that the original developer, given the problems and design issues you mention, may have built logic that breaks with such constraints. For instance, if the app uses a 0 in a key column instead of NULL to represent "nothing", a foreign key constraint would fail that UPDATE/INSERT, even if the value is just used temporarily in a procedure. The best place to start is probably to identify specific queries that show performance issues or cause locking, and deal with those. Just adding proper indexes on strategic tables may prove a huge improvement for you. As for cursors.. some devs just don't know better. :) 
+
+The results that were returned only contained information from the instance the database was restored onto. Not a single user login from the instance the backup was taken from was returned in the result set. 
+
+I have a configuration where one database is log shipping to three different servers hosted in a disaster recovery site. These three disaster recovery servers are joined to the same AlwaysOn availability group (AG). In the event of failover, we recover the database on the server acting as the primary replica of the AG and then add the database to the AG using the 'Join only' synchronization option. Since the databases on the secondary replicas are already in a non-recovered state, the operation succeeds and we end up with a database synchronized across the AG. This is 100% great. New problem: Our monitoring software does not like it when databases are not in a readable state. So while we are in our primary site and are log shipping to our NORECOVERY secondaries at the disaster recovery site, our monitoring software opens high-priority tickets because it thinks the secondary databases are down (because it can't read them). Making the secondaries readable by switching them from NORECOVERY to STANDBY solves this issue, but creates a new one. When we failover to the disaster recovery site and try to add the database to the AG (as outlined above), it fails because the databases on the secondary replicas need to be in NORECOVERY in order to successfully join the AG. If we switch these databases from STANDBY to NORECOVERY before attempting to add the database to the AG, we receive a message saying the databases on the secondary replicas are not restored far enough in order to be joined to the AG and the join fails. If at this point, we take a transaction log backup of the database on the primary replica and apply it to the secondaries with NORECOVERY, we can re-initiate the join procedure successfully. It would seem that changing the secondaries from STANDBY to NORECOVERY is causing the engine to determine the databases are no longer in sync but I can't for the life of me figure out why. Anyone have any ideas? The only thing I can think of is that the act of recovering the primary database itself was enough to bring them out of sync, but if this were true, shouldn't it also be the case when we simply leave the secondaries in NORECOVERY to begin with (like our original plan)? 
+
+Obviously, I don't have your data to test with, but I imagine this should be a really well-performing solution. 
+
+Things you can do to reduce (you can never eliminate) deadlocks in a multi-user relational database: Reduce the duration of transactions. Any deadlock is the result of two processes competing for the same resources, so the fewer simultaneous processes are running, the less risk of a deadlock there is. This does not just apply to hour-long ETL jobs, it could very well apply to millisecond OLTP transactions if there are many enough. Performance tune your long-running queries or tweak your server infrastructure for better throughput. Also, I've seen examples where a process can hold a transaction unneccessarily. For instance, in some ETL processes, there's often just a single process loading data and you may not need transactional integrity at all - if it fails, just truncate everything and reload it again. Remember that a regular SQL statement, even without a / also implicitly creates a transaction (which commits as soon as the statement completes). Try placing locks in the same order. The textbook example on how to create a lock is: 
+
+Pretty sure the problem is in the username. When you connect to an Azure SQL Database instance, foo@bar implies that you're connecting as the login "foo" to the instance "bar.database.windows.net". The credentials you use when logging into the Azure management portal won't work when you're using SSMS. Verify that you've set up a SQL Database login, and use that login. The admin account is set up in the Azure portal - you can verify the login name by clicking "Properties" on the server instance. Regular logins/users are set up as 1) logins on the database server, or 2) as contained users in each database (if you have enabled containment), or 3) in Active Directory (if you've configured one).

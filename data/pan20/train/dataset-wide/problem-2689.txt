@@ -1,0 +1,47 @@
+Now on to javascript, where most of my feedback relates: Don't cram all your game logic into one function. You have way too much going in this this function - game setup, cards being dealt for individual turns, card deck being shuffled, win/loss resolution, etc. 
+
+Your singleton is implemented improperly. The constructor must be private to prevent object instantiation from outside the static instantiation method. 
+
+I question why you would want to put a critical dependency like a config setting into a mutable variable in global scope vs. something immutable (like a constant). So perhaps something like this is more appropriate: 
+
+You are likely doing yourself a great disservice if you are not extending upon PHP's object (or implementing against SessionHandlerInterface) if trying to make an object-oriented, custom session handler. As it stands right now, your method names do not really map to the expected method names to be used for , which makes it unclear how you are expecting this class to interact with those built-in PHP hooks used by session set save handler. 
+
+You also have a potential edge case you might need to address. What if subject string is all caps? Since you use case-insenstive match you could end up with an all-caps plural word geting lowercase letters replaced into it. Should you really be case-insensitive here? Should your function name indicate that the function is only applicable to Portugeuse? 
+
+Be consistent with style around variable naming. You probably should not be using first letter caps for any properties or variables in PHP (which is more or less industry standard). See the PHP Standards Recommendations for good suggestions on standards to follow (particularly PSR-2 around coding style). 
+
+Try to avoid loose comparisons like this. Here values like , , '1'` would all evaluate truthily. What value are you ACTUALLY expecting from your API? Be specific. 
+
+Is this meaningful validation? You could get your application in a bad state here. Perhaps flip your conditional around and check for valid instance of . 
+
+I would agree with your concern over naming, as this doesn't really seems to be a "service", but rather a simple data store. So perhaps or similar is more appropriate. You have some portions of code that are omitted that might suggest a more permanent data store being used in conjunction with this class, so perhaps this is really acting as a cache ()? 
+
+This appears to be hard dependency. You should use such that this script fails out of you can't load the dependency. Also, your style of adding space between function/method name and opening parenthesis would be considered non-standard by most PHP developers. Typical usage has no space. This makes reader less likely to confuse this parenthesis with a logical operation. 
+
+In either case, don't call repeatedly in single method. It is unnecessary. Get the result of and work with it. 
+
+Here you make all your dependencies clear up front, not hidden away in other class files. You also set up your single DB connection and pass it to the User_Login upon instantiation. You are injecting your dependencies to the objects that need them, allowing you to remove all logic from classes on how to set up their dependencies. 
+
+That way if the caller wants to get the error message later they can (via your getter), but it is really easy for them to differentiate a good result from a bad result on the method call. 
+
+When inserting votes, why make a call (and 2nd query against the DB) to ? You could just set value to 1 on insert and/or have default value for that DB field be 1. 
+
+I find it odd to have all you logic crammed way down at the bottom of the script after the point where you have already rendered output to the browser. Ideally, if you have a script which have different GET and POST logic, you would handle all the database interactions up front and make it much clearer earlier in the script whether the code is relevant to GET or POST. 
+
+Outside of the other answers about the general utility of this function, I figured I would add some additional thoughts on the code itself. I do agree with those other opinions though that this function just seems to obfuscate your code behavior. 'typeof' is so universally used and understood, that I don't know why you would want to introduce this potential point of complexity and confusion. The first thing goat jumps out to me is all the unnecessary nesting. You are doing a good job of returning from the function as quickly as possible, but then still leave a bunch of unnecessary else code paths. If you return in the if. The else should not be there. Remove them and de-nest your code. You will also find this would eliminate need to check for function or regex multiple times. I do not understand why you would return lowercase first characters in your return values. If your are testing "Object" for example why return "object"? This especially seems odd when your very last line of code for the fall through use case does not apply this same pattern. 
+
+You then extend this class for each for each DB table that you want to work with as an object. A sample implementation might look like: 
+
+Or something of this sort, such that you don't have to traverse this multi-level template structure. You just seem to be wasting a lot of iteration looping over the template because it may not be structured in an optimized fashion. 
+
+Ideally, you should keep your passwords, API keys, etc. out of your code and inject via configuration. Why do you hard-code your API key twice here? 
+
+This is consistent with your usage in in inheriting classes and consistent with iterator interface. This also allows for override of in inheriting classes if there ever was such a need for this. 
+
+If you are using PHP 7.1, consider using session_create_id() to establish better connection between indvidual user and their session id. This allows allows better usage of prefix index for database lookups if ever using a relational database as session storage medium. 
+
+I would suggest using exact comparison operators and as default comparisons on your coding vs. loose comparisons. Using unnecessary loose comparisons tends to make you code more fragile to unexpected truthy/falsely behaviors. You should use loosed comparisons only when there is a specific reason to do so. 
+
+Both examples show really poor coding style which honestly makes it hard to give a good evaluation or to come to some A vs. B decision on which code is better, as both pieces of code have significant problems. 
+
+I would like to also add to the "Avoid Undefined Behavior" thoughts from @janos♦ I think his example of "returning early" from within a method is a good demonstration trying to design away conditions. Most of the time you can do this, unless both branches of code create specific, alternate side-effects. This helps minimize the number of code paths you have in your application, making is generally easier to read and easier to test/maintain.

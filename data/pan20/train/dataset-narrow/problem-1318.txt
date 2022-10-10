@@ -1,0 +1,77 @@
+will handle all the thread safety issues for you. You don't need to worry about locking at all - the default will ensure only one is created (i.e. compile only called once). As an aside - you should never when is public instance... you have no idea whether or not someone else will try to lock the instance and cause a deadlock. Always use a private object to synchronise access. (code from memory directly into browser so might not compile but should be substantially correct) *updated to use as per comments. 
+
+You resize the array on every . That's O(n) and unnecessary. You should be creating an array larger than your current limit and then making it bigger (by some factor) when you reach the limit. Also, under the covers, an simply creates a new array and copies everything over. 
+
+The approach is a good one, you just need to copy the value of the variable. There are many tricks for that but you can improve readability by introducing another function . 
+
+Why start a new task and then synchronously wait with ? This is the sort of code that will bite you later when you find out that a synchronisation context can cause a deadlock. See Stephen Cleary's blog post on the subject of an async deadlock. Stephen's blog is an absolute gold mine of information on and . Either use the synchronous api all the way from your controller down into the Azure Storage SDK or use the asynchronous one (with and ). Don't mix and match - that's a source of errors and also pointless. Aysnc is useful when there's something else the thread could be doing. E.g. in a web app that's serving requests. If the web app is blocked by or then there is no benefit and you should use the synchronous API. 
+
+Note the use of with . See Stephen Cleary's blog to learn more about why blocking on async code is such a bad idea. 
+
+I understand that you want to show a progress bar - that's definitely good for a long running application but you don't need to know how many lines are in the file to do that. Instead of reading the file and counting the total number of lines you can use the file size and keep track of how much of it you've processed in bytes. In C#, a is always 2 bytes. Length of line * 2 gives you the size of the line you've just processed. Then your progress is just (bytes_processed/total_bytes)*100. Other answers have already addressed the string concatenation. 
+
+I then decided to use Manhattan distance because I'm only allowing up, down, right and left (i.e. no diagonal) which seemed pretty standard: 
+
+We don't want to search the DOM for the element every time (unless it can be added/removed) so let's pull it out: 
+
+Distinct Take a look at the documentation for Distinct. A couple things from the remarks should stand out for you: 
+
+Using on an unsorted list has O(n) cost. If you use a data structure with constant time lookups e.g. a and a instead you should see a performance improvement using key lookup: 
+
+You should write instructions out the Console. Users don't like spamming the keyboard hoping to do the right thing(TM). 
+
+I can't really help with the performance issue because following your code is really hard (I don't speak the language it's in). That said, I just can't look at this and say nothing: 
+
+I would say that I don't generally like generic repositories but I won't get in to that now. A lot of people use the pattern and I don't know of any canonical 'this is bad' sources so am happy to disagree over it. One thing you do need to consider though: multiple column primary keys. That's why takes an array (params). You're making a method that will throw if the object has a multiple column primary key (). 
+
+(all of the code in the edit has just been typed directly in the browser, if it doesn't compile, hopefully it should be close enough to correct.) 
+
+I'd generally never put a space after an opening bracket or before a closing one. That's the stylistic stuff out the way, I haven't mentioned semicolons because I don't want to start the other JavaScript holy war. Hoisting No, hoisting isn't good. It confuses beginners and I don't like having to scroll below the line I'm reading to find the function. Declare your functions first. 
+
+Mapping code is never pretty, the key is for it to not be in the way! That means at the top level you might have something like: 
+
+You'll be able to simplify this a lot if you use a better in memory datastructure than a . You only want distinct items, will generally be better here as it has O(1) lookups. 
+
+I don't really understand how you want to use this so I'm just going to add a couple of comments for you to ponder. Naming It's more common to abbreviate to not when used in identifers: -> . isn't a great name for an event, events generally need a verb to make sense e.g. , , are all good names for an event. Consider something like or similar. Thread safety You aren't raising your event safely: 
+
+As you can see, the dependency (where to output) is being injected into the class. I used a for simplicity but you could easily use a or something. The caller is now responsible for where the class puts its output: 
+
+Don't leave commented code around especially when you're asking for a code review. It adds a lot of needless noise. 
+
+If you refactor that to use a loop you can also only compute the cells' html once instead of having to recompute it for each row (width doesn't change between rows). I also think all the generator/iterator stuff is pointless for the html as it is all called from which is only called by . File outline I see what you're saying about being able to read the file as an outline, I generally do this sort of thing: 
+
+Little Santi's answer has a bug because it is closing over the i variable in that asynchronous call in the for loop. Here's a simplified version of that code running in Chrome's console: 
+
+Your names aren't great. For example as a class name doesn't tell me anything. From a TDD point of view, it would be good to get at the sequence generated, not just the resulting string. This lets you test things like expected number of elements. The actual logic of your methods is good. Renamed version with extra method: 
+
+For point 1, why are your methods ? You want to know the results of sending the emails (that's why you've added the list). Why not return the list directly. You could even add a class which encapsulates both successes and failures as well as other interesting data to be logged somewhere. For point 2, consider this: 
+
+You should rely on fields less and pass things through parameters. Side effects suck when you're trying to follow execution. E.g. 
+
+As we've already reasoned, all pieces have to have a colour and unless you've got a defective set, none of the pieces can change colour midway through. Sounds like we have an invariant that we want all pieces to obey. We can lock that up with a base class: 
+
+I renamed to which is slightly easier to read IMO. I've also introduced a variable for as I don't like lines of code that do 2 things. Edit: Short and concise methods are brilliant and a very good thing to aim for. However, consider your method at a glance: 
+
+This is basically the same algorithm as yours but by shuffling the unmatched pile at the start of each iteration, you can remove the costly calls to items from the lists. 
+
+There are lots of other ways you could solve it for example, by using reflection to instantiate the class. Update: 
+
+Just a flying review: Have you tested this? The equality code isn't at all right. Firstly, never override and without overriding the method. You'll end up with a check that will be different depending on which way you do the test - that's bad. Secondly, your code can't handle this really easy test: 
+
+So you're either going to have the option to remove the cookie on the unload event or the session cookie will expire anyway. I would structure the code a little differently: 
+
+It's not async if you immediately wait on it. It would be interesting to know what sort of work you're passing in here as it's not obvious whether you need to try to make this asynchronous or not. I'm concerned that you have confused threading and asynchronicity. Edit I can't believe I didn't mention this before, I must have been distracted... If your event handlers throw (the things listening on the event), you're toast. Say you have 2 listeners, if the first one throws, the second wont be called. You need to go through each one in the invocation list: 
+
+I'm assuming you're using the latest and greatest C# for the next few points. I can't remember when collection initializers were introduced but it's a while ago now. This is a very common pattern: 
+
+I think you should check that the range isn't zero length and throw an exception if it is. Use the ternary operator where it makes sense: 
+
+is a typo; it should be . It's also not a user - it's an id! The name would be better as . You should read the official naming guidelines and capitalisation conventions see here. 
+
+Don't have time for a full review but hopefully this will give you some food for thought. Why add an extra variable ? Angular is more than capable of binding to an expression: 
+
+Separate the mechanics and the semantics of the code. Here's my very well used extension method on : 
+
+Yes if you never want to know why something went wrong. You should log the exception so you can diagnose issues later. Swallowing exceptions like that is rarely a good idea. No. Web requests return status codes. It could be returning a 5xx error which would indicate that the directory was not created successfully but you'd be acting like it had worked. A response successfully is not the same thing as a successful response. 
+
+As you can see, I've modelled the MagicSequence as an array of nullable bytes so that I can use a custom to make a wildcard (i.e. match anything). I've tested the above out on a few different files and it seems to work well (although the PDF check slows things down massively). I don't think this is quite right because I can't ask whether a file is a PDF without asking what type a file is and then comparing the extension/name to what I'm expecting. Looking for tips on structure (and all general points) but particularly so I can easily do stuff like:

@@ -1,0 +1,37 @@
+Defining types Another way in which types improve readability is that they hint at the semantics of a value. is a very generic type, defining a newtype for interval endpoints might make things easier to understand. Code organization Related code should usually be grouped together. The order, in which the local functions are defined, seems rather random. Reorganizing those functions could benefit readability. Variable naming The variables a are shadowed in some functions. That's confusing and will cause compiler warnings when compiled with . I'd suggest renaming the outer to . This is just personal taste, but I'd also rename to (in analogy to and ). This would make even more sense if a custom type was used (e.g. ). Opinionated cleanup Below is what I perceive as a cleaner version of this function. It doesn't have the nice compactness of the original code, but uses the same basic algorithm. The local functions are quite general and can easily be promoted to top level functions. Reusable code is usually to be preferred. 
+
+This will force the user to either select one of the existing companies or enter a new company name in the textbox. Option 2 If you want to display both "Please Select" and "Other" options, then in your GET method, insert a into your property, for example 
+
+Its not clear why your view model has properties such as and and , and based on you (now closed) previous question they are not necessary. In addition, I suggest your property in the data model/database table be nullable, so that a value of (rather than a value of ) denotes a top level category. 
+
+your loading all the records into memory (using ) in order to get the last one then throwing all the rest away, and then making another database query using 
+
+Note this assumes you will not have a value for of in the database To address point 3, if you use option 1 above, then no ajax call will be made since you already have 
+
+However, this is (somewhat surprisingly) slower than the fold. AFAICT, this is due to the fact that ghc won't inline , but will do so with . Finally, here is how I (naïvely) would have written the code. Looks nice, performs terribly. 
+
+The compactness and efficiency of the code is quite impressive. The downside is that it's rather convoluted and difficult to understand. Types Annotations Haskell types are very helpful, both when writing and reading code. Type declarations should not be limited to top-level functions. They can, and should, be added to local variables as well. Even though it's not very complicated, the purpose of becomes much clearer when its type is explicitly stated: 
+
+As a final note, one should be aware that the algorithm makes some implicit assumptions on the topology of the intervals in . It would break down when intervals were allowed to have start points which are greater than their endpoint (think modular arithmetic). 
+
+Note that I have assumed that if there were less than 2 items in the table, then your data would not make sense in a view which is the purpose of . That check will also prevent exceptions in the code that follows. I have also assumed (based on the description in the question) that will always return an item with and will always return an item with so I have excluded checks for that in the code above 
+
+which fetches those records all over again. You only need the one database call to materialize the records to memory, and then you can get the first and last records from that collection. Your also not testing for when you use and which has the potential to throw an exception in the code following those queries. You can also simplify some code such as 
+
+You are unnecessarily looping through the array 3 times (only one loop is required). Its not clear how you will be using the results, but assuming you need to store them, then the code can be simplified to 
+
+A quick test gave me a 20% improvement compared to . Notes on The fold in is just a map. Using partial application, it could be written as 
+
+2. Performance improvement Pattern matching on lists usually takes two cases: empty and non-empty lists. This can reduce code (DRY etc) and actually improve performance, as tests for empty lists are faster than tests for singleton lists. 
+
+Since is only used within , it would make sense to define it as a local function. This has the additional benefit that we can drop from its parameter list, since it's already in scope and won't change. 
+
+3. Monadic notation Let's start with your last question, as it has a clichéd answer: Do whatever you prefer. I often find the bind operator nicer to read, but switch to do-notation as soon as the code gets complicated. Another rule of thumb is to use do-notation if the code is easier to express imperatively. Both notations are equivalent, there is no performance impact. 1. Idiomatic Haskell Haskell has a few conventions about variable naming. Lists are commonly referred to as or (think plural of ), while function parameters are named or . Type parameters are almost always taken from the first letters of the alphabet. 
+
+The combination of and will convert the collection to a javascript array. It would however be cleaner if your view model contains a property so that in the view, it can be just 
+
+You have written about 10 times as much code as needed to create your collection of You can greatly simplify this by using linq queries, and gain some performance as well. I would first suggest you sort on the database, rather than calling a method that returns a in-memory collection of and running multiple loops and recursive methods. Then you can use to group your items 
+
+which will exit the function. If you use option 2 above, then change the code to only execute the ajax call if the selected option is not 
+
+To address points 1, 2 and 4, You database should not include a value for "Others". Instead you can handle this one of 2 ways Option 1 Remove the attribute from and change the attribute for the to

@@ -1,0 +1,59 @@
+I've found this link: Changes to Extended Events Permission Requirements in SQL Server 2012 that mentions the need of permission for using extended events on SQL Server 2008. I want to grant access to extended events to developers, is not any other way to do it? We are running on SQL Server 2008R2. 
+
+Back in the days there was sp_who, sp_who2, but then came Adam Machanic and created sp_whoisactive. And he saw everything that he had made, and behold, it was very good. And there was documentation and downloads on the following days. 
+
+I detected that SQLAgent was not running on one of our servers due to a unexpected memory leak error that caused SQL Agent to shutdown. There were not alerts configured so one main job that was supposed to be running there was not. Is there a way to monitor SQL Agent from SQL Server itself? I've done lot of searches but can't find a way to do it. All I've found lot about monitoring jobs, schedules, etc. But not how to monitor if the SQL Agent stops working, does not restart or anything similar that prevents it to run. PS: I'm planning on asking another question for the memory leak issue 
+
+Transactional Replication would be hard to maintain. If you do frequent schema changes, then you have to drop replication and recreate it, which is time consuming and on the top of it, you have to maintain distribution database as well. Network latency also plays a big role if you are replicating your entire database. For you scenario, I would recommend : 
+
+You can grant the Service Start/Stop right for the SQL Server and Agent service to the Developers or their Windows group. You can use 
+
+OLE DB Destination is the slowest option and SQL Server Destination is the quickest. Refer here and here for more details. Below is what you can do : 
+
+I am assuming that by mirror copy ==> you mean at the point when the database full backup was taken. If that is not the case, then for near to realtime copy of your database, I would suggest transactional replication. Also, if you are using enterprise edition, then you can leverage the benefits of database SNAPSHOTS. Step 1: Make a FULL database backup 
+
+SQL Azure database does not support replication. See SQL Server Feature Limitations (Windows Azure SQL Database) 
+
+We don't have "off business hours", we run 24/7/365. Is not a definitive answer, but at least we know the root cause of this issue. So the approach will be to temporarily change connection string so the task that is failing will read from primary AG node instead of secondary AG node the day the reindex run. 
+
+EDIT A new option is available from some time already, First Reponder Kit. Is a set of scripts, freely provided under MIT license by BrentOzar team, that will help on various tasks, including the one asked by the OP. Mainly sp_BlitzFirst and sp_BlitzWho scripts for this case. 
+
+Have couple of monitoring scripts gathering information on perf counters. Have digged as far as possible with DMV's and third monitoring tools, I have lot information at hand. But there should be (ofc) something that I'm missing here as I can't find an answer to this slower response time. The 2 newest servers are using less RAM but I guess that's expected, when compared to the other older ones as those have a lower load. 
+
+So, there is no way to ROLL BACK a transaction using T-log natively (unless you use third party software like ApexSQL Log and log rescue - only supported sql 2000 ). As mentioned above, use STOPAT to restore to a point in time. 
+
+So essentially, you might think of it as only related to Plan cache with the ability to remove specific plans from the cache with the plan handle and or pool name. Fun With DBCC FREEPROCCACHE is a blog from Glenn Berry 
+
+What RDBMS are you refering to ? MS SQL Server does not have "Incremental backup". It just have full, differential and transaction Log backups. You can equate (loosly) transaction Log backups as Incremental backup as it will require a FULL backup and all the increments (which are nothing but transaction backups) until the point-in-time failure. Differential backup works differently, as you only need a FULL backup and the last differential backup and the database can be brought to the point when the differential backup was taken. After that you have to restore T-log backups, so that a point-in-time recovery can be performed. Considering above facts, most DBA's or server admins prefer Full backups and subsequent Incremetal backup (T-log backups) to a. conserve disk space b. Time required will be less as compared to restoring a FULL backup. Note that, the recovery model (e.g. BULK LOGGED, SIMPLE, FULL) also plays important role when you go for T-log backups (Obvisously, SIMPLE recovery is out of picture when it comes to taking T-log backups). The only problem with Incremental (T-log) backups is that if you loose any of those, the database can only be restored to the last unbroken log chain. Imagine someone deleting files, etc. Also managing them is an extra overhead as well. 
+
+Of course there will be an increase on CPU, as any other process on the server. But Extended Events are recommended precisely due to the low resource needs of running them. Using Extended Events to capture information takes much fewer resources than using the long old known profiler tool for example. Use it wisely of course, don't setup and run thousands of sessions to capture tons of data, then you can have a problem. We have used Extended Events on our own servers for auditing different processes and from our experience, we almost didn't saw a measurable increase on CPU activity. Yes, it takes some disc space to record all data it gathers, but again, think ahead and plan were to save it in order to affect as less as possible production environment. As for 2nd question: it depends, as usual. Each system, platform and configuration are different, none is exactly to the other. So, if not possible to tell you how much RAM, CPU, disk space or IO will gonna take. But certainly will not be so much. Again, use common sense, don't start hundreds of sessions capturing gazillion of data, because then obviously you will have a penalty on performance. For more detailed info check here, here here and here. 
+
+You have to delete logshipping for the databases that you offlined. That will stop the alerts. How to: Remove Log Shipping (Transact-SQL) 
+
+Transaction isolation level should be thought in terms of read operations. Isolation levels control how the read operations are protected from the other write operations. The database engine governs the locking behavior of all write operations, and you cannot change that behavior at the database level. From BOL : 
+
+Looking at your RAM availablity for this particular server and you are running several databases ranging from 30GB to 5 GB, you definitely need more RAM on this server. You have not mentioned that this is a stand alone instance or this server is having more than one instance of sql server running. Your MAX Memory settings seems OK for a server having 8GB RAM. See these suggested best practice settings from Glenn Berry. I would highly recommend you to do a baseline of your environment using below PERFMON counters to get a good value of your memory configuration : 
+
+Windows server 2008 and up will have new partitions aligned out of the box. KB 929491 has documented starting offset of 2,048 sectors (1 megabyte) - which covers most of SANs. Kendal van Dyke has done some testing here. 
+
+I could keep showing lot more of information but I'm not fully sure what could be needed. Any clue on what I should check? I've read through a know whitepaper from MS Troubleshooting Performance Problems in SQL Server 2008 and taken lot of DMV's queries from there. EDIT Upon request: 
+
+No, putting the database into single user mode will not solve your issue. Single user mode will prevent others to connect to the database. Is used to isolate the database and be able to do some type of operations that requires that no user is connected. But if no user is connected, then no ETL process will be able to run and no user can check the results of that. You or someone else will need to go through all those queries and/or app code and do a performance checkup. Also I will advice on doing a check on the general configuration of your SQL Server box to rest assure that everything is correctly configured, say amount of RAM given to the SQL server engine, max_dop, etc, etc, etc. And about using NOLOCK hint, take a look here Bad habits: Putting NOLOCK everywhere. 
+
+You should stripe your backup along with compression. Copy-dbaDatabase does it for you. It stripes into 3 backup files which is sufficient in most cases. Also, you will need to restore the database 
+
+I am running 2 instances of sql server 2008R2 Standard Edition. What I have done is : Bind NODE 0 to Instance 1. So instance1 will have 8 logical processors. 
+
+You can refer to Paul Randal's blog (the guy who wrote DBCC CHECKDB) : CHECKDB From Every Angle: Complete description of all CHECKDB stages : 
+
+Yes the restore will work just fine. Every edition of SQL Server 2008 and later can restore a compressed backup. Refer : Backup Compression (SQL Server) for more details. 
+
+If you dont want to go for windows scheduled tasks --> calling sqlcmd, etc Another View point : I would suggest you to look into Service Broker which is available even in SQL Express edition. From BOL : 
+
+1. Does the transaction replication have any load on the primary server(pardon my use of generic terms) when its moving data out. Many factors that it depends -- 
+
+Change to Make sure that is the only authentication type specified on make sure all url's are absolute, without wildcards 
+
+We have an SSRS 2014 already in production and we want now use a secure site by linking it to a certificate (URL like "$URL$ So now the URL is fully qualified domain name(FQDN). We can access correctly to the report manager with this https URL. We have to register to access with the Windows account. The bug we have is that when we navigate, sometimes, we pass to an http page. Each time that we pass from an https to an http page, the browser (IE) ask to register again. For example, here we are on a https page. When I click right on a report -> manage: 
+
+No, is not a good idea. There is a possible security issue underneath when using as owner of the job. All jobs are ran through SQL Server Agent and it sets the security context for job execution based on the role of the user owning the job. So, if you use then you know what it will happen. By default, SQL Server Agent executes job steps under the SQL Server Agent service account irrespective of job ownership, or under the context of a proxy account. The exception to this rule is T-SQL job steps, which execute under the security context of the job owner. If the job owner is a member of the sysadmin role, then the job step executes in the context of the SQL Server Agent service account. So, using as the job owner will cause all T-SQL job steps to execute as the SQL Agent service account, which is a system administrator account. A better option is to set a non-sysadmin account as the job owner, and explicitly grant only the required database permissions to this account. So, what I would do is to create a specific user on the DOMAIN and give that user the needed rights to execute those jobs. And that user should not be a person in the company as you could have same issue in the future, if that person goes away and the account is closed...same error again.

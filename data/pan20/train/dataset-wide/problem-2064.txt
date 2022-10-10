@@ -1,0 +1,61 @@
+means undefined and is a special value. You can only compare it with or . If you want to use it with then you need to use something like or where has the value instead of . Consider to give it a default value instead of in your table to prevent this. 
+
+The parameter is used by the Oracle network layer to do character translation between the client and the database. This way the client can display all the characters in the database in a 'correct' way. Your should match the character-set of your database when you do an export. If you export a UTF-8 database in US7ASCII then you risk to loose information when you import this data back into a database. Why? The UTF-8 character-set can hold much more different characters then US7ASCII. The 'unknown' characters are replaced by a single character. In the past I have seen this happening that we lost all characters with accents. They were replaced by a '?' if I remember well. If you import then you must be sure that the is set to the value of your import file. Oracle will then do the mapping to the character-set of the database in which you import. 
+
+Your log file is created with the 'Windows End-of-Line' way. When you check it with Vi or Vim then the (= CR = Carridge Return) is show because it is not part of the 'Linux End-of-Line' way. You can ignore it. 
+
+Do not see the problem. When somebody enters the email address a second time then this happens. Nothing to do with replication. This is what the is used for. If this error would break the replication then I do not understand how replication could ever work. Every user could easily break the replication by, in this case, entering an email address 2 times. I am not an MySQL expert but I think that the doc relates to errors other then maintaining data integrity. Perhaps somebody with more in-depth knowledge of clustering can help you on how to configure master-master clustering. 
+
+Take into account that the size you get also contains the empty space that is allocated to the table. When the table was just extended and only 1 new record is written in this extension then the information is less correct. But given the fact that you have nearly 2M of rows per day the space per row will be quite accurate. 
+
+I do not think that you want to test Oracle 12c itself but if the applications still function. In that case I propose that the developers (or test team) perform there 'normal' application tests to see if the applications still function correct. The only thing that the DBA might give is information on the differences between Oracle10g and Oracle 12c at the handling of the data at SQL-level. 
+
+Normally Oracle no longer uses the file anymore. It uses the in the directory. This is a binary file. Tio change the parameter(s) you should use: 
+
+In my opinion option 3 is the best. Option 1 has the problem that you always have to use a like on the tags field to find the articles. Option 2 will cause a rewrite of the tag each time that an article is added or deleted. When there are a lot of articles for the tag then the record becomes long. Both option 1 and 2 will end up with 'big' rows which means less rows in a physical block which means more physical reads and 'slower' result. Option 3 has a simple setup. It is the way to present an M-to-N relation. Put an index on the name of the tag to help to speed up the finding of the tags (will not help much if you have a very limited number of tags). Adding an article or adding a tag to an article will be fast too. 
+
+If you have multiple control files then you can try to copy another one over this corrupted one. Otherwise you need to restore it from an (RMAN) backup. 
+
+Using those 3 fields for a primary key is not a good idea (or did I misunderstood your question). There are 3 reasons for that: 
+
+Create an SQL that does the same as the would do. Remove the rows from the corresponding ~50 tables in the right order before you remove the users. This is some work but it keeps your data safe from an application error that does an accidental remove of a user with (lots of) messages. 
+
+There is no field in so Oracle takes the one from . I tried the but this gave me only that there is a . I presume that this will generate some kind of Cartesian Product between both tables that result in a list of all the names in is returned by the sub-query. 
+
+Also be careful. Your can hold bigger values than 99.99. These values will give ###### as a result and also the value will be rounded on 2 decimals by the command. 
+
+When you use the server name (DNS name) then a change of IP address will be used by your clients as soon as all DNS servers have this new address. Since you change your subnet you must be able to 'reach' this subnet from your clients. The only 'problem' can be that you loose the open connections. 
+
+Using RCSI on the subscriber(s) is a common way to design this type of a scenario to avoid blocking. RCSI will allow readers and writes to play nice together but won't solve writers blocking writers. Since the report queries are readers and the transactional replication is a writer, this feature is a good fit for this. You just need to make sure that your TempDB is configured to support your workload for the versioning. Also remember that enabling RCSI adds 14 bytes to each inserted/updated row which might cause internal fragmentation. 
+
+Perhaps, if you see a big IO Queue on your SAN, you have a lot of IO bound queries on top of your memory pressure. Check the PLE and Memory Grants Pending counters on this server. If you PLE is very low and you have lots of pending memory grants, your server might benefit from additional memory. Also look if you need to add any indexes (review missing indexes DMV) -- Are you using SQL's Missing Index DMVs? 
+
+When I need to do something like this, I just use sys.objects. After you restore the NewWarehouseDatabase databse, create a Linked Server on the instance where you have WarehouseDatabase to point to the instance where you have the NewWarehouseDatabase databse. Then write an EXCEPT query using sys.objects. Something like this: 
+
+Even thought the KB point to 2000, it's still true up to 2012. Run through this scenario and see for yourself. STEP#1 
+
+There is nothing wrong! This is how DBCC CHECKDB works. You can read Jonathan's post explaining this behavior and a workaround if you're on the Enterprise Edition -- DBCC CHECKDB Execution Memory Grants – Not Quite What You Expect The only strange thing is that usually this happens with servers with larger amount of RAM! Here is also a really good article on Understanding SQL server memory grant 
+
+I am not sure if there is a better way but something simple like this should do it. If you run this query on the Publisher, it will compare the tables and will return you the difference in tables. The Publisher needs to be linked to the Subscriber. 
+
+No update yet because the threshold is 24,796.4 - 20247 = 4549.4 but we inserted only 4548 rows for ID 8. Now insert this one row and double check the histogram: 
+
+This should give you a list of the objects that are in the WarehouseDatabase databse but not in the NewWarehouseDatabase database. 
+
+Now the histogram show the missing ID 7 and the execution plans show the right estimates as well. Query #1: 
+
+Look at the table and histogram! The actual table has ID = 7 with 20247 rows but the histogram has no idea that you've just inserted the new data because the auto update didn't trigger. According the the formula you need to insert (20247 * 6) * 0.2 + 500 = 24,796.4 rows to trigger an auto update for stats on this table. Thus, if you look at the plans for these queries you see the wrong estimates: 
+
+I am not sure if you're interested in all constraints but INFORMATION_SCHEMA.TABLE_CONSTRAINTS doesn't seem to return the DEFAULT constraints -- TABLE_CONSTRAINTS (Transact-SQL) 
+
+Check this article -- Reversing Log Shipping! Now what you need to do is to take the log backup with NORECOVERY on the primary and restore this log on the secondary with RECOVERY. This will preserve the log chain. 
+
+We tried to use ODBC for QB few years ago but gave up on this idea because it was painfully slow! So our developers created an extract application using QB API to export the data we need out of the QB to a CSV file which we import into a table on our SQL Server. This process have it's own drawbacks like when a QB client gets updated to a newer version everybody needs to get on the same version otherwise the export application fails. Again, we developed this few years ago and tested with, perhaps, an old ODBC driver. Also have only handful of QB clients that need to be maintained. This has been working for us all these years. Here is a good starting point if you'd like to start developing an application using QB SDK -- QuickBooks Desktop HTH 
+
+Yes, as soon as you pass the threshold of 20% + 500 from the total rows. The auto update will trigger. You can run though this scenario by re-running STEP#1, but then modify STEP#2 by running these queries: 
+
+MBR cannot handle partitions bigger that 2 TB, thus if your partition is bigger than 2 TB you have to use GPT. There is no performance gain as far as I know. It's all about the capacity! 
+
+You can use CNAME in DNS. When you're done with GARDB1, rename it to something else (GARDB1_OLD). Create a CNAME in the DNS server called GARDB1 which should point to GARDB2008. It should solve your problem because GARDB1 will resolve to GARDB2008 now. Ideally what you need to have is a generic CNAME that you can just re-point to a new DB server each time you are migrating. Perhaps next time you plan to migrate, you can implement it. Or you could go with what @SeanGallardy suggested. 
+
+You are missing the schema name in your query. It should be [LINKED_SERVER].[DB_NAME].[SCHEMA_NAME].[OBJECT_NAME]. So in your case, [12.34.56.78].TESTDB.[HERE SHOULD BE YOUR MISSING SCHEMA].test_table It's a public IP address. Hopefully it is a firewall's address that routes the traffic to a SQL Server! If it has a DNS name assigned to it, then you could use it. Or you could create a SYNONYM and forget about typing this long name.

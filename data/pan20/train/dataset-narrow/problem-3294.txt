@@ -1,0 +1,103 @@
+If you want to drive servos/ESCs without jitter you need to use something like (my) pigpio or servoblaster. 
+
+That said I have connected my UBEC output to a two pin female plug which I plug into pins 4 (5V) and 6 (ground) making sure it's the right way around before I switch on. 
+
+The 3V3 pin (pin 1) and the ground pin (pin 6) are permanently powered while power is available at the microUSB or expansion header power pins. So the answer is no. 
+
+So add the line dtoverlay=spi-bcm2835 to /boot/config.txt and reboot. See /boot/overlays/README You really need to use a software module to transfer data with a SPI device. For all the devices I have used (not many) you need to read and write a specific number of bytes. 
+
+As soon as the first byte is available you read four bytes. The first byte being ready does not imply all four bytes (plus line feed) have been received. 
+
+A GPIO callback is a method of being notified when a GPIO changes level. The level change may be low to high (rising edge) or high to low (falling edge). You can ask to be notified on rising edges, falling edges, or both. So say a lift arriving at floor 3 changes the state of a GPIO from 1 to 0 you could ask to be notified about falling edges for that GPIO. Your callback code would do what needs to be done for that event. You don't say specifically but the mention of RPIO and the tag of RPi.GPIO suggests you are going to use Python. See $URL$ for RPi Python modules which support GPIO. That link has additional links to the documentation for those Python modules. I suggest you look through and decide which to try. RPi.GPIO is pre-installed in recent raspberrypi.org Raspbian images, the others would need to be downloaded. 
+
+EDITED TO ADD If the above does not solve the problem you may need to use a tool called dosfsck rather than fsck. dosfsck is part of the dosfstools package. 
+
+You may power from 5V but the data line pull-up should be to 3V3. You may have damaged the GPIO and/or the Pi by exposing a GPIO to more than 3V3. 
+
+You can't communicate between two Pi's with the SPI bus. For a SPI bus one end is a master the other end is a slave - you can't have both ends as a master. The Pi hardware only supports operation as the SPI bus master. 
+
+Whenever you have multiple threads of activity it is important each thread is not starved of time. This is usually taken care of automatically if your thread contains system calls which yield to another thread, e.g. I/O calls. If a thread does a busy loop without such a system call it is important to add a time delay to allow other threads time to run. In the question 
+
+The following code will time the edge to +/- 10 µs or so. Change the GATE (Broadcom) GPIO and START_EDGE (0 or 1) to suit. 
+
+I'm assuming you want to do this without external hardware connected to the gpios. Have your test code alter the level of the gpios you want to test. There are multiple ways. 
+
+Unless you have an oddly labelled board you should be connecting board TX to Pi RX and board RX to Pi Tx. Do not connect the VCC line unless you are powering the Pi from the serial board (unlikely). The two 3V3 power supplys (Pi and the board) will be fighting. 
+
+where x is the (Broadcom) GPIO number you want to use for the 1-wire bus. For a description of the GPIOs and the numbering scheme see this Gadgetoid page. 
+
+I am going to assume the error is the superfluous early call to main() as you gave no explanation for why it was there. 
+
+Don't connect a Pi 5V pin to logic supply 5V and leave the logic power jumper in place on the motor driver board. Connect a Pi 5V pin to logic supply 5V and remove the logic power jumper from the motor driver board. 
+
+Both PyAudio and rpi_ws281x are using a single hardware PWM peripheral in an inconsistent fashion. Of course it does not work. You need to change one of them to not use the hardware PWM peripheral. I'd have thought the LED strips could be driven by the hardware PCM peripheral rather than the hardware PWM peripheral. 
+
+You should always check that tutorials are up to date. You should now be using device tree. Remove the LIRC entries from . Add the following line to and reboot. 
+
+A DC motor is normally controlled with a motor driver using two GPIO. A typical motor driver allows control of two DC motors using pins 1A/1B for one motor and pins 2A/2B for the other. I assume that MOTOR_1_A is a constant whose value is the GPIO connected to pin 1A etc. 
+
+gpio21 was at pin 13 in the first revision of the original Pi. In all recent models gpio27 is at pin 13. Where two gpios are shown (x/y) the second gpio is used in current models. V indicates a voltage and that the pin is part of the power rail. 
+
+The Raspberry Pi has 16 hardware DMA (Direct Memory Access) channels. Using DMA you can copy the contents of memory from one memory address to another memory address without software involvement. The hardware allows you to chain many transfers together such that the next is automatically started when the previous has finished. You can also pace (i.e. time) the transfers using either the PWM or PCM hardware. pigpio uses these features to create waves, whereby blocks of memory are periodically copied to the GPIO output registers which sets the levels of GPIO 0-31. This means you can switch any combination of GPIO 0-31 on and off at controlled intervals. 
+
+You have a misconfiguration. Remove the device_tree= line from /boot/config.txt. That says not to use device tree. The next line says use device tree for SPI. Use one or the other, not both. It's probably best to accept device tree is the future and start using it. As a separate issue the Linux kernel SPI interface changed recently. You might need to search around for an updated version of spidev_test.c if it's old as it's no longer a reliable test. However if /dev/spidev0.0 and /dev/spidev0.1 exist you can assume that SPI is functional on your Pi and actually try your own test program. 
+
+As far as I am aware you will need to bit bang the protocol yourself. This will mean that you will only be able to reliably support comparatively low clock rates. The Pi contains hardware to support SPI in a slave mode but it does not appear to work. This post on the raspberrypi.org forums documents my unsuccessful attempts to drive the hardware from userland. The pigpio BSCX command will be useful for those wishing to experiment with the SPI slave hardware. The problem with bit banging is that the external device will be the master and will control the clock. SPI has no equivalent to I2C clock stretch which allows an I2C slave to slow the clock. So a SPI slave must guarantee to respond to a clock change within roughly half a bit time. This isn't possible within a Linux preemptive system at more than a few hundred bits per second (probably even less). You may be able to get decent bit rates if you use bare metal (no operating system) but that is outside my experience and really negates any point in using the Pi in the first place. 
+
+A LM35 sensor is not a DS18B20. The LM35 signals the temperature by generating an analogue voltage proportional to the temperature which must be read by an external ADC attached to the Pi. A DS18B20 is a digital sensor which signals the temperature by sending a digital bit pattern down a 1-wire bus (single wire) connected to the Pi. You need to buy an ADC, e.g. a MCP3008 or similar. 
+
+If you look at the wiringPi source you will see there are a couple of likely functions in wiringPi.c. digitalWriteByte digitalReadByte The associated comment is 
+
+I have run your code on both a Pi2B and a Pi3B. On both I get a segmentation fault with spidev. I don't know why. I'm not sure where I sourced those versions from (they may be part of the raspberrypi.org image at the moment). Just checked, part of the raspberrypi.org image. 
+
+To control external appliances it is probably simplest to buy a relay designed for that task. The relay can safely switch mains voltages under computer control. The GPIOs may be used to command the contacts to open or close. See $URL$ for an example of the sort of relay to buy. This is not an endorsement. 
+
+Linux buffers serial input and output. I don't know the buffer size but believe it to be thousands of bytes. You can use the C tcflush function (man tcflush) to flush the buffer. 
+
+You have provided very little in the way of diagnostic information. Perhaps your GPIO have developed a fault. Try wiringPi's pintest utility. Or (my) pigpio's gpiotest utility. 
+
+It will work but will not be as efficient as it might. The empty while loop will consume 100% of a CPU core. It is better to let other things run so I would use the following style. 
+
+As long as your flow meter has an open collector output (as most seem to) it should be quite safe to use with the Pi. An open collector output means that the pulse is indicated by the sensor pulling the output pin to ground (0). At other times the sensor lets the output pin float to an external voltage. This means you need a pull-up to 3V3 through a resistor on the sensor output pin. A resistor value of 4k7 is quite normal. Alternatively you could just enable the internal GPIO pull-up to 3V3 for the GPIO you connect to the sensor's output pin. Example pigpio script 
+
+I believe the file /etc/fake-hwclock.data is periodically updated with the latest date/time as the Pi runs. When the Pi restarts the time is set from this file unless a network time or a RTC time is available. This ensures that file date time stamps are always reasonably correct. 
+
+Have a look at the wireshark (GUI based) and the tshark (console) packages. They both listen to traffic in promiscuous mode. If they can see the data you are wanting to capture then craft your own version (it's not hard, I have done so myself). 
+
+There is very little to go wrong with servos. If the servo is powered externally you must ensure the power supply ground, the servo ground, and the Pi ground are connected. If the servo is powered from the Pi you must ensure the Pi ground and the servo ground are connected. To generate servo pulses on any GPIO you may use the following commands. The example is for GPIO18 (pin 12). 
+
+I doubt you'll need to use the PWM capability of gpio 18. There are many ways to provide hardware timed PWM on the Pi on all the user gpios. They are all variations on a theme and use DMA transfers paced by the PWM or PCM peripherals. You can ignore that as they are all wrapped up in simple wrappers. My offering is pigpio which will let you send servo/PWM pulses from C, Python, or the command line (via the pigs utility). 
+
+If you are talking about Linux you can't program an interrupt. Linux handles interrupts. If you are talking about bare metal then yes, you can program interrupts. You can ask Linux for a callback when an interrupt is detected (or probably about 50µs after at least on a Pi.). 
+
+No you don't need a breadboard. I'm fairly sure they'd disagree. The motors of hobby motors are usually driven from 5 or 6 volts. The control wire (connected to a Pi gpio) will quite happily work at 3.3V 
+
+I chose those as they are grouped together on the expansion header. Connect your 12V+ to Vcc, 12V- to Ground, and also connect the 12V- (power supply ground) to a Pi ground. Connect your chosen 4 GPIO to the A1, A2, B1, B2 pins of the L9110S. I don't think there is a standard Python stepper library. Google will find lots of examples. Choose one at random and if you get stuck post a new question. 
+
+The peripherals base physical address has moved from 0x20000000 to 0x3F000000 on the Pi2. This will affect all software which directly accesses the Broadcom peripherals. The bus address of DRAM has changed from 0x40000000 to 0xC0000000 on the Pi2. This may affect any software which directly accesses the Broadcom DMA peripherals. Such software will need to use the correct memory address when referencing DRAM in constructed DMA control blocks. 
+
+It is safe to use PWM (however you generate the pulses) on any gpio on the expansion header. For a model B: 
+
+servoblaster added a switch off after several minutes option. I wonder if that is kicking in. Try my pigpio 
+
+If the GPIO column has a V it indicates the pin is connected to the power rail and not a GPIO. Where 2 figures are shown separated by a / the first figure is the GPIO number used on the first revision Pi B boards. 
+
+I don't know why the permissions are wrong. Until they are corrected use the following in the root crontab. 
+
+The Pi2 has a 2 amp polyfuse so if you are powering via the microUSB socket there is no point having a higher amperage power supply. If all you are powering is the Pi2 (i.e. no power to attached peripherals) then you would probably get away with a 0.7 amp power supply or less. 
+
+I suppose they wanted a mainstream language which might figure highly in a software engineers career, languages like Java, C, Ada, Python etc. etc. Languages like Algol, Pascal, Perl, PHP, JavaScript, FORTRAN, BASIC, Ruby, Smalltalk etc. etc. are more niche. Whether Python is a sensible choice or not is moot. It has been chosen. My concern is with learning Python in an unstructured way, which is how most Pi users will learn. I think it really needs to be introduced to programming learners as part of a structured course so that bad habits can be discouraged and good practice can be explained. 
+
+Have a look in /proc/config.gz for the options used to build the (running) Raspberry Pi kernel. E.g. 
+
+You can create as many circuits as you want and connect them to the Pi at the same time. There will be overall limits, e.g. 
+
+Yes, it is called sinking current rather than sourcing current. I have used it myself with LEDs on the Pi. The control is reversed. To switch the LED on you write 0 to the GPIO. To switch the LED off you write 1. 
+
+Start up your system as normal then unmount the boot partition, check it, optionally correct it, and remount. 
+
+Fans are usually standard DC motors and it's simplest if you buy an inexpensive motor driver board. Look on eBay for inexpensive modules based on the L9110S or the L298N, or even consider a single chip solution such as the L293D if you are happy to use a breadboard. Each of those modules will drive two DC motors and allow you to change direction (pointless with a fan) and vary the power (by providing PWM signals to the motor driver board inputs). Check that the fans don't need more power or voltage than the module can supply (unlikely to be a problem). The servo doesn't need a motor driver board as it contains one. With a servo you just supply power and a PWM control signal. The Pi can generate the PWM signals you need. 
+
+The SD card will have two partitions. A small FAT formatted partition used for the boot files (abour 60 MB). A large ext4 formatted partition used for everything else. Windows does not understand the ext4 format. You will need to boot your Windows machine from a Live Linux CD. Google for examples, e.g. $URL$ This will turn your PC into a temporary Linux machine, without altering your Windows set up. You will then be able to view the SD card if your PC has a SD card reader and save any files to a USB stick. 
+
+All data is held on the SD card. If you write a fresh (for instance Raspbian) image to the SD card that will remove all existing data.

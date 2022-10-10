@@ -1,0 +1,43 @@
+You have data sets within code. Code should ideally be independent from the data. We can see that target_meter, update_timestamp_col, data_lifespan, move_back_amount, secs_in_res all correlate. I would extract the data from the functions: 
+
+The context is passed (as pointer) to each function so it knows the circumstances it operates under. This also groups relevant data together. The second context you operate under is a specific meter. 
+
+This is a mixture of storing the value and storing the operation. When you need to print a value, you look up the range and print the value. As you see, we need less than 64 bytes for this simple example to store the information how the 7.4 GB data is compromised of, yet we can print the value for each and every array position. Even if we have reduced the data, we still need to optimize the remaining data. We can't just dump it into a linked list - as stated, we can end up with Q+1 entries (200001), we can't afford to search the entries with an effort of O(n), let alone (r-l) * O(n). But if we put the data into a binary search tree, we can find the correct array entry in 18 steps within the 200000 entries. This costs us some more memory, not only due to the overhead, but as we need the array index as key, we can't group all identical values together, just as long as they are one range. So the example above will need 4 nodes in the binary search tree, to separate the value 0 twice. So, when you combine these two approaches, you should be able to get a decent memory and processor time consumption. 
+
+This doesn't help too much here, but might make things more obvious in the long run. Now, considering performance, the choice of a list of integer will make your program hard to optimize. Functions such as this will be really slow : 
+
+As lists are linked lists, and indexing will traverse all previous elements. Profiling shows that this is the most time consuming function. I would suggest one or a combination of the following solutions. Using the monad The ST monad is a strict state monad. It is pretty useful for encapsulating value-mutating algorithms in referentially transparent functions. Basically, you would write algorithms the way you would in C, and the resulting code should be quite efficient. The type might be a good candidate. Using a library known for its performance A library such as or , both are known to be able to generate crazy fast code when the right rewrite rules fire. is probably overkill, and hard to understand. You can alter vectors in the monad too. Change your representation The function takes most of the time. It has an implementation for a single case (), and all other cases rotate the board, run a , and rotate it back. It might be possible to either have specialized implementations for each case, or, perhaps better, to use function composition / modification to skip the rotate / rotate back operations. 
+
+But those are all minor nitpicks. The main issue, for me, is that the whole design is unnecessarily coupling orthogonal concepts. Decoupling stuff There are several concerns that are mixed : 
+
+Warning : I never played this game, so I might be wrong. Syntactic nitpicking There is quite a bit of syntactic noise, that you can catch by using . For example : 
+
+You will have only memory for exactly two digits. That's not enough! You have to calculate the actual number of possible digits. Luckily, that is simple: 
+
+This isn't necessary, since is also an instance of . And since the Applicative-Monad-Proposal every is also an and therefore a . 
+
+Otherwise you end up with a deleted, but not nulled . Call-by-reference Use for arguments if you're not going to change them afterwards. 
+
+Essentially that's still your code, only put into two functions and using the above. This makes it possible to later test the parts of your previously large . Note that all those functions are rather small, and do only one thing (and one thing well). Now what's left is the . Instead of the previous one, we can now easily use an one. For this, we provide three additional parsers that parse the sub-expressions : 
+
+By the way, whatismyip.org seems to be up for sale, so you might not get your IP in another few months, or the format might change. ipecho.net has a strange whois entry too, but at least its mentioned in a highly voted answer and returns your IP without the need to extract it from the HTML. 
+
+Almost all memory is allocated in . After all, you break both the map and the list apart for every character in . That's quite costly. Instead, let's try to stay on a single map as long as possible: 
+
+It is even shorter. It is easier to read than the point-free version, too. No . But if we want to preserve whitespace, it is still not optimal. Since we're handling a single character in either way, let us just keep spaces and handle all other characters: 
+
+However, it makes things a bit more complicated to lay out at first ... All players are handled in the same way There is now less code duplication (the and functions were almost identical), and it would probably be easier to increase the player count. Pluggable strategies Now all strategies are pluggable, not just that of the dealer. Well ... I basically said "rewrite your whole program in the way I like", and there is definitively a question of taste here with the whole "free monad" or "operational" decoupling. You gain nice effect separation with "magical behavior" that might turn into cargo cult programming ... There is also the problem that I turned fixed fields ( and ) into a , which might return Nothing. 
+
+I believe the intent here is not properly encoded, as you might modify one of the two lines, and have both branches (or none) executed. I think that the following makes it more obvious : 
+
+I am unfortunately no performance guru, but will take a stab at this as I repeatedly had to make programs faster, and there are no answer yet. A nitpick : I would have used a type synonym for and : 
+
+It is a lot more complex now :) Here are the main takeaways : An interpreter This is a major technique in Haskell : transform an effectful computation into a pure computation that is then interpreted. You can use the or packages for that. You now have the game logic running in the monad, that can run effectful instructions encoded as the type. Those instructions are then interpreter by the function. You gain several things from that move : 
+
+But we will change that later, so don't use that yet. Don't trust the customer What happens if the customer inputs 'a' instead of 'y' or 'n'? Well, you accept it and don't add anything. However, if you asked a customer "Do you want a bagel?" and they answer "Cthulhu!", you'd probably ask them to either accept your offer or decline. A small 
+
+(*) You can still use those techniques internally, but a public interface should be hard to use wrong if possible. After all, that's the reason you're using and , right? We end up with the following code: 
+
+Oh boy! A snake game. I'm excited, since this was also one of my first games. So let's get to work, shall we? Keep it short and simple The biggest concern with your code gets obvious if we just have a look at your post. Your whole code is inside a single file, which makes it hard to navigate. Your file ist "just" 270 lines though, but still, it's a first step to make your code more readable. Consistency is key The next concern is missing consistency. You provide a class for your snake, but a with C-like object oriented programming . That's somewhat arbitrary. Also, you're calling your struct , which makes it easy to disambiguate it from normal variables (which use ), whereas your other class starts with a lowercase, and the suffix is superflous. Instead, pick a naming convention that immediately shows whether you have a class-like type, a function or a simple variable. This leads to 
+
+Which isn't too far off of your last variant. But if you're already using notation, I would pair it with pattern-matching:

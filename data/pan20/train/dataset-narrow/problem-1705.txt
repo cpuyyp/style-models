@@ -1,0 +1,75 @@
+I'm investigating an issue, which is described almost perfectly here: $URL$ I've followed the steps in Part 2 and confirmed that the WMI service does not have the correct permissions that Citrix requires. My question: How do I change this? The MMC snap-in is read-only and I'm not entirely sure what I'm looking at. Citrix just say: 
+
+Just because your computer is still connected to the wireless, doesn't mean it's using it. Your computer is quite capable of being connected to multiple networks. It will choose what it perceives to be the best connection. If you're convinced this isn't working correctly, please goto the command prompt and paste the output for the following two commands: 
+
+It would generally refer to the practice of running a Type 2 hypervisor on top of Windows, with some kind of Virtual Machine running inside. An example would be VMWare Workstation. You install the VMWare Workstation software onto Windows and then, within that, VMWare simulates another machine. For example, you may be running Windows 7 but choose to install Ubuntu inside. This is very different to running a Virtual Machine on a Type 1 hypervisor, such as ESXi. ESXi is an Operating System in it's own right which you install onto your machine. However, you can't use ESXi for anything, you have to install a Virtual Machine on top of it. One (rather confusing, but important here) exception here would be Microsoft Hyper-V. This comes with Server 2008 as an extra role but is actually classed as a Type 1 Hypervisor. Despite the fact that it's managed within Windows Server, it shouldn't ever be confused as a product like VMWare Workstation. I'd suggest having a read of the following: $URL$ $URL$ $URL$ $URL$ $URL$ You may also choose to download a demo copy of VMWare Workstation. It's actually fairly straightforward to get started with and have a play. 
+
+No, basically. Why would it be? If someone can read the DNS name from the config, then they can simply do a Ping or check the hosts file anyway. Regardless, though, obscuring names and IP addresses is definitely not a way to do security and will simply make maintenance and management difficult for you. 
+
+Yes, absolutely, this is the very foundation of Group Policy hierarchy. Group Policies are applied in the following order: 
+
+We'll be able to determine which connection is being used by default then, and confirm whether or not your laptop is assigning the correct metric. 
+
+I'd say this is untrue anyway. Print servers are about centralised management and distribution, not about offloading work. Have you considered simply adding a different basic 64bit postrscript driver on the print server? This would probably get you the same result as the CUPS solution, with less mess. 
+
+This sounds like an absolute mess. Firstly, there's no such thing as PDC and hasn't been for many years. Either you created a domain by adding the ADS role, you joined a domain, or you didn't. I find it bizarre that you can't remember if you built a Domain Controller or not. If the computer properties shows it's in a workgroup, then that's where it is. For some purposes, it will take the local computer name as a "Domain Name" in lieu of being connected to an external Active Directory Domain. For example, shows the following on my non-domain laptop: 
+
+Ping really tells you very little about the machine you're pinging, other than it's responding to ping requests. ICMP echo's are at a very low level and as William Hay points out, it's entirely possible for a very broken machine to respond to ping. With that said, and in direct response to your question, I would be more inclined to look into networking. 
+
+I don't think there's any native way to do this. The only way to do it would be to export the state when you disable it and then re read it from a config file when you enable it. You may have better luck on StackOverflow with this one. What O/S are you on? Powershell may be a better bet. You can Google "Get-Service" to get you started. 
+
+Yes, but what makes a lot more sense is to have a secondary domain controller on a different host, or have a separate physical domain controller. I'm guessing you don't have the luxury so a second VM is better than nothing, but be aware that a host or storage failure could leave you in a bad place. Ensure your backup strategy is spot on. I'm not going to sit and say "YOU SHOULDN'T DO THIS", but you need to be aware of how fragile everything will be sitting on one host. 
+
+I've never seen this particular issue, but you can sort out file associations with Group Policy Preferences. Either: 
+
+I think you're technically right in thinking that you can't set it to run every 15 minutes after a boot, but why does it matter so much? E.g Will run the task every 15 minutes of every day. You can add in a new schedule alongside it to run on startup aswell. Worst case scenario there being that the task may run twice in less than 15 minutes for the first time after boot. If that really is an issue, then the only alternative way I can think of is to come up with a script which runs at startup which creates the new scheduled tasks. You may be able to use this page as a starting point: $URL$ So, to clarify: 1) Server boots 2) Scheduled tasks runs batch file 3) Batch file deletes the previous boots scheduled tasks (You can use an ID number to differentiate) 4) Batch file creates a new task to run at 15 minute intervals today 5) Batch file runs the task You may be able to skip some of that by just having the bootup scheduled task run the 'real' task for the first time. It will then run every 15 minutes from that point. However, it still doesn't preclude the possibility of running it more than once in 15 minutes. 
+
+You can use Group Policy Preferences to do this with absolutely no scripting. You can base the location on username, security group, client name/IP and a myriad of other options. Assuming you're on a 2008/2008R2 domain of course. 
+
+Add the servers to a different OU and apply a different subset of policies. You could also change the permissions for your folder redirection GPO. There are other ways, and the 'best' will depend on the current architecture of your Group Policy but the essential answer is to use Group Policy as intended and apply different ones to this server! 
+
+The only way round this that I could think of would be to run a local proxy which does rule based forwarding. Perhaps it would help if you told us a little more about the problem you're facing. 
+
+Check this page: Start Menu -> Right Click on "Computer" -> Properties -> Advanced System Settings -> Computer Name -> Change This is your definitive answer on whether that machine is joined to a domain or not 
+
+The system proxy (This is the one you see when in the Internet Options panel) An application embedded proxy. Obviously this is reliant on a developer implementing such a feature. 
+
+No, your VM should perform the same and will use the same resources on the host. It's just a design choice which was primarily added to add some flexibility where your OS or software may have per CPU licensing requirements. Each socket / core will represent one physical core on the host. Remember that more cores isn't automatically a good thing due to the scheduling requirements. 
+
+HVAC - Cooling, but also ensuring it doesn't get frosty or damp in the winter. Remember you'll need water for air con. Power - How will you get sufficient power to the container and what about redundancy and resilience? Connectivity - As above, how will you connect? Will you risk running a high cable, or pay to dig? Again, redundancy, future proofing etc Security - How will you physically secure the environment from unauthorised access? Access - Opposite to the above, will you have sufficient access to get in there and get things done Weatherproofing - How weatherproof are the containers and what will you need to do to make them truly weatherproof. This depends on your environment, but I know I'd be tense when it was raining heavily. This also means your utility connects all need to be seriously weatherproof and that you have room to open the door without splashing everything! 
+
+Why would want to implement the complexity of passing it through. Just configure a datastore and present a VMDK or RDM only to your FTP/SAMBA server. This gives you may more flexibility and will be far more supportable. That said, by doing this anyway, you're losing a lot of the benefits of virtualisation unless you're going to implement some kind of replication system. 
+
+They're beyond use, so you should physically destroy the drives before disposal. Attempting to overwrite them is going to be fruitless because you know they're not reliably reading and writing. 
+
+Every other company manages to get people to use their own user account and password, and you should be no different. 
+
+I'm attempting to lock down a Windows 7 build but I've noticed that users (In this case, students) can highlight a drive and get to the properties menu. I'd like to disable this if possible. I normally use the following GPO: 
+
+You've got the wrong hotfix - you've downloaded the one for Server 2008 R2 / Windows 7. Yours should be called Windows6.0-KB2600100-x64.msu This is the download link: 
+
+MAC addresses are only relevant on a local subnet - your VPS can't see your remote devices MAC address. In short, you can't achieve what you're trying tobdo. 
+
+I have a Windows Server 2003 box which will be acting as a terminal server. It will actually be running Citrix, but I don't believe that to be relevant here. There has been a request for every user to use a single mandatory profile. I've used mandatory profiles before, but there have been generally different profiles for different users so I've always used the "Terminal Services Profile" tab to good effect. What I'd like this time is a single setting, such as a Group Policy or similar that simply forces every non-domain admin user logging on to the box into using the mandatory profile. We'll be using Folder Redirection to take care of everything else. I'm aware of the following GPO: 
+
+Which is not very helpful. It's a Server 2003 R2 box on a very small 2003 domain. It does have GPO's applied, but I can't find any configuration relating to this and I know for a fact it's not a part of our standard rollout because otherwise I'd know about it! 
+
+Personally, I wouldn't. With a single host, I don't think you're going to get any advantages and because of your lack of AD redundancy, you are creating a dangerous single point of failure as you point out. This answer changes when you being scaling out and have a decent AD infrastructure. Also, ensure your Host is configured with static IP and DNS. 
+
+You can't do this by using traditional Group Policies, but what you need to do is copy shortcuts (.lnk) to the appropriate directory. You could achieve this by using Group Policy Preferences, or a startup / logon script etc. If you're redirecting your start menu, then that's the location you need to copy your shortcuts into. If not, then by default the start menu locations on Server 2012 are: All Users (NB: The GPO you've configured works by disabling this location. However, I'm leaving it here for info) 
+
+Your DNS is fine and both rcnhca.org.uk and wwww.rcnhca.org.uk resolve to 195.74.61.93. The issue is the configuration of the VirtualHosts. Follow the instructions here: $URL$ Or speak to your hosting provider. 
+
+You need to use a "Split DNS" setup. Essentially, you have one one DNS server for external requests/users and one DNS server for internal use. The external DNS server points things to your public facing IP's, and the internal DNS can use your private IP range. How exactly you accomplish this will depend on exactly what you're doing, though. Here is a nice, though dated primer on the idea: $URL$ 
+
+You should get site 2 a permanent, reliable internet connection and use a permanent site to site VPN. You'll need a router each side capable of doing so, though. 
+
+This is essentially VDI (Virtual Desktop Infrastructure) and the two big commercial players would probably be VMWare View and Citrix XenDesktop. XenDesktop can certainly do as you require, though it's far from open or free! I'm pretty certain VMWare View also ticks all the boxes, but I've not deployed that beyond test environments. You may also look into VDI in a Box as another commercial option as this requires less core infrastructure. 
+
+You're describing the Citrix Web Inteface which works with XenApp and XenDesktop. It's also compatible with the iPad etc. 
+
+Almost certainly not, but if you have backups (Which you do, don't you?) and it's not mission critical and you can get a KVM to bail out if you need to then I'd just go for it. Problem with this question is that's its pretty niche as of now and the only way someone will know for sure is if they try it. As an aside, and this is controversial, I'd always avoid in place upgrades in production. I'd much rather start fresh with a brand new OS. You could also run a test using VMWare Workstation, first. 
+
+You absolutely can set a static IP on the HP T5740 - in fact, for the most part, they work just like full fat Windows. What problem are you having? I presume you've been logging in as admin and committing / disabling the write filter? 
+
+I think you're misunderstanding that option. If you want to authenticate at the Web Interface, you'll need to point people directly to it and open all of the relevant ports. So, yes. You will be compromising your security because you'll no longer be tunneling sessions and authentication through the CAG. Perhaps this page will give you some direction: $URL$

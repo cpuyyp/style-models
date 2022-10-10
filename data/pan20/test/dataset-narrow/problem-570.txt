@@ -1,0 +1,67 @@
+If you really want to stay away from , you can use as you do in the original code, but I don't see why it is necessary. 
+
+One thing you may want to consider is remove the hard coding for and instructions. Instead, you can pick up current orientation's proper new orientation by the letter itself. 
+
+It took me a while to understand the way works in its current implementation. I even thought that there's a bug (after rereading the code, I see I was wrong about it). 
+
+First we declare fields to iterate on. Clear validation error indicators set on previous runs. the fields which fail validation. I am not sure what is the '?' that original code relies on, but I think you know better ;) If there list of filtered fields is empty, we know there are no validation errors and can return from here. Otherwise animate to the top of the screen, display UI errors for failed fields, and return false. 
+
+The last part is your consumer component. It orchestrates objects creation and iteration. The collection of is created in rather than constructor, and it defines the number, kind, and order of the Cards. 's constructor is used to inject the dependencies and prepare a that is than passed to the s (remember, they now require it in their constructors). method is used to react to the corresponding event. In my code I assumed that we only need to iterate through the questions linearly (first to last). If that is not the case (e.g. you may need to jump from Card1 to Card3 if a specific Answer was selected), then would need to emit event with some data. For example, and . Then the answerId could be used in for implementing more complex iteration logic. 
+
+You may not be ready or want to jump into @jasoninvegas' state machine proposal, but you should consider it among the alternatives you have. As the very first step, I'd recommend looking at plain old extract method refactoring... 
+
+forEach vs map When using function, we're supposed to return something back from the function parameter. In the code above you do and populate the collection by pushing to it. If you want to have the external collection as it is now, a should be more readable than a . With , the function may look like this. Also, notice that this allows joining the declaration and the assignment of array within the body of : 
+
+This is not following RESTful approach. This will be invoked if your code could not update a question. Meaning, the service was not able to fulfill a request. The correct HTTP response code for such situation is 500 Internal Server Error. You should only return 400 Bad Request if the request was validated and there were issues with the payload (request body received). In such case, HTTP 400 is truly the best option, but in order to improve user experience, you should also provide the information about what exactly was wrong with the request. E.g. HTTP 404 + response payload 
+
+I'm also unsure as to why you are creating the database connection twice but I would consider passing that into the GetRoles method like so: 
+
+Could you make the the account status and even account types an enumeration? I tend to try and err on the use of enumerations over string literals. I believe the latest version of Linq to SQL supports this? Why do you need to expose the repository on your IBankAccount interface. Why would the interface even care about a repository? I think this is better being supplied to any concrete classes via it's constructor? It would also make unit testing easier I would think. I personally wouldn't pass in the whole BankAccount object into the factory method. It only needs the account type so I would pass in that. Probably I would look at using a switch or if else in that factory method as well and throwing an exception if you can't create it (depends on your requirements of this method). 
+
+I would supply all the variables that you have hard coded into the method i.e. localPath, filename, ftp server, networkcredentials. Otherwise how can you re-use this method for other operations? I would probably avoid making the method static unless there was good reason to. In your finally clause you don't check if responseStream or writeStream are null? What if they never got created before an exception was thrown? I personally think unless there is a very valid reason you should always do something in an exception catch block, whether it be logging somewhere, re-throwing the exception or anything. Otherwise the calling method will have no idea that something went wrong. What is _result? I don't see it being set and I don't see it being declared anywhere? If Length is a constant, make it a constant. i.e. const int Length = 2048. I might also consider implementing some sort of call back method so you can provide status updates on the progress on the download. Just a suggestion, not sure how you would implement it exactly. 
+
+The method will ensure the new html elements are rebound for validation. I did not write that code so have not added it for review. For options 1, 2 and 3 above we didn't want the person writing the ajax to always have to worry about these so esentially wanted them to just be handled so to speak. 
+
+The method is doing too many things. It's responsible for querying for your record, instantiating the record and populating as well as performing the persistance. The method has too many dependencies. It looks like you have made it subject to both an external UI component in the .Text objects as well as the database layer. What happens if you had multiple ways of populating the object. You would have to duplicate this method? 
+
+Not using AutoMapper No mapping framework with If statements inverted to reduce nesting as well as remove need for additional variables. 
+
+used to be a field that is assigned in three different places: one in and two in . Each of these places could have a bug, and this code was scattered. Now it's calculated on the fly: 
+
+Update As @Gerrit0 suggested, is a better option than (more concise and achieves exactly the same result). 
+
+Clean up I don't know why it had to be so long and to have so many temporary variables. So I shortened it to make sense out of it. Here's what I got. 
+
+P.S. As a minor side note, I want to mention that some devs like to explicitly mention the //... interfaces in the class' clause. I am not sure whether it's very helpful or a big deal, but at least the compiler will complain if the is missing while class declares that is implemented. 
+
+I think, the key is in not fighting the complexity in-place, but rather move it out. If the language does not provide a construction you need, you can try using a library (like lodash; I'm not sure if it has what you need). If you don't want to use any third-party dependencies, you can still home brew the missing thing. It can be as simple as an importable isolated function: 
+
+Possible bug This seems to be a bug, but could be that I simply misunderstand the intent. The construction is strange and not idiomatic (usually, we either see or ). 
+
+P.S. Notice that the same approach may be applied to . And, speaking more generally, Strategy design pattern is almost always a working alternative to an or . Of course, to get the benefits of the pattern, we need to write some boilerplate code ( + Rule registry), however it's a great trade of for the scenarios where there are a lot of rules, or the rules are frequently added/modified, or the rule selection strategy may change in run time. 
+
+Yes, you can do this, and the garbage collector will do the job well. This is very close to your original code (snippet 1), but notice the parameter clear instructions. 
+
+Returning is okay-ish for as long as the consuming will not need to store as a valid value. IMO, there are two better ways. Which one to choose is up to you. I am personally a big fan of defensive programming and fail fast approach. Thus, I'd prefer to so that the consuming code breaks instead of hiding a bug. I say "bug", because when a queue is empty, nobody should not even try to from it. If you disagree, you can at least make your class consistent with JavaScript. Return the same thing as the one returned by an empty array when is called (which is ): 
+
+Probably, not really a question for CodeReview. In my code the are not really used (only allow checking whether the state machine ). What is it used in real life situations? Should I drop it altogether? Or should I change it? Any other advice regarding code readability, maintainability, idiomatic TypeScript, etc are very welcome too. 
+
+Alternative - XmlSerializer One alternative I have used in the past to parse Xml into objects is the .NET XmlSerializer. In your case you might do something like: 
+
+I can't guarantee but this code should be slightly faster and a bit more readable. So a first crack at a refactored solution might look like. 
+
+First of all. Is _queryLeadsByHeat supposed to represent a method? If so I would steer away from using underscore in it's method name unless that's your naming convention in which case I guess your stuck with it. Underscore is traditionally mainly reserved for fields (if at all as there are large debates for this practice). I don't have Visual studio in front of me so not sure if this will even compile (or is even possible) but my initial thought would be to try and consolidate the Predicates into one method. 
+
+I don't see any reason for these pieces of code to be async. They aren't doing long running tasks and aren't even hitting the db (unless Add doesn't something we don't know about of course like saves as well which is a different point of review right there). 
+
+Recently I had the need to make some ajax calls within a MVC 3.0 with Razor and jQuery application. After a bit of trial and error and refactoring it was discovered that a number of different needs were required. These included: 
+
+As I think George Howarth was suggesting in his answer you can reduce nesting and avoid the Arrow code effect by returning early from the method. This helps with code flow as well as readability. As already mentioned if you can remove constant literals from your code that is good. One way to do this is to move these to private static or const variables or even supply them to the method. 
+
+This has the added benefit in that you most likely have a Edit() action as well. You could re-use these methods. 
+
+Just a small comment from me. I'm not so sure about the need for the method SetJob(). It seems like there is a requirement for this method to be called before the Start() and once called you wouldn't call it again? Hence perhaps I might look at moving this to the constructor that would hopefully imply this concept? Also that way you can't change the job. This is of course made with the assumption you aren't looking at changing jobs once a new ScheduledJob has been setup. Also probably what Stylecop might pick up anyway as suggested by Leonid; 
+
+If there were a group of interfaces that shared a common theme i.e. CRUD I might consider making those seperate and implementing them where necessary. Or even a base service class to contain common methods. 
+
+Where did you read this? I'm not denying it it's just that I have not read this before and I haven't experienced too many problems with using EF in the case of one instance per request.

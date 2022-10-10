@@ -1,0 +1,87 @@
+Results Running the two code chunks above, as well as your code chunk, for a number of iunput values ("foo", "bananas", and "supercali......"), with a number of test values (including the input value itself), and then benchmarking the results (using Microbench ), I get: Your code: small, medium, large (microseconds) - 0.24, 0.5, 1.2 
+
+So, I would agree that naming is a concern in your code, but it extends beyond just your method. Your method does not tell me what it does, and the code in the method does not help much either. The code in the method does not help me help you rename the method. 
+
+I have taken this problem on as a little study in to lock efficiency, performance, and contention. As a result, I am posting a second answer with some additional information, and a different sort of review. Note: The full console output from my harness is here in pastebin.com First, my conclusion is that lock-free fib generator is a mistake. Reentrant locks are also a problem, and that the best performance comes from plain old synchronization. So, to test this all, I created a basic interface: 
+
+EDIT: after edit and comment from OP. After your changes I think my point-1 remains valid, but your changes make the 'smell' even worse.... ;-) 
+
+No, it's not possible using the system you do, to get it down to 1 second.... of course, though, I strongly suggest you add some timing information to the Android version to check that the actual times are about what I say they will be. On the other hand, there are 4 things I can recommend you consider when evaluating this issue: 
+
+This way it makes it obvious what is what, and also, the actual fields are only set in a single constructor too.... Additionally, it opens up an easier way to make the fields final, if you wanted to. Finally, I don't like code that relies on using the not-supplied default values of declared fields, and the Canonical constructor solves that (what I mean here, is that your current constructor does not set any other fields, but relies on the default values for and . toStrings Your s are using string concatenations. This is not horrible, but I would prefer to see string formatting. This code: 
+
+(and bug 3) NullPointerException if any of the queues are empty (in some combinations) (one bug on , the other on ): 
+
+Statistically insignificant errors You have another alternative too, which is to reduce any modulo bias to a statistically insignificant amount. You do this by using significantly bigger random numbers (bigger than 256). Combining multiple bytes for each output byte would accomplish this, for example, using 4 bytes. Using more bytes would further reduce any modulo bias: 
+
+A while loop on the result is the natural loop constraint. Instead of compiling the code down, I used an array of text injectors to perform the write. Some injectors inject a constant value, others inject a lookup value from the Parameters. I was able to reduce your class down to much simpler constructs, with no code abstraction and compilation, etc. From a readability and maintenance perspective I believe it is clearly better: 
+
+While your code looks right, there are two concerns I have with it. The first is the somewhat arbitrary use of as the limit of the random numbers. Why that value? The performance issue you have is the nested looping you have first to generate the values, and then inside you loop again to check for duplicates. You can reduce the inner loop significantly by using a in combination with the array to check for uniqueness. The set will consume more memory, but it will allow a check without any looping (it will reduce your \$O(n^2)\$ algorithm to \$O(n)\$). The code would look something like: 
+
+Finally, if it really was me, I would recommend that you consider ReentrantLocks and Conditions to manage the queue.... There's a good example (almost identical to this exact problem) of how to do it in the JavaDoc. 
+
+There are two aspects to this, the general design, and the implementation. Implementation The entire things should be extracted as a function. The first line of code: 
+
+But, you want to complexify it by using a SortedSet (because int[] is not easy to use?), so you can then convert the int[] to the SortedSet. I don't see why the SortedSet is a good idea, but, it is easy enough to convert to using it (even though it is bigger and slower than an int[] array). I don't think you will find a simpler (or faster) alternative. I would guess that you could quavify it with (note the data is being inserted in sorted order anyway): 
+
+Your GCF function is also an area of improvement. The Euclidian algorithm is really easy to apply in go (it's recursive, but that's OK): 
+
+This pattern starts with . This pattern says 'match any characters that end in a '.', but, the means that if nothing matches, then that's OK..... so, what the really means is "Match something with a dot at the end, or match nothing". This is apparently sensible, but, because the entire URL is not anchored to the start of the line (there is no ) it really means "match anything". For example, all of these URL's will successfully match: 
+
+Alright, apart from the thread daemon status and names, the rest of the thread model looks OK..... You have a thread that queues the events in an ordered queue, then a bunch of threads that decode them in paralle, and a final thread that removes them in the same order as their insert order. From what I can tell, this is good. Generics You go part way to working with your generics, but then you get lazy, or there is an inconsistency in your code. Inconsistency: you have where is Now, ChannelDecoderEvent is: 
+
+The above test (I call it with ) runs the three functions, yours, the one with ArrayCopy, and the one that has the sort in two parts. It does not matter what order I run them in, but they all take an array of 10,000 random values, and sort them. The Times I get are: 
+
+As an example usage, this is one of the ways that the above code is used. There are other places too: 
+
+No, I cannot see a better way. The group-by constraints are different for the selects, so there is no way to merge them in to one. The remainder of your code looks good, except I am concerned about your % calculations.... are they accurate? 
+
+This is a generic method. You can throw pretty much anything at it from any collection structure. An implementation of the method would look something like: 
+
+This is a case where a preset table of values will be helpful to test your conditions. Consider a structure which identifies what three buttons represent a winning condition: 
+
+This is good code. General While it does what it says it will do, here is one beef I have with it, but it's a small one: 
+
+The use of ListIterator is a great solution for manipulating linked lists, and because the operations are O(1), it's quick (of course, the linear scan is slower, but we hope that the topx is much smaller than the total number of lines, so we hope that most of the records are smaller than the first record. Of course, if each string is longer than the previous string, then all items will be scanned each time :( 
+
+The logic and data encapsulation are a little disconnected here. I think it may because I have misunderstood where this class fits in to your class hierarchy.... but I don't think so. There are a few things I don't like: 
+
+Note, this declares the dimension for the game. This is a single constant. Your use of and in a lot of places is called using Magic Numbers, and this is a bad thing... You need to replace those with a OK, that gets rid of the copy/paste initializer. Math.random() To initialize the 'alive' cells you use: 
+
+I presume is an enum (if it is not, it should be). An enum is a great candidate for a switch statement, and it also makes the conditions very clear: 
+
+That's all you need. Conclusion Putting all these suggestions together, you can significantly reduce the complexity of the code, to something like: 
+
+Note how is the sum of all memebers to the left of , and then just needs to find the difference. Remember, optimization often involves solving expensive problems fewer times, and reusing the results of the expensive calculation to derive other answers. As for your code, the LeetCode Javascript format is not a great one for good code quality..... but your use is simple enough to not have any real issues. Try it out here: 
+
+You have a lot of things in here to review, so I am just going to cherry-pick the things that stand out to me: 
+
+I would expect the second stream to produce the same results as the first, but the second stream will produce..... from what I can tell, the same content, plus an extra copy of the start URL. It will also re-scrape the last THRESHOLD number of pages (but assuming the pages did not change, it will ignore the scraped URLS). Odder things will happen if you call multiple times, from multiple different threads... You have a race condition in your analyze code. The following is broken: 
+
+This can all be done in a single loop, with very little data needed to track the details. Loop over the data... for each value: 
+
+I understand your concerns here. This is a messy situation, and Java (like most languages, I believe), makes it relatively hard to build up interdependencies during the bootstrapping of the classes, classloaders, etc. What would be ideal is if you could have an Enum that allowed the following: 
+
+In this case, there are many things wrong. The most significant, is that you never remove anything from the K1 map, as a result, that map always has a hard reference to the V value, which means the V value will never be GC'd, which in turn means WeakReferences referencing it will never 'go null'. The right way to work with WeakReferences in a situation like this, is to extend them, and to include the keys as part of the reference. Using a ReferenceQueue also allows you to clean references more efficiently. I 'threw together' the following code which illustrates these right ways, and you can use that as a basis for further development..... 
+
+The reason this works well is because you can exit from the hard work at any point, and have the default standing by to continue..... ... also, as an exercise, use the try-with-resources and new NIO2 features in Java7 
+
+You need to rationalize that. I started with the spaces and slashes first... using a bash regex/replace for to be replaced with an underscore. 
+
+would be much better. Validation It would be trivial to break your code by giving it a negative value as input. Testing for a negative value, and throwing an exception, would be acceptable, but determining the abs value of it would also be a good start, but, note that would cause a stack-overflow for the input value because you cannot calculate the absolute-value of that.... A different trick would be needed there. Primitives Keeping values as primitives instead of (or worse, ) is a very important factor with performance. When Java 9 or Java 10 arrives, this may change, but it is not there yet. Recursion Recursion is an elegant solution to a number of problems in computing. In general though, it is important to separate the three components of all recursive structures in to discrete logic points. All recursive structures consist of: 
+
+I would recommend that you use an IDE (Eclipse/IntelliJ/Netbeans) to help you get these things right. There is some debate about whether new programmers should use an IDE or not, because they make some things really easy and you may miss understanding some of the basic requirements of the language.... but, I believe that the IDE's allow you to focus on the stuff that is more important, like the code content. 
+
+It is guaranteed that there will be an instance created for you on the first call from a thread. Getting good seeding Your seeding system is both complicated, and wrong. If you are looking to have a special random generator that you feel out-performs the existing Java Random class, that's OK, but, it needs to be seeded right. There are a few problems in your seeding that I can see. First up: 
+
+That code takes the first number in the un-processed ones, and removes it, it's prime. That's fine, no problem, but.... Look at what is: 
+
+Taking things to the other extreme, we can sort the data in-place, and not use any additional memory overhead.... but we will have to implement our own sort. Our sort will be slower than the native sort, but, we will not have the overhead of creating Objects.... So, I have played with your code, and wrapped it in a quick-sort algorithm.... (your mileage may vary, buyer beware, use at your own risk, etc.).... Some notes: 
+
+Similar things can be done with a Date, or Calendar instance from earlier Java versions. For a real simple 'hack', though, you can also do.... 
+
+Note how there is no variable... it was being reused for different purposes in different places. It was confusing. Renaming the variables to self-document makes the code easier to understand. The compiler will sort out any optimizations in the same ways as before. There is one additional item in that method... why the CamelCase parameter ? I have renamed it . main The main method has a couple of issues I think must just be an artifact from testing. You set up the loop to check each input string, but, you do not use (the loop variable) as an index to the actual data you check... you have the code: 
+
+Note that the in-place process does not simply overwrite the input file. It creates a new file to put the output in, and then, when it's complete, it renames the new file over the input file (which is a safe, atomic operation which can't fail part way through). 
+
+Go native structures Now, the bigger issues with your stack is really about using the struct at all.... Because Go is statically typed, and has no forms of "generics" or "templates", you are forced to use as the value type. This is awkward, and requires lots of casting to use the output values from and . Writing a stack on top of a Slice is what I would do.... and not have the Stack code at all. You peek the stack by reading the last element and push with

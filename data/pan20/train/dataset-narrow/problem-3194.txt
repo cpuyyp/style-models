@@ -1,0 +1,97 @@
+It seems with the current bootloader it's not possible to use partition UUID as kernel boot parameter for the root device. As suggested in the comment I tried booting with the device name . It works and I will use that from now on. It is more stable than using PARTUUID because it does not interfere with disk management tools on cloned disk images like Raspbian. Before flashing an image I modify and . For reference I use and mount its partions on a pc with CD Card reader. The offsets are only valid for this image! 
+
+Your Raspberry Pi has two interfaces: and each with an ip address from another subnet. This is a very good condition to make your raspi a router. First you have to enable . There are several ways to do it. You can enable it direct to the kernel with: 
+
+For this we need some additional firmware/drivers. Raspbian If you start a new installation then use the latest official software for Raspberry Pi and everything is good. But you cannot just plug a SD Card from a into a without updating the software. @joan commented [2]: 
+
+VPN is a virtual private network and safely connects two networks mainly over the ethernet. It builds a so called VPN tunnel. You can copy data through this tunnel to the other side into a program there. But this program isn't a . It can be any program. I suggest you split your issue into two problems: first transfer the console output (numbers) from your source program into the destination program and when it works, copy it through the VPN tunnel to the destination program on the other side. I will focus on the first step here. There are many ways to transfer data from on program to another with bash. Your information is very vague but I will give you some common ways to give you an idea how it could work. With your comments we are maybe able to specify your problem. But by the way, this isn't really a Raspberry Pi specific problem. If your is working as filter you can simply pipe data to it: 
+
+Here is how I got it to work. First of all: I use the latest Raspbian Stretch Lite 2018-03-13. With this version there is no anymore if you install . You should also use up to date versions. In enable overlay . and are default and you can omit their settings. I have added them if you use other pins. You can find the settings in . 
+
+To complete the answer from @TheDiveO, it is possible to bridge wifi interfaces on OSI layer 2. This is done with which most wifi router support. But as told you need 4 address fields enabled in the ip header instead of 3. This is done with: 
+
+You don't use a but for the completeness for other readers: Adding the line is essential for Pi 3 B+ because without it wifi will not start. Look at release notes: 
+
+If you can mount the root partition of your SD Card with the file system on a PC you simply can set a static ip address in . There are some examples in it. You may consider to boot with a linux live system, e.g. from Debian or Ubuntu or SystemRescue or something else. You can also use a network scanner running on your operating system. On Linux you can use for example: 
+
+In addition to the answer from @Milliways you have to enable support on the wlan interfaces with . But if you try to add such an interface to the bridge you will get the error message . Raspberry Pi does not support OSI layer 2 bridging on wifi. You have to use workarounds for "bridging" wifi. You may consider to use instead. 
+
+Reboot, but only if you have an ethernet interface ;-) Step 3: Setup wlan interface Create this file with your settings: 
+
+Reboot if you have a wifi interface. Most of you will have. Good luck ... Step 4: Bonding ethernet and wlan interface for failover You should have both interfaces setup and running as described above. It is no problem when both interfaces are up. The kernel will use the interface with the lowest first. Here the ethernet interface will be used first. But this has a great disadvantage. As you can see with each interface has it's own ip-address. If the kernel switches the interface because one is gone down it also uses its new source ip-address. This will break any established communication, e.g. ssh, streaming and so on. You have to reboot to take effect. But that isn't really what we want. The solution of this problem is . We create an interim interface that does not change its settings. Ethernet and wifi will switch to . First disable the single ethernet and wifi network files: 
+
+It doesn't matter if both interfaces are activated when then build in isn't configured in . But to avoid possible confusion I would prefer to disable the build in wifi interface with putting this into the : 
+
+Be aware that the workarounds with NAT restricts communication in your local network. Devices connected to the raspi through wifi will see your mobile phone but devices connected to your internet router will not see your phone because of the NAT to the internet router. 
+
+it could be that your storage (sd card?) is full. This behavior is typical for this. If it is the case try to login as root and clean up your storage. If this doesn't work you can mount your storage on a pc e.g. with a card reader and free up some space. 
+
+troubleshooting as firewall only restricts communication so for troubleshooting make sure is complete transparent. If routing works then we can set up a firewall. If you have some rules there then save them (out of scope here) before flushing [1]: 
+
+That means: "send all packets belonging to network (destination network) to the next router (gateway). It knows where to go on." summarize Raspberry Pi settings Settings on RPi (router): 
+
+The default way on linux to share directories over the network is to use the Network File System . Support for this is integrated in the kernel so it should not be too difficult to set up. Because is a flavor of you can use NFS Server Setup from that. 
+
+Now we can look if we get the pushed buttons. Start and push buttons on your remote control. You should get something like: 
+
+To use two interfaces for failover it isn't done to give both an ip address. Wifi will not switch over automatically. You have to reboot. To avoid this you must use . Here is a suggestion to use dynamic failover. 
+
+As I understand there are two interfaces, the wifi connected to the network 10.0.0.0/24 and the ethernet port connected to the network 192.168.1.0/24. Assuming this we have a typical router. It's a little bit difficult to evaluate your configuration in detail from here. But essential for a router is that sends ip-packets from one interface to the other and backwards. So lets have a look on this. Check if is enabled on your raspi with: 
+
+I'm using , so I'm not so familiar with your configuration. But there are some general issues that should be mentioned. You have enabled . This is for . But all your interfaces are on the same subnet , even and on your raspi. This can only be done with . So you have to decide in general what to do: bridging or routing. For you have to reconfigure your network into at least two subnets, one subnet for and one different subnet for . Look here for Using the Raspberry Pi as a Router. Simple on OSI Layer 2 between ethernet and wifi does not work on a Raspberry Pi because lack of WDS (Wireless Distribution System) and limitations in . You have to use workarounds for a Raspberry Pi WiFi to Ethernet Bridge. 
+
+Reboot and your program runs as soon as the usb drive is attached, no need to mount it. If it doesn't work Stop the service: 
+
+Then your raspi should start to this target. I don't know what's wrong with your system but there are much more targets you can boot in so you may find one that will give you the possibility to repair your system. Maybe 
+
+Create initramfs with temporary installation Boot the SD Card in a raspi. After login to the raspberrypi first install and reboot to take affect. Be patient if it takes sometimes a little bit longer. There are many mounts to unmount with timeout. 
+
+If the red PWR LED is flashing, it indicates that voltage from your power supply drops below 4.63V. Seems there is a problem with your power supply or an overload by attached peripherals, e.g. USB-devices without its own power supply. Look at What do system LEDs signify? for further information. As @Milliways wrote in his comment this may not work if you use the wrong firmware. To ensure your firmware is up to date you should test your with the latest official Raspbian Stretch Lite. 
+
+the usb drive, detach it and start the datalogger.service. The service should wait (don't return to the prompt). Attach the usb drive and the service will start (return to the prompt). Reboot. 
+
+Don*t remove the entries in . They are still needed for wifi even for DHDP. They are used for authentication to connect to your wlan. 
+
+I have just tested with a fresh flashed Raspbian Stretch Lite 2018-04-18 on a Raspberry Pi 3B+. Adding an empty file will persistent enable the ssh server on the Raspberry Pi. Even after several boots I get (have a serial tty-usb console cable): 
+
+As we can see there is also a second partition . That is because we have copied the old partition table from the image. But in is no valid data. Create root partition and restore tar archive You can use the second partition and format it. But I want a little bit more and create a new one with 3GB. Also name the new partition with its old name . Check with . 
+
+In the next time here I will document step by step the effort I have taken to find a solution but without success now. Is this a problem only for me? For this i can't give an answer and need your help. If you like please run the simple ping test for a while from another computer against the ethernet connection of your raspi and tell me if you have packet loss. 
+
+Yes, it is possible. You can enable on every raspi so all of them work as router. But then you have to setup different networks for every ethernet connection so you can route packets between the networks, e.g. 
+
+This is the simple route on my raspi music renderer but not working as router. As I said it is difficult to give here special advices to you without detailed information from your network setup. 
+
+Here you will scan for devices from Raspberry Pi Foundation which MAC addresses start with . Scanning about 65000 ip addresses in this example tooks a time. Maybe you can reduce the range if you can guess what subnet your ip address can be in, e.g. with 255 ip addresses. 
+
+If you have formatted your drive you cannot simply copy the from the old because it is very likely that PARTUUID has changed because of using disk management tool. You can show the current of a device with command (example my raspi) 
+
+you will find what services and targets are active. Only look at the targets. Other candidates for and seem to be: 
+
+Your Raspberry Pi must at least associated to a wifi network. Otherwise it is not possible to connect to it. It is the same as if you haven't plugged in an ethernet cable. You can the SD Card put into to a card reader on a pc, mount its boot partition (the first partition) and create a file called with necessary information for the new network in it. On first boot, this file is copied to , overwriting any existing file with the same name. When the raspi is associated to the network, then you can scan for its ip address (given that there is a dhcp server) with a network scanner from your pc also connected to the wifi. For example with linux you can use (don't know what scanners are available on other operating systems): 
+
+You wrote that you have wlan0 bridged through to eth0. As far as I know a real bridge on OSI layer 2 with wifi is not possible with Raspberry Pi and nobody could show me so far how it works. For bridging wifi you need WDS ((Wireless Distribution System) and Raspberry Pi does not support it. For "bridging" wifi on a raspi you have to use workarounds. But connect to a local network with internet access together with using a vpn tunnel is mainly a routing problem. So you should use clean routing instead of faked "bridging" but that requires different subnets e.g. for your wifi, the vpn tunnel and for your local network. A working solution of this problem I have made with Raspberry pi as access point with vpn. Your setup seems to look similar to this (asuming unknown ip addresses): 
+
+Put the SD Card into a raspberry pi and boot. Using a prepared SD Card If you have copied the boot-partition to a SD Card once you can simply use it multiple times. My typical use: 
+
+What you have done was to mix up both systems so it is fairly possible that something is broken with your installation of . For the future please only use and for managing services! There is no need to touch . The simplest way to fix this is to flash the SD Card with a new image. If this isn't possible you can try to install again and purge it afterwards in the hope it will clean up your messed installation: 
+
+As @eftshift0 suggested in his answer I would also start with Raspbian Stretch Lite 2018-03-13. On this minimal platform you can get your application to run with installing just the minimal required packets. For example you can install the integrated development environment (IDE) for Qt with all its dependencies (150 additional packets): 
+
+Now I get typical packet loss. jessie Installed latest version of 2017-07-05-raspbian-jessie, prepared like jessie lite. With ping-test I got typical packet loss no matter with or without full-upgrade. ping-test results 
+
+references: [1] Bridging wlan0 to eth0 [2] $URL$ [3] $URL$ [4] $URL$ [5] $URL$ [6] Raspberry PI 3 MODEL B - Wireless Bridge to ethernet 
+
+and set it to your name server and reboot. Maybe you have also to stop asking for a domain name server from your dhcp server. You can try to modify the line: 
+
+And you should get responses out from the internet, e.g. from the google nameserver. First try from the raspi then from the end-point: 
+
+I don't have old stable version jessie running but usually you find in the default Raspbian repositories. Look with if it is available in jessie. If so you can simply install the libraries you need. There is no need to compile from source, unless you must use a newer version. 
+
+problems: The wifi device can only be managed by one application: either by wpa_supplicant or by hostapd but not together. At boot time hostapd seems to win. from wpa_supplicant is down. You may force wpa_supplicant to win with . We want to connect to two different wifi networks. This cannot be done at the same time with only one wifi device. We need two wifi devices for this, e.g. an additional wifi dongle. There are two bridges and . has only one slave interface . That doesn't make sense because there is nothing to bridge. Don't know where this bridge comes from, how it get its ip address and how it interfere with and . This bridge and its slave should be eliminated. What we want We want an isolated network with Wifi Access Point, Ethernet connection, a DHCP server and dns domain "pi.lan". Its access point, the raspi, should be able to connect to another different wifi network with internet router for updates, but only for the raspi. There is no routing between the isolated network and the internet connected network. I see three possible solutions for this problem: 
+
+Without the leading characters at the second line and at the third and fourth line. I thought it was a copy and paste error to the question, but if I take it as shown then the second line will just do nothing because it is a comment to . The third line will not work at expected because it starts with a redirect sign. The fourth line never terminates the input to . You write you get an output from 
+
+Yes. you can setup , the most widely-used name server software on the Internet. You will find it and some useful additions in the Raspbian repository with: 
+
+For any button add a new block . The button name is exact the name you get with . As action (line ) I do a simple so you can see on the console what button was pressed. Here you can call any other program, e.g. system programs, bash scripts, python programs, what you want. Look at . Thanks to manthony121 in his last comment. Have fun :-)

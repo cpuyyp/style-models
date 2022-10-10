@@ -1,0 +1,61 @@
+The fastest way would be to create a cluster an join your current stand alone server to the cluster as a new node. Set the database to full recovery model, take a full backup and a transaction log backup and restore them to the instance on the other node with norecovery. If you have a good full backup (most recent), it would be possible to set the recovery model to full, take a differential and then take a log backup using the last full from the simple recovery model as your base. The differential should bridge the lsn gap. To answer your questions: 
+
+ASSUMING all of the previous, it acts no differently than 2012/2014 in terms of readable secondary replicas. Yes, there were enhancements but the real reason why there are performance implications on the primary is mostly due to a resource being run out on a secondary and causing long waits which show up in the primary as . 
+
+There isn't a one sized fits all answer, so assuming that the reporting workload doesn't run the secondary replica out of CPU/Memory/Disk/Network resources and there isn't any contention for said resources then the primary should not be impacted but log growth will occur, which in the end could impact the performance of the AG/SQL. 
+
+That's the minimum you'd need for replay and recovery of individual transactions without any optimizations. There may be many more than 3 for a single CRUD item in SQL Server. 
+
+The AG will be manual failover, yes. However, there is a huge asterisk here which is that whenever AGs are used in conjunction with FCIs, there is no automatic failover at the AG level. The automatic failover will happen at the FCI level and the only failover method for AGs would be manual. 
+
+Not knowing much else about your problem, if your database is online and you're not using anything that may be actively using part of the log - such as Mirroring, AGs, Replication, etc, you could attempt removing that part of the log from the sweep by changing to the simple recovery mode (if in bulk or full) and issuing a checkpoint. Then go back to your normal recovery model and either take a full or differential to restart a valid LSN chain. This may or may not work for you depending on what the actual underlying cause is, but should work for most cases caused by a state of 6. Please note: I am not advocating that you do anything to compromise your database. If the database is online and functioning, this won't cause any data loss nor would it be destructive other than to your LSN chain which can be bridged. 
+
+The permanent solution is to figure out WHY/WHAT is causing the database to go suspect. Is it a filter drivers, bad hardware, etc. We don't know and can't tell you, this is something you'll need to inspect on your own. You'll want to get your sysadmins involved as well. 
+
+When it's not longer needed by recovery (and/or, depending on recovery model) when it's been successfully backed up. See the log architecture link, above. 
+
+To workaround it, either start the SQL Browser service or unblock the port(s). Additionally, with the SQL Server Management Studio connection dialog it is possible to press the "options" button in the lower right hand corner and override any of the preset options. In this instance, using to specify the server name and port number overrides the SQL Browser port lookup and allows for a direct connection without name to port resolution. 
+
+The issue was fixed in SSMS 17.3, however you'll need to load the "applocal" assembly and not the one from the GAC. In addition, in order to be "backwards compatible", the property will stay a string and act/behave just like it did before. The newly added (and a getter/setter with it) will have the correct representation you're looking for. 
+
+Per the previous statement I made, this is not possible as Windows Clustering is a shared nothing approach. Thus you cannot use the same disks for multiple resources. In this case, having two separate instances of SQL Server would violate that constraint. Now, should you want multiple active and converged instances of SQL Server running on different servers, you could look into using peer-to-peer replication. It's not cluster aware but there is nothing stopping you from putting it on top of a clustered instance... it just wouldn't make much sense in my honest opinion. Resource: $URL$ 
+
+Quorum is a majority agreement, it is not a resource. It used to be a resource until 2003 where the only option was a disk, but this hasn't been the case since Server 2008. There can only be a single witness, you can't have both a disk and a fileshare. The choice of which to have is going to be based on your favorable scenario during a failure and your internal implementation limits. For example, a company I work with has said absolutely no shared disk to any server, so that rules out a disk as a potential witness. Most organizations want the whatever is considered the optimal side for their business (though, proper planning and implementation there wouldn't be an "optimal" side) to stay running. In most cases we call this the "primary" side. Generally speaking the witness should be closest to the location that should stay up in case of a true split situation when using windows server 2012R2 or lower. If you're using Windows Server 2016 you will want to look into sites. 
+
+Given the wait types of and I highly doubt AlwaysOn was the culprit. These two latch types may go hand in hand. You'll want to investigate where the waits are actually happening - sys.dm_os_latch_stats may help here where the latch_class is not 'buffer'. Given that removing AlwaysOn did not help with the situation, I highly doubt AlwaysOn was the problem. However, AlwaysOn may have contributed to some wait time though how much is impossible to say, though I doubt it would be noticeable against your current top waits. Paul has some information on these: $URL$ $URL$ Additionally this whitepaper on latch contention may be helpful: $URL$ 
+
+I'm not sure what you mean by SQL Server cluster and windows cluster. If you are talking FCIs, you wouldn't be able to AG between the FCIs because they'd share the same set of nodes. 
+
+Unless you already have this information logged somewhere, no there is no place that this is automatically logged at. You can attempt to slog through the engine errorlog, window event logs, and cluster logs... but there is nothing to say that they haven't rolled over or have been otherwise cleared. 
+
+There is another way in which snapshots can be used to recover lost data, specifically when used with AlwaysOn Availability Groups. If there would be a need to have a forced failover, a snapshot can be created of the database(s) that were previously the primary before resuming data movement. This would give you a before and after picture (snapshot is before, current db is after) of the forced failover and an potential data loss that would be a result of the forced failover. This was not meant to be a solution to the OPs question which was not specifically about AGs, but it is a way to use database snapshots for data recovery that was not mentioned in any other answer. Feel free to incorporate this text into a different answer and then delete this answer. 
+
+You can change the permissions and requires the settings to be properly set. The security implications are that of any other file share. 
+
+A single log backup doesn't hold everything that ever happened, you'll need every log backup ever taken. If your database was ever in the simple recovery model, or if it was in the full recovery model and anything was accomplished in it before a full backup was taken then you're not going to get everything back. Period. Just because there are 100k records in the table doesn't mean there were 100k transactions, either. It could have been one big transaction, it could have been 2 transactions that inserted 200k and then a 3rd transaction that removed 100k, etc. ad nauseam. 
+
+For the underlying WSFC you'll need at a minimum: Node1 - IP Address for each unique subnet for each network interface Node2 - IP Address for each unique subnet for each network interface CNO - IP Address for each unique subnet EX: 2 nodes, 2 subnets, 1 interface per node, subnets 192.168.1.1/24 and 192.168.2.1/24 Node1: 192.168.1.10 Node2: 192.168.2.10 CNO: 192.168.1.20, 192.168.2.20 
+
+In all of those cases it is entirely dependent upon the configuration of the availability group. If you're set for automatic failover (synchronous commit + synchronized databases + automatic failover set) then in all of those situation the availability group should fail over. 
+
+The pages are asked for from memory like most things in SQL Server. The same process applies for as it does for other read operations in SQL Server. 
+
+You'll notice that the secondary replica is missing The fix is to make the secondary have identical paths for the databases involved. 
+
+This happens when attempting to put in a tracer token without an active subscription. This error seems pretty obvious. Error 18752 
+
+There are a ton. Whatever you could do now, you can do "in the cloud". Think of the cloud as an extension of your current datacenter (being a very basic analogy). 
+
+The job started 2:14:40 ago, which is the time of the last known good checkdb - that's true. You started it then, it ran for 2 hours and 14 minutes +/- some agent stuffs. The times look fine to me, it's not like the job ran for 5 seconds and shows a last good of 6 hours ago. I believe the issue is you expect the CHECKDB to show the good value at the end of the run versus being updated when it was executed. That shouldn't be a problem. 
+
+Yes and No. Yes, Basic Availability Groups are available but I honestly don't believe it's the right fit for your situation. I actually don't believe Availability Groups in general is a good fit for what you've described. 
+
+Number of database Number of needed replicas for HA and DR Log generation rate CPU/Disk/Memory usage 
+
+That's the basics of how it works. Remove automatic failover (synchronous), install the updates/patches, reboot (in this scenario). 
+
+That depends. How any nodes are in the cluster? What are the node weights? What version of Windows is it? 
+
+Present the disk to all possible owners of that disk (nodes) Bring the disk online from the first node that will own it Bring the disk into the cluster - it'll now reside in available storage Move the disk into the resource group for SQL Server Set the SQL Server resource to DEPEND on that new disk Double check sys.dm_io_cluster_shared_drives to see that SQL "sees" the disk. If it doesn't, one of the steps above was not successfully completed. 
+
+Until the old principal server (now the mirror server) is upgraded to 2016 you will not be able to resume data movement - no data will flow until you upgrade the older instance to 2016 and manually resume the data movement.

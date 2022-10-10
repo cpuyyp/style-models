@@ -1,0 +1,85 @@
+Just have to say that @user1118321 advice about the loop is wrong. In fact what he has suggested is an anti pattern (a very common mistake). Now I agree that it would be nice to make that conditional shorter. But that is achieved by using his first bit of advice and creating a class (object) for back accounts. But the pattern as advocated: 
+
+Since most C++ loops are based on iterators lets update your code to use an iterator based approach. 
+
+Also in C++14 we added the range based for: The below loop is basically syntactic sugar (though it only calls once in C++17) for the previous loop I wrote. 
+
+Do you need to create the factory dynamically. A local object will probably do. Even though the factory probably needs to create the objects dynamically you don't want to return pointers (but rather a smart pointer or a reference depending on how you want to handle ownership semantics (there are several good articles on SO about this so go have a read)). 
+
+This is a C function (even if you have used it from C++). This means you must check the return value to make sure the faction succeeded. Don't artifically stop the application. You may forget to remove this and then it will make the program look like it is broken. 
+
+Note: Notice how the SO code block picks up the type. This is a reflection of common conventions used in C++. Re-Design 
+
+Also in C++ never us RAW pointers (there are some exceptions). But RAW pointers do not convey ownership. If you don't know the ownership then you don't know who is responsible for deleting the object. One of the most important concepts in C++ (over C) is the concept of ownership (RAII being more important). We should always know who owns a pointer so we know who is going to clean it up. Smart pointers are the usuall technique of indicating ownership (or using references to indicate the passing of a reference with no ownership transfer). The is part of the type. So put the by the type when declaring pointers. 
+
+Basically you are testing each character to see if it is uppercase or a special. This is much easier by doing an explicit test on each character. This is a very bad way of extracting a single character into a string. 
+
+If getline() fails with a real error (not EOF) you end up with an infinite loop. The last line read reads up to (but not past the EOF). So you have read the last line but EOF is not set. You then re-enter the loop try to get another line, this fails and sets EOF but nothing is done with yet you still push in onto . So you end up pushing the last line twice. 
+
+The two object need to be a type that the standard understands. So currently you can only swap types that are in the namespace . std::swap will fallback to using a temporary and assignment but this is not always as efficient as possible and lots of types define their own swap to make it much more efficient (but that will not happen here). What you want to do is: 
+
+This is an indication that you can go backwards and forwards with the iterator. In fact the concept means that your iterator must also support are well as . See: $URL$ The link you provide indicates that a square list is circular. So moving forward all the time you may never reach the end. But without understanding (or seeing your implementation) it is hard to tell if the current implementation will work. 
+
+Why are you putting code that determines correct usage of the function external to the function. Rather than that why not put the code inside the function then it can never be used incorrectly. The top priority is maintenance and re-use. You should write your code so that it can not be used incorrectly. Thus rather than: 
+
+I don't think that makes it easier (or cleaner) You are injecting pointers (which begs to ask ownership) You should be preferring encapsulation over inheritance. 
+
+In addition to what @Chris Jester-Young covered (so everything he said): The Base class of a hierarchy with virtual methods should also have a virtual destructor. Otherwise you are going to start having issues with memory management when you start dynamically creating objects on the fly. 
+
+Turn on your compiler warnings: (Fix this first) Even at the most basic warning level I get a whole bunch of warnings. Personally I compile at a much higher warning level then basic and then I get two pages of warning messages. They may be called warnings but really they are logical errors in your code. You really should fix them all (or at least address them to make sure the code works correctly). Personally I always tell the compiler to treat warnings as errors thus it will fail to compile unless I fix them. Major Comments on code: (Fix this second) Refactor the code so you do not have functions that are 500 lines long. Ideally (not always achievable) one screen is a good rule of thumb. Then you should be able to see the whole function in a glance. Second Major comment: (Fix this third) You tagged your question as C but your file is *.cpp (which implies C++) and you are using namespace. 
+
+There is no year 0 in the Gregorian calender. It goes from -1 (or 1 BC) to 1 (or 1 AD). Also I would not go back that far. Limit your application to years above 1900. Before that it gets very complicated and actually depends on what country you are in. Or (assuming this is just a school project) you can make the assumption we used the Gregorian all the way back to pre-history. Remove Repeated code. Replaece repeated code with a function call. 
+
+If you want to go python like we can compress it a bit more. The function is designed to run over a container and collect information. Normally we do something simple with it; like to add the elements. But with the quick addition of a lambda we can get it to count each value and return the highest counted value (the return value of each iteration of the lambda is passed back as the first parameter to the lambda). 
+
+So I make my makefile only print out the interesting stuff. If there are no errors all you get is the basics info you need (and a ). You will get the full command line if there is an error. 
+
+Global variables make the code harder to modify and maintain in the long run and should be avoided in most situations. Pass them as parameters and things become much more flexible. Second point is to declare each variable on its own line (it is much more readable). And try and make the names more meaningful a,i,n hold no meaning so I have no idea what you are going to use them for. In C I find it usefull to typedef structures to make sure I can use the short version of the name (I have not use C in anger recently so I am not sure if this best practice anymore but I think it makes the code more readable). 
+
+I think you want to separate producer and consumer from the Moniter. These are three different types of object. When you construct the producer/consumer you pass it a monitor object to use when it deposits/withdraws items. 
+
+Rule of Three Your does not obey the rule of three. Now this is a special case as it should only be used by and I can't see a wrong usage. But to protect against future misuse you should make this (RCObject) a private member of . Though you have the three methods you require for to implement the rule of three you don't actually do it. Su you leak in a couple of situations. 
+
+Every byte in the is being set to -1. There are multiple bytes in an . If it works you are just getting lucky. 
+
+You are polluting the global namespace. It is best to prefix types and object with their appropriate namespace or selectively bring into the current scope just the bits you need. Code that look like this: 
+
+Design. Do you actually need to count all the characters? I would just record that I had already moved them as I moved them from source to destination. 
+
+The only thing I would change is the interface. Most algorithms in C++ use iterators. This abstracts the container type. 
+
+You don't actually call delete on these so you are leaking memory. Even if you did call delete the code is still not exception safe. Basically you should never be doing something like this. 
+
+You should either update to take the function by r-value ref or change the take a normal ref (to be consistent). Personally I would pass the r-value ref through to the . 
+
+Normally people break these into two lines. One for the template information and the next for the function information: 
+
+I would have made that return true if there is available memory. Not if we ever successfully allocated memory. But I have not read the standard allocator documentation. So that may be what you want (though I doubt it). Why are you using ? 
+
+Sure you can do it. But is it worth it? The standard answer is no. Even though when it happens this will save you a lot of time (because that copy is a very expensive operation). Unfortunately self assignment is so exceedingly rare (it barely ever happens) that what you have done is pessimize the co the normal code. So for billions of assignment operations you are making the assignment take slightly longer micro seconds. Then for one operation you are making the code much faster (milli seconds). Is it worth it. Probably not. Move Assignment The standard approach is what you commented out 
+
+Is it really an error in the first place? But why is it part of the resource management code? The resource management code should be wrapped in another layer of code that does the business logic and informs the user. That way you can re-use the function from another piece of code that does not care if the data is in the list or not. Style Comments Naming Variable names are supposed to be self documenting. 
+
+Polymorphism: It looks like all this work is done on the board. But really you should be using polymorphism to mark the board. ie the piece knows its own type and can mark the board appropriately. 
+
+Normally when you implement numeric types it is easier to specify the standard operators in terms of their assignment versions . 
+
+Prefer to The only difference is that will flush the stream after putting the character on it. Flushing the stream manually is almost always a waste of time as the stream will auto flush when required and any attempt by a human is ultimately at the wrong time. Data Driven programming. Rather than have a big set of blocks. Put the data you want to draw into an array and just print the appropraitare array element. 
+
+I don't see the need for the object to be part of the object. It is only every going to be used inthe constructor. Once the data is loaded it will never be used again. So just declare it as an automatic variable that is local to the constructor. 
+
+As a side note: This is the kind of reason why underscore is reserved for the implementation to allow for little shortcuts like this without having to re-invent the language. Rather than using recursive templates. I would have used an iterative aproach. With you can do quite a lot that is evaluated at compile time. 
+
+Your use of underscore is perfectly correct. Unfortunately not all coders are aware of all the rules around underscore. So I prefer to avoid them, especially at the beginning of identifiers. Your nodes use move semantics only. Which is fine. But your move constructor and assignment should be marked as . In your specific case it will make no difference but it is a good habit to get into (especially if these methods are actually noexcept). 
+
+Overall Its pretty good. Your main issue is just deciding who owns object (do the register functions really need to dynamically create objects). Can you have stateless plugins? Once you have decided on ownership then you have define the semantics you want to use to describe the ownership and thus how to enforce it. Note: Ownership semantics is all about who is responsible for deleting the object at the end of its life cycle. 
+
+There have been a couple of attempts like this. springs to mind. They used rather than . But personally I don't see a need for this. BUT big advancements have come from trying the non obvious (things I would not think of). So please experiment. 
+
+Personally I think this is overkill and you should just put the work you were putting in these classes into the execute method. I would do this: 
+
+C++14 Its 2014 most modern compilers now support C++14 so you should use it. This code is still very C++03. For this class this simply means adding move semantics (and nothrow on swap). To add move semantics you need to add a move constructor and move assignment operator. 
+
+This basically says I (the function) am returning an array the at I dynamically allocated internally. I am handing the ownership of this array back to you and thus it is your responsibility to delete it. Note: The object will deal with deleting it. As a result C++ does not have the issues with memory leaks that languages like C has. It also has better garbage collection (its deterministic and fine grained) than languages like C# or Java. This is all because of ownership semantics (and the concept of RAII). Stop using NULL C++ has an explicit correctly types value for this: . Unlike the macro (that comes from the language) the literal has an explicit type that does not get accidently converted to other types. Thus it can not be used incorrectly. Stop using C casts C++ has its own more refined casting tools. 
+
+I hate all the faffing around with the bad bits and the clunky handling of the rest of the line. Yes there is a slight possibility of inefficiency if there is a bad line that is exceptionally long. But under normal operations I would not worry. When reading formatted input with efficiency is not usually your biggest concern. When you are reading then its (efficiency) definitely not your biggest concern as the user types very slowly. I would also say it is the easiest to read out of the three solutions. Comments on original Code Things that stand out in the original:

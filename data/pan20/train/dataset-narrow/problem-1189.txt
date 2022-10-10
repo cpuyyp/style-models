@@ -1,0 +1,69 @@
+@Austin Hastings good review leaves only some corner issues to consider. I advocate avoiding manual formatting - recommend to use automatic formatting. Life is too short for spending time formatting code. 
+
+Minor: not needed, --> Style: I favor the style of rather than . Nice to begin with as that insures multiplication is done at least as . 
+
+Allocate to the size of the de-referenced type. With above change, size to the variable, not its type. Easier to code, review and maintain. 
+
+What does program do? "Simple file renamer" clearly states a file is to be renamed and it is is evident the program takes only 1 argument. Yet I would expect a comment to state the purpose of code and what the file name is changed to. When using using typedef'd , take time to minimize work should the type change. 
+
+From a design standpoint, I would also include as the functionality of these safe functions may expand and require that even if it present does nothing. It makes symmetric. 
+
+All uppercase variables names like will often be reviewed by coders as being macro constants. Better to use or , etc. 
+
+There is no protection against pushing too much. I'd expect the size of memory available with to be provided and to code against overflow. In any case, OP should provide documentation concerning what happens when too much memory is requested. There is no clear functionality against popping too much. I'd expect either an error return or a perhaps the equivalent of the top allocation having size 0. Some compilers will warn about mixed signed/unsigned math. As the return type from is some unsigned type, use unsigned constants throughout. 
+
+"whether its bad practice or not" to sub-divide. No, not bad practice - in fact good in certain areas. It often comes down to maintenance - how many functions per file and the optimal answer is highly problem dependent. IMO, too often files need fewer functions than code needs fewer files. have troubles as it ungets a . This special value should not be unget-able. Further – I have doubts that when is , that these 2 functions properly handle some char values as the real returns and . Example: If is un-gotten, on get, it may have the value of . Recommend making your unget buffer . Unclear to the whole need for user functionality as standard library ones well handle 1 level of . The whole , should input be alphabetical, devolves into a linked list. Consider AVL trees. Below test against after the assignment. Recommend test before to cope with pathological values like 1. Recommend re-write - avoiding code like . Further, consider rather than for array indexes. 
+
+OTOH, I do like to qualify input right up front. Suggest a helper function to read an and check its range and handle various errors detections. Something like Read_float 
+
+Defensive programming. What happens if user passed a negative value for ? (Answer: a very long loop). 
+
+Obscure bug when . is only valid when has a value in the range or . As may have various negative values, can be undefined behavior (UB). 
+
+Not a fan of the missing at the end. Although not needed, it adds pause in the review – was this OP’s intent? Suggest a name and date in your code 
+
+The whole messing with and math relies on 1) (something not specified by C) and 2) does not detect conversion problems with . Suggest a new approach that only uses math. 
+
+Pedantic code would test for overflow in , but let us skip that corner case for now. Initialize when declaring, if possible. 
+
+Use type to index arrays. It really is the best type for arrays being not too wide nor too narrow. may be insufficient. 
+
+is more logical as . Either way, and in the code would convey more meaning. Bug. does not reset in . So does not "seed" the complete PRNG state. Same for in . Consider making , etc. to the file, so may reset them. relies on . Either make code portable or add an to confirm assumptions. [] usually means to include end points. So comment would be better as . Bug. No protection against in . Unclear comment in with "Sign test as per the recommendation" as there is no sign in the code. should be sufficient. Any bit should be as random as the others. Go for simple code. unnecessary in . The could only make the constant wider than it needs to be. I find using digits in one case and in another adds clarity to the constant . Given #34, it is not needed anyways. The function names lack distinctiveness and meaning (e.g. How is something to do with "random"?). Recommend similar change here as in #13. Example . 
+
+Nice that posted code respected the site presentation width. Code did not need a horizontal scroll bar. 
+
+I find confusing for the allocated memory as proportional to . Re-write code so the array's count is . I'd go for a that can affect the state of to put it into a error/start state. Example 
+
+Use when able. As the string pointer to by is not modified, add to allow wider application and potential performance improvements. 
+
+Minor: prefer rather than as argument in . More useful to separate from the code under test. Something like: 
+
+Subtle point. When is used to store a character and subsequent code interacts with , the standard C library model is to treat the values as . This is important when is signed and values outside are used. Recall returns values in the range. 
+
+will read the entire should it encounter an embedded as will not break the loop. Better to continue loop if exist and the buffer just read is max length. 
+
+Code needs more robust testing. Some mods to create easier testing are below. With such testing, the functional error would be readily noticed. Not so surprisingly, test code can be harder and longer to write than the code-under-test. 
+
+Separate out functional code from the test driver. I'd expect some stand-alone function and then code in testing it. Questionable space size and incorrect use of . Avoid coding naked magic numbers like 20 
+
+A memory optimization, trading some code for constant data would be to combine error messages. Also I see this as more maintainable. 
+
+Watch out for assuming applies to the width of the target - it is applied to the constant. What if was 64-bit, was 32-bit and was . is an unsigned with the value of rather than , thus masking off the top bits. Same problem with anf . Better to use , etc. 
+
+Arrays are best indexed with type rather than . Notice unnecessary mixed types in . Both should be . Avoid naked magic numbers. Why in ? Formatting: For review purposes, consider limiting to the width to the target display. 
+
+Use same case prefix for type "Stack" and functions "stack" --> "gStack" or whatever. Use correct print specifier. This implies that either OP does not have all warnings enabled or is using a weak compiler. Suggest remedying that. 
+
+Spelling --> . can be coded simpler as . (style issue) Not a fan of using to print strings. expects that first argument to point to a string used as a format - which is a problem should it contain . Consider Uncertain that is generally OK in . Since it is test code, suggest simplifying. 
+
+Use a temporary head node. This also handles cases when by returning , unlike OP's code that leaves the head node uninitialized. 
+
+The is not needed as , as a string, is never . In C, a string is a sequence (e.g. array) of characters up to and including the terminating null character. Still it is not a bad idea to check against for as a pointer, sometimes will be assigned . The can be eliminated by taking advantage of starting with assigned to the address of the null character. 
+
+Change of type without checking range - candidate bug. Similar unqualified type changes used. The loose use of permeates code. 
+
+When counting lines in a file, code needs to consider 2 typical problems: 1) If the last line does not end with a , does it count as a line? IMO, it should. Solution: increment line count when a character is read after a or is the first character. 2) Might the file contain embedded null characters? The occurrence of these prevents proper use of . In this case, OP does not use , but the question is still of consideration. Code should not assume a file will consistent of lines or less. Recommend or . 
+
+Not checking the result of can lead to all sorts of trouble as if the conversion fails, may be left in its former state. Code safe: check return values. Re-design idea: Create a software FIFO. Have the ISR pull data out of the HW FIFO and fill the SW FIFO. Then in the main loop, code can process the SW FIFO at its leisure. 
+
+See little value with as an upper bound - it is arbitrary and surprising. If anything use, as the upper bound.

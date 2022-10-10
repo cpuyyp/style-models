@@ -1,0 +1,73 @@
+That was tricky... Actually, your blocks are pretty irrelevant, apart from getting the right slice of to do the with the corresponding , so I went the easy route of creating an array as follows: 
+
+It may be marginally faster than your code, but I think the most important improvement is in compactness and readability. 
+
+What your code is doing is typically described as merging both lists. The word union sounds like the set operation, where repeated values should appear only once. Assuming your interpretation is correct, you typically want to minimize the amount of work done in the inner loop of any algorithm. In your case, this is typically done by not handling the items of one list once the other is exhausted inside that loop, but afterwards. Also, the typical way of merging is that, in case of a tie, the value from the first list goes into the final list first. This is mostly irrelevant for your case, but it is a good habit to write these things conforming to that norm, so that if you ever find yourself writing code for an indirect mergesort, you willt be less likely to make it non-stable by mistake. 
+
+You can do a similar thing for the setting of zeros of the sieve for other prime numbers, but it gets complicated to figure out how many zeros to add on the right. 
+
+That's not going to do a whole lot for performance (basically get rid of a rows iteration), but everything else I see is really context specific that may end up with worse performance assuming your data looks like I expect it does (< 10 , < 50 and thousands of rows). A couple of additional thoughts you can try, though, depending on your data: 
+
+From a high level, I have to disagree with your class design and names - they're really modeled after your implementation (, , etc.) instead of your problem domain. I would've expected to see some classes such as , , etc. I won't attempt a straight refactoring - though there's isolated areas of code that could be improved on, the main thing that jumps out at me is the mix of concerns spread across all your classes. Currently, your classes all know way too much about and user input - you need to centralize that logic, and split into dedicated layers: UI, business, storage. Here's an attempt to walk through a design - which should hopefully give you enough to tweak the specifics to meet your needs. Any compile errors or bugs are intentional and intended for learning purposes. Just kidding - though I will take some shortcuts since MarkDown isn't the best IDE. Let's first extract out a class so we'll have something to work with: 
+
+You basically initialize the board to all zeros, use for one player and for the other, and keep track of the sum of values in each row, column and diagonal. Whenever you add a new move, you can update all your data in constant time, and check in constant time if the player has won. 
+
+In your case, you want to take into account extra contributions from multiples of the factor squared, cubed, etc... This is relatively straightforward to do also: 
+
+Note that the excludes the value over , as Python slices are right-exclusive. We can turn this idea into code doing something like: 
+
+As I said, you'll need to test it, but I wouldn't be surprised if this little change makes your code 5-10x faster. 
+
+Now that you have a way of extending a prime list, you just need to extend it until it has sufficient items in it. A not too sophisticated way of going about it could be: 
+
+Unless your interview is of the "here's your exercise, e-mail us your working code within a couple of hours", you are either going to be writing on a whiteboard, or on a shared google doc, with no internet access or reference material to check. The way I see it, this means you want to be very defensive in your coding style, and avoid using the less usual modules or features of the language, unless you are extremely comfortable doing so. Long story short, I wouldn't use in an interview. If a bunch of statements thrown in a function are good enough for Peter Norvig, they should also be enough for any interview. What you can certainly improve on is the structure of those tests, e.g. put together something like: 
+
+Ok, now we have enough to get to refactoring the class. Currently, your class has too many responsibilities - it's showing the menu, tracking the current state, and adding/removing products. We're going to trim that down to just showing the menu and tracking the current state: 
+
+Ok - that pretty much gives us our product management functionality. Now, on to UI. You've got the right idea here - console input/output should be handled generically, so let's expand on that idea and write a few generic helper classes. A good way to think through this is figuring out what portions of what you need to do are specific to your app, and what is a generic concern. You should try to split those as much as possible. These won't have anything to do with , so they'll be reusable in a different console app. 
+
+Customer and Item classes Well, to start with, isn't used and I don't see how it could ever be. So that should just go away. Your naming style is off for C#; you should be using PascalCase instead of camelCase for public methods (eg., AddItem). and don't add much value; they're OK as-is, and are actually a reasonable encapsulation - but they're kind of overkill here. (as an aside, your class doesn't include , but I inferred it from your ). This comment could really be directed to the whole structure, actually - since you really just need a to solve the problem. Not to say the structure can't be useful, but I would consider it overkill unless there's some future plans being made here. Program class Your class sets a private member, but never uses it outside of ; it's odd to have a class instantiate itself like this. In this case, you can just use the as a local. will take an object and call on it for you; no reason to use the format overload. 
+
+You are building a lot of intermediate sorage that you don't really need, as you could simply iterate over both dictionaries simultaneously. Using the method of dictionaries (or if you are using Python 2.x will also save you a bunch of dictionary look-ups: 
+
+Imagine you had to do the same with 4 distinct digits, , , and , and lets forget for now about numbers with less than 4 digits. There are 4! arrangements of these 4 digits, of which 3! each will have the in the first, second, third and fourth positions. So the contribution of the digit to the overall sum will be , and the total sum of all numbers generated from these four digits ends up being . It is easy to check that this works comparing to a brute-force solution: 
+
+The following outlines a couple variations of a numpy solution. For the problem sizes in your post, they all clock faster than 100us, so you should get your 30,744 calls in about 3 seconds. 
+
+To move from the top left corner of an \$n\times n\$ grid to the opposite one you have to move \$n\$ times to the right and \$n\$ times down. So in total you will do \$2n\$ moves. If you could make those in any order there would be \$(2 n)!\$ ways of doing them. But you don't have that freedom, because the order within the movements to the right and within the movements down is fixed, e.g. you have to move from row 4 to row 5 before you can move from row 5 to row 6. So of the \$n!\$ ways the movements to the right can be ordered, only one is valid, and similarly with the movements down. Summing it all up, the closed form answer to that problem is: $$ \frac{(2n)!}{n!n!} $$ Unsurprisingly this is the same as \$C_{2n, n}\$, the combinations of \$2n\$ items taken \$n\$ at a time. You could think of the same problem as having \$2n\$ movements and having to choose \$n\$ of those to make e.g. the movements down, leaving the others for the movements right. With Python's arbitrary size integers you could simply calculate that as: 
+
+Ok - now we've got most of the pieces, we just need to put the actual program logic together. Let's move on to the method: 
+
+I'd advise that if you're looking for 100% compatibility with here, you'll probably want some extensive unit tests. Here's what I came up with that handles the edge-cases I threw at it, but I don't expect it's bullet proof either. Main changes are using the format specifier, and using to get the number of digits before the decimal place instead of . 
+
+You can over the directly, getting a . Or you can over and just get the . Either would be preferable to going over the just to get to the (and you don't check the return of ). I'd also change the name of your variable since the trailing implies that it's multiple dictionaries (FWIW, I'd probably go with just just so I didn't have to ever read a potentially offensive word over the phone; but that's just me!) 
+
+Now, we'll need something to keep track of the inventory levels. We could use a simple for this, but let's go ahead and abstract it out into an class, so that we'll have a place to put some convenience methods. Since we know we'll need to be able to remove an item by name (not caring about the price), we'll need some help to find that entry. We can also add some convenience methods around adding a product. 
+
+If you don't like global variables (which you really shouldn't!), you can create a static variable by making it an attribute of the function: 
+
+What exactly do you want to do with your array of booleans? If you used numpy, you could instantiate your boolean array as an array of one eighth the size of the boolean array, e.g. 
+
+You should profile your code, to figure out what exactly is it that is slowing your code down. It's hard to tell without some actual measurements, but my bet is on your calls to and , as the method is notoriously (very) slow. For some operations there is really no alternative, but for addition/subtraction you can use . The transformed code would look something like: 
+
+To give this answer a little more meat, in most other languages you don't have the luxury of not having to worry about integer overflows. Even in Python it may be a good idea if you want to keep your computations fast for very large numbers. So you would typically do the same computation as: 
+
+While obviously doable, this reusing a list to make a linked list doesn't seem like a very good choice. It is very typical to use a dict of lists to represent a graph, rather than creating an explicit new class. And heaps also fit very well into a bare list with some helper functions, that's e.g. how the module is implemented. But in your case, while it would be ok for a quick and dirty implementation where you directly accessed and , if you are going to go through the trouble of writing all those helper functions, it is infinitely clearer to actually create a new that embodies the abstraction. 
+
+Well, you can certainly make it easier to read by cleaning it up a little bit and getting rid of the extra () loop, and substituting a and for the inner () loop's concatenation: 
+
+Once you have the of the integer portion, you can use the format specifier to get the correct number of decimals, which would clean up the string building part. 
+
+Your unit tests for now only need to be concerned with the results of - which verifies the was constructed properly (an important bit to test, since it's weakly typed). You can dress it up with generics, extension methods, builder patterns, etc. - but that's the basic pattern. 
+
+This is basically a pipe and filter pattern - where you construct some number of filters into a chain and just pass the outputs to the next filter. If you control all instances, then the simple thing is to abstract out to an interface: 
+
+If you're familiar with inheritance, hopefully you can see how you could add that functionality into a 'PersistentInventory' subclass. Hopefully, you can see by splitting the functionality out cohesively both readability and maintainability. Think through adding the following functionality in v2 of your app with the various designs: 
+
+From there, any further optimizations would be heavily dependent on your data and would need some example data of the correct relative sizes to profile and test. 
+
+Before streamlining the code, it almost always pays off to streamline the math. The you calculate is the dot product of two vectors, and , so we can rewrite it as 
+
+Your function, which is called by most of your other functions, has to scan the full list to validate it. That means that, especially with functions like , which already need to scan the whole list, performance is going to end up being \$O(n^2)\$. That is not a good thing! You should probably go for a lazier , that defers erroring until possible non-compliant items are actually used, e.g.: 
+
+Your logic seems solid, but there's a couple of things I would do differently. One obvious improvement is that you don't need to hold the full dynamic programming array in memory: it is enough to keep the previous row and the one you are working on. It also leads to a pretty neat handling of edge cases, as you'll see soon enough. I am also a little weary about the approach of your function: relying on a string representation just doesn't feel right. I also frown at your adding both the forward and the reverse paths to your banned set: the only reason you can use DP in the first place is because you can only move forward in both directions, so you might as well take advantage of that knowledge, and store only the direction you will eventually find. A possible implementation of all that could be:

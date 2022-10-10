@@ -1,0 +1,67 @@
+Just to be sure you are setting the width and height for the fullscreen mode resolution. Then, you might want to look at reducing the x and y position of the lower hotbar by 1. This should move the hotbar one position towards top left in both axes. Its hard to tell what else is missing from the lower part of the screenshot. 
+
+This is not your problem, im guessing. You need to create a single vertex array for every block in the view frustum, and send that to your gpu shader in a draw call. The code you pasted is probably part of your generation call, which usually isnt as much of a problem as the tesselation call. Look at my Techcraft code on codeplex.com for an example of how this can be done single threaded. 
+
+I would like to say that the errors you are getting have now changed from the first post you made, which highlights now the fact that it is becoming a service configuration problem in .NET now, and no longer an issue with trying to get DLLs working in Unity. I would strongly suggest that this question is not drawn out any more, as it deviates from the original question too much, and might confuse readers in the future. You're more than welcome to contact me directly on Skype, at coombes.jason, where I will help you further if you need. 
+
+In one of my voxel engines, the voxel block explosion was done by creating a defined amount of minature blocks at the explosion point, and applying physical properties to them, eg velocity and gravity. Then, set them at random directions, and draw them. So, the actual voxel model wasnt really being disintegrated, but the voxel particles gave that impression. That is one approach. Another approach is to actually break up the voxel model. To achieve that under testing, was to detach the smaller voxels from the model, and apply the same techique for the previously mentioned explosion. No new voxels were created. In relation to pixels, I would imagine it possible, yes. An approach might be to look at using a rendertarget for the sprite, and where the texture pixel coords match the explosion points, store those coloured pixels in a dictionary, with position and colour values. Then, the rendertarget would form the source of the sprite without those pixels present. Use finally some type of custom particle manager to explode the pixels from the dictionary, using a technique similar to the explosion of the voxel model that I mention in the second part of this response. Edit: As requested in the comment, here is an example of using a rendertarget to regenerate a sprite: 
+
+Essentially, the normal of the vertex would be the average of the adjacent faces' (triangles) normals. In pseudocode: 
+
+I haven't tested this, so it might need some tweaks. The game object the collision refers to is drawn from the collider field. 
+
+It looks like half of the tris are flipped the wrong direction. Triangles have a winding order and a normal, and if they face the wrong way they will be treated as backfaces and culled from the render. The other half could be one of a number of things: 
+
+Consider the real world. We have all kinds of things measured in meters and feet. Now how many, say, meters across is your field of view? Clearly, you need to know more about that question to continue. At what distance? Horizontally? Vertically? Even the arrangement of cells on your retina doesn't indicate how much of the world you can see. The same problem exists in projection. We have some 3D surfaces in an imaginary world (the unit of its coordinates is just a matter of interpretation - we use different units depending on the scale we're simulating), and we want to project them onto a 2D surface that we will then display on the monitor. So, we define a 3D surface with some particular size in the world on which to project things onto (in practice the surface is only implied by the matrix) and then scale and translate the 3D vertices so they lie in line with that surface. Imagine drawing a line from every vertex through the surface to some point, then moving them to the point where the intersect with the surface. That is the duty of the projection matrix. Now that all the 3D stuff is 2D, we just have to scale the surface to the pixel resolution and map the textures' coordinates onto it. This is a very simplified view, since there's a lot of tweaks like filtering and z-buffering that usually need to happen in between, but that's the problem and a short explanation of the solution. 
+
+Take a look at Awesomium. I have integrated it to SDL before and the process was fast. The biggest thing you have to deal with is translating SDL events to Awesomium. Otherwise the rendering is really easy, you can just query pixel data from Awesomium into an SDL surface IIRC, and then render that to your game. 
+
+Here's a small pseudocode example of something kinda similar to the system I'm using for my game. Basically the important trick here is to check both the topleft of your player, and the bottomright of your player, which is enough as your player is rectangular and of the fitting size. If the player character would be bigger than two tiles, you would have to check more tiles. 
+
+You need to add an event loop for your window. The following code is directly from a pyglet quickstart tutorial. You basically need a function that gets called periodically. After that you can then just ask pyglet to run the application. Here's a basic draw function: 
+
+I think your problem is the fact that SDL_SetPaletteColors wants an array of s as an argument instead of pointer to a single color. I cannot guarantee that this is the problem as you didn't post the code where you initialize the code, and you haven't told if returns an error message. Otherwise, make sure to always check what returns on a SDL function you think might be the cause of the problem. 
+
+It means that all existing textures are freed. I checked the SDL source and inside the function they do this: 
+
+For some reason the tween library requires you to update the tween inside your function, and calculate the time using something like the following: 
+
+You need to set the size of your destination rectangle. Currently you're rendering a 0x0 portion of the texture. So change your code to also include the size of the preferred result. See $URL$ for more info. Assuming your image you're trying to render is 32 wide and 32 tall, you would need to set the size of the rect like this: . Then as you're using as the source rectangle, SDL will stretch the texture to the size you want. 
+
+I have some idea of how to do this for a single gravity source (conic section, parametric curves), but how do you blend multiple forces, and thus multiple curves, together? The idea is to give the player some idea of the trajectory their shot will take, so it doesn't need to reflect the actual path exactly, but the closer the better. 
+
+If you need to store entities in chunks it's probably better to actually store them in the chunks rather than a separate array. 
+
+Note: I'm playing fast and loose with the pseudocode here, so let me know if anything is unclear. Ideally, the player shouldn't be special - just another set of components. The main function of entities is to group components. You might think of it this way: components get updates, not entities. From the good old Evolve Your Hierarchy article: 
+
+Toggle returns the current state of the button - either the same state passed in value or the new value as changed by the user. So a better pattern would be... 
+
+Updates flow down from the Component Manager, and entity association flows across. So, you'd start from something like this: 
+
+This frees you up to use alter how things are stored and which math is used later on. Now, your set_EulerAngles will look like (and I'm using C# here because my C++ is rusty): 
+
+It depends on whether they have registered the name as a trademark. The liability with respect to similarity ("My Product" vs "MieProduct") in specific instances is a matter for lawyers to advise and courts to decide. 
+
+It seems like you're confused about what constitutes a ray, which is a point with direction. Put another way, it's half of an infinite line. Here's an example: 
+
+Okay, here are the settings you'll want to use to additive blending, plus some extra info in case anyone else wants to do something similar. I'm not sure how to get this to work with pre-multiplied alpha (or if that's even necessary, since I'm guessing you plan to do mask-based lighting), so you'll want to make sure that if you have any resource based "brushes" (also known as "cookies") that you set the pre-multiplied alpha property like so: 
+
+I didn't go with the way of implementing a custom Awesomium class for this. Instead I just updated data of a single texture by querying the surface from Awesomium. 
+
+The problem is that you are passing the flag to your window in , but then you are using the for rendering. You need to remove the flag for to function properly. 
+
+Remove the from the other conditions, as only the first condition triggers. That is because something greater than or equal to three is also greater than two. 
+
+According to various different threads it seems that there is no OpenGL initialization code in , so OpenGL context initialization won't work with that method. If you are building your own SDL binaries, you might want to consider modifying the function by adding the correct flag to the correct place in that method. It seems to be what people experiencing this same problem have done. Why are you not using SDL for window creation? Letting SDL handle the windowing makes it easier for you to develop, and it will also make your project more cross-platform. When you create the window using , just remember to pass in the flag to the creation, and then you should be able to create your OpenGL context just fine. 
+
+Sorry for the complicated (?) example, but that should outline clearly what the important trick here actually is. This might not be the most effecient way, but already the fact that the level "geometry" is laid out in a grid makes the code a lot faster and simpler, as you don't need to actually go to look for collisions, you can just check a couple of positions. 
+
+Colouring SDL textures might be a little tricky. The following code should outline the main points of colouring a texture. The key is to fetch all required data from SDL before starting to alter the texture. 
+
+You forgot to initialize your pointer. Currently you only declare the pointer with , so there is actually no memory allocated for the event. You need to either change the line to and change the while-loop to , or you can manually allocate space for the event by calling 
+
+This is a line-of-sight problem in disguise, and if your walls are vector based you can apply mechanics typically used for realistic lighting to it. If not, you can vectorize them and apply the same algorithms. You have sound sources and listeners, and you can think of walls as casting "sound shadows." For refractive sound (around corners, down halls) Sweep a ray from the sound source to each wall vertex and listener in order to find out if any listeners are between the sound source and occluding walls. For walls that are partially occluded, repeat the process starting from the ray's angle of incidence to the wall intersection and proceeding clockwise or counter-clockwise (depending on the direction you swept the original ray). This way, the nearest walls to the source will limit the sound from passing through. You can use the partial wall behaviour above to gather listeners where sound still passes through but at a reduced volume. See "Red Blob Games - 2d Visibility" for examples of how these algorithms can be visualized. Design considerations As a matter of design advice, players will bring their own expectations into the game about how sound should behave so it will be important to highlight these mechanics. Otherwise they may feel as though some sounds should have been blocked, or that there was no way they could know that a sound would echo all the way down a hall. A bonus to approaching it this way is you also get a clean way of displaying how sound travels, either to show the player or for testing. Just create a mask from the swept areas and display it like a light source or animation, like a series of expanding rings. 
+
+The default Unity project settings include some joystick axes already. So looking further down, we find the same axis defined again! Removing the extra axis definitions fixes the problem. 
+
+The main purpose of the ECS pattern is to be programmer friendly, not speed. So this is essentially an architecture problem, although I will also address your cache-friendliness concerns. It seems like you're setting your components up like data records, whereas they should contain all the relevant behavior for their subject. Think

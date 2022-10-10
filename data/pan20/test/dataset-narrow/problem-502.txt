@@ -1,0 +1,81 @@
+The idiomatic mechanism for managing resources in Java is by using an AutoClosable implementation. The use case would be, in Ugly Java: 
+
+So, the point of my answer is to say you chose the less-appropriate code structure. Nodes should be containers (and private, and light-weight). The Trie itself contains the state data, and is what does the heavy lifting. This is the opposite of what you have. I have left the data structures similar to what you have. If I were doing this myself, I would probably be using a large data set, and I would find a way to get rid of the Map, and replace it with a more space-saving primitive array structure of some sort. 
+
+What an interesting challenge. Learning Java8 is on my list, so here's some suggestions I have, but bear in mind that I am learning too.... First up, lets use functions for the functions we have. Starting with the safe function: 
+
+Finally, the variable names you have chosen are really short..... consider renaming the variable at least. 
+
+Well, this one is interesting.... the comment is actually needed here because of the loop you are using. If you convert this to a do-while loop, and use some functional extraction... then you can convert your code to a self-documenting, commentless block: 
+
+Code-wise I can't really see any major problems. The only glaring issue I see is that should be private. The remainder of the code is neat, and consistent. I like that. The rest of my review is about the usability. It irritated me that I had to click on the text entry to add my name. I realized that you forced the focus on to the button in order to make the "prompt" text visible in the Text Field. When you click on the field the prompt goes away though.... leaving you with nothing. I prefer the use of labels, in combination with the prompt, in order to guide the user. Prompts that disappear are a problem. So, I would add a label "Name:" before the TextField, and I would force the focus on to instead of . With those changes you can start the app, type text, hit enter, and get a reply - no mouse needed.... ... which leads to the next problem, the only way to reset the system is to exit, and restart.... you should have something to help with that, but, I know, this is just an entry-level system. As an aside, when I added my label, I also had to set the HBox alignment to Pos.CENTER and I set the spacing to 5 on the layout too. 
+
+In this case, there are many things wrong. The most significant, is that you never remove anything from the K1 map, as a result, that map always has a hard reference to the V value, which means the V value will never be GC'd, which in turn means WeakReferences referencing it will never 'go null'. The right way to work with WeakReferences in a situation like this, is to extend them, and to include the keys as part of the reference. Using a ReferenceQueue also allows you to clean references more efficiently. I 'threw together' the following code which illustrates these right ways, and you can use that as a basis for further development..... 
+
+EDIT After your edit you have introduced the concept of a separate thread for managing the notification process. The only comment I have for the modification is that the typically has 'the right tool for the job' somewhere. In this case, you chose the wrong tool. It is pretty complicated sometimes, but the right tool would probably be an implementation of a BlockingQueue. In this case I would choose LinkedBlockingQueue. Your methods can then lose the blocks and simply become: 
+
+If you ever have additional datacenters, you can simply add a new name to the enum and the rest will work. Also, you can add values that are not the same naming convention... for example, if you add the ENUM "EU1" for your first european datacenter, it will match aaa.eu1.xxx.yyy 
+
+Note, that while we are there, you have one of those wtf moments in your variable names. the name is a really, really bad name. is very easy to confuse with , and should never be used as a simple 1-letter variable name, and then, to make it worse, you put them together? Huh. 
+
+Other than that, I found your query relatively easy to read, and since I understand the SEDE dataset quite well, I could follow the logic nicely. Basically, your query is good, and I would 'accept it' in a review. Ugly things of note though are: 
+
+Since you are using a stored procedure, it is not much of a stretch to extend that to be a trigger. Triggers are the natural tool to use for this type of problem, and are designed to have two 'virtual' copies of the data, one copy is the value before the change, the other copy is the value after the change. In your case, you would have a trigger for insert (create), delete, and update. Read up on triggers here: DML Triggers and the syntax here: CREATE TRIGGER (Transact-SQL) In the trigger, you would scan the and virtual tables for the data that is changing, and use that to maintain the audit logs in your logging table. Note that thoese virtual tables contain only the data affected, so scanning them is fast. For more information on those tables, see The Inserted/Deleted table documentation Using the above mechanism, you can track the changes as they happen. Each instance will be relatively quick, though the work will happen inside the same transaction as the inserts to the main table. Using a stored procedure like you have, is a good first step, but you should transfer the relevant logic in to the trigger instead. 
+
+Doing Integer-based processing is significantly slower, probably because there's a lot of overhead in the Scanner.nextInt() method. Here is my full code, but my sunmmary output is: 
+
+What this means is that you may have to scan for multiple instances of the same field if you don't know whether the field is specified as . You expect a space between the colon in the header, and the field value. This space is not required. The header is fine.... though a single-space is 'preferred'. 
+
+There is not much to criticize in your code.... and there is a lot of code to go though. Mostly really neat, and, it takes a while to 'grok' it, but it comes together OK. Here's a laundry-list of small items (there are no big Items I can see): 
+
+Note how I calculate the expected limit for and then had just one check? That makes the code simpler to read too. Finally, that can be used like: 
+
+Follow the same pattern for the other bits... This is a relatively concise way to do things, actually, and you only need to keep one 'dimension' (the length of each data value) of the problem in your head, and you can ignore the offset. This leads to fewer bugs, and better understanding and readability. I cannot find a definitive reference whether PHP supports a definitive assignment operator. If it does, the lines can be replaced with 
+
+Your stream is infinite, and will just keep going... even when the item is 1. So you have to use a side-effect mechanism with the hack of a 'anyMatch()' short-circuit terminal condition that you tack on at the end. You also use the Atomic Long as a crutch, to ignore the first value .... and, since it starts at 0, it will always be true. That atomic, is really hackish. The right solution for this problem using streams would be to create a stream that is a valid Collatz sequence.... Consider a function: 
+
+Your use of the boolean return value of the call is a clever way to check for your duplicates. The concept you have is good, and I can't think of a faster way. Additionally, I like how you have used Interface-based types on the left-side of assignments and the concrete classes on the right .... people often put the concrete type on the left too, and it's good to see that you did not. In terms of the Java streaming API, though, I can't help but feel that you missed out on an opportunity to improve the process by streaming the split.... The Pattern class has a splitAsStream method which would reduce your latency on the first words.... As an aside, a word should probably be on a contiguous whitespace, not just a single space (i.e. instead of ). Here's your code done differently: 
+
+The performance can be significantly improved by doing batch operations on the input, processing, and output. Additionally, the last point is important. Java compiles code essentially on a method-by-method basis. By keeping all your code in the main method you are reducing the possibility for Java to compile and optimize it. Read the whole file in, split the lines out in one operation, write all the results out as one string. That will likely remove more than half your execution time... but your actual algorithm is slow as well. Since you use regular expressions to split the characters, you may as well use one to just clean up the whole URL... and strip all vowels that way. Here's a scratch-up of what I would consider given this task. It shows the ideas I was mentioning, and also uses some Java 8 features: 
+
+I believe you have a bug in your generic implementation, especially in relation to floating-point style classes that have signed-zero values: your code: 
+
+the rules are sorted at pre-process time. some rules are in multiple sets of operations. instances are compiled just once, not at use-time. 
+
+The methods have an accumulator mechanism (adding up ints, doubles, and the string lengths) and making the results available in a method. Also, I have put your function in there as . There is a function which builds an array if input strings where there are approximately equal numbers of int, double, and string values. Finally, the benchmark function: 
+
+The answer to the second question is 'yes', but we'll have to explore your current code to understand why.... Current code, is it good? Your code, for the most part, is neat, well-named, and generally understandable. Great. But, there are some significant problems too: 
+
+You know, it's nice to see code that does what it says, and a nice simple task that still requires some head scratching.... but I'll assume you're a Java beginner. Basics Going through some of the basic stuff... 
+
+If I replace that stream to instead be a for loop, it is much faster. The rolfl-mod code replaces that stream with: 
+
+Putting this as an anwer, because it took a while to find it: I took your code, and put it through some tests..... I made the tests up based on the 'rules'. This is the sort of thing any interviewer will do: 
+
+I don't believe you can reduce the space complexity, and still maintain the \$O(n)\$ time complexity. There is a trade off here you have to compromise on. Of course, you can, if you want, run on \$O(1)\$ space complexity, but your time complexity will have to be compromised. Now, your code has a bug.... it needs to add the element to the Dictionary even when it has a match for neutral.... Consider a data set like (fake elements and pH's): 
+
+Which is an operation (or, as has been pointed out by James, the complexity of this function is dependent on the complexity of ). If you want to keep complexity you can precompute the scale for valid ranges of . The largest possible for an int result is 9, and for a result it is 19. This is a small data set to keep in an indexed array accessed with 
+
+Exception handling in Java has certain best practices. But not all situations are covered equally. In this case, what you have, is a combination of logging, handling, and shutdown handling. In this case, your handling appears to be sane. The centralization of this logging/shutdown is convenient because it essentially extracts the same functionality from multiple places in to a single place. There are two issues that I can see: 
+
+With the above class, any constructed Response is automatically a fail... only the static instance is a success. Your use code then becomes: 
+
+Your problem is easily solved without having to delve in to the internals of , and without needing a new either. SImply use the methods that are currently available, and combine them.... 
+
+and the LOGGER could check to see whether before building the actual message (string formatting) with . This 'formatted' log messages is one of the best features available in Logger APIs, and, as far as I am concerned, it is the 'winning' feature for when deciding which API to use... cough slf4j cough Unfortunately slf4j does not support the method entry/exit calls. What a mess. If you are determined to have a LogUtilities static class, I would recommend the following: 
+
+if the input long value is negative, you will never reverse it (it's < 0). you should read up on the zero-shifting operator you will need to do all the 64 bits of shift otherwise the you will only reverse the set bits .... i.e. should reverse to and not 
+
+On the whole, your code is neat, the style is good, generics look OK. I have a concern with two major 'design' points though. The first is the class. This encapsulates the basic functionality of a node in the binary tree, and it makes it seem that there would be a way to customize the implementation. Unfortunately, you can't. Your BinaryTree class creates a concrete implementation as a static-internal: 
+
+Design OK, about the design.... I believe this is a problem. Handling phone numbers is much more complicated than what you have.... it is really a challenging problem. It is easy enough to strip off the junk, but it gets hard really fast. For example, this is the the Queen of England's land-line number (not kidding): 
+
+There are two algorithmic aspects to your code which concern me. The most significant problem is that you read the entire file in to memory before you start processing the data: 
+
+which is the difference. Note that the math is more complicated if the b value is larger (a negative result). Compare the above with a and b : 
+
+And that method should handle the server communication. You should have a second method, perhaps Person.toJSON() that converts the Person to a JSONObject. I know I have used a different capitalization for vs. . For some reason, it makes sense to me since JSONObject is capitalized that way. Strict conformance to code-style guidelines suggests the method should be called Once you have separated the concerns, the method should be completely reusable. If you want to be smart, create an interface like: 
+
+The above array will be used to say: Anything less than or equal to the value at index will have have bucket . We use this table to build the actual lookup table: 
+
+Casting is never 'pretty'.... But, in a proxy situation like this (assuming you really need the proxy), it is possibly unavoidable. I can recommend though that you do it defensively... you should really do:

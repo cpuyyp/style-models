@@ -1,0 +1,83 @@
+From a performance standpoint, it is unlikely that there will be a meaningful difference between using one, two, or three subqueries. If you are going to multiple sets together, since you know there are no overlaps, you would want to use a rather than a to avoid an unnecessary sort and ( has to remove duplicates, does not). 
+
+Are you trying to test the database? Or the application? Assuming that the Oracle database is configured correctly (i.e. it is in ARCHIVELOG mode, backups are done regularly, DataGuard is in place depending on your recovery requirements, etc.), by far the most common source of problems in a failure is that the application itself has not defined its transaction boundaries correctly. The classic scenario here is a banking application that wants to make a $50 payment from account A to account B debits A by $50 in one transaction and credits B that $50 in a separate transaction. Unless you happen to be able to test what happens when system fails after the first transaction commits and before the second transaction commits, you won't see that the transaction boundaries are incorrect and the application might inadvertently lose $50. 
+
+The vendor might want an actual physical backup of your database-- if they do, Leigh's answer is spot on. My guess, however, is that the vendor probably doesn't want a physical backup since that would require that they have an Oracle install on their side on the same operating system with the exact same version of Oracle that you're using. For conversion efforts, it is generally much more effective to get a logical backup of the database using the export utility (classic or DataPump). A logical backup can be imported into an existing database and it doesn't require that they have exactly the same version of Oracle. If all the vendor is going to be doing is extracting the data and loading it into a new database, they aren't going to benefit from having a physical backup over a logical backup. From the command line on the database server, it's pretty easy to generate a full database export. The command 
+
+Store the first. When you do this you can enable index key compression. See $URL$ for the syntax and $URL$ for the concepts. In your case, you can do it like this: 
+
+Test! Be sure to test this in your Test / Q&A environment! Generate representative transaction loads, but also much higher loads to see how it will perform in the expected and unexpected cases. Even at high transaction levels, you will have to weigh up the performance associated with updating and storing the running totals vs how often they are queried. 
+
+Oracle will only scan the partition for the year 2013. On the other hand, if you are altering the table to add or remove partitions, you will more often than not need to name the partitions. This isn't always true: for example, Oracle 11g has interval partitioning where Oracle can automatically create new partitions for new data as needed -- perfect for the example I just mentioned. 
+
+Which solution you chose is largely a matter of personal preference. I have a strong preference for the foreign key approach, and think I can provide good reasons why. First of all, check that your requirement is strictly to capture a single "primary supplier", and not (potentially multiple) "preferred suppliers". If you can't guarantee that you'll never have more than 1, the foreign key approach will break and you're better off going with the flag approach from day 1. If, however, a part always has a single primary supplier I would use the foreign key approach. If a part must have a primary supplier, then this is the only approach where the database constraints guarantee that the data is always correct -- make the foreign key column mandatory (not null) and you will have to provide the primary supplier when adding the part. There is simply no way that the data cannot be correct. With the flag approach, the primary supplier information can be missing from parts -- unless you want to rely on your application's logic. If that's potentially a problem, the mandatory foreign key approach is the easiest way to ensure this can never happen. Think also about updates. With the flag approach, you need to clear the flag from other "part supplier" records when you change preferred suppliers. 
+
+This is not about natural and surrogate keys, but about concept of independent and dependent entities. Here is your original example 
+
+As far as mandatory address is concerned, verify that on the application layer and wrap the loading statements into a transaction -- that way you'll get all or nothing. 
+
+Note: I am using RDBMS wording for constraints, in general is an internal uniqueness constraint, foreign key is a subset constraint (inclusion), and is an internal value-comparison constraint. 
+
+And here is how it looks in an ERD; note that comments (grey) are not necessary, used only to illustrate the method. You may also note that it is not easy to express all the constraints here -- if comments are removed the [c2.3] will not be obvious. 
+
+| Student (StudentId) attends school (SchoolId). Each student may attend more than one school, for each school is is possible that more than one student attends that school. If a student attends school, then that student must exist. If a student attends school, then that school must exist. 
+
+There is nothing circular in any of these cases. In "circular reference" scenario you have "a chicken and an egg problem" -- can not insert a row into a table because it is always missing a reference to some other table, like in: 
+
+Extend or adjust for data types as needed. Remove for each data type if you wish to allow null values. The only complexity is the constraint to enforce that the appropriate column is used. If values are mandatory, then the check constraint can be written as 
+
+I'd go for option 1. With this approach there are no "hacks" in the app for anonymous users. The standard security model continues to apply with the only difference being that if you don't know who the user is (ie, they haven't authenticated) that you pretend they are the anonymous user, which in effect they are. Option 1 is also the approach used by most (all?) web servers and file servers: they use an "anonymous" or "nobody" user. 
+
+This should work for the database instance, but you may have trouble with the bundled web apps and network settings. In this case, if it's an option, you could rename your other PC to have the same name as your original PC... 
+
+This is almost certainly not what you want in an OLTP application. Or in a data warehouse type application it implies that is a dimension, and is a fact table. However you would normally see a hierarchy in a dimension, which you don't have. So then there's no advantage in not using the built-in datatype instead of inventing a surrogate. 
+
+| Student record (RecordId) was generated for student (StudentId) by teacher (TeacherID) in school (SchoolID). Student record is identified by RecordId. If a student record was generated for a student by a teacher in a school, then that student must attend that school. If a student record was generated for a student by a teacher in a school, then that teacher must teach in that school. 
+
+First thing to notice is that the PK on the LineItem table has three attributes , as opposed to just two in your example. Second thing to note is the confusion resulting from the use of the generic name for an attribute. The should ideally be (1,2,3..) for each customer and (1,2,3 ...) for each order. Well, this is nice if possible, but requires a query looking for the previous max value, like 
+
+P1 Course named (C_NAME), assigned a course number (C_NUM), exists. .. and constraints c1.1 For each course name, exactly one course has that name. c1.2 For each course number, exactly one course is assigned that number. The predicate leads to relation; the constraints to -- well, constraints like: PK, AK, FK, CHECK etc. 
+
+The only problem that the author of that article has is not understanding database design. The problem in his examples is simply lousy design stemming from insistence on single column PKs (IDs), and not understanding how business logic relates to DB constraints. In the second example, his design assigns re-sellers commission based on the user and the product, instead on an actual purchase, which makes no sense business-wise. In the first example it is possible to assign a user to a task outside his project scope; again nothing to do with "circular", but not knowing how to implement constraints. 
+
+Assuming that you mean that the table is partitioned on and subpartitioned on , the query that includes the predicate will be much more efficient. Since Oracle cannot know that subcategory only exists where the category is , it would generally not be able to eliminate any partitions. Instead, it would have to search the subpartition of each partition where a of would be stored in order to fulfill the query (assuming that there is no global index that could be used). If you include both predicates, Oracle should be able to eliminate all but the partition where values are stored and then search only the subpartition where values are stored. 
+
+The pseudocolumn is assigned as rows are processed. The predicate will evaluate to if is anything other than 1. Conceptually (and I emphasize that this isn't how Oracle actually works, it's just a useful abstraction), the second query does something like 
+
+This is not the sort of task that you would want to use triggers on tables for. If you really wanted to use a trigger, you could declare as a view, rather than as a table. You could then write an trigger on the view that translated statements on the view into statements against a new base table. Were it me, though, I'd let the statements go into a table which allows duplicates and then create a materialized view on top of that table that does the aggregation. You can have that materialized view refresh if you want to ensure that the data in the materialized view is always in sync with the data in the detail table. 
+
+Instead of searching for tips and tricks (deferred constraints included) I would suggest that you simply design your way out of this "reference lock" -- so try something like this: 
+
+So, both R1 and R2 are in 6NF and therefore in 5,4,3,2,1. There is no in-between -- it may happen that in some specific example you may see "progress" 1, 2, 3, BCNF; but that is an exception, not the rule. 
+
+P2 Course number (PRE_NUM) is prerequisite for course (C_NUM). c2.1 For each prerequisite course that course may be prerequisite for more than one course. c2.2 For each course, that course may have more than one prerequisite course. c2.3 A course can not be prerequisite to itself. c2.4 If a course has a prerequisite then that course must exist. c2.5 If a course is a prerequisite then that course must exist. 
+
+I would say both are OK, but I prefer the second example. The confusion stems from something that you know as absolute. 
+
+I prefer the first case when possible -- you choose your favourite. And obviously, there is no need for direct FK from to in these three cases. 
+
+And now a bit modified model where is a dependent entity (note rounded corners). Here can not exists outside of the context of the . 
+
+You can't embed DDL in a stored procedure like this. Either use and your DDL statement passed to it as a string, or, better, remove the stored procedure entirely an execute the DDL directly. 
+
+quoted from $URL$ , Oracle allows you to use versions of Oracle DBMS downloaded from OTN for development "for free". 
+
+One way you could do something like this on Oracle is to use a with . The rows will "disappear" at the end of the transaction. If you're using a host environment such as JDBC with autocommit, this will make it look like what you describe. If performance is important, this approach will be much faster than the "discarding trigger" approach. Syntax: 
+
+Postgresql has many indexing options. It also has some powerful components built on top of these indexing options. One such feature is full text search. See $URL$ 
+
+If you really need to do this (a la Windows Registry values) I would probably try to keep it simple and keep it to one table something like this (untested pseudo-DDL): 
+
+You're interpreting the semantics of the delete statement incorrectly. When a clause is used, it doesn't mean that records will also be deleted from those tables. Instead, those tables are purely used to join to in order to determine which rows need to be deleted from . You basically have three choices: 
+
+the database can use the index on to find all the rows where the last name begins 'Cav'. On the other hand, if you had something like 
+
+Realistically, the requirement is crazy. Like all great crazy ideas, however, it is probably based on a nugget of potential reasonableness taken far out of context by people that have no understanding of the underlying rationale. It can be reasonable to design a database schema such that no values are allowed. If you do that, however, you are committing to a level of normalization where every non-required element is broken out into an separate table with an appropriate foreign-key reference back to the parent. It's not often done in practice but in cases where it makes sense to do, there can be benefits. If you are going to design a database schema such that no values are allowed, it makes no sense to allow let alone require magic values to indicate that something is unknown. That introduces all the problems that allowing values has plus it adds additional code to check for the magic values that has to get repeated all over the place. It makes no sense to develop an API that requires magic values to be passed in regardless of the database design-- if you're going to hobble your code with checks for magic values, you really ought not let that insanity propagate out to other systems. 
+
+Note that is propagated to the to serve as a FK. If you squint a bit, this is close to your example, but with only -- as opposed to two column PKs from your example. Now the question is, why not simplify to something like this? 
+
+One possible fix may look like this, though I do not think this would be complete solution, but it may be a good starting point. I will use predicates -- marked by | -- and constraints (italics) to describe the model. Predicates map to tables and constraints to PK,AK, FK. 
+
+This is the root cause of your problem. There is no such thing as a parent table in relational model; foreign keys are constraints, not navigation paths. You are dragging OO terminology into a relational DB and these two do not match -- paradigms are different. 
+
+| Teacher (TeacherId) is licensed to teach in district (DistrictId). For each teacher, that teacher may be licensed to teach in more than one district. For each district, more than one teacher may be licensed to teach in that district. If a teacher is licensed to teach in a district, then that teacher must exist. If a teacher is licensed to teach in a district, then that district must exist.

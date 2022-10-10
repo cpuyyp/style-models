@@ -1,0 +1,89 @@
+A proper way would be to use specialised tool for balancing. Another way, quite simple, is to have domain name that points to multiple IPs and use that domain name in directive. $URL$ 
+
+You could use variable. It contains host name specified in directive. In your case it's exactly upstream name. 
+
+You've got it wrong. directive sets headers that nginx sends to backend ( in your case). What you need is directive. 
+
+First of all, remove Second, you had header and browsers remembered that for 2 years (as that commented out header says). Add it back with to remove the effect. If you can't do that (or want immediate effect) clear HSTS from your browser like this article says. 
+
+You are using in , but rewrites , so nginx doesn't rewrite request to and it is passed to your app as is. In general, you should always use trailing slash in directive that should match directory (unless you're absolutely sure, you don't need it). Also there is a shortcut for this common case to replace location prefix in nginx. Try this one: 
+
+Your directive is too restrictive and, I guess, is in wrong place. Either remove completely, it doesn't makes much sense, or, at least add so directive will work. 
+
+$URL$ Try to use or instead of . is too "fast", it doesn't give nginx's master a chance to stop workers. 
+
+It's really basic and simple. Just add part to and nginx will replace s prefix with that path. You need to replace with , so do it: 
+
+These locations are different. First one will match for example, that might be not what you expected. So I prefer to use locations with trailing slash. Also, note that: 
+
+Nginx process request in phases, and 's phase is always before phase. Therefore the order of these directives in config doesn't matter. 
+
+nginx's locations are prefix based (except regexp ones), so matches all requests unless more specific one matches. 
+
+With this block, any url started with will be denied. But there is caveat, even url like or will be denied, which is not what you usually wants, so it's better to use trailing slash: 
+
+You didn't show any url, but I'm pretty sure it ends with . Everyone really should read how nginx chooses location. In short, locations are exclusive and in general nginx prefer regexp locations to prefixed ones. To prevent this you have to use flag in location: 
+
+Also, it's better to test redirects (especially permanent redirects) with console tools like or , because your browser is likely already cached redirect and will just use it without actual hit to the server (that's the main reason of permanent redirect). 
+
+We are pulling an Active Directory server out and modifying DNS settings on all systems. Attempting to update DNS list on a vm host results in a validation error that the domain value is not filled. How could this have been setup originally without, what does it do and is there any harm in adding our domain? 
+
+Am I correct in understanding that generally IaaS (looking primarily at rackspace cloud servers) will provide a virtual server where OS updates, software updates, anti-virus, managed backups and other common non-hardware server admin tasks will be required by the client. With PaaS (looking at heroku) on the other hand almost all of that is handled by the host with only maybe occasional external backups necessary. Flexibility and customization as the main trade offs? 
+
+We are settings up a site on GoDaddy's managed wordpress product. For mail to go through the contact form we must use the relay server . Mail sent through the contact form is only ever directed internally to our own Office365 hosted mail boxes. In order to prevent Office365 from marking the messages as spam we must update our spf record properly. The details of the message when sent to junk mail indicate the IP address needs to be included in our spf. When we add it to our record it correctly allows spf to pass and mail flows to our inboxes. However it is possible the mail could come from various IPs used by GoDaddy. GoDaddy provides this helpful page that describes the spf change to make. $URL$ When I make this change, adding in our record, the mail gets put into junk by Office365. The info again shows 198.71.225.38 as failing. 
+
+The solution ended up being to run commands through a simple PHP page. The connection was internal to our network and we weren't worried about encryption, just remotely triggering a command and getting the output. There must have been another command line scripting tool we could have used but the approach we took ended up being very simple and met our needs. 
+
+The IP block in the final record would include 198.71.225.38 so I'm not understanding where in this chain SPF would fail. 
+
+Overnight one of our servers (Win 2K8 R2) began having problems connecting to a network share (Win 2K3 R2 x64) by IP. The server has for months accessed the network share by IP for certain purposes, and the previous server it replaced did so as well. The server can access the network share by name. The server can ping the network share server by both name and IP. Every other computer on the network can access the network share by name and IP. 
+
+Here is example implementation using cookie. If cookie value one of , or we try to serve cached page. For any other cookie value (including no value) we bypass cache and suppose that upstream will set appropriate cookie so next request will use cache. We use to add cookie value to cache key and to skip cache if cookie is not in set of predefined values. 
+
+Variable defaults to (that is NO-CACHE header from uptream), but empty value (i.e. no header set) maps to . 
+
+There are several ways to solve the problem: 1 You could put your proxy config to separate file and it. : 
+
+There is document on how nginx processes request. In particular that means if you have only one server block then all requests will end up there regardless off header. In your case you want to process only requests that match your hosts and ignore others. So you have to declare another server block that will process all unmatched requests. This should look something like this: 
+
+That's because is executed before proxy take place and at this moment there is no variable . You could use directive from Lua module. E.g. 
+
+must be outside of any block and it's global for all nginx config. We have to define named variables before using , because as soon as we use it, it will ruin all positional variables (, , ...) because of using regular expressions. So will not work, because - will be empty. 
+
+Your code with isn't working because does internal redirect. So request flow in your case is: → (rewrite) → (index, internal redirect) → (proxy_pass) 
+
+Here first block will handle all https connections except and . And you don't need directive if you have flag in . EDIT There is another solution with only one server block: 
+
+There are actually more parts, but they could be (and almost always are) empty. The last part is comment and could be anything. So the answer to you question is NO, comment is not part of authentication. You could read more in documentation: $URL$ 
+
+Since you did not define custom error page for 301 error, nginx sends it's built-in special page with predefined headers. See $URL$ 
+
+Also, there is no need for variables in . Nginx will replace prefix with and append query strings automatically. 
+
+But my guess is, you need to move this into , this will make sure that php-file exsists before pass it to PHP-FPM for processing. All other files will be served by nginx with proper use of directive. 
+
+You express configured to serve path , but you requires . Either configure express to serve or make nginx to strip from proxied request. Latter is as simple as add trailing slashes to and . 
+
+This is an issue in Windows 7 (and to a lesser extent in Windows 8*) because CEIP is part of the Get Windows 10 (GWX) forced strongly suggested upgrade. So I want to turn it off on all the PCs I support. I know I can do it GUI : But I'd like to do it in the command line, even in a .bat file. This Microsoft technet description of CEIP lists several ways to turn it off (GUI, Group policy, Answer File). Maybe an Answer File would work--I've never used one. I suppose I could also just modify the registry directly (these were discovered with regshot): 
+
+I had to run those more than once. Each of those steps fixed corruption. Until they passed with no corruption found. Still, Windows Update would not work. Still hung. Going deeper I tried this fix, "Option 2" from sevenforums $URL$ : 
+
+I tried an expanded version that added stopping/starting of and a rename of and which stopped last because windows may auto-re-start it. Here's that code: 
+
+So I do think turning off CEIP is part of the fight against the Windows 10 push. But it's not the only reason I ask this question. EDIT 2: This technet sounds promising Managing Group Policy from the command line but alas you can only view and apply en masse. 
+
+But I like to avoid direct registry modifications if I can, and I don't know if the Update Time matters or what format that is in. EDIT: Thanks for the responses which were all about preventing systems from upgrading to Windows 10. I want to know how to turn off CEIP from the command line not just because of Windows 10. I just want to know, if it's possible. I DO want to turn off CEIP just because I don't like it, don't believe it gives me enough benefits in exchange for the information I'm sending to Microsoft, and the CPU and bandwidth it uses. To elaborate on the Windows 10 connection, there are several Windows Updates to CEIP that are diagnostic tracking/telemetry updates to evaluate and/or prepare a system for Windows 10. For those interested, here are the Windows 10-related KB updates I have identified (via research on the internet) that are involved with Windows 10. You'll notice most are upgrades to CEIP. 
+
+After that, and a reboot, Windows Update worked. How very bizarre. Here's some of the prominent solutions I tried that didn't work: 
+
+My Samsung laptop has Windows 8.1-Update. It had an infection that was cleaned. Current date is 05/16/2017 but last windows update was 2 years ago back in 2015. Windows updates were not working after it was cleaned of malware. It would hang, no progress in , and yet taking up 100% of one core. One consequence of being 2 years out of date, that might be relevant, was that GWX (Get Windows 10) was still running on this laptop, even tho that offer expired over 1 year ago. The other notable thing with this laptop was that I replaced the motherboard twice. The first time, it was crashing multiple times a day. The second motherboard worked fine. So those crashes may have had an effect here. After trying almost everything, this is what worked: Windows aka "Disk Cleanup" aka "Clean up disk space by deleting unnecessary files". I selected: 
+
+There have been 2 instances now where the Script checkbox under "IIS > Sites > Site > Handler Mappings > Edit Feature Permissions" has become unchecked. What could possibly be causing this to occur? Haven't been able to find any information online about others experiencing this problem. This could just be a coincidence but I just realized that this has happened twice now within a day or so of posting a full update to the folder which the site points to. Usually we upload a new folder of code, rename folders and the new folder takes the place of the old folder. The permission does not immediately uncheck, it is hours later. Is there any reasonable explanation why this might cause the script permission to disable automatically? 
+
+One of our Active Directory servers rebooted after a windows update this morning multiple hours out of the expected time period for updates. I found the automatic maintenance task "Regular Maintenance" in Scheduled Tasks under Microsoft/Windows/TaskScheduled. It is set to run at 3 AM which lines up with what the GUI shows and our intentions. However the "Next Run" value is 4:15 AM tomorrow and looking back in history the task is never triggered at the scheduled time, always running 1-4 hours late. What could be causing this and is there any way to remedy? I could find no useful info in event logs. Edit: our primary Active Directory server just restarted at 9:30 AM, more than 7 hours after the scheduled maintenance is set to run 
+
+In what circumstances would a DNS server request timeout when the forwarders already have the answer? For example, there appears to be a domain that I assume is having DNS issues at the moment us.army.mil. If I hit the forwarders directly with nslookup for type=mx then I get a response right away. If I hit our DNS server though with the same request it takes more than 2 seconds and times out or when I extend timeout to 10 seconds it fails. If I try multiple times it eventually returns a response. It is my understanding that our DNS server should be sending requests for external domains to the forwarders and getting response if available. The log shows the first forwarder being hit and then after 3 seconds the second forwarder is attempted. How does my direct request to the forwarder not have problems while our server's does? 
+
+I'm trying to create a process for comparing two folders that should contain exactly the same files. Would like to be able to modify a file's content without changing the attributes as if the file was accidentally corrupted. Any way to accomplish this? 
+
+I needed to setup 2 vms and naively simply setup one from scratch, made sure it worked correctly, then copied it to another host. Now getting message "the trust relationship between this workstation and the primary domain failed" which apparently is due to the SID being the same on both machines. I've looked around and see a lot of conflicting info about sysprep and how to resolve at this point. Can I just update SID the machine having domain issues and then all will be well? If so, how can I accomplish that? Thank you

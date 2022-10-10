@@ -1,0 +1,35 @@
+There is no way to directly connect the composite signal directly to the Raspberry Pi. The only option would be to use a USB capture card with composite input. But unless you want general composite input, for instance if you want a specialized camera, I would just get a supported USB camera or, depending on your needs, the Raspberry Pi Camera Module. On a more general note, there is no analog input on the Raspberry Pi so any analog signal input (including audio) requires additional hardware. 
+
+The Raspberry Pi requires an SD card with an OS image to boot. You MUST write the OS to the card from another computer with an SD card writer. If you don't have a writer, you can buy an SD card with the OS already written to it. 
+
+If you don't want to have the Raspberry Pi join a network your only other option is to have it be an access point and have your mobile device connect to its wireless network. There are a number of tutorials about how to do this. For example: $URL$ 
+
+You will need to add some sort of feedback. A rotary encoder like this could be attached to the other end of the shaft. You would then need to have the Raspberry Pi continuously monitor that input to know the position. If you need continuous rotation and angular precision I you probably should look at a stepper motor instead of a DC motor or servo. With a stepper you can control the rotation in precise increments (steps). 
+
+It is being run twice at startup because it is running for both the loopback (lo) and ethernet interface(eth0). Try this in your script. It should show the interface name. 
+
+If you look at the source code you will see it is a bash script that uses to create the menus. whiptail is part of the newt library 
+
+The OSX machine is only reading the very small FAT32 boot partition. The rest of the SD card is a linux ext4 partition and it looks like it has been resized properly. OSX can't read the ext4 partition natively. I think there may be software to let you mount the ext4 filesystem on OSX but I don't know. 
+
+Here is my understanding of the problem. For various reasons you need to get files from a PC to the Raspberry pi without a network connection. Given that constraint you could connect the PC to the Raspberry Pi using a USB->serial cable. You will need to disable the serial console and serial login on the Raspberry Pi. Follow these instructions. As an alternative to using the serial port on the GPIO header you could just get 2 USB->serial cables with standard DB9 connectors like this and a standard DB9-DB9 null modem and use these to connect the computer to the RPi using the USB ports. Once you have them connected via the serial cable you need a way to use it to transfer files. I haven't done this in quite a long time but my starting point would be Kermit which can run in server mode on the Raspberry Pi and have a scripted client on the PC. Kermit is designed for sending files without errors over unreliable connections. Since the PC will initiate the communication this connection will be difficult to exploit. 
+
+If you are connecting pin 4 (5v) to ground pressing the button is shorting your power supply. The power supply will then shutdown and cut power to the Pi -- killing your ssh connection. Then it reboots after you release the button and you can repeat the process. If you want GPIO 4 I think that is pin 7. 
+
+NOTE: The Model B rev 1 does not have mounting holes they were added in the rev 2. Two options for mounting the B Rev1 
+
+Edge mounting stand-offs like these from Adafruit A friction fit case that does not need mounting holes: 
+
+Since your Raspberry Pi is directly connected to your PC you should choose static IPs in a network different from your WIFI network otherwise Windows will probably try to use the WIFI interface to access the RPi. For example if your WIFI network is 192.168.0.xxx use 10.2.2.xx for the RPi and the wired interface on your PC. Configure the Rpi with 10.2.2.2 (netmask 255.255.255.0 or /24) and the PC with 10.2.2.3 (also 255.255.255.0 netmask) on the wired interface. You should be able to ssh from your PC to 10.2.2.2. Be aware that the Raspberry Pi will not be able to access the internet unless you configure windows as a gateway which is out of scope for this answer. 
+
+It looks like you are trying to use the line from /etc/fstab as the arguments to mount.cifs. On the command line you put the need something like this: 
+
+Yes you can power the Raspberry Pi from 2 AA batteries. I don't know if your boost converter could do it. Adafruit's Minty boost should be able to. How long it will run depends the batteries you use and the efficiency of the boost converter you are using. This page goes into the details of how to calculate it. The rough result from that page is that for 2 alkaline AA's you could get about 1000mAh at 5 volts. My Raspberry Pi (Model B rev.2) draws about 430mA when idle so I would guess you might get about 2 hours. 
+
+Since the USB to TTL serial is sort of working it is probably safe to rule out software configuration problems in the OS. I can think of 2 possible causes: 
+
+Look into using Supervisor to manage your scripts. It is available as a package for Raspbian. Supervisor can restart the scripts if they crash and capture any the output and log it. It can also run the script as a non-privileged user if you want. 
+
+Be aware that by using if the first button is pressed the second and third buttons will never be detected as pressed until the first is released. 
+
+No. The microUSB port is power only -- the other pins are not connected. You can see that the data pins are not connected on the schematic.

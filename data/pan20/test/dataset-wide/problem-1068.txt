@@ -1,0 +1,61 @@
+Second Script Before you run the below TSQL, you will need to move the applicable physical data and log files to the new locations as you plugged into the first script. 
+
+Below is a TSQL method to find all explicit DB object permissions and members of fixed or custom DB roles per each DB you run it against. Just search the results for the value of the role name you need to confirm the user is a member of beforehand and that should suffice for your need. 
+
+Memory related system DMVs would probably be a good starting point, but I placed a few examples below with direct links to the MSDN articles that give more detail and T-SQL examples, otherwise, you could and start filtering down from there based on your needs. Additionally, consider having a look at Glenn Barry's Scripts too when you get a chance. He provides some excellent queries specific to each version of SQL Server you need to run it with to help get stats, troubleshoot, and so forth. 
+
+With the function for the second argument you pass it telling it the format for the time value in the first argument, you should use the or format 
+
+Yes and with the argument it should prompt you for a password to authenticate to perform the correlated command operation. 
+
+You can put logic in the stored procedure to and then that with the query that returns the other values from the other query in the stored procedure and ensure the very first row returned is 
+
+db_ddladmin vs db_owner From what I can tell from what I tested and read up on, for the most part your list looks accurate except DOES allow you to . I did confirm that the other security permissions you listed were indeed denied. Denied with DDLADMIN only: 
+
+2. Restart SQL Server (if you can restart the server OS meaning power cycle it) 3. Run the below once it's back up and confirm . . . TSQL 
+
+For the msdb SQL Server Agent roles, granting allows them the ability to manage jobs which only they own, and see the job history of those jobs too. To compare schema on all table of any DB, assuming you want to also allow them to have to all tables, the role should be fine per DB. Otherwise, if you want to be specific, then allow explicit on the schema per DB which you want to all them to compare and to the tables you want them to be able to compare the data. EXPLICIT EXAMPLES TSQL (per the article) 
+
+Log Shipping With log shipping and the DB staying in standby mode, it stands there waiting for new transactions from the primary to commit. You cannot make changes to the secondary DB without breaking the transaction log chain and thus breaking the log shipping entirely as it's no longer an accurate replica. 
+
+This means if you want the XML element, etc. to have a value of rather than being blank, then your statement would need to use the function and say if the value is then replace with literal value to be as the actual XML value. 
+
+Below are two scripts I've used for this purpose quite a few times in the past; just adjust accordingly for your environment. Basically just plug in the new path locations, the data and log file names, and the logical SQL data and log file names, and then run the first script (see comment above second script below). First Script Plug in your variable accordingly for your environment. 
+
+Give something like the below a try... You'll obviously need to plug in your variables for your environment, check the data types (may need to add logic to keep leading zeros?), change from the final temp tables to your regular table(s), etc. Works fine for me for import from XML files to temp tables without deleting the files afterwards but adding logic to delete files from the UNC path shouldn't be too difficult with another xp_cmdshell command. 
+
+I think it depends on how well you want to lock it down really, and how trustworthy they are for what you are allowing them to have access to. 
+
+Since the log backup files are purged from the locations which the LSRestore for DR runs and grabs those, then that job will take care of those once the restore job completes successfully. 
+
+The issue is either you're simply running out of disk space and the physical file cannot grow to complete the transaction, or you have a limit on the SQL file growth settings and the physical file cannot grow more to complete the transaction (whatever max space available means extactly e.g. per settings or disk capacity). 
+
+Once you get all the needed information from the vendor and confirm the login is defined on the primary instance of Microsoft SQL Server, you can execute a CREATE LOGIN statement and pass that information in to create the login to match how it's defined on the primary server. Example T-SQL 
+
+Obviously your current process has an issue trying to insert duplicate data on a table with a constraint that doesn't allow such data to be duplicated where the value is per the defined Primary Key. 
+
+Restore it to a dummy DB, purge the data that you don't want them to have, make another full backup, drop the dummy DB, and then provide them the copy of the BAK file at that point. 
+
+Just remove all three of the correlated table data files from the file system and that should ensure all traces are removed as per my understanding of 15.2 The MyISAM Storage Engine Each MyISAM table is stored on disk in three files: 
+
+From the Manage Server Connections window click on the "MySQL Connection" that is giving you this error, then from the SSL tab you will want to ensure the Use SSL field has a value of If available so it only uses SSL if it's available or else it'll connect without SSL encryption. 
+
+Add the full path (example) where the mysqldump.exe is located to the environmental system variable of the OS where you're running this. Example: and then press enter to get this in the command window where you'd type 'mysqldump' as shown here and then press enter. Furthermore, you could put the full path to the mysqldump.exe in with double quotes around it and then press enter as well e.g. and then press enter. 
+
+Additonally, having db_ddladmin role permissions may mean. . . (Since you have so many different versions of SQL Server from 2005 - 2014, it may be best to have a small set of users test this initially to see who screams to iron out any kinks, etc.) 
+
+Since you're running PowerShell through SQL Server from an agent job, you could try calling a PowerShell script with your saved PS logic in it rather than running raw PowerShell commands to see if that makes a difference for a potential workaround. Try explicitly putting the full OS path on the server to point to and then pass your PowerShell commands after that in case the issue has to do with environmental variables not working correctly for PowerShell within the shell. 
+
+NOTE: It is worth noting that if you create the login on the secondary instance with everything matching, the security changes will still not be effective until the next round of Transaction Logs you get via SFTP which have these changes in them from primary are actually committed to the secondary DB so timing is something to consider and test before publishing externally for their usage. 
+
+So just as dwjv suggested, set the PATH OS system environmental variable to include the path on the OS where the mysqldump.exe exists ($URL$ otherwise, change the directory in your command window to that path where it is and then run the command. 
+
+Just a quick thought on something to look into, in a domain type environment, some operating systems allow you to logon to the server before full network connectivity is established. You may want to check for either local or domain level group policy settings to not allow logon or OS startup until full network connectivity is established. Just in case you notice this when you log onto the server after reboots, it actually logs onto the OS with the cached credential before it can reach the domain controllers to authenticate (network connectivity not fully established) with the login credential if it's a domain credential the SQLExpress service account is running as. Not sure if that's exactly applicable in your case but this is something to at least simply investigate and try to test at least just in case. I found this in some article I saved long ago when I had a similar issue with an AD home directory (not via login script) to map home directory for a workstation PC: The policy value for Computer Configuration -> Administrative Templates -> System -> Logon “Always Wait for the Network at Computer Startup and Logon” will be set to “Enabled”. If the following registry value doesn’t exist or its value is not set to 1, then this is a finding: Registry Hive: HKEY_LOCAL_MACHINE Subkey: \Software\Policies\Microsoft\Windows NT\CurrentVersion\Winlogon\ Value Name: SyncForegroundPolicy Type: REG_DWORD Value: 1 
+
+Consider granting VIEW DEFINITION permission as defined in the below quoted reference; this still applies to SQL Server 2012 as well. 
+
+I've copied the logic I've used with success on this sort of task below. I run the create table logic once (for both) but save it to a commented out or skipped SQL Agent step for future reference only. I shared both the and the capturing methods and logic below but be sure you're on the DB to run the processes as it's logic is implicit. Be sure to specify the table and DB Names in the processes since its logic is explicit. SP_WhoIsActive Table Capturing Create Table 
+
+Switch recovery model to simple on primary DB (TSQL with SQL Agent job step) -- this will break the log shipping chain so time out your LSCopy, LSBackup, and LSRestore jobs around this time when this occurs -- then run your cleanup process on primary DB Switch your primary DB back to full recovery model (TSQL with SQL Agent job step), grow your (or perhaps shrink) your primary log file back to the "usual" size (SQL Agent TSQL again) Run (or TSQL script with SQL Agent job) a FULL backup of the primary DB to the "usual" full backup location Restore the secondary DB with the FULL backup file as in #3 above (TSQL with SQL Agent job step) 
+
+This way your Reporting Services app server recycle operation happens every day at the usual and designated time per the value you set in the config file, then right after that happens (giving ample time for full completion) the dummy report runs before any production reports run for the day, and then every subsequent report for the next 24 hours runs as expected without needing to wait for the RS app server post 'recycle' load operations to complete. You also could leave out the PowerShell scripted solution altogether as well if this works.

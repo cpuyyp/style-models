@@ -1,0 +1,51 @@
+Please note that triggers always cause some extra load, and also initial sync will be equivalent of dumping all replicated tables. Hope this helps, I'd propose to come back with more detailed questions if you have problems. Good luck! 
+
+Why async? I would avoid doing this in trigger due to locking issues under high load. Also, easy to DDOS so permissions should be separate for form insert and form create. 
+
+I don't know BDR (maybe it's a good solution), but do you REALLY need both servers in R/W mode? If not, I strongly recommend using built-in streaming replication (with streaming or log shipping). 
+
+Built-in PostgreSQL features are enough to get a WAL-based, read-only standby (a.k.a. secondary, a.k.a. slave) server. However, they are not enough to get multi-master operation. This R/O slave can be promoted at any time to standalone, R/W server by using . 
+
+Yes you can hide those messages in the log. In the calling session, before running the statement, issue this statement: 
+
+(note: tool might be hidden in default debian/ubuntu setup. Look in to see it) When it's promoted, replication stops and slave is disconnected from primary. See relevant fragments on command in pg_ctl documentation and failover docs. Question 2 
+
+in pg_hba.conf, in the lines with localhost IP, replace "ident" by "md5" and restart - then you will be able to use password logins if (1) is not acceptable, sudo to "postgres" user and create another superuser login - then use this login to connect from PgAdmin. 
+
+Update: Konrad corrected my misunderstanding of his question. The goal was to count queries, not transactions. How to count queries? Method 1 Use pg_stat_statements contrib. Method 2 Enable full logging of queries for a representative period of time. To enable full logging, for PostgreSQL 9.0 - 9.3, change following settings in 
+
+Solution 2 Using more ANSI-compatible SQL, like UNION and LIMIT. It will work on MySQL, DB2 and some others. Similar solution can be done on Oracle, just replace LIMIT with ROWNUM. 
+
+If you don't have filesystem snapshots you will need a local copy of the whole cluster (rsync will be good to maintain this). Only disadvantage is disk space used, and more time needed. 
+
+Problem description I need to rotate (with DROP and CREATE) a table which is heavily used by other clients. At present, I have a program which replaces (DROP + CREATE) this table. Sometimes, just after the table is replaced, I get "ERROR: could not open relation with OID xyz" from concurrent clients accessing the table. One could say this behaviour breaks transaction isolation... Does it? I understand this is caused by system catalogs being cached by postgres backend (which is normally a good thing). Am I right on it? Is there any way to force a backend to "forget" table OIDs (DISCARD does not help)? I know it will help if I switch to "DELETE and INSERT" pattern instead of "DROP and CREATE" pattern. But this is some legacy program and we do not want to change it unless absolutely needed. I will be grateful for any suggestions how to get rid of this problem. The goal is to rotate the table transparently for other clients. The test case Here is the minimal test case that I reduced the problem to: A. This is the client (multiple clients will run this SELECT in parallel). We will use pgbench for stressing the database. 
+
+The hook you need is . All the scripts defined in PgPool's configuration - , , , etc - are executed by the pgpool master process. You can check which one is master using utility. It means that if you want to execute commands on PostgreSQL node you need to setup password-less auth from pgpool into postgres nodes and use ssh inside the script. To give an example, in my I have this: 
+
+Yes, it makes sense to materialize. The analysis of large datasets (see: OLAP, dimensional modeling) includes the concept of aggregations - which can be implemented as materialized views. You should design what aggregates will you keep. In my opinion you need at least two: 
+
+There are many open ends in your question, but partitioning by customer could to be the way to go - especially if: 
+
+Issues that Simon puts in his comment are really important. So you will have to enforce a very strict policy regarding GRANTs in your database. In PostgreSQL, it is possible to achieve (as well in many other RDBMS). The key to achieving multi-tenant solution would be intelligent usage of schemas, roles, setting. See $URL$ Actually what I propose will in a way emulate what Oracle does. If you need help on details please ask. 
+
+Constraint-based exclusion [CBE] is performed on early stage of query planning, just after the query is parsed, mapped to actual relations and rewritten. (internals, Planner/Optimizer stage) The planner cannot assume any contents of "sensor_sample" table. So unless you have values hardcoded in the query, the planner will not exclude "partitions". I guess what happens with the CTE variant... the planner is restricted because you use TABLESAMPLE and the whole subquery may be treated as volatile even if literals in the subquery are static. (that's just my guess, I'm not expert on planner code) On the bright side, the index scan with negative result is blazingly fast. (single page scan at most!) so unless you have over 10000 partitions, I would not bother. So, to answer your question directly: 
+
+There is a lot of good sources on to partition or not to partition. If you are going to store 2 years and more, daily partitions could be optimal. But remember that very large number of partitions will make query planning longer. Threshold depends on CPU speed / queries used. PS. I assume that you ran out of normal ways to optimize: 
+
+You can use string escape syntax and function like below. Please note it's heavily dependent on setting. Should be . You can find details here, here and here. 
+
+Interesting question but also very open one. I'm putting a list of recommendations here - hope it helps. 
+
+The question will be solved after you define primary keys correctly. Please remember that FK must point to other table's primary key (or unique key). It is legal (at least in SQL) to use multi-field FKs. 
+
+I try to saturate the server using pgbouncer. I was running a Select-only test, with 1000 clients for 5 minutes. (). PgBouncer was initializet with scale=100 (but a SELECT-only test should not suffer on it). During the test: 
+
+Internal representation of larger attributes will be sometimes compressed. More specifically, what works here is the TOAST (Oversized Attribute Storage component used in PostgreSQL). The threshold when values are considered for compression is 2000 bytes. is not a logical length, but the size (in bytes) of actual internal representation of the column/variable. It is documented. PostgreSQL stores array values in a custom, internal, binary format. Command line example below. Details also here. 
+
+I'm not yet sure if this is doable in pure SQL (probably - yes), but here is the brute force solution using cursors. This is just a (working) draft, with some twiddling and dynamic SQL you could add more parameterers, like function name. 
+
+You should read PostgreSQL documentation on Controlling the planner with explicit JOINs and Query Planning Configuration. 
+
+It's not documented in the official docs (as of now - Feb 2018), but PgPool's memory footprint is quite heavy. In my recent testing PgPool II version 3.6 needs as much as 140 MB RAM per child process. (the number of child processes is defined in ). This is private process memory - not shared. This means approximately 8GB for each 50 clients. Compared to PostgreSQL, this is 5-10 times more (PostgreSQL can easily handle 250 sessions on 8 GB RAM). Plus, PostgreSQL uses shared buffer cache which is much more cost effective. 
+
+So your second guess is correct: you need to go for complete rebuild of standby. This arises from PostgreSQL internals, WAL format and timelines. Every time fail-over is done, it creates a new timeline. You can not safely use WAL files from new server (the one that was promoted) to replay on old server after it's revived. From version 9.1 on, you have a tool for fast cloning of postgreSQL instances: pg_basebackup. You can also use filesystem snapshots (eg. LVM2 + XFS). If you have a snapshot of primary postgres cluster from before the crash, and a series of WAL files from that time on, you can revive primary cluster from that snapshot and replay its WAL files. This is covered in the docs. PS. Thanks for a good question - this is not so clear right out of the docs.

@@ -1,0 +1,65 @@
+A note on your English: You've said repeatedly that "I would like to assert my dequeuing algorithm." Unfortunately, the word assert does not have any English meaning that makes sense out of your statement. I think you meant "I would like to get some feedback on my algorithm.", or "Does anybody have any comments on my algorithm?". Also, it's impossible to evaluate your dequeueing algorithm without also seeing your enqueueing algorithm. Of course we can guess what the latter looks like, but if I'm just going to guess, then I don't need to see any of your code, do I? 
+
+You're correct that using perfect forwarding and will produce more efficient results than not using them, so I won't even try to review the versions of your code that don't use them. Let's look at this most efficient one: 
+
+Here you're checking that is convertible to , and that is nothrow, but you're never checking whether is nothrow. Is that intentional, or a bug, or doesn't-really-matter? 
+
+Notice that the calls to and always come in pairs: first we do both on , then we do both on , then we do both on... oops! Red flag! We have forgotten to destroy the object that was move-constructed into the memory of on the first line. The missing destructor call could produce a memory leak, resource leak, or worse. In an ideal world, the red flag of "faulty parallel construction" would have tipped you off to this bug. But I admit that I was particularly looking for this kind of bug because I'd already seen it happen in the wild, in the code of . Type-erased move and swap are theoretically no harder than any other type-erased operation; yet empirical experience has shown me that in reality nobody gets them right on the first try. 
+
+(I think this is right. "Rotating right around the x axis" means pointing your right thumb in the direction of increasing x, which I think of as "to the left", and curling your fingers in the direction of the rotation, which I think of as "top-moves-away". However, even with this much effort to avoid brain farts, I might have messed it up.) Here's the Python code for converting the input into a C++ function body: 
+
+i.e. just remove all the superfluous and , and replace by because it's shorter (and you did ask for us to make it shorter!). 
+
+I think you meant there. Regardless, you probably don't need this method; and if you must have it, consider spelling it either 
+
+Nit: is technically the wrong name for a single dimension. Also, by capitalizing the template parameter, we've freed up the shorter name (or ) for the constexpr member variable. You never have to use a tediously long name like if you manage your naming real estate effectively! 
+
+You spend a lot of lines of code trying to get the expressions , , and to behave like plain old functions. Consider just using plain old functions, instead. For example: 
+
+is always bad style in C++, but especially when you do it in a header (.h) file, because of how C++ handles via textual inclusion. When you in a header file, you're forcing that decision on every .cc file that includes your header, which can often result in changed or confusing semantics in those .cc files. Never use in a .h file. Prefer not to use it in a .cc file. Prefer to spell out , , et cetera, on every reference, so that your code is clear to the local (human) reader as well as to the compiler. 
+
+Your ball can only move in the eight (semi)cardinal directions? It can't move at, say, a 30-degree angle? Well, even so, it will simplify your code to treat the ball as if it can move in any direction. Either: 
+
+Regardless of your concerns about mmapped files, in a loop isn't going to overwrite the file multiple times, not even in memory. Check the assembly output with ; I think you'll find that the compiler has hoisted the test outside the loop and duplicated the loop body, and then replaced with the equivalent of . 
+
+Iostreams are slow; don't use if you care about micro-optimizing performance. — But in fact you shouldn't be printing output from within your parsing function anyway! Let's just have the parsing function return the map of headers. Also, your variable names seem confused. I'd try to make each extracted string run from to , since that's how we usually talk about things in English. So: 
+
+Incidentally, the return type () is needlessly verbose and constrained, as of C++14. In C++14 and later, you should write simply , unless you have a technical reason not to. In this case, the technical reason would be "I want to make sure that does not participate in overload resolution unless has a member typename " (because the explicitly specified return type participates in SFINAE, whereas would not). Since I'm pretty sure you don't have that technical reason in mind, you should not specify the return type. 
+
+so I'm not sure why you're spending four lines to say basically the same thing. (And the comments aren't adding anything. Kill them.) 
+
+I see more than one of the same — that's a red flag, because often the reason we're forwarding is so that someone else can move its guts out, at which point any further use of the moved-from could trigger unintended behavior. Let's take a closer look. The two appearances of are okay, because they're on separate (disjoint) codepaths. The three appearances of are scary. Let's see... the first appearance is the argument to , which always takes its argument by , so there's no bug there — but the use of is redundant and thus a bad idea. The second appearance is as an argument to , which means you're forwarding to a user-defined comparator. This could definitely trash the value of , depending on the user-defined comparator's code. I can't think of any really plausible argument-trashing comparator, but just for the proof of concept: 
+
+It's possible to create an object of type which is un--able! Definitely you should fix this. Either the constructor should throw an exception, or it should initialize the uninitialized slots to , or at worst it should leave them undefined and you should change to return "incomplete tuple" or something. Having a that throws is just bad news, IMO. 
+
+Now, this is probably getting a little crazy and going off in directions where you might not need so much genericity. But this is the direction I'd think about going. It's pretty unrecognizable compared to our starting point of "require the user to define ," and yet the usage of it has maybe even gotten simpler. No more , no more , no more arrays of pointers... just the rawest possible thing that could be called a "heap." And then we built the malloc'ing on top of that. Anyway, it's food for thought, even if YAGNI in practice. :) 
+
+Step 1 is always to try it without the duplicated code and see what it might look like; then you can try to fill in the blanks to make the program compile again. So: 
+
+It doesn't matter for primitive types like and , but if the parameter or the return value were class types, the added would have made a difference: 
+
+You can kill this whole block, can't you? The code immediately below the block appears to do exactly the same thing (spawn two threads, join them, merge the resulting arrays). 
+
+If you consistently avoid postfix operators, your users might even thank you, because your code will work even with their incompletely belled-and-whistled iterator types. 
+
+Jerry Coffin's answer finally piqued my interest enough to look into it. My first observation is that you can't meaningfully compare a program that does in its inner loop to a program that doesn't produce any output. :) Adding to Jerry's inner loop (inside the ) slows it down from 0.197s to 3.520s, which is at least of the same general order of magnitude as my original program. 
+
+— that is, if the size of the input is , then the worst-case size of the output is . Printing those bytes of output will take time just by itself. Anything else the program does (besides print its output) can only make the overall program slower, not faster. On the above worst-case input, your "repeated binary search" algorithm runs in time, which is worse than . Now, if you're not concerned about worst-case inputs, but merely with the average input... well, then you'd have to define a notion of "the average input". You'll have to come up with some model of what kinds of input you expect. One way to do this is to come up with an algorithm for generating inputs, and then treat it as your model. For example: 
+
+The line I ed above was . Why on earth are you using manual memory management in this class? Remember the Rule of Zero. Use and get rid of the member variable (because you have for that now). This not only protects you against memory leaks (e.g. consider what happens if one of those copy-assignments throws an exception) — it will also make your code more efficient, because the vector will track its own capacity separately from its length, and use geometric resizing to make sure that a sequence of calls to results in only reallocations, instead of reallocations. It will also make your source code shorter, because you can get rid of those and functions. You can also get rid of all your special member functions (as the Rule of Zero suggests), which will shorten the code even more. 
+
+Syntactical nitpick: Those trailing backslashes are going to bite you one day. (I don't even know if putting a backslash as the last character of a source file is well-defined!) Instead of 
+
+I see where you initialize and where you , but I don't see anywhere that 's value decreases or is reset. So do you only ever check 20000 entities and then stop checking forever? That doesn't seem like super useful behavior, since memory leaks typically manifest only after a fairly long time. What's the point of the counter? (If you keep it, then it would be a good idea to add a explaining why it's desirable. Code comments are great for explaining the "why" of code.) Speaking of "explain the why": it would have been nice to see an example of how you expect the user to use this leak checker. I gather that he'd just insert a call to after initializing the object, and that would trigger the checking of every 5 seconds for 20000 iterations? 
+
+We can tell instantly that it can't possibly work, because it's got this thing called that's basically a "carry flag" for the addition. The reason we know it can't be right is that this carry flag doesn't have enough bits to store an arbitrarily large number of carries! Try adding together 4294967297 copies of the hugeint and see what happens. One bit of carry is only enough for 2 addends, and 32 bits of carry is only enough for 4294967296 addends. What you need is a 's worth of carry; or else just get rid of this whole "carry" business and just expand the result as you go; or else get rid of the notion that it's a good idea to add arbitrarily many addends and just make a that does the obvious thing. 
+
+Finally, the code is clean enough to notice that what we're really doing here is transforming a string character-by-character: for each character in the input , we produce a corresponding character in the output . So we can use a comprehension to get the same result directly, with no intermediate state: 
+
+The only newly introduced lines here are the lines, the lines that define , and a couple of closing curly braces. 
+
+Notice that they are all very similar in flow: the four shift counts are always "power-of-two, half-that-number; non-power-of-two, half-that-number" for right rotations. This is unsurprising in retrospect because our cube-rotations are naturally isomorphic in terms of how many sets of bits are switching places. The only difference is which indexes are contained in those sets of bits. Notice that the 32-16 swap that shows up in the "x" and "y" rotations is a "reverse-words-in-the-qword" operation, and the 8-4 swap in the "z" rotations is a "reverse-nybbles-in-each-word" operation. The x86-64 processor has a built-in "reverse-bytes-in-the-qword" operation () but does not have any faster way to do the 32-16 or 8-4 swaps as far as I know. (We do the former in 9 instructions and the latter in 17.) The code for these rotations, and (non-exhaustive) test cases for them, is now located on my GitHub at $URL$ You can investigate the assembly code for these rotations on Matt Godbolt's Compiler Explorer: $URL$ 
+
+This is because is implemented in terms of move-assignment, but you've chosen to implement move-assignment in terms of ! Here are some slides on the subject (full disclosure: I wrote them). 
+
+That's not particularly concise, but it's much less bad than you originally thought it was. So let's work on removing the unnecessary parts. First of all, you have three specializations of ; that's a red flag, because you should basically always have two specializations of any recursive template — you should have one base case and one recursive case. If you have two base cases, something is probably wrong. You can safely remove the middle case,

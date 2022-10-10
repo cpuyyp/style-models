@@ -1,0 +1,97 @@
+This is completely False. Why would T-Rep not work in sql 2000 ? Why would it have a severe performance impact on source server ? The only impact that I can see is 
+
+This is because any database you create with full recovery model is always in pseudo simple recovery mode until you take a full database backup and this is where a log backup chain can be establish successfully. You can easily check if a database is in pseudo simple recovery mode using ** --> check for field with value of . This means that the log chain has not been established. Paul Randal has a TSQL script and Edwin Sarmiento has a PowerShell script that will tell you if a database is in pseudo simple recovery or not. You can use the scripts from above links to first check if the database is in pseudo simple recovery and if the database is then execute a full backup else run diffs or log backups. 
+
+I would not say that its a bad idea, but its always prefer not to touch the CPU affinity on sql server unless you know for sure that the problem is due to excessive context switching (and this too might be not the actual problem, but just a symptom). 
+
+Depending on what build you are using .. if you are getting an error then it might be a bug that you need to report to Microsoft. You can still give the undocumented - a try but it is just a wrapper as Brent says in his answer : 
+
+This way, UserA is not able to see SchemaB's tables, but still can execute procs from SchemaB. Below will explain the permission hierarchy : 
+
+Taking into account a 400GB database, its upto you to choose any of the below routes : Method 1 : Backup and Restore Depending on your hardware and the amount of activity going on, it will be slower than Method 2 - BCP OUT / BCP IN Below is the script that will help you : 
+
+If you want for webserver, then your best bet is to use Powershell. Even you can generate nice reports with charts out of your collection. 
+
+Also, Kendra Little has an excellent post on Log Shipping Magic: Using A Differential Backup to Refresh a Delayed Secondary Note: As per your question, it seems to me that you are mixing up HA and DR. They are different when it comes to RTO and RPO vs availability of your application. 
+
+If you have the database recovery model set to FULL for those database with 50-100GBs of T-logs, then you have to start doing frequent T-log backups. Remember in Full recovery model, once a log backup chain has been established, even the automatic checkpoints wont cause the log to truncate. As a last resort, you can truncate the log file and then immediately take a full backup and then start taking T-log backups so that you can do point-in-time recovery if a disaster happens. 
+
+Also, from your screenshot, the report server databases are cleanly shutdown. Do you have auto close option turned ON ? If you have rights on the server, then below TSQL will help you : 
+
+My advise is to use sql server 2012. You can do an upgrade later by properly testing your application on sql server 2016. 
+
+SQL Server Express cannot serve as a Publisher or Distributor. SQL Express can only be Subscriber. Refer to : Replication Considerations (SQL Server Express) for more details. 
+
+setup logshipping or mirroring from 2014 to 2016. On the day of cutover, if using logshipping, take the tail log backup and restore on 2016 with recovery. if using mirroring, change to sync mode and failover. Follow the post steps listed in step 1. Ask the app team to test/sign off the application. 
+
+You can use powershell dbatools to calculate for you. The dbatools has to set the max memory for you across all your servers. I would go with to check the recommendations first and once you are comfortable, use set to set it across all your servers. 
+
+No. Since a database snapshot is read-only, you cannot modify or add any settings to it. In-fact, extended properties cannot be applied to it. So your best option is to have a table in the database (or a utility database) called e.g. with columns like 
+
+You can use the Azure data sync, but its buggy - since I never managed to get it running flawlessly for even a week. It is still in Preview mode with limitations. Also, Data sync IMHO is suitable for database tables that deal with smaller volumes of changes per sync cycle. If you dont want real time data sync, then I would suggest you to look into SSIS. Its much more flexible. I still use SSIS to move data from on-premise to Azure. Alternatively, you can look into Sync Framework - Replicating, Distributing, and Synchronizing Data 
+
+As a side note: Do refer to below post from Paul Randall about sizing tempdb : On all later versions, including SQL Server 2012, that recommendation persists, but because of some optimizations (see my blog post) you usually do not need one-to-one – you may be fine with the number of tempdb data files equal to 1/4 to 1/2 the number of logical processor cores – which is what everyone apart from the official Microsoft guidance recommends. 
+
+Not in terms of sql server's performance. Better for maintenance and when you want to find specific error - the size of the log file will affect any app or even opening the error log. To recycle error log - use . You can even schedule this using a sql agent job on a weekly or biweekly (depending on the activity of your server). If you have Logshipping, to avoid getting your log bloat, I use 
+
+Drop the merge replication by running the delete script generated in step 1 from the publisher. On both the publisher and subscriber(s), clean out any triggers that are not removed by the replication delete script by running the drop trigger script generated in step 3. On both the publisher and subscriber(s), check the , , and tables whether the entries for the merge replication still exists. If so, run the following script to remove the entries from sysmergearticles and sysmergepublications Note : You may also delete any entries in sysmergearticles that are no longer referenced by entries in sysmergepublictaions/sysmergesubscriptions, but please be very careful when doing this 
+
+This is called PUSHING Data as you are executing the query on source server and pushing the data into destination server. This will be expensive operation. --- executing in target server 
+
+(Image source) Also refer to Grant Fritchey's article on Rollback and Recovery Troubleshooting; Challenges and Strategies 
+
+This is not correct. You just have to create SERVER LEVEL / DATABASE LEVEL TRIGGER that will take care of the database events that occur on the server instance or database. You can even filter out the databases that you need to audit for schema change programatically if you are using server level trigger. Refer to : DDL Event Groups Code Project has a working example - Send Email Alert on Database Schema Change in SQL Server Be careful as this can generate a lot of data as the trigger will fire for every alter, create, drop events. My preferred way of doing this is using Event Notification using - creating a notification on an individual databases. 
+
+(I am not mentioning database mirroring, but you can use that (even though it is marked as deprecated. You can create database snapshot on secondary and every 2-3 hrs, you can generate a new one since your requirement is - data can be stale 2-4hours) When using backup/restore method, make sure that you have enabled Instant file initialization and you are using backup compression. That will cut down the backup/restore time. 
+
+You should follow - Backup and restore best practices in SharePoint 2013. Also, to me your VM having 2 CPU seems to be underspec for running a 70GB database (Not sure if there is only one database or multiple databases). 
+
+When designing SSIS package, you can use configuration file. The advantage is that your packages will be customizable, like when you are developing it can point to your local server and when you want to promote it to prod, you just have to change connection string to point to PROD server. Good example can be found here. Use Bulk Insert to load data. As @listik mentioned, you can use Import/Export wizard as well. You can use linked server too as described here. 
+
+SQL Server does not maintain when an Index was last rebuild, instead it keeps information when stats were last updated. That can be found using the function. You can use Ola's Index maintenance solution or Michelle Ufford's - Index Defrag Script. These scripts are widely tested in the community and are much flexible so that you can adapt as per your needs in your environment. SQL Server SP2 for 2008R2 and up has a new DMF which tells you when your stats were last updated with other info like 
+
+Your option 1 is good as you can just create a staging table called "Excel_Data". Then once you import data in sql server, you can just write a query to just report the data that is both in the database and in the excel spreadsheet. The data loading can be automated by Bulk Insert or using SSIS. Also, you can use Linked server to directly query the excel spreadsheet as described here. 
+
+If the server is involved in replication (remote Distributor or a combined Publisher/Distributor) then the for will be set to . If the server is not involved in replication, then the for will be set to by default. Note: I confirmed the above statements by checking on the servers with and without replication. I am not sure, where you see a value of . 
+
+The database backup includes all the data in the database when the FULL backup was taken including the database users. When you restore the database on Test server, make sure to SYNC Orphan users. 
+
+This way, UserA is not able to see SchemaB's tables, but still can execute procs from SchemaB. Below will explain the permission hierarchy : 
+
+Before a query batch begins execution on SQL Server, the batch is compiled into a plan. The plan is then executed for its effects or to produce results. The compilation of execution plans is a relatively expensive operation so an attempt is made to avoid these costs by caching the compiled plans in a SQL Server memory region called the Plan Cache. When another query batch needs to be executed, SQL Server searches the Plan Cache for possible plan reuse opportunities. If plan reuse is achieved, the compilation costs are avoided. SQL Server decides the appropriate allocation of memory to the Plan Cache from the Buffer Pool. 
+
+Note that you cannot use query hints in a view, so you have to figure out an alternative of making your view as an SP or any workaround 
+
+The difference between and are not that major meaning that is a compatibility view and is depreciated (for backward compatibility). So, just a replacement for for newer versions of SQL Server. So its a good idea for transitioning from compatibility view to DMV's (as you mentioned that the script won't be used for any SQL 2000 servers). DMV's can be run for any databases if you have required permissions e.g. VIEW SERVER STATE permission to run Reference : QUERYING PERFORMANCE COUNTERS IN SQL SERVER for an excellent script to make sense out of the performance counters. 
+
+Your questions are very broad as you are touching a lot of topics in sql server. I am just going to provide you relevant links so you can understand the subject in a better way and at your own pace. 
+
+(Image source) Also refer to Grant Fritchey's article on Rollback and Recovery Troubleshooting; Challenges and Strategies 
+
+Perform backup and restore of PROD database to dev environments Once above is completed, kick off the scrubbing script to purge old data. 
+
+In SSIS I've hooked up an Excel source to an to import the file but it takes a long time. There are three destination adapters for doing this: 
+
+I have faced this situation many times and below is what I do : When obvious methods do not work .....(just like in your situation) : Find out the database ID from sysdatabases. Then execute - that will show all the locks on the instance along with spid and dbid. Kill the spids with the dbid that you are trying to offline or drop. Though, the process is a bit manual, it can be automated as below : 
+
+bcp out the data using below script. set SSMS in Text Mode and copy the output generated by below script in a bat file. 
+
+You can use the same restore concept and do a point-in-time restore with STOPAT parameter. For detailed example refer to (Page 319): Backup and Restore for FILESTREAM Databases. 
+
+I don't see any reasons of NOT using SCHEMABINDING on database objects. Its like safe guarding your objects. Obviously there are pros and cons associated to it. If you are not going to create Index Views, then you dont need SCHEMABINDING for views. Basically, SCHEMABINDING 
+
+If you are running SQL Server 2008 and up, then you can use Performance Data Collector on SQL Server. This will get you all the metrics (and even more) that you need. Below is from my TEST server : 
+
+When taking backups, use . You can save the backups to tape. Thats what we do in our company as well for data retention (We have to retain data for 10+ years). Alternatively, you can use Windows Azure Blob Storage Service. Make sure that the archive bit is set (attribute 'A' on the backup file). 
+
+Complementing to what @Chris suggested - You should use sql agent alert and choose to either email you or log to a local database e.g. dbautility or dbaadmin (whatever you choose the name). This script from Andy Mallon is a great resource. Also, you can use sp_whoisactive with parameter to show you details - I have mine set as this gist. You can even log that to a table. 
+
+This is a very broad quesiton and will be eventually closed. Below page from BOL will be helpful to you : 
+
+This KB article : How to configure SQL Server to listen on a specific port will clarify things for you : Dynamic Port Allocation If you configure an instance of SQL Server to use dynamic port allocation, and you have not yet restarted the instance of SQL Server, the registry values are set as follows: 
+
+Since the secondary in a log-shipping configuration is either or , you cannot make changes to the database (i.e. create a USER) until a ROLE CHANGE happens (i.e. when you failover from primary to secondary). You can create a LOGIN on the secondary server. You can use this script - How to transfer logins and passwords between instances of SQL Server to script logins - both SQL and Windows. If you are using SQL Server 2014, then you can just create a ROLE and then grant that role and . This works on readonly databases in logshipping configuration as well. Note that above is not that elegant if you keep security in mind, but still is an alternative that can be considered. 
+
+There is no way to clear/reset statistics for , , and just like . Refer to Clearing “missing index” suggestions for a single table 
+
+This is very common for VLDBs. You can be a bit smatter and follow Paul Randal's Quick list of VLDB maintenance best practices. You can rebuild indexes ONLINE in Enterprise edition. In your case since you are using Ola's Index Optimization scripts, you are running into endless index defragmentation which you can solve by being analyzing table I have given few more thoughts on Is a weekly rebuild of indexes a good idea? covering maxdop option. I would say, if your databases are extremely big (TB size), atleast do a reorg instead of rebuild and manually update stats. This will put you in a good reasonable state since a reorg will start from where it got killed. For running in parallel threads, you can drive of table and use powershell runspace (be careful of not spawing many threads - see Notes on usage of using runspace).

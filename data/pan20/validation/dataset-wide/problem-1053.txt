@@ -1,0 +1,105 @@
+The problem is that you are using conditions as expressions in your second query, i.e. inside a CASE expression after and after . Boolean/logical expressions cannot be used like that in Transact-SQL. You can only use them as conditions in contexts where conditions are expected. In a Searched CASE expression, for instance, a condition can only go after the keyword. The resolution of the issue you are facing depends on whether each of the two columns needs to be compared to the same value or to a different one. If it is the same value, then you can move the part outside your CASE expression: 
+
+You could also try replacing the predicate with a disjunction to see if it can result in a more efficient execution plan for the entire query: 
+
+MySQL 5.6.4 has introduced fuller support for fractional seconds in time values. The CURTIME function can now return the current time with up to microseconds. To return it with milliseconds, you call it like this: 
+
+Obviously, you could now also get rid of the table as no longer needed in the SP. One last note concerns the specific script you are planning to run against each database. Instead of 
+
+Other database products support more advanced SQL syntax – specifically, window functions – that allows you to solve this category of problems without using a join, thus offering better performance. MySQL does not support window functions (yet?) but there is a way to work around that limitation using variables. Specifically, you would use variables to rank rows within each group based on the value and then filter the rows on the ranking value: 
+
+The easiest fix is to remove all the branches that check for equality to 0, because they are just superfluous: 
+
+you cannot expect to get a match on every ID in the list. This is because is not expanded into a list and instead is treated as a single item of the IN list. The commas inside it will be seen as just characters inside a string value, not as syntactic delimiters. In order to use the way you want, you will have to build and execute a dynamic query around the value of . It could be something like this: 
+
+In cases where both operands of a division operation are integers, the result is also an integer, and a rounded down one at that. So, = 1 will give you 1, because 
+
+Note that the above assumes the values (at least those that happen to be first or last in their corresponding hours) to be unique, or you would get more than one row for some of the hours in the output. An alternative, if you are on SQL Server 2005 or later version, could be to use window aggregate functions and to calculate s corresponding to either or , before aggregating all the results similarly to how you are probably doing it now. Here's what specifically I'm talking about: 
+
+When checking if a string is empty or not, append a non-space character to it and compare the result to the same character. This 
+
+Reliance on precedence rules when implicitly converting data. The results of the functions COUNT() and GROUP_CONCAT() are different. One returns an integer, the other a string. When you are trying to put values of such different types into a single column, the server must decide which type to convert to which other type. It is good to know these rules but you should never rely on them in production code. That is just bad practice. In the queries above, a COUNT and a GROUP_CONCAT are either in the same column in different legs of the same query or in the same conditional that chooses between the two. In each case MySQL needs to apply its rules of type precedence. To avoid that, you can just explicitly cast each COUNT as a string: 
+
+The next, and last, step would be to use the above as a derived table and outer-join to it once more – this time to get the job details (and you would also need to outer-join and to get details from those tables as well): 
+
+Basically, this is about finding a row-wise minimum. There is an elegant inline solution in the most upvoted answer to this Stack Overflow question: 
+
+With these three additional columns and the previous change, the CTE will be returning a row set like this for your example: 
+
+Now join the two subsets using a well-known range matching method: . That will give you intersecting ranges – or, translating into our problem, matching ins and outs. For the example given, the resulting set will look like this: 
+
+You are taking the week day of January 1 as a number of days and subtracting it from January 1, unless that date falls on Sunday, in which case you are subtracting nothing (that is what the is for). For Monday-based week numbers, the result of the above formula will always be a Sunday, and in this case it will be the Sunday of the first Sunday-based week of the year. Before going on to calculating Sunday-based week numbers, here is another formula for turning any date into January 1 of the same year: 
+
+You can use a expression or an expression to calculate the master ID to use it as the primary sorting criterion. The expression will check whether the row is a duplicate or not. If it is a duplicate, return , otherwise return . In standard SQL it will look like this: 
+
+As has already been mentioned more than once, you cannot expect rows to be in a certain order without specifying that order explicitly using the ORDER BY clause. For the problem described in your question, you actually do not need a UNION at all. Use only the LIKE condition to cover both full and partial matches: 
+
+Moving one step further, you could obtain , and in as well, instead of the main query – using the counterpart window functions: 
+
+Joining the results Use your current queries (the monthly query, the yearly target query and the yearly actual data query) as derived tables and join them together on the employee ID (). Do not use the inside the derived tables, as there is no need to join it several times when you can do that just once. In fact, you can use the table as the joining point for the complete query, something like this: 
+
+Usage With both approaches the expression is supposed to be used as the grouping criterion. Using the first one as an example, your query could be rewritten like this: 
+
+Incidentally, I would like to suggest that you rewrite the comma joins in the subquery as explicit joins – for consistency and maintainability's sake: 
+
+This is certainly much more coding than your original query, but the extra bit of code is not redundant, because this way you are making your results predictable. The only simpler alternative that might emulate the MySQL 5.6 behaviour could be to rewrite the query like this: 
+
+If finds nothing, it returns 0. When 0 is specified as the second parameter of , the result will be NULL, which should make sense, I assume. Take the three rightmost characters from the remaining string. 
+
+The computed column in the nested SELECT marks the beginning of each island. Additionally, the nested SELECT exposes each row's previous date and the dataset's last date. For rows that are the beginnings of their respective islands, the previous date effectively is the previous island's ending date. That is what the main SELECT uses it as. It picks only the rows matching the condition, and for each returned row it shows the row's own as and the following row's as . As the last row does not have a following row, returns a null for it, for which the COALESCE function substitutes the dataset's last date. You can play with this solution at dbfiddle. When introducing additional columns identifying the islands, you will probably want to introduce a PARTITION BY subclause to each window function's OVER clause. For instance, if you want to detect the islands within groups defined by a , the above query will probably need to look like this: 
+
+The doesn't seem needed in the subqueries at all, and instead of matching against the subqueries should correlate with the outer query. Since you want aggregations per date, it seemed to me the subqueries should match against . 
+
+If is a column, or if it is an integer column that can only have values 0 or 1, then you could use a single UPDATE statement like this to cover both cases: 
+
+which, in turn, simplifies to just . So, when is equal to , retains its value from the previous row. The current count is then stored in to be compared against on the next row. That way stays the same until is no longer equal to . At that point and – and, consequently, 1 and 0 – trade places and the expression becomes equivalent to this: 
+
+will yield . The function will ignore the two trailing spaces and return 5. Subtracting 4 from 5 gives you 1, thus will return just one rightmost character of the string, which is a space. As I said, though, if can never have trailing spaces, either option will do. For completeness, let me suggest one more, which uses the function: 
+
+At the outermost level, you are returning the average values along with . If you want averages per , then you need to group your rows by . You are doing that in the nested queries but not in the main one. So, after just add . But if you want the average value across the entire row set, remove from the (main) select list. 
+
+Furthermore, I would also consider moving the concatenation bit to the front end and use the database only as a data source*. My final query, therefore, would look like this: 
+
+Another option would be to take all the values and subtract (using EXCEPT) those that have a non-NULL : 
+
+I believe you could also make the first query a view and then just select from it filtering the results as necessary: 
+
+and you want to expand each list into a row set while keeping the relationship of each fruit and each vegetable to the row, you do not just add more rows and put the first item of one list together with the first item of the other list on the same row, then the second item of each list on another row and so on, like this: 
+
+You can use the above pattern to calculate separately the target data and the actual data and join them as derived tables to similarly to the first solution: 
+
+The result will be the datetime value representing the midnight of the first of the same month as p._DATE. For , for instance, you will get . Approach 2 Another method, primarily applicable to dates but easily adaptable for datetimes, is to take the date's day value (for instance, 16 for today), decrease it by one (15) and subtract that number of days from the date. As you can understand, that will also give you the first of the same month. In your case the expression would be: 
+
+The values and are calculated for every row but used only when the description matches any of the patterns specified. The is the position two characters after the position of the in the token, and is the first slash encountered starting from – in other words, the slash immediately after the token. In case the description does not have an token, the values of and will make no sense. However, as already explained, they will not be used in that case but the ELSE clause will work instead. 
+
+While that would work, such an update might not be very efficient, because the same table would be touched three extra times to obtain the source value. Since you know that the non-null values are stored in one row for each company, you could obtain them all in just one extra pass over the table by using a derived table and the proprietary "update with a join" syntax: 
+
+The would commonly be a query involving inserted and, often, the target table, sometimes other tables as well – all depending on what you want to check. The could be logging the just established fact of presence/absence of (i.e. inserting a row with a text message into a custom log table of yours) or just rolling back the pending transaction (thus discarding the effect of the INSERT statement that caused the trigger execution). Or it could be both. Or it could be that and raising a custom exception for the client to catch. The way [spaghettidba's answer] is suggesting it, the trigger will roll back the transaction and raise a custom exception, which, again, is common enough – and may well be what your assignment question actually requires the trigger to do (only it is not stated explicitly). You can take your time with the issues above – or you can move on to... Implementing the actual tests I would argue that this should have been asked separately, but since I have decided to answer the question anyway, here goes. Test A Forget about inserted for a moment and just think about dbo.Rental. Assuming the table already has some rows, including pending rentals, how would you go about finding the pending rentals? That should be easy, of course: 
+
+This is a classic anti-join scenario. You want rows from one table excluding those matching another table. In English, you could put the condition like this: 
+
+But the results will be for buckets while you want the counts for periods starting from now. The final step, therefore, should be getting the running total of the counts in the ascending order of , like this: 
+
+You can see that the first 'in' range repeats three times. That is because the first 'in' row lends its quantity to three 'out' rows. You can also see that the last 'out' range is repeated too, meaning it borrows from both 'in' rows. Now that ins and outs are successfully matched, the big issue is to correctly determine the quantity that an 'out' row borrows from an 'in' row in case it matches more than one 'in'. There may be variations on the logic to use, here is one: 
+
+Note: the above assumes that both feg.sort_order and eat.ID are either declared as PKs or have a UNIQUE constraint defined on them. Otherwise they cannot be referenced. You can still store references without a formally defined relationship between tables, but you cannot have guaranteed data integrity that way, so I recommend you make sure you can declare the new columns as foreign keys. The next step would be to populate the new columns from the current ea.Element_Answer one. That can be done in one go with an UPDATE statement like this: 
+
+If you are not very familiar with the formula, think of it as an alternative to . For details on how it really works I refer you to this Stack Overflow question: 
+
+Knowing a name, you can easily get the matching ID by filtering by the name. For the table, it would look like this: 
+
+You are not explaining why your PIVOT query did not work for you, although it is not too hard to guess if your sample is representative enough of the data in that table in general. You have two sets of responses for User 2 but your query picks up only one. As your expected output shows you want the query to return both sets, you need to teach it to distinguish between various sets of answers by the same user. One way is to use the ROW_NUMBER analytic function: 
+
+You can turn your table into a row set like the table without any temporary tables, using a single query like this: 
+
+It is fairly straightforward with scalar functions, although your description is very confusing and hard to follow with regard to function names and parameter names. Anyway, when you have a scalar function and a table of values that you want to pass as arguments to the function one row at a time, you can go like this: 
+
+You can see that the aggregate results are both returned as their own columns and used to create another computed column, the total of all entries. As you can also see, with the above query I have also taken the liberty of slightly rewriting your conditionals. I just wanted to make them more compact. But there, again, I am not entirely sure if Access will accept that syntax. If not, you can always revert the syntax to yours. 
+
+It appears you want , which gives you the count of unique values in a column – seems to be exactly what you want. 
+
+*I realise that things may work differently with Access, as it can be used both as a back end and as a front end. Nevertheless, I would still keep this option in mind. 
+
+I am not entirely sure but if the aggregated results are supposed to be per date and the date is , then perhaps this: 
+
+all have the same pattern: they all use to determine whether to display or . Depending on the DB engine you are using, that may be inefficient. It might be a better idea to use EXISTS instead. So, you could rewrite the above like this:

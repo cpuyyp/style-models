@@ -1,0 +1,83 @@
+That's it. No PHP involved. All iteration is handled in the shell script I provided. You can then combine them in the new DB Server as DATA_ONE like I mentioned before. Give it a Try !!! 
+
+Making these changes will sidestep this whole mess of dealing with keycache, RAM disks, and tmp tables. Give it a Try !!! 
+
+For mysqldump, --opt includes --extended-insert. If you use --skip-opt when doing mysqldump, it disables --skip-extended-insert. Here are the options of mysqldump that affect extended insert: 
+
+I think your problem may stem from where you wrote the directive Make sure you place the option under the header in /etc/my.cnf 
+
+Thus, SQL Server 2012 will not allow to work on the aforementioned DML. If you are concerned about queries that can be unintentionally destructive: 
+
+What you are asking for is impossible. Regardless of storage engine, DDL of any kind will lock a table. If you must remove a partition from a table that is active, you should: 
+
+There is a possibility for to be chosen and aggregate . However, there is still some traversal across the table. If you really want to get aggressive with indexing, create this one 
+
+This will traverse the entire table and recommend column definitions for every column based on the data it contains, the minimum field values, maximum field values, and so forth. Sometimes, you just have to use common sense with planning CHAR vs VARCHAR. Here is a good example: If you are storing IP addresses, the mask for such a column is at most 15 characters (xxx.xxx.xxx.xxx). I would jump right at CHAR(15) in a heartbeat because the lengths of IP addresses will not vary all that much and the added complexity of string manipulation controlled by an additional byte. You could still do a PROCEDURE ANALYSE() against such a column. It may even recommend VARCHAR. My money would still be on CHAR over VARCHAR in this instance. CHAR vs VARCHAR issues can be resolved only through proper planning. With great power comes great responsibility (cliche but true) 
+
+This would not be in your best interest to do this unless this is a one-time reordering. My advice would be to just stick with creating the index and let MySQL do all the necessary heavy lifting. In addition, you will need to run once a week to ensure the latest index statistics before running large date scans. 
+
+DISCLAIMER : Not a Menial Base 2 person VACUUM is a sqlite operation for defragmenting tables and tablespaces. It also helps reclaim diskspace. It defragments all sqlite tables by copying data from the sqlite tables to a temp tablespace. The VACUUM operation will then swap out the old tablespace and use the new one. Database pages lost due to DELETEs and UPDATEs will no longer exist. MONyog also uses sqlite tables for collecting database statistics and features a VACUUM operation. 
+
+Since error 1452 breaks the SQL thread, you can make MySQL Replication skip that error by adding the slave-skip-errors option under the group header in the Slave's as follows: 
+
+The EXPLAIN plan shows a full table scan and a sort of a temp table which has all columns. This makes sense since the WHERE clause sees 49.0496% of the table rows. It is easier to do a full table than figure out from the key distribution that accessing the index also requires accessing the table. This explains why the EXPLAIN plan did not choose the index. The distribution of key values in the index can be seen by running this 
+
+You could do this every night. It will not attempt to do any defragmenting or shrinkage of data. You could probably do that once a week by running . This will also do the for you after the shrinkage of the table's physical file ( for InnoDB or for MyISAM) or. 
+
+You can either load with all 20M ids, or cycle through at a time. Perhaps a stored procedure might work for you. First let's make some sample data: 
+
+These are among the things that are being churned inside and outside of InnoDB. Yet, this is not everything. Check the MySQL Documentation on the Status Variables. My guess is that MySQL Workbench is just monitoring Innodb_data_writes. If the data writes are high, given this 
+
+If you have MySQL 5.6 running before, then the MySQL data is located in If you had recently installed MySQL 5.7, that instance has its own MySQL data in You need to migrate the data from MySQL 5.6 into MySQL 5.7. If you are not sure what what version of MySQL was actually running on your Windows Server, here are two things you must investigate: INVESTIGATION #1 
+
+You mentioned that is . Since it is , which is 8 bytes, and it is being set to , think of what that does. The first byte has 0xFB (251) followed by 7 bytes of undefined stuff. The code for I have shown you in my answer has something for integer starting at line 458 
+
+Usually, I watch for several timeout variables. This is very imperative if you use MySQL remotely from MySQL Workbench, mysql client, or PHP app on an app server contacting MySQL on a DB Server. Here is what the MySQL Documentation says one these settings: 
+
+Notice that I replaced with (blank followed by ) I have the sed command translate (which means the blank capital G at the end of of line) and convert it to . Notice that sed is doing this conversion with OS output and mysql output. You no longer have to deal with that issue. Simply plan for a blank capital G to be transalted by sed to . 
+
+Go to the folder where the binary logs are located and manually delete the binary logs (should only be one at this point) and also the binary log index file. Start up MySQL 
+
+Thus, removing a column where every value was will not shrink the table. What did adding FLOAT columns actually do ? Let's play a little math game. You said the new table has 106.7M rows. 
+
+At the Client Response, there is crosscheck of capabilities between the client and the server. The CLIENT_COMPRESS flag (value 0x00000020) needs to be mutually exchanged before continuing authentication. To be honest with you, I have never heard of a MySQL question this deep. Good the thing all of this appears in the MySQL Internals Documentation. How on earth would you actually know where to intercept the CLIENT_COMPRESS ? I would suggest using tcpdump or snort to inspect packets. I will leave it to you to read up on the needed exchange packets 
+
+Step 1 flushes everything InnoDB not yet committed to disk. That makes for a faster mysql startup. From here, you have the option of changing settings Give it a Try !!! 
+
+When you run this, the table on the Slave is compared to that of its Master using the Primary Key (or Unique Key is there is no Primary Key) of the Slave's . The output will be a series of SQL commands, usually and . The script is to be executed on the Slave. When done, the data in should be identical to its counterpart on the Master. To test it then, run these commands: 
+
+You could dump the queries to a text file, and follow up with That is all that MySQL currently exposes for InnoDB's internal metadata. Here are all the table structures 
+
+you will see nothing because there are no files in it. Even though the innodb database contains no storage engine data files ( or ), you cannot drop the database because the folder is not empty. 
+
+Splitting the dumps allows you to load the schema into an editor and see if there are any problems. If you do not see any problems, load the MySQLSchema.sql into the target server. If the error is reproduced, you can fix the schema file and reload. Once the schema is loaded, you can separate load MySQLData.sql BTW you should use mysqldump binary whose version is 5.0.51a-24+lenny2. Use dumps from version as mysqld is usually better to port and may minimize problems like this. Give it a Try !!! 
+
+You'll see all the status variables for the Buffer Pool. ou can apply the same queries against whatever you need to examine. 
+
+In heavy-read, heavy-write environment, such as OLTP, this would be expensive in terms of RAM usage and possible inhibition due to swapping in the OS. On a low-write, low_read website, I would not worry as much. 
+
+If you could change the WHERE clause for the sake of the benchmark, do one of two things: OPTION #1 : Table Scan 
+
+When you launch mysqld like this, mysqld expects my.ini to be in the parent directory, which is C:\Program Files\MySQL\MySQL 5.5. Using start in DOS will open another DOS Window as a background task. If any error messages appear in that window and that forked DOS Session quickly disappears from the screen, check the Task Manager to see if mysqld is running. If it is, you should be able to log into mysql. If mysqld is not in the Task Manager, launch it as a foreground task like this: 
+
+That's one relationship I was able to take advantage of. There is another relationship visible in your sample data: The number at the end of the each field. If you can enter names in bulk and then later load country in bulk, you would then have to rely on the number at the end of each name field. Such a query would look like this: 
+
+Rather than try to guess, you should download Percona Tools. You should use the tool pt-duplicate-key-checker. It will compare all the indexes for you and give your the ALTER TABLE commands to drop the ones you do not need and still maintain fully compliance with all your index search needs. Here is the code to do it: 
+
+You need three changes CHANGE #1 Add after end CHANGE #2 Just insert NEW. directly into CHANGE #3 Make it an AFTER INSERT trigger, to be sure the new lands in 
+
+You should consider using Nagios XI or MONyog to do all that for you. If you want to be a hero, use Google Charts 
+
+Percona calls Views a Performance Troublemaker SUGGESTION #2 : Use another index (Optional) You definitely need an additional index to assist the query 
+
+Next, change the way you delete the data. Instead of running the DELETE query, try copying the data to be retained into a temp table and then rename. For example, if you have to delete rows from table mydb.mytb whose id <= 500000, run these steps (it should be faster): 
+
+Both queries will display the same result, but the second query will do less work and take less processing to achieve. 
+
+UPDATE 2013-02-02 22:44 EDT If changing the authentication style on the MySQL side has not worked for you at this point, I have some bad news for you. You stated earlier: 
+
+ANSWER TO QUESTION #2 SCENARIO You are driving at 3:00 AM. You are the only driver on the road. You come to an intersection. You have the red light. Question : Do you stop or go through the red light? Answer : Depends on the neighborhood 
+
+Sounds like you got to Step 9. You have to make sure to setup Data Migration. Apparently, it is not automatic. If you are having problems with the import, you are not alone. This has been a source of heartache for many. You may need to try : 
+
+Linux and mysqld has no problem with it. Windows, on the other hand, does. I tried to do this in MySQL 5.5.12 on my desktop, that is, zapping the error file and I got this message:

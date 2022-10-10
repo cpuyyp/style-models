@@ -1,0 +1,87 @@
+Answers to Questions from your comment No, you cannot rename the system user. It is dedicated to handle MySQL Replication only. The only way to manipulate properties of of the would be throught the GRANT command issued to create the replication user. For example, when you setup a replication user, you issue a command like this: 
+
+UPDATE 2013-09-14 20:05 EDT To demonstrate that the actually works, I ran this on MySQL 5.6.13 today: 
+
+This will give you a ballpark figure. The column is not used because mysqldump does not dump indexes, only data. Just to be safe, you should always gzip it immediately: 
+
+Something tells me you are either using a version of MySQL prior to 5.0, you called an older version of mysqldump, or you messed with the settings of the dump. What usually blows up a mysqldump past the size of its dataset is the option --skip-extended-insert. In older versions of MySQL, there was no extended insert. That means each and every row in a table had an INSERT command to itself. If a table had 2,000 rows, the mysqldump output will have 2,000 INSERT commands. That's a whole lot of commas, parentheses, single quotes, and "INSERT INTO" tags to place in a dump file. In newer versions of MySQL, --extended-insert was added to group together dozens (or even hundreds) of rows in a single INSERT. SO, instead of... 
+
+Everyone is used to this one, the good old text file. Just run the following to flush a slow log everyday STEP 01) Turn off the slow query log 
+
+If all you are getting is the header of the mysqldump, an error must be posted somewhere. In order to make the errors show up on demand, please run the dump like this: 
+
+That's not a typo. I want you run four(4) times. Look at the column. Since the table in InnoDB, I expect the Cardinality column to be different each time. Why? InnoDB get the Cardinality value by estimating it (NO PUN INTENDED) by counting via the BTREE page entries. Check your system variable innodb_stats_on_metadata. It should be enabled. If it already is enabled, disable it and rerun your original queries to see if improves things. DO THIS ONLY AS A LAST RESORT !!! So instead of these queries: 
+
+The first two commands you have commented out has double dashes when you spell out the option. That part of the syntax is correct. OTHER THINGS TO CHECK 
+
+A quick way to determine how much memory MySQL thinks it could allocate is as follows: wget mysqltuner.pl perl mysqltuner.pl When you run this script, it will tell you what percentage of the installed RAM MySQL thinks it can safely allocate. If the answer given is over 100%, you definitely need to lower your buffer sizes. The main one to focus on are: sort_buffer_size read_buffer_size read_rnd_buffer_size join_buffer_size max_connections key_buffer_size (not really effective past 4G) @DTest already set the direction for you in his answer, so +1 for his anwser. The perl script will tell you what happens if you don't set it or if you change any value. Here is an example: A client of mine has read_buffer_size=128K read_rnd_buffer_size=256K sort_buffer_size=2M join_buffer_size=128K max_connections=1050 Here is the output from mysqltuner.pl: 
+
+When I see messages of that nature, I usually blame the redo logs. This is where is LSN is written. The problem may stem from not preparing the incremental backup. What seems to be missing is the use of the --prepare option. What this essentially does is create the backup rolled forward to a specific point in time. This is particularly true if there were transactions occurring during the backup. It's kind of like the opposite of a , which makes a logical dump based on the start time of the backup. Doing a --prepare with xtrabackup will make the redo logs roll forward to match the end time of the backup. Note what the opening paragraph of Preparing the backup from the XtraBackup Docs says: 
+
+That's it !!! All the auto_increment stuff is handled for you !!! Please look over the sample code I mentioned. GIVE IT A TRY !!! 
+
+I added a plus sign to pankt and I got different results. What 2 and not 3 ??? According to the MySQL Documentation, notice what it says about the wildcard character: 
+
+I looked at the Server Variables and there is no ddl_log option. You can count ALTER TABLE commands from status variables (Com_alter_table). SUGGESTION If you are using MySQL 5.6 and should you decide to bite the bullet and use mysqlbinlog and parse the output, you may need to setup mysqlbinlog on an external server, redirecting output to your own log file for DDLs. You will also have to use stop-never. here is what the MySQL Documentation says on stop-never: 
+
+I wonder what happens if anyone uses InnoDB data created via InnoDB Plugin and then switch to another version of InnoDB. That could create possible page corruption in the eyes of mysqld. Note what the MySQL Documentation on InnoDB File Format says about this possibility : 
+
+You have to control the subselects by giving them as little data as possible. That's why I suggested running before joining to the correlated subqueries. UPDATE 2012-06-15 12:18 EDT Since this is a full join, remove the from your original query: 
+
+Please note the data dictionary inside ibdata1 (the system tablespace) It sounds like you have a broken data dictionary entry on the table when it existed The only way around would be move all the tables into another database. For starters, suppose you have database . Create another database 
+
+oNare's answer shows the principle way to achieve this. (He gets a +1 !!!) He set the variable as follows: 
+
+What are the benefits ? Deadlocks can never occur with MyISAM. The MySQL server can thus manage all contention, explicit (LOCK TABLEs) or implcit (Any DML). As long as a MyISAM table has no deleted or updated records, concurrent inserts can freely occur with impunity. That would, indeed, include INSERTs on a table that has an explicit read lock. For any table with gaps, running OPTIMIZE TABLE would remove those gaps and allow concurrent inserts once again. For more information, please read "MySQL 5.0 Certification Study Guide" pages 408-412 Section 29.2. 
+
+Now, if you would like to filter on student_type and have the zeros to come back, you must rewrite the query like this: 
+
+You should never encounter deadlocks as long as the Slave is used for reads and backups only. GIVE IT A TRY !!! 
+
+This will load mysqldump in the slave and the set the correct log file and log position in /var/lib/mysql/master.info. Finally, run on the slave and mysql replication should get going. Run to check replication status. Give it a Try !!! 
+
+According to the MySQL Docs, when innodb_stats_on_metadata is set (by default), InnoDB updates statistics during metadata statements such as SHOW TABLE STATUS or SHOW INDEX, or when accessing the INFORMATION_SCHEMA tables TABLES or STATISTICS. (These updates are similar to what happens for ANALYZE TABLE.) When disabled, InnoDB does not update statistics during these operations. Disabling this variable can improve access speed for schemas that have a large number of tables or indexes. It can also improve the stability of execution plans for queries that involve InnoDB tables. Once disabled, you would have to run on the InnoDB tables of your choice. Make sure you have SELECT and INSERT privileges. 
+
+An example of how to do this is in check constraint does not work? () I have also explained this in my post BEFORE INSERT trigger in MySQL () In your particular case, you need to add the new row to and then abort the stored procedure. I cannot guarantee the rollback won't happen but at least no should occur. You will have to experiment with this and see. 
+
+The rationale is probably based on which datetime representation is easier to handle for both MySQL and the OS (in this case, Windows XP) 
+
+I became a MySQL 5.0 Certified DBA (CMDBA later changed to SCMDBA) back on August 11, 2007. While I never personally met or know of any person who got a raise because the person became certified, that was never my incentive from the start. I wanted to be taken seriously as a DBA. I had made the transition from a Developer to a Developer/DBA, starting with MySQL 4.0 back in August 2004. I picked up several books along the way, including: 
+
+Give it a Try !!! CAVEAT #1 Your DBA must give the SUPER privilege to so that can globally change the long_query_time setting. Perhaps a DBA can have a cronjob give away SUPER privilege to just before the mysqldump and revoke SUPER privilege when the backup is done. CAVEAT #2 Unfortunately, any long running queries that occur during the mysqldump might not be recorded 
+
+This also means you may only have database level grants for all users. How can you tell ? Login as root@localhost and run this 
+
+If you installed MySQL 5.6 from the command line, the easiest way to find the temporary password is to go to the Linux command line do the following: 
+
+I cannot fully answer this question but I can give you some tips on what to look around for. First thing I would do is check the dates inside each partition as follows 
+
+MySQL accommodates only one increment column per table as does PostgreSQL, Oracle, SQL Server, and MS Access. MySQL does not have a SEQUENCE schema object like Oracle and PostgreSQL. 
+
+All stored procedures and stored functions, whose code is written in the MySQL Stored Procedure Language, reside in . You can see how many of each with this 
+
+This will clear all dirty pages from the InnoDB Buffer Pool. That way, the time for is as fast as possible. When all syncing is done, set it back to 90 (if running MySQL 5.5) or 75 (otherwise). Your Comment 
+
+Please note the absence of a . However, for your own good, the InnoDB Storage Engine creates a hidden rowid and an index called gen_clust_index whenever you create an InnoDB table with no . It gets created even if you do define a . In that instance, a partitioned table can be made. Once a partitioned table has some explicit uniqueness imposed on it, the columns that define how to partition must be included in the . 
+
+Just a quick observation: you using MySQL 5.1 Driver against MySQl 5.0.92 I recommend you should either 
+
+NOTE: If you cut-and-paste the above query as is, it will generate the whole month for you You then LEFT JOIN this to your original query 
+
+If you are dumping a mysql database that has a mixture of InnoDB and MyISAM and you have scheduled downtime: 
+
+Before you touch anything, please fix the server-id situation The spawning of relay logs is to be expected because sibling slaves take turns getting SQL entries from the Master. They simply cannot share the same server-id. The Master will somehow alert subsequent slaves that I gave server-id an SQL statement already. Thus, the I/O thread on subsequent slaves will disconnect and retry. Consequently, empty relay logs increase. (Trust me, I have shot myself in the foot with this years ago). This methodology of the Master talking to Slaves for this info allowed MySQL (eh, Oracle) to come up with semisync replication. This would break semisync replication as well. Even though MySQL 5.6 will soon introduce a Global Transaction ID into the mix, server-id will still be used in its method of checks-and-balances on the Master. After all, if an eagle had two eaglets, no eagle would spit into two mouths at the same time in order to feed them. 
+
+See my post Possible to make MySQL use more than one core? and About single threaded versus multithreaded databases performance for more info 
+
+All these queries make assumptions on the content of the data. Such queries would produce very poor performance results. This is why I suggested creating an external table to perform the JOIN that would couple the id of name and its country together. UPDATE 2012-08-16 17:19 EDT In answer to the last question from the comment 
+
+I wrote about something like this on Mar 05, 2012 (Tombstone Table vs Deleted Flag in database syncronization & soft-delete scenarios) Basically, you can do the following: 
+
+Check out this link from the Pythian Group on how to start and stop the individual DB services. From my answer, you should see that there must be a complete copy of the data in /var/lib/mysql1, /var/lib/mysql2, etc. 
+
+This will reveal whether the EXPLAIN plan favors an index scan (Extra column ), or a full index (or table) scan (select_type of ALL or SIMPLE). 
+
+Your mission is to parse the mysqldump I just mentioned and get each table description loaded into this table, along with the database anem table name. Once you construct such a parsing program, you could do this process every hour and update your dynamic documentation. Give it a Try !!! UPDATE 2012-04-01 00:39 EDT Here is modified suggestion: Given the mysqldump suggestion I made, your should load tMySQL Schema attained from the mysqldump into another DB server that contains no data. Set it up as a replication slave using replicate-do-db=mysql. That way, no data will collect in the slave. You can use this slave as the source of the mysqldumping of the DB schema. This separates the data from the schema. You can use your documentation system fetch the schema from the slave. 
+
+Since TRUNCATE TABLE does an implicit commit, don't use it. As long as the table does not have foreign keys, you can do it quickly like this:

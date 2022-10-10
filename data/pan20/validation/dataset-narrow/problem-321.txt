@@ -1,0 +1,81 @@
+which will more-or-less double the size of the table, since the UPDATE has to keep old row versions around. You may want to read up a bit on how PostgreSQL implements MVCC and how vacuuming works, but to answer this question: 
+
+In addition to Craig's thorough answer, I wanted to add that the cover of the book you reference says: 
+
+I am wondering if anyone knows the history of why is the default transaction isolation level for PostgreSQL, SQL Server, Oracle, Vertica, DB2, Informix, and Sybase. MySQL uses default REPEATABLE READ, at least with InnoDB, as do SQLite and NuoDB (they call it "Consistent Read"). Again, I am not asking for what the differences are between different isolation levels, but rather for some explanation of why the default was chosen to be in so many SQL databases. My wild guesses are: small performance benefit, ease of implementation, some recommendation in the SQL standard itself, and/or "that's the way it's always been". The obvious downside of this choice is that tends to be quite counterintuitive for developers and can lead to subtle bugs. 
+
+Assuming you are talking about the column in , or some status field derived therefrom, you can create an invalid (or intentionally corrupt, if you prefer) index like so: 
+
+So, 300k rows total doesn't seem like a huge amount, I wouldn't be overly worried unless you have a particular cause for concern (e.g. your UPDATE taking way too long, holding row locks for too long, etc). But two suggestions which may be helpful for your particular use-case: First, make sure that your UPDATE statement does not touch rows it does not need to. If you want to set all values of some_bool_column to false, do it like this: 
+
+I work on a relatively small development team that works with an Oracle (11g) database. It's recently been requested that all the developers be given the role so that we can utilize SQL Tuning Advisor when developing complex queries. Some have raised concerns that this may have significant performance and/or security implications, but I have not been able to find concrete answers to what these implications are. If this role were to be given to the various members of my team, what are the major pitfalls we should be watching out for? I've included the tag for Oracle 12c as well, since we'll be upgrading to that in the near future. If there's a significant difference between the two, I'd appreciate it if it was at least pointed out. 
+
+In a current report, I'm trying to track the migration of a person from department n, to n+1, or to n+k. My data is split into a row per term (university data). An example: 
+
+It sounds like your database administrator has set the value to . Change this value to , and do a restart. The restart will take a long time as normal, but the following reboots should be much faster. If this device is really a "blackbox" to you, I doubt you can change this yourself. I'd contact your DBA. See the documentation for more details. 
+
+This block mixes left and inner join notation. When you mix any form of an outer join and an inner join, it becomes an inner join. If you change the block to 
+
+I'm working with Microsoft Reporting Services 2008. In our database, we have a small group of confidential students that need to be taken into account for several queries. If they are a confidential student, the database needs to essentially return nothing. Currently, we do something along the lines of: 
+
+Because when you're creating a full backup you're creating a backup of the data (as it is physically and as it is materialized from the log). Restoring it somewhere else restores it as data, not log. 
+
+Make sure to keep transactions as short as possible. E.g. don't show a login form after starting a transaction and wait for user input, instead gather all the info you need and then run the transaction. Use the lowest possible isolation level, e.g. don't set serializable when you just want to temporarily show some values to the user. Please note that setting correct isolation level is a science in itself and out of scope in this answer. If you are the victim of a deadlock, i.e. you get error# 1205, then re-run your transaction transparently to your user. Since the other, competing, transaction has now hopefully acquired the resources it was waiting for and finished, it is unlikey that you will encounter the same deadlock again. 
+
+I'm using Red Gate SQL Compare to create a release script based on differences between SVN and a database. This results in a script containing a bunch of table- and procedure-changes and it works fine. However, one thing puzzles me, it's using transaction isolation level serializable. I know what it does to dml-statements, but I'm not sure what it means for ddl. Can someone enlighten me, perhaps with an example? 
+
+The others are combinations of the documented flags, e.g. 24 is 16 and 8. This is a method for simulating optional parameters and is used in e.g. C iirc, the numbers and so on are structured like that because they correspond to binary values that combined in any unique way create a unique number. The function that accepts them then use bitmasking to extract each individual number. E.g. if you send the value 6 to a function, then we know that this is a combination of 4 and 2, to find this out using a bit mask we would do: 
+
+I'm trying to figure out how many times in my database a particular grouping has occurred. I have two relevant tables. 
+
+When using the autotrace, query A had a cost increase of 30% and Query B of nearly 40%. Obviously, I should be using query b in both cases, but I don't understand what causes them to differ. 
+
+to get the distinct program names, but I'm interesting in how often particular groups of applications are used in a given session. So essentially, how often are these three applications grouped together. Is there a way that can get me results in the form of 
+
+The duplicated a's in the first group and b's in the second group are due to other rows in the data (I'm okay with this, but removing that would be a bonus). My main problem is I need that final a to be treated as a different group; so basically showing the first each time a cluster appears. 
+
+If you have a bunch of random fields I would set that up as an . The table would include a reference key to the original account, a field that specifies what type of attribute it is, and the value of the attribute. Alternatively, you could have them each in a series of tables. If each country has a different style zip code, for example, a zip code table might not be a bad idea. Just make sure you have a field. 
+
+I work on a team that has an SSRS setup with roughly ~1300 (and growing) canned reports. As one can imagine, this has presented problems when a breaking change is introduced to a table. Finding all the reports that may touch a table/field is error prone at best. I'm trying to programmatically build a dependency model. Getting the schema for and how views/tables relate is fairly trivial. What I'm struggling with is how to get a resolved list of fields from a given query. I can pull the query from the RDL files, but interpreting those files is far less so. Queries can contain aliases for fields and tables alike, plus there are problems such as . I'm trying to avoid a regexp hack, and I really don't want to write a SQL interpreter... My initial thought was to loop through the RDL files and parse the explain plan output. While technically possible, this doesn't give me a complete list of resolved fields. Is there any method in which I can use to get the DB analyse a given query and return a list of ? I don't mind having to do some text processing to pull out the results if necessary. 
+
+although semantically the UPDATE above is exactly the same as if it did not have a WHERE clause (ignoring triggers), you will avoid a ton of I/O for tuples which already have some_bool_column = false. Second, if you can, try to take advantage of Heap-Only Tuples aka the HOT optimization for your UPDATEs. So if you can avoid having an index on some_bool_column, these bulk UPDATEs will be faster and may be able to avoid contributing to index bloat. Often, you don't want to have an index on a boolean column anyway, since the selectivity will be low (or if one of the boolean values is rare, just use a partial index on that value.) 
+
+You can set seq_page_cost and random_page_cost per tablespace via ALTER TABLESPACE without restarting Postgres. 
+
+Canceling queries (or, equivalently, rolling back a transaction) in PostgreSQL doesn't have any database corruption hazards which you might have been spooked by in certain other databases (e.g. the terrifying warning at the bottom of this page). That's why non-superusers are, in recent versions, free to use and to kill their own queries running in other backends -- they are safe to use without fretting about database corruption. After all, PostgreSQL has to be prepared to deal with any process getting killed off e.g. SIGKILL from the OOM killer, server shutdown, etc. That's what the WAL log is for. You may have also seen that in PostgreSQL, it's possible to perform most DDL commands nested inside a (multi-statement) transaction, e.g. 
+
+The space utilized by the table should go down if you run a or ; probably a alone will not be sufficient to immediately reclaim space. 
+
+You can look under the "base" subdirectory of the data directory, and you should see something like this: 
+
+Both statements would be evaluated to , thereby we have found out the individual values. Note: In the real world, we would iterate through all values from 1, 2, 4, 8, 16 and so on to the maximum value of an integer (or whatever datatype the parameter was set to). 
+
+In SQL Server there is a separate thread that periodically (default 5 seconds, lower interval if a deadlock has just been detected) checks a list of waits for any cycles. I.e. it identifies the resource a thread is waiting for, then it finds the owner of that resource and recursively finds which resource that thread is in turn waiting for, thereby identifying threads that are waiting for each others resources. If a deadlock is found then a victim is chosen to be killed using this algorithm: 
+
+We had an issue in our dev environment where a procedure call timed out from the web server after 30 seconds. I traced the query and ran it manually (same params and all) from SSMS and it executed in about 2 seconds. I then ran 
+
+Identify threads that are not unkillable (e.g. a thread that is rolling back a transaction is unkillable). Find the thread with the lowest deadlock priority. Chose the one that is cheapest to roll back, i.e. the one that has done the least work so far. 
+
+The original log file might be truncated so the space can be reused, but it's size might stay the same. 
+
+and after that the call from the web server also completed in time just fine. I would suspect that the same plan should be used since I was using the exact same parameters from both connections, but I'm not sure. My question is: Can there be different plans or buffers for different connections? Or could it have been some other side effect caused by me running the above dbcc-commands? 
+
+You can also see in the pg_constraint table (e.g. via for some referencing foreign key ) that PostgreSQL is internally tracking this dependency by the OID (in particular, the column in ) of the index rather than the name of the index. The OID of the index does not change when you use , which is how Postgres avoids becoming confused by the rename. 
+
+Right -- if you see that pg_stat_activity.waiting is "true" for an ALTER TABLE, that almost certainly means that it's patiently waiting for the ACCESS EXCLUSIVE lock on its target table, and its real work (rewriting the table if necessary, changing catalogs, rebuilding indexes, etc.) hasn't started yet. 
+
+However, this is really not what CHECK constraints are supposed to be used for, and it actually introduces a race condition if you have multiple transactions writing to example_table at the same time (can you see how?). Use the UNIQUE constraints that PostgreSQL provides. If your values are too large for the UNIQUE constraint's B-Tree index, create the UNIQUE constraint on an MD5() of the value. 
+
+This behavior is controlled by the parameters max_standby_streaming_delay / max_standby_archive_delay. You can fiddle with these parameters in the RDS Parameter Group used by your Read Replica instance to allow more time for queries against your Read Replica to complete. 
+
+PostgreSQL reads its (index, heap, etc.) blocks either from shared_buffers, if they are available there, or from disk if not. Postgres does not need to read out of its WAL files other than for crash recovery (similarly, standby) purposes. 
+
+Amazon's RDS only offers PostgreSQL versions 9.3.x, and it seems unlikely that they'll ever offer to host older versions of Postgres. So by jumping from a local 8.4 install directly to RDS, you would in effect be making two significant changes at once (jumping up several Postgres versions, as well as switching to managed hosting). That may be alright or not -- it all depends on what features you're using and depending on. You should do some reading on RDS's limitations (no external hot standby, limited extensions, no shell access to the database instance, etc.) and benefits (hopefully much less maintenance work) and decide whether it's right for you. Also, I suggest you walk through the steps of dumping and restoring your data into RDS and ensure your application works OK, as well as reading through the Postgres major-version release notes for 9.0, 9.1, 9.2, and 9.3, paying particular note to the incompatibilities listed to see if any of them would affect you. 
+
+I'm analyzing a database of login records for a university and I'm trying to write a query that will give me an idea as to how many users are using the labs for short bursts, verse a more extended stay. I have the query below query, which tells me how many times each user has used a lab for less than or equal to 10 minutes. What I want is a result that tells me this and their total number of logins. 
+
+My team uses Oracle 11 and SQL Developer. I've been relying heavily on explain plans lately to try and determine the most efficient way to solve various problems. Recently, a coworker pointed out that explain plan is not always accurate to what actually happens in the database, and that an autotrace is a better indication since the query is actually run against the data. Testing a query, I've gotten the following results 
+
+No, they're not the same. Though I think they're equivalent to what your original query wanted. In an oracle database is an acceptable (if less ideal) way to write a left join. Likewise, denotes a right join. Your original join contains the set: 
+
+This isn't a big deal for such a small query, but most of them return many fields (often 20+) and I'm not a fan of so many case statements for obvious reasons. Because of how Reporting Services work, I can't do a general replacement either, it must be done on each and every field. Is there a more efficient method where I could replace every value in the row with 'Confidential' in a single case statement, or at least something more elegant? Edit: To clarify, that there isn't just this one field in the select. I only wrote one for the example, but in production, some reports are looking at displaying a huge amount of columns. I'm trying to avoid making two comparisons on every column for reports that could return rather large sets of data.

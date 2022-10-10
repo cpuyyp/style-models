@@ -1,0 +1,61 @@
+I've no idea what to call this, so I called it since that's how I use it. Basically, the idea is to pass a which is evaluated for an input, and the first returning true will return the key. The intention is to make this a generic extension method. 
+
+So we're down to one responsibility: process an array. It's made up of steps, but the implementation for those steps is not part of . Next we'll fix : 
+
+Ok, so we've taken a lot of this down and cleaned it, just a little bit further to go. First, should not be null here. So remove that check altogether. 
+
+This makes it much more idiomatic as to what is going on. It's precisely clear what the intention is, and Windows will manage all the triggers for you. :) It also allows you to keep control and not have an additional thread just looping. By setting in the method, you guarantee that the timer will not continue counting down after it fires. The line in will re-enable the timer once the method is done. This means the timer can never fire twice if the method takes an absurdly long time to run. 
+
+The rest of it looks great. I won't comment on the algorithm, because I'm not an algorithms person, and it looks like it does what it wants. What I'm even more interested in is the fact that you wrote this algorithm so clearly that it's easy to follow and read. Personally, I think more people should take that page out of this playbook and write code for clarity first, then deal with whatever issues may arise. 
+
+Never omit braces from statements, and never one-line them. Adding braces won't prevent bugs, but it will help prevent bugs. 
+
+Another thing you could consider, which may be more beneficial, is to rewrite it to call a function when a match is found: 
+
+This eliminates the portion and brings some of your code back to the right of your IDE. This is not counter-intuitive as it is considered part of . From the moment you have determined that is not a null or empty string, it is considered valid throughout the rest of the method. Thus, the entire method does not need shifted to make room for this one validation. 
+
+The first thing you should do is clean your code up. We should notice that is called no less than once, and no more than twice in the loop. We can fix that (quite easily). Next, we should notice that if we find a in our second loop, we can skip that many numbers ahead. Lastly, is bad practice. In Java you can subtract single-character literals. Instead of , let's do . The 48 becomes a magic number, and it's just as easy to subtract the instead. :) 
+
+This eases our code greatly. Next, we'll adjust our method (and rename it at the same time, to follow conventions of Pascal Case). 
+
+Notice that is the only one that is public. If you did want them to be internal, I suggest adding the keyword in front of them to be explicit about it. 
+
+One of many aspects of a project I am responsible for is generating an abbreviation, that is no more than characters, for a given string. We use this in the organization for a couple things, and it only happens once for each "thing", so performance isn't hyper-critical. An example is something like "The Main Test Company" — when asking for a 3-character abbreviation, I want to be able to generate a string like . Now this would also be the same string as , but the idea is that a given company can be abbreviated and it can be done safely and effectively. Also, if the abbreviations aren't large enough for the requested characters (say we request 4 characters from ) it should, for each abbreviation character, start adding characters to the total (so our example is ). I wrote the whole thing in F#, and it seems pretty readable and followable, I'm also including some test strings to verify functionality. Any comments are welcome. 
+
+Yes, the idea of the is to mark a shared resource as "in-use" so that threads know to wait on each other before they can proceed. You could, however, replace it with a instead of an for smaller overhead. You could have performance implications by the , but that's the downside of multithreading: somewhere you will have a bottleneck from context-switching, et al. That is beyond the scope of Code Review. 
+
+Don't give up, you could still make this better. You just saw where to improve: start with the method, and go from there. You can make this better. You may not ever consistently beat the built-in modulo operator, but if you can get close enough that's impressive. 
+
+Regarding the service-layer handling database access: this is a good approach, I'll tell you that a lot of my code in this project I've mentioned previously is in the controller, and it's cumbersome. What I would change is reject the idea of needing to create a (or pass it to the method) controller-side, and do one of two things: 
+
+I'm not sure on Java's best-practices on Lambda's, but I would try to avoid using large Lambda expressions like you have. The big ones - the 10+ liners - should be methods instead. Even the smaller 5-10 liners should be methods. I tend to think of Lambda's as small bits of code that are too small to justify a method. 
+
+That is way more than a method should do. A good alternative to this would be to create an event for instead, and fire the event when is changed. 
+
+Alright, that doesn't do much but it does start pushing things into motion. You state in your question: 
+
+There are a lot of ways to shorten this, my favourite is to create a or class and move the movement code into it. For example, I have a world class that has an method as follows: 
+
+Obviously both pieces need put together. You can do similar things with your methods that smell like arrow-code. (This is a pun on Code-Smell, if anyone missed it.) 
+
+You could test this better by developing around Test-Driven Development. You have interfaces for a reason, they are also very good at TDD. It's easy to mock things with them. (So that you can verify that whatever the thing is works. Especially with generics.) 
+
+But we're still not done, let's say we want to write our such that it doesn't create the entire result array, we want to stream it, sort of like an in C#. In F# this isn't nearly as hard as it seems, all we have to do here is rewrite our as a sequence generator, which turns it into: 
+
+Nothing here needs to be modified to use the MVC system, this is the landing so that can take all the work and send it away. This next controller is an example, because I want to demonstrate how easy this MVC system is to use: 
+
+The first defaults and then checks for the parameter, the second checks if it's set then defaults. Take your pick. But those still don't handle invalid (non-numeric) input, so we can do that as well: 
+
+I am using it to track a and the order the value goes in. Next, we have to have some way of taking a UTF-8 array and determining, at any given index, where does that character start? 
+
+I started writing this as a comment, but as I was exploring things got worse and worse. Your benchmarks (in the comments) do not at all line up with my experience. In fact, they're just the opposite. I ran your benchmark code, and a few modifications to it, to test truly whether your optimization, specifically for , was faster than the built-in. Now, I'm not knocking your idea, but if you claim to have a faster production than something, you should have scientifically reproducible results. I should be able to copy/paste your code (which I did) and build my own benchmark (which I did) matching your benchmark (which it did) and get a reproducible result that confirms your theory (which it did not really do). What it did confirm is that the vs. methods differed as you indicated, it did not confirm your version is faster. What it did confirm, is that when compiled to x64 and using the RyuJIT, your version appears to perform faster. (I put 'appears' because of the fact that this is the only time your algorithm is faster, though your version is significantly slower when using the dispatch approach, which is it's intended usage so I don't even know if that claim can be made.) And I had this nice long answer written out at work, but of course the draft didn't save when I closed my browser and I'm really not in the mood to go through all the work I did again, so I'm just going to tell you why your benchmarks are wrong and leave it to you to investigate. First: you benchmarked on only x64 build. I know this because when I ran my benchmarks on x64 they came up with the same general idea as yours: ~4us for your , about 8us for and a little less than 8us for . However, when I changed this to x86 build, the performed over twice as fast as your version. Second: you did not benchmark your 'dispatcher', which adds a metric tonne of overhead. When I benchmarked it I saw ~21us on x86, and ~17us on x64. So not only is your x86 algorithm slower, it's also extremely slow when using your dispatcher. Third: you only benchmarked for the value of , but what about other key values? You ignored them. Personally, with the result of the benchmarks I already did (which I may add back in later when I have more time), your code is significantly slower than the built-in, which means this 'optimization' is pointless, as it doesn't optimize at all! What I would recommend, is finding out why RyuJIT is so different (in fact, creating an opposite result) from the 32-bit LegacyJIT. 
+
+That keeps it really simple. (It'll probably be slightly slower, LINQ is usually slower than a hand-written loop, which is why I leave it up to you if you like it or not.) You have this method: 
+
+I don't like that at all. It just seems, wrong, somewhere. I'm not sure how it could be better, but that bit seems less-than-ideal. 
+
+Please don't do that. It makes it significantly harder to follow. If you want to omit braces I understand but don't inline them like that. 
+
+Ah, I guess I really did need after all. While both of these bugs are pretty major, for your situation they're really not something you would look for. You are specifically switching between languages that have different parents, and you're only creating one . (Which is probably the most likely scenario.) 
+
+I saw that and died on the inside a little, considering what you're doing with this you should rewrite that to one case for and then sub-cases for . It's nice that you're trying to use the new C#7.0 features, but let's not abuse the new C#7.0 features. You can make the first case and then test from there. This little guy:

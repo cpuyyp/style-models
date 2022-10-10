@@ -1,0 +1,83 @@
+If Oracle cannot start even in NOMOUNT mode then you can fetch configuration information from spfile: 
+
+I do that now and then to create test environment. Just for such more complex directory structure I prefer . With it you can resume copying if you run into some disk space or network issues. 
+
+To import data into a different schema you need to grant role to the user. Oracle MOS Doc ID 351598.1. Or you can use SYS user: 
+
+Even such query counts as scan if id field has btree index. In your case we almost all DELETE queries are running in loop with 'LIMIT 1000' or similar value. 
+
+Usual rules apply. Code changes should not be required but something will break if code is more complex. Also there will be some SQL plans regressions. Official documentation about deprecated features is there: Deprecated and Desupported Features for Oracle Database 12c Also you can check Metalink note 567171.1 about parameter. This parameter is used to enable or disable certain bugfixes which affect query behaviour. In 11.2.0.4 the view contains 854 rows which means that there are so many potential quirks while upgrading to the newer version of Oracle Database. I am sure that 12c contains much more rows. 
+
+impdp/expdp unlike imp/exp does not move the data. They only invoke DBMS_DATAPUMP package and actual data movement is done by the Oracle instance. So data pump can access external data the same way as all other Oracle procedures - loading files via directory object or SELECT data via dblink. 
+
+2nd step is to drop all the active connections and unfinished transactions so that node is free from user queries. And all the applications continued to work on the other SQL node. 
+
+Also one small note for the multiple schemas approach - put different applications data into separate tablespaces. This will add just a few minutes while creating users but may save a lot of maintenance time later. Trust me. :) 
+
+Range partitioning involves a bit more maintenance because you have to create the partitions yourself. However, once the partitions are created, range and interval work similarly. 
+
+The type is a nested table of , so you need to build a set of objects to get the list. The following query works on 11.2: 
+
+(additional restrictions on updating views apply) In your example you update table only. Oracle has to make sure that for a single row of this table, only one row of the other can be found. This seems to be the case since you have a PK on . Therefore you should be able to update the join. See for example this SQLFiddle with a similar setup. In your case you should either: 
+
+I don't think Oracle keeps track of past closed queries. However, you can find out what cursors a session has opened with . Since many applications cache the cursors for later reuse (this is automatic in PL/SQL: a cursor won't be completely discarded unless you reach the maximum number of open cursors), in many cases all past queries will be in this view: 
+
+You have the basics right. There is only one type of commit (no normal, fast...). from the concepts doc: 
+
+Only one base table is updated All other tables are key-preserved: each of them must have at most one row for each row of the base table. 
+
+There seems to be something wrong here: the 0 cost on the index full scan is suspicious and if I had to guess I would say that you're missing something: probably the stats on the index. This in turn leads the optimizer to believe that it can run the FULL INDEX SCAN "for free" and goes on with a suboptimal plan. This could also be a rounding error problem, since there is very little data (1k tiny rows, probably fits in a single block!). So either there is some stats missing, or too little data to be meaningful. Interestingly, if we run your test with a large sample (say 1M rows), the optimizer is happy to go with an index scan. If we insert some data instead and do a standard stats analyze, we find a more logical plan (11.2.0.3): 
+
+First step has to be run on all nodes of the cluster. Second step though - just on one node which will rebuild all the indexes. For foreign keys you can try to split first step into two: 
+
+Maybe db_cache_size, shared_pool_size, sga_target or other memory related parameters are set to non zero? Remember that when using AMM those parameters specify minimum memory allocated for particular pool. So if sga_target is 6GB you will not be allowed to set memory_target to 4GB. Also sum of internal variables __sga_target, __db_cache_size, etc. may be more than your specified value of 4GB. If you see those symptoms you can cleanup pfile bounce Oracle with pfile and recreate spfile. In the same step you can also set to zero. 
+
+First insert/select goes from dba_objects then it is faster to insert/select from filler table itself. Now you just have to check datafile using RMAN: 
+
+This is one of the reasons why good Oracle DBA can save quite a lot of money with licenses. First instead of using many core CPUs look into Intel "Oracle EE" line of server CPUs. Next - put ton of RAM which is way cheaper nowadays than Oracle licenses. Then you can use Database Smart Flash Cache. MLC SSDs for servers are not that expensive. But of course there is huge price gap between Standard Edition One and Enterprise Edition if we are talking about single dual CPU server. 
+
+With any more complex data it is almost impossible to restore data in MySQL Cluster in one step. Usually one needs two steps: 
+
+Then you would not get wasted space in tablespace and also even in case your data grows fast and catches up with autoextend operation - there will be only small delay in writes because 10GB will not take a long time to format. And Oracle will autoextend tablespace proactively. It will not wait for the last blocks to fill up. 
+
+The jobs submitted while the window is closed should be queued and run later when the window is opened. 
+
+You can create the database link by connecting directly to the remote database. As suggested in the askTom discussion, you can also use or to create a distinct remote transaction that can initiate the DDL statement. 
+
+Yes, most analytic functions can be rewritten with semi-join. In your case it would probably not be very efficient: 
+
+Most likely using a cluster for this query won't be beneficial. A cluster in Oracle allows data from multiple tables to be stored physically close when they share a common key (here I suppose). This allows some query to perform better but a cluster will intrinsically consume more space than standard heap tables because for each key there will be some unused space. Insert-only heap tables on the other hand are one of the most efficient way to store data space-wise, since the rows fill all blocks nicely up to the HWM. In your case since you don't have a filter so all rows will be read, producing a FULL SCAN of the data. Because the rows are stored in a more compact manner in heap tables, the cost will be less than the cost for the cluster. The cluster, however, should have an edge when you look for a specific key, but this will also depend on the distribution of the data (number of rows per key), and on the length of the rows. You could build an example where the heap tables with regular B-Tree indexes will outperform a cluster for single-key queries. In conclusion, clustering tables in Oracle will help for some queries, but will also be hurtful to others, it has restrictions and drawbacks, it is not a silver bullet for optimal performance. Heap tables are the default for a good reason: they have good performance for most queries. 
+
+Everybody here are missing one point - SQLs in question are retrieving 1000 rows. And one cannot retrieve 1000 rows fast unless most of the data is cached. If data is not cached one has to do 1000 random reads sequentially to retrieve the data. Good disk based storage with fast disks will give you up to ~200 reads per second. Common disks even in RAID I doubt that manage even 100. That means 10+ seconds to get results even with the best indexes. So in the longer run such data model and queries won't work. Now the queries run fast when you hit cached data. 
+
+I was using the following steps to perform backup and restore. In the first step I generate dump script to make schemes structures backup. 
+
+By "default" you can only select data from tables and views in your schema. To create different objects you need appropriate privileges granted. 
+
+Not exactly an answer to your question but amount of changes generated by the session can be found using such query. 
+
+30min for 1TB is quite normal. That all writing stops is also normal if your tablespace completely run out of space. When writes has nowhere to go they have to wait for the RESIZE operation to complete. If one extends datafile while there is still space in it database I/O does not stop. Just why you extended for such huge amount? Now those +1TB will add to your RMAN backup. Of course they will compress well but still not 100% and RMAN will need time to read all those blocks. I would setup autoextend on those tablespaces: 
+
+NOLOGGING. But as you noted not loged are only specific operations. So you have to plan and program around it. TEMPORARY TABLE. But in this case each session can only see and modify its own data. COMMIT WRITE BATCH NOWAIT. This feature was introduced in 10g and it affects redo size indirectly. Redo size is reduced because redo log buffer is not flushed immediately and less space is wasted in redo blocks. 
+
+first define a window with . This window could have a 24 hour duration and repeat every day so that it is always open. modify your job submission so that they run under this window (parameter of the procedure). when you need to enter maintenance and/or release resource, use . When your maintenance is done, use . 
+
+In Oracle, DDL on remote database is not permitted. One likely reason is that a distributed transaction commit can not be initiated at the remote site (you can't ) and since DDL statements include a commit they are not permitted. You would get an with other DDL statements: 
+
+I agree the Oracle docs can be a bit bland, however they are in general very complete. Once you learn how to locate the relevant piece of information you're looking for, they are often the best resource you can find online. In your case I would suggest you take a look at the PL/SQL Packages and Types Reference book, where you will find the complete documentation of all standard packages. The chapter, contains a collection of examples, in particular how to set up your directories to enable access. Once you have setup your directory object, you can create a file in PL/SQL with something like the following : 
+
+If your table is updated concurrently, a bitmap index with a unique value will be a point of contention and shouldn't be used. 
+
+One way to force data to actually be overwritten would be to update it to a meaningless value before deleting the row. This wouldn't work with indexes since updates are translated to delete+insert in a b*tree index. 
+
+Here the row in sale will be replaced (updated) by its first split component and the additional components will be inserted. 
+
+The most likely cause of a mutating table error is the misuse of triggers. Here is a typical example: 
+
+It calculates dates of next Sunday and 1st of next month and then returns the one which will be sooner. Just 'Sunday' in next_day is NLS dependent. That should give your required interval in call to DBMS_REFRESH.MAKE procedure: 
+
+It seems that for solving your problem you chose the wrong tool. MySQL Cluster is good when you do mostly key based lookups from multiple threads from memory based tables. Disk based tables may be useful when you have rarely read data. Or your work dataset is small portion of the table which should fit into memory cache whose size is defined by DiskPageBufferMemory config variable. If your queries need many range or full scans - MySQL Cluster is slow even on physical machines. That is because such queries need a lot of data exchanges between data nodes. Try pinging between your data nodes. And for range scan data nodes may need to exchange hundreds and thousands of such messages. Also MySQL previously stated that for data nodes your should use physical machines and have good interconnect for data node traffic. I doubt that this recommendation is no more valid nowadays. And I think you should try cleaning up your config. For testing most of those things hardly changes anything and some setting may be slowing down things. Try such simplified section: 
+
+You will need some more space for row overhead and PK storage. More information you can find in MySQL Documentation. For the most detailed information you can use ndb_size.pl utility. 
+
+Ultimate source for such answers is Oracle Database Licensing Information. Sadly to downgrade from Enterprise to Standard Edition you have to export all the data install Oracle Standard Edition and import data (Doc ID 139642.1). From your list "Automatic SQL Tuning Advisor" is Enterprise Edition only feature. As a rule of thumb - features which needs AWR are Enterprise Edition only plus you need to buy .

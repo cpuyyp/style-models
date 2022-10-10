@@ -1,0 +1,49 @@
+There's simply no reason to wrap your existing promise with another promise and no reason to use or here either: 
+
+Get a DOM element once into a variable and then use it from there rather than calling more than one for the same DOM element. Put the color code into a reusable function rather than having two copies which also makes it easier to set the color in just one place rather than three places. Put zwa, zwb, zwc, zwd blocks of code in order to make it easier to read and follow. 
+
+Some of the things you're doing in here could easily be more general purpose functions on their own that would make them more available for reuse in this or other projects such as and the calculation of and the background color. You might consider make those utility functions outside of this scope that could be used elsewhere. The variables , and could be pulled out of and up into your IIFE (I'm assuming their values don't change) so they don't have to be refound every second when is called. 
+
+Neither is appropriate as both your options employ promise anti-patterns (creating new promises when you can just work with and return the one you already have). Assuming already returns a promise (which you imply with your use of ), you should just return that promise directly. I see no reason to even use or here. 
+
+Remove all undeclared and thus implicitly global variables. Remove caching of jQuery selector object (don't see any need for it). Remove several intermediate variables that are only used once Add to event handler so it can use directly Change from to to code more closely to the promise standard. 
+
+The idea here is that you make the items that you want to process self describing by giving them a common class and either an id or a data attribute that describes the query to use. When you add items to the HTML, you don't even have to modify the jQuery as long as the items you add to the HTML follow your recipe. 
+
+because there should only ever be one item in the entire document so if that was the case, you could just do this: 
+
+Why are you starting a 1000ms animation and then repeatedly stopping it after 150ms. It seems there is a more efficient way to do that. 
+
+Because you have different options for each one, there isn't really an efficient way to combine them into a common selector. And, with only three items, other options aren't really that likely to be more compact. Here's a pure table driven mode that would be more advantageous if you had many more of these: 
+
+Any time you see the same pattern of code repeated over and over, figure that you should eliminate that repeated code, either with a common function, a loop or some other technique that makes only one copy of common code. Any time you see an if/else comparing to a bunch of values and then selecting different data based on what matches, consider using the keys of an object to do all the lookup work for you. Any time you don't really need data to persist across function calls, consider moving variables inside a function rather than using globals. Make absolutely sure that all loop variables are declared as local variables. Implicit global variables, particular loop variables are a bad source of hard to find bugs. 
+
+A good mindset to be in when tackling coding tasks like this is to Don't Repeat Yourself (known as DRY). If you're ever copying/pasting the same or mostly the same code in more than once place, then there's probably a better way to do what you're doing. You can either put something into a loop to repeat the same operation or put the common code in a function (with one or more arguments) and just call the common operation each time you need it. You pretty much should never copy the same code in multiple places. Here's a shorter version with these changes: 
+
+On your method, you are only removing the client from the data structure if is already true. I know it's supposed to be the case that those two operations are innately tied together, but why not remove it from no matter what? You don't want any chance of a memory leak here and it's not like some random attacker can send an unauthenticated message using your client object. The client object is uniquely associated with the socket. 
+
+The faster way to know if a number is already in a data structure is to use an object, not an array. So, if you don't have to have the numbers in an array, then this would be a lot faster, particular when the number of items gets big because the object look up is massively faster than the linear search of : 
+
+And, here's a version that makes the change to wait on any promises that are returned in the array of values per our discussion in comments. I also changed it so that if you don't pass a function to .spread(), it will reject: 
+
+I also don't see why there's a callback passed to ? There's no async operation and the callback is executed at the end of the function with no args so the caller could just put that same code right after the call. There doesn't seem to be any reason for a callback argument. 
+
+When coining your clientID, you don't need to multiply at all (you said you cared about performance). You can just leave the random number in decimal form. You're just trying to have a random string so it's no big deal if you have a decimal point in it. If you really don't want a decimal, then you could just remove the decimal with a string replace rather than multiply. Also, why ? Why not just (it's more unique without the )? So, you can change this: var clientId = (Math.random() * Math.pow(2, 32)) + "_" + time % 1000; to this: 
+
+This uses a very useful feature in Javascript called a "closure". When returns the inner function , the code in retains access to the variable even though has already finished executing. This allows you to privately accumulate the sum with successive calls to without using any globals. 
+
+Update the appropriate variable with an appropriate increment. Set the appropriate value. Call . return the newly modified value. 
+
+You may also want to handle a failure in with a local try/catch handler so rather than end the entire operation, you can handle an individual error and continue with the rest of the processing, but that depends entirely upon how you're using this code and what you want to happen if a parse failure occurs. You may also want to handle a failure in . 
+
+FYI, when looking at the Parse documentation, looks like it also returns a promise and looks like it has a method (not sure if that needs to be called). 
+
+Your particular example gets 10 times faster by just removing the jQuery and using a loop and instead of the jQuery versions. It's also worth stopping the iteration when you find an excluded value since you don't need to look any more once the flag is already set: 
+
+Is your webSocket library safe from malformed packets? Is your webSocket library safe from DOS attacks with giant messages? Do you need rate limiting per connection to be safe from DOS attacks from a single connection? Do you know what happens if a client connection just silently disappears without an orderly TCP shut-down. Will your server eventually close the socket and remove the client object? Or do you need to check for inactive connections/clients and get rid of them? What happens if a single client who passes authentication, connects a zillion times? I don't understand your authentication step. The code you show doesn't actually do any authentication so the client gets into the map without passing anything and then you call some message handlers for authentication, but they don't have any return value to actually indicate failure. 
+
+If most of your code is the same among all the different delete URLs you are processing, then it makes perfect sense to share one route that branches based on the minor difference between them. Since that is what it looks like you have, then the way you have it is a logical way to do it. You could simplify your current technique a bit: 
+
+There's no way for the code that calls or to know when either function has completed. There's no way for the code that calls to know when that function succeeded or failed. There's no way for the code that calls to know if an error occured. 
+
+First off, if you're trying to do these animations sequentially, the code isn't written to do that. You need to pass a function reference, not the result of a function call so this:

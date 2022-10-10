@@ -1,0 +1,73 @@
+On the whole, yeah, looks good. I recommend you use braces for one-liner blocks as well. In this instance, I'm not batting an eye at it—it's fine—but it's a good habit to learn. 
+
+Depending on your use case, you can also consider a different approach (*). Right now, you generate all possible combinations before returning. If you don't need all combinations at the same time, this may be overkill. (If you do, then making them all in one go is probably the most efficient.) 
+
+I'm cool with either, as long as it's applied somewhat consistently. If you don't use calculate and calc in different contexts and implying different meanings, either one's fine. 
+
+General Remarks The code checks incoming parameters, and throws an IllegalArgumentException when they are out of bounds (except ; see later). This is a good thing. It would be even better if you could include the faulty indices in the error message so that I don't have to pop out the debugger. ;-) The class seems to work with 1-based indices rather than 0-based, the latter being more common in Java[1]. As you commented about this within your code (but not in your public documentation), you've felt there's a mismatch; it may be better to use 0-based indices for consistency with the rest of the JDK. You're going through hoops to work with arrays in the public interface while using streams and collections behind the scenes. Consider returning lists instead of arrays, or maybe even streams if you're so inclined. Constructors Character encodings are important, too important to force the default encoding on your users, for any definition of 'default encoding'. Many of the classes and methods deprecated in were so because they assumed about encodings, which I've seen lead to subtle but no less spectacular breakage.[2] Allow/force your users to specify the encoding. If they make it be this fangled default encoding, then on their heads be it. (A simular argument could be made for .) For your class, it doesn't matter how it gets its stream of strings, as long as it gets it. Make this clear in your constructor: 
+
+What sorcery is this? You've conjured a string from thin air! Where did that come from? You should avoid magic strings where possible, instead assigning them to a or of commonly used phrases within your application. The same can be said for in the call: what is 1987 and where did it come from? Assign it to a resource list. Client.cs Code Analysis Says: Implement correctly. Your class nominally implements , but you've only written half the implementation. You also need a method, called by . If called as , it should also clean up managed resources; if it's you should only clean up your class' resources. You also need to tell the garbage collector not to run the finalizer on your class because you've already implemented . In this case there's no difference that I can see, so a few simple modifications: 
+
+Algorithmic time complexity, as we commonly understand it, is a measure of how an algorithm scales in terms of its input. We're usually interested in asymptotic complexity, meaning we want to see how it performs in the generalized, large-scale cases. It is the answer to the question: "What if we make it bigger?" How you calculate is fairly straightforward: you figure out the number of steps your algorithm needs compared to your input size, and you crib out the scalars: Θ(4n² + 25n + 842) = Θ(n²) ; Θ(28n * 6 log (18n)) = Θ(n log n) ... with the understanding that, as approaches very large numbers, all scalars become insignificant. (This isn't entirely accurate, but it's good enough for envelope-and-fingers calculations.) Here is a line-per-line of your code: 
+
+Yes, if only because you're working with Strings/objects where you don't really need to. But it depends on how far you want to take it. On the surface, there are a number of inefficiencies that you can eliminate: 
+
+Where is declared? I can't find a field or property called in this class. If is a type, it needs a variable identifier after it; if it's a declaration and identifier, it needs a type before it. Were you trying to assign to ? I stand corrected: the property concerned does exist. Naming - the same points apply here as to Client. 
+
+is technically safe, and is fine for your current script, but if you want to adapt it for another script, it'll break. A more general, equivalent one-liner is: 
+
+I've created a voting system that's similar to Stack Exchange's in a Ruby on Rails web app. It's working great - as far as I can tell, all the edge cases are caught. This is the action to cast a vote. There are some conditions I've had to satisfy: 
+
+[ln 179] Folder !== Directory. Be consistent throughout: if this is a setting that a user needs to understand (hence why you used Folder instead of Directory), convert it to Directory code-side. 
+
+is usually a red flag in code, especially when used to emulate a blocking call. If you choose a different approach, such as using CompletionService, you can use to wait for an answer. Seeing as a return type in a multi-threaded context also worries me. Who closes the that generated it? Consider offering a callback mechanism that can operate on the result instead: 
+
+Here is a more bare-bones version of your code. (A slightly more cleaned up version is further below.) 
+
+No. A singleton is never really necessary anywhere(1) and it's usually a convenience hack to prevent having to pass a reference into a method or store it in context; a bypass of sorts. That's not to say that singletons serve no useful purpose, but that the decision to use a singleton should be an implementation choice, and never a design choice. (1) It can even be downright hazardous in server environments with managed containers. 
+
+ServerManager.cs This class is generally good, apart from naming. Rename your variables here and you're OK on this class. 
+
+[ln 30-31] Style choice: I recommend using around conditionals, even if they're only one line - because if you update them and make them more than one line and forget to add the brackets... exceptions. Also, your indents are off here. Indent the first line of the snippet above by one more space. 
+
+Why is this here? If it's because you're waiting for the client to connect, this is a bad idea because you don't know if the client might actually take longer than 1 second to connect. Instead, you should execute the next line inside the event handler: 
+
+(A quick note on vote types: the column has type , and the possible values are 0 (upvote) or 1 (downvote)). 
+
+What is this verb "Enqueue"? Method names of this format should be verb-object, as in "do this to this thing". If simply adds the passed object to a queue, the correct name is . 
+
+This approach has the added benefit of being thread-safe: no need to fence access to , and no risk of having a bean in an inoperable state, or filling the log with errors. 
+
+Do replace this with a thread pool or, preferrably, an ExecutorService. Executors take care of much of the hassle and bookkeeping involved in using multiple threads, shielding the rest of your code from (some of) its complexity. Exit strategy Multiple and nested uses of makes it hard to really, really stop your program. Consider looping on a volatile boolean instead, and adding a close method to your actors: 
+
+Consider using instead. Or, as you are working with Calendar instances, you may find JodaTime useful in your efforts. 
+
+appears to carry information that is local to a student, and is not very useful outside of the context of a student, so your instinct of 'hiding' it through delegation is a good instinct. But it makes me wonder why you have a in the first place. If the goal is to close for extension and provide immutability, then the next question becomes: is included in the guarantee of immutability? If not, can be said to be immutable? That depends entirely on the relation between student and status. tl;dr What's better depends on what you aim to achieve. Don't get mired in the perfect way to do things, because such a thing does not exist. Do think about what and why, which is what you are doing, and I wholeheartedly applaud that. 
+
+[ln 215] ? Seems like one list to me. Rename it; again, consider the point above that it should be . 
+
+[ln 60] Single responsibility: if 's purpose is to get news, it shouldn't also be dealing with notifying the user if there is none. Make this method return if there is no news to be had because of the , and do the check in the UI code [ln 55]: 
+
+I've written a userscript that pops up a dialog before you take a moderation action (closing, deleting) with some pro-forma comments, so that you can add one of those before you cast your vote. I'm pretty happy with how I wrote it, but what's clear to me is unlikely to be so to others. Is there anything in this that I could have "phrased" better, or that could be optimized more? Comments on style (or, for that matter, anything else) are also welcome. It also occurs to me that this isn't as extensible as it could be: it's not easy to add new comments. Is there anything I could do to facilitate this? I've also put this code in a gist, if you want to see it there. 
+
+Indeed, there is—good catch! We can speed up the duplicate counting by using a instead, mapping a name to the number of times we've found it. (This is essentially a multi-set, but our standard libaries don't carry such a data structure, so we 'fake' it.) Our printing code will look quite different, though: 
+
+After all, what is the point of going through the trouble of having 4 different coin types if this difference is not meaningful? (Think about how you will use this class: would you set up prices for items in a shop in platinum, gold, silver, copper coins? Or would you set a base 'worth'?) 
+
+Note: creates a new string since Java 7—in the reference implementation, at least, and creates a new object too. If you want to avoid these allocations, you can do the char-to-digit conversion manually, but it's a bit messier, easy to muck up, and I feel that's out of scope for the exercise. 
+
+String replacement If you've got a lot of replacements, or you plan on adding more, try an extensible solution instead of all the calls: 
+
+Running Code Analysis in Visual Studio on this code throws up a few issues, with which I shall combine some of my own remarks. Program.cs 
+
+and its equivalent on the next line, is redundant: you should only use when you're passing in a delegate, and even then not always. Rewrite those two lines: 
+
+can just be , because range starts at 0 by default. The syntax is essentially - the only mandatory param is . Filename parsing If you want to parse filenames by yourself rather than using a library, then while your current solution: 
+
+Don't prefix your names like that. If you're adding a prefix, it should still follow all the rules of variable naming for C#. For private fields, variables are named in , with the underscore before it. Public properties are named in . So, you can rename a number of variables, for example should be . Server.cs I do believe I've found an error here. 
+
+You have the beginning of a stopwatch representation—you have its data. You still need to add its behavior. Approach your design of the class as if the class should stand on its own. Input/output will be handled by something else, like the console, but the stopwatch should be the authority on its internal state. The simplest stopwatch has a start/stop button and a display. We'll interpret "having a display" to mean "a way to get the stored elapsed time". This means we'll need to provide three methods: 
+
+The exclamation mark at is because, while provides access in asymptotically constant time, the actual constant time may be significant, and it depends on practical factors like load factor, bucket sizes, and hash spread. 
+
+Entity manager factories are usually pretty expensive to create, since they must parse their configuration and mapping files, and possibly set up a connection pool to your data source. Factories are thread-safe, so it's safe to have only one per persistence unit in your application. Recreate the factory only when it fails to create an entity manager (and log when you had to do so, because it may be indicative of problems). Close the manager when your application shuts down, to give it the chance to shut down and cleanly disconnect any database connection pools. That said, my experience is that this manual managing leads to bloat and maintenance overhead. If adding a library or container to help you is out of scope for your application, consider creating a template class so you can focus on the what instead of the how-with-resources.

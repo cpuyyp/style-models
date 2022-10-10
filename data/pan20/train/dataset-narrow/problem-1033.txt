@@ -1,0 +1,77 @@
+When programming generically, prefer calling the non-member functions. Member and do not exist for all containers. However, the standard containers and c arrays are supported by non-member , , and the const/reverse variants. How does the specification work if can throw? It's not clear why you are applying a function to a result. Consider writing a wrapper () on a generic non-member to apply the result to a function. Using Expression SFINAE (ymmv on MSVC support), you can simply check if the expression is a well-formed expression. If the expression is ill-formed, the overloaded function is culled from the overload set. 
+
+An alternative approach would be to use . stops reading the string at the first character it cannot recognize as part of a number. This may be the first encountered null character, or it may be the first numeric character greater than or equal to . Note 1: This also handles leading whitespace. Note 2: c++11 guarantees that is laid out contiguously. Note 3: c++11 guarantees that the null character is returned when . 
+
+You could also consider copying the naming scheme from these and have . For general purpose conversions, the ones that immediately come to mind are (stream-based) and (policy-based). Boost also has , an adapter library built to work with various conversion utilities (, , , and C++-Streams). 
+
+Your function is just a reimplementation of . Make sure you include everything (missing ). Assert liberally. See the CPPCoreGuidelines. 
+
+Be aware of the pitfalls of . Despite the widespread support of , the compiler extension is non-standard (rejected by committee) and not guaranteed to have the same behavior across all supported compilers. The extension allows the compiler to figure out which files should and should not be read for compilation. This is a difficult task and can easily be defeated by symlinks/build systems. The guard idiom forces you to decide on an identifier that defines your intent the file you are working with. It does require a unique name and you do have to type it out twice across three lines, but you control what is included and not included. Until the Modules TS is standardized (soontm) or another approach becomes standardized, prefer the guard idiom. 
+
+Each of your functions works only with the hard-coded . Consider refactoring the state into an argument. Ensure you are using a resource manager for (the ) so that it doesn't leak. Use the C++ type system until you have to interact at a boundary (like a C-API). 
+
+This can simply be written using and it does the work for you of returning a key-value pair. Putting it all together, you get 
+
+Keep functions short and simple. When functions gets to be longer than a few lines, look for opportunities to refactor into higher levels of abstraction. For example, your function has one large block that is essentially and another block that essentially finds the previous node. 
+
+Be consistent with your spelling. Rather than tracking the state, simplify the logic and just return as soon as you encounter a bad character. Prefer the member / to make it clear to readers that the elements of the range are immutable. 
+
+Your program still attempts to brute force it's way through the sequence, comparing each and every element in the worst case (\$O(n^2)\$). Exploit the properties of the sequence (sorted/contiguous). You can search for things efficiently. For each element, find the first element that falls below the limit (reverse linear search). The elements beyond that point would make invalid pairs. Elements upto that point can be summed with your current element to make a valid pair. Since we are only interested in unique pairs, we just count the number of gums between our current gum and its pair. Consider the equation \$A_i + A_j = K\$. If \$K\$ never changes and the value of \$A_i\$ increases, we would expect the value of \$A_j\$ to decrease. Since they are converging, you can resume your search from where you left off. Once \$i == j\$, you've exhausted all the possible unique combinations. Putting all of this together, you have an algorithm that counts the valid pairs in \$O(n)\$ time. Combined with the \$O(n log(n))\$ sort, it's still much faster than your brute-force approach. You can also optimize for the special case that the last two elements are below the limit. If they are, you just calculate the triangle number in constant time. 
+
+You had opportunities to reuse code. Write an adaptor composed from two s or another standard container. Instead of using raw pointers for resource handles (ownership), use smart pointers (). Manual memory management is tedious and error prone. Smart pointers are simple to use (/) and provide leak-freedom by default. Note: wasn't included in the C++11 library. You can find implementations on SO. Inline with the modern C++ approach, containers should have a constructor that takes a . ing multiple values onto your would have been simplified. 
+
+Now in your program, you get straight to the point. Keep clean. Use it to parse/forward command-line arguments and configure the environment in which your tests/program will operate in. 
+
+Compile with warnings enabled (). If your goal is to write code intended for other platforms, enable pedantic warnings as well (). 
+
+is not guaranteed to be defined. Prefer the qualified which is guaranteed to be defined by the C++ standard. 
+
+Do not in header files. Most C++ implementations transparently inject static constructors into every translation unit that is included in. Instead, and provide a stream parameter for library users. In the event you only need to forward declare a object, prefer . only what you use. Every file should be able to compile on its own and should not rely on transitive includes. Including is unnecessary. 
+
+When we encounter a key, we just want to increment by 1. If a key doesn't exist, use the default value and increment by 1. You can initialize your hash to have a default value of 0 by . 
+
+The code you have provided will not accomplish this task. I was going to report it as not ready to be reviewed, but it has up-votes. 
+
+Keep functions short and simple. Functions that are focused on a single logical operation are easier to understand, test, and reuse. Instead of having a function "do-it-all", let's take a different approach where we break-up the code into abstractions that perform single logical operations. Some pseudocode: 
+
+Use the least amount of language power to accomplish your task. If you are only checking if the first character is a vowel, do you need to pass the whole string? Prefer range-based loops over manually written loops. Use specialized range functions in instead of writing loops yourself. Qualify immutable variables with . If the variable represents a constant literal, use instead. 
+
+isn't needed after using a control flow interrupt (, , , etc). Help reduce indentation and limit the amount of code you ask readers to keep track of. 
+
+Be aware that including in your headers may transparently inject a static constructor into every translation unit that includes it. This is very common in C++ implementations. 
+
+If you define any of the five special member functions for classes (destructor, copy/move constructor, copy/move assignment), the compiler is not guaranteed to generate them for you, so you must define them yourself. 
+
+Should be publicly exposed? Prefixing is implied. Typically used in objects you maintain, so as long as you avoid shadowing names, you shouldn't need to prefix and can reduce clutter. Don't weigh your members for ordering. Lexicographically compare your data members. That means you should find the first mismatching data member and then apply the comparison operator. C++11 makes this simple by using (requires ) on the data members to create a , then using the comparison operators for objects to lexicographically compare. Using and , you could implement the remaining 4 relational operators through logic. 
+
+C++17 provides lambdas. While lambdas may evaluate in a context implicitly, consider being explicit. Consider inheriting the specification from the function that is selected in overload resolution. 
+
+So becomes , which is equivalent to (the null character). Since is not null-terminated, the null-character is a valid character to be contained within a . 
+
+Your method works, but it's not really concurrent. As Forsvarir mentioned, there are different approaches to the critical section problem in concurrent programming. Pick one and implement it. As for the use of , your host environment determines whether you should use it. See the note on the reference page: 
+
+Should I ensure that the advancing iterator starts within the range of (, )? The forward iterator version of advances from the start since it has that information. Should I keep this or fall back to the input iterator behavior (throw on decrement)? Some consider the need for both and to be tedious, which is why almost all "safe" versions only implement . Would it be better to split the decrement case from into another function, say , and move away from to ? Anything else you'd like to comment on? 
+
+This function does not change the state of the object and should be qualified with at the end. As far as naming goes, avoid using the name for your getters. implies a mutating or possibly destructive operation on the state of an object in a non-by-value world. When you get cash from an ATM, you are taking cash out of the machine, leaving less in it. Consider naming your getter and pre/suffix your member variables. This seems like a good candidate to overload . 
+
+The integral conversion rules for values with an unsigned destination is defined. From the C++ standard (n4659 §7.8.2): 
+
+Make member functions by default. Qualifying expresses your intent that the objects observable state does not change inside the member function. This enables you to catch changes to the observable state at compile-time and be able to use the member function with the object itself is . When you intend to have a member function change an object's observable state, then omit the qualifier. 
+
+Looking over the Fibonacci sequence, we see that our Even Fibonacci Numbers appear every 3rd element. We can define 
+
+When programming with generics, it's important that you realize what possible value types you are allowing to be passed as arguments. In this case, can be any data type. could be cheap to pass (primitives like ). could be expensive (). We don't know what might be passed, so we have to assume the worse happens. When passing data whose copying cost is or might be expensive, prefer to pass arguments by reference. As earlier, if the data stored is immutable, specify . 
+
+For input-only parameters, pass cheaply-copied types by value. Pass everything else by reference to . Any type can be represented by as is not constrained. Since any type can be of any size, passing by value can be a very expensive operation. Avoid shadowing variable names. When is checked, most pre-C++17 compilers will consider shadows names to be an error, even in the context of a class member initializer. 
+
+Keep previously computed results around for operations that could be costly. The complexity of is constant on average, linear in the worst case. 
+
+The problem with returning from is what do you return? Returning by value is inefficient for expensive types. Your other option is to return by reference, but is a destructive operation that would result in returning a dangling pointer. A third option is to separate the concerns. Make a non-value returning function that simply removes the top element. already provides access to the element. 
+
+If you want to iterate a dictionary by its key-value pair, Python's built-in dictionary includes the method . 
+
+Always ensure that the allocation functions and friends succeed. These functions return a pointer when they are unable to allocate memory. If the environment isn't configured to guard/crash when fails, then you have a bunch of pointer dereferences causing undefined behavior. 
+
+Naming variables appropriately helps with readability. What is the element being read? A . What should we call a collection of ? Pluralization makes sense, so . 
+
+From here, we can use our definitions to find \$G_{n+1}\$ in terms of \$G_{n}\$ and \$G_{n-1}\$. $$ $$\begin{align*} G_{n}&= F_{3n}\\ G_{n+1}&= F_{3n+3}\\ &= F_{3n+1} + F_{3n+2}\\ &= F_{3n-1} + F_{3n} + F_{3n} + F_{3n+1}\\ &= F_{3n-3} + F_{3n-2} + F_{3n} + F_{3n} + F_{3n-1} + F_{3n}\\ &= G_{n-1} + F_{3n-2} + F_{3n-1} + 3 G_{n}\\ &= G_{n-1} + 4 G_{n} \end{align*}$$ $$ Now that we know \$G\$ is a recurrence relation, we can define the sequence \$G_n\$ of Even Fibonacci numbers as the recurrence relation \$G_{n} = G_{n-2} + 4G_{n-1}\$, with seed values \$G_0 = 0, G_1 = 2\$. This allows you to remove the calculation in your program of \$F_{3n+2}\$, the odd fibonacci value before an even fibonacci. Now we can calculate all of the Even Fibonacci numbers dependent only on the previous Even Fibonacci numbers.

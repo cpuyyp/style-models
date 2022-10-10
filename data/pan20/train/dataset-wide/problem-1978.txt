@@ -1,0 +1,75 @@
+If you want something to run on server startup you can create a stored procedure in the master database and mark it as a startup stored procedure as long as the configuration option is set. No need for powershell or batch files. 
+
+The leaf pages of the index form a doubly linked list with pointers to the next and previous pages. This means indexes can be scanned both forward and backwards. There is a slight difference in that currently only scans in the forward direction can be parallelised but it is extremely unlikely to justify the cost of maintaining both just for that edge case. 
+
+You haven't explained why you need SQL Server to do this multiplying out of rows rather than your application. You are quite possibly asking the wrong question. You can do this With an auxiliary table of numbers though. 
+
+I let it run for a minute before killing it. By that time it had output 40,380 rows so I guess it would take 25 mins to output the full million. The only thing that changed is that I added some additional rows not matching the predicate. However the plan has now changed. It uses nested loops instead and whilst the number of rows coming out from is still correctly estimated at 1,000 (①) the estimate of the number of joined rows has now dropped from 1 million to a thousand (②). 
+
+which means proprietary Access extensions like work when accessing the page from Firefox (but this will fail in Chrome) 
+
+Showing that the high water mark can be reset after deleting the duplicate with the highest uniqueifier value. The delay was to allow the ghost record cleanup process to run. Because life is too short to insert 2 billion duplicates I then used to manually adjust the highest to 2,147,483,644 
+
+Take care of SQL injection if you go this route. Also you would need to be careful of parameter/place holder names and order of replacements, so if you had place holders and the one would need to be replaced first. 
+
+It would need to be not . Without the parentheses it looks to find a stored procedure with the same name as the string inside . Hence the error you are seeing of 
+
+You are deleting 7.2% of the table. 16,000,000 rows in 3,556 batches of 4,500 Assuming that the rows that qualify are evently distributed throughout the index then this means it will delete approx 1 row every 13.8 rows. So iteration 1 will read 62,156 rows and perform that many index seeks before it finds 4,500 to delete. iteration 2 will read 57,656 (62,156 - 4,500) rows that definitely won't qualify ignoring any concurrent updates (as they have already been processed) and then another 62,156 rows to get 4,500 to delete. iteration 3 will read (2 * 57,656) + 62,156 rows and so on until finally iteration 3,556 will read (3,555 * 57,656) + 62,156 rows and perform that many seeks. So the number of index seeks performed across all batches is Which is - or I would suggest that you materialise the rows to delete into a temp table first 
+
+This works acceptably when there are relatively few duplicates (less than a second for the first example data) but performs badly in the pathological case as the initial aggregation returns exactly the same results for every and so doesn't manage to cut down the number of comparisons at all. 
+
+I was able to repro on 2008 R1 SP3 10.00.5512 but installing the latest CU (14) fixed it. Reviewing the bugs fixed in the intervening versions it looks as though you need to upgrade to a build that includes the following fix. Access violation when you run a query that contains many constant values in an IN clause in SQL Server 2008 or in SQL Server 2012 As you are on 2008 R2 you will need at least CU 9 for SP1 or CU 5 for SP2. The description of symptoms is somewhat brief but mentions mismatched datatypes 
+
+The query cost is reported in execution plans as "estimated subtree cost". This is an absolute figure such as . Conor Cunningham mentioned in a SQLBits presentation that it originally referred to the number of seconds taken to execute on a particular Microsoft employee's machine ("Nick's Machine") in the SQL Server 7 days 
+
+After the delete operator (to the left) the column values from the deleted rows are sorted back into order and the row_number re-applied. It looks like the same is happening in your case from the results. (temp tables have a negative id and are sorted first before which has a low positive of ). As well as the dubious semantics of the result the second sort by doesn't seem strictly necessary in this plan as it looks likely that they will already be sorted in that order in any event. Regarding workarounds for this specific case changing the output clause to would work. For more complicated clauses I think you'd need a pass to calculate the row_number and then a join. e.g. 
+
+Just happened to come across this article from Joe Chang that addresses this question. Pasted his conclusions below. 
+
+Each row has been updated and now contains two bytes for the column count along with another byte for the NULL_BITMAP. Due to the extra row width the non clustered index now has 285 leaf pages and now two intermediate level pages along with the root page. The execution plan for the 
+
+For it works as though for each data page in the table SQL Server flips a coin. If it lands heads then it reads all the rows on the page. If it lands tails then it reads none. Tracing the call in Profiler shows the following query is emitted 
+
+The record length for the non leaf pages in both the CI and the NCI is 15 bytes (1 byte status bits, 8 bytes for the composite key and 6 for the down page pointer) but for the leaf page NCI the rows take up 17 bytes (1 byte status bits, 8 bytes for the composite key and 8 for the row pointer) compared to 15 for the CI (2 bytes status bits, 1 byte column count offset, 8 bytes data, 2 bytes column count, 1 byte null bitmap). And as well as this less compact index structure you also have all the additional pages for the heap itself on top. 
+
+You'd probably be better off making this a field with or otherwise you also need to validate that only the strings and were entered. With the bit column arrangement the check constraint would be 
+
+No this isn't possible (Related Connect Item) You could create a new database of the original name and fill that with synonyms pointing to all the objects in the renamed database though. 
+
+It needs to validate that the row you are trying to delete is not a parent of an existing row. You don't have an index on . So it must do the scan. 
+
+Three rows were processed before one was found matching and there were two ensuing scans on Rewriting as follows... 
+
+But you should still keep the check constraint as a last line of defence so however the invalid value appears it is stopped. 
+
+You can also do it within the same scope and in the same transaction if the table does not yet exist. 
+
+The blog post you reference also indicates how you could have answered this yourself. If you execute 
+
+A repro script is here. It simply creates a table with a clustered PK and a columnstore index and tries to update the PK stats with a low sample size. This does not use partitioning - showing that the partitioning aspect is not required. However the use of partitioning described above does make matters worse as switching out the partition and then switching it back in (even without any other changes) will increase the modification_counter by double the number of rows in the partition thus practically guaranteeing that the statistics will be considered stale and auto updated. I've tried adding a non clustered index to the table as indicated in KB2986627 (both filtered with no rows and then, when that failed, a non filtered NCI also with no effect). The repro did not show the problematic behaviour on build 11.0.6020.0 and after upgrading to SP3 the issue is now fixed. 
+
+The answer to this question is "no". I just finished reading SQL Server 2008 Internals and the last chapter in that book written by Paul Randal on DBCC internals covers the huge variety of possible corruptions that can happen to database pages that can be detected by . You can use checksum protection on your data pages, backups, and regular checks for corruption with Your plan of writing and re-reading data seems somewhat pointless as unless you are continually running to ensure all dirty pages are written to disc and then you will likely just get handed the page straight from memory anyway. 
+
+Returns a range of to . Extremely likely you have no dates in that range in the table (or statistics histogram) so SQL Server will estimate that no rows will be returned out of the scan, and certainly no need for 30 million lookups. This is a fixed bug but requires trace flag 4199 enabled. If that isn't possible you could try rephrasing the predicate in a different way that avoids the use of or assigning the values to variables and using 
+
+No there's no way of configuring SQL Server to do what you want to do. Under snapshot isolation the call to gets blocked waiting for a shared key lock on one of the system base tables () when doing a from The Using Row Versioning-based Isolation Levels topic in BOL does say: 
+
+Your query accesses 10 partitions and you are searching a 10 month range so my guess would be that it is partitioned on month of . I can reproduce your plan with the sort with the below. 
+
+That looks like a data page (page type=1) from a table variable or temp table (negative object id of -1948083318) in the leaf of a clustered index (indexid=1). From the allocation information and the fact that this does not show up in your second query presumably the underlying object has been dropped. You may be able to get additional information about it, such as original object name, by looking for that allocation unit id in if you're lucky. If it belongs to a dropped object then one would certainly hope these pages are first candidates for putting on the free list. However the article TempDB memory leak? and associated connect item indicate that there might be a problem in this area... 
+
+Just in case it isn't clear what the problem is the result of the has two columns called . One from each table. A table can't have two identically named columns so the attempt to create a table with that format fails. The solution is don't use . List out the columns you want explicitly and remove duplicate columns that you don't need or use column aliases to disambiguate any dupes that you do actually need. Usually for a full outer join what you actually want is 
+
+This filters out all except the final 100 rows before doing the lookups which can have a significant impact on speed for large offset values. 
+
+You could try importing the database into an SSDT database project and building the project. It should report this type of thing. Alternatively you could try 
+
+You don't need 30 join conditions for a here. You can just Full Outer Join on the PK, preserve rows with at least one difference with and use to unpivot out both sides of the ed rows into individual rows. 
+
+If you do see of 3 returned then something is definitely using it. If you don't I'd probably try attaching (copies of) just the mdf and ldf to another instance and test to see it all works correctly (with and selecting all rows from all tables). If all of this works without error then it is possibly OK to backup everything then go ahead and delete that row referencing the file from (will need ad hoc updates to system catalogs enabled). I, of course, accept no liability if this all goes horribly wrong however! 
+
+Records aren't deleted straight away. They are marked as ghosts to begin with then cleared up by a background task. In the test above very few of them were cleaned up in the 10 iterations meaning that the tenth did 10 times as many reads as the first one. Possibly in your environment the s are occurring at a greater rate than the ghost cleanup task processes them leading to the continual degradation of performance. 
+
+The way I do this is with SSDT projects and a post deployment script that -s from a list to the target table. If it is necessary to store different values in different environments you can use variables defined in the project properties and store a publish profile for each different environment. It does require a particular development approach though. Developers should know that the contents of these tables is part of the project and that they should be editing the post deployment script and re-publishing rather than editing the data in these tables directly. You could potentially add triggers to these tables that roll back changes and raise an error as a reminder if you feel that this may be a problem. The triggers could check a value and allow the modification to succeed if some specific value to allow the post deploy script to succeed. 
+
+You could consider adding as an included column to the index to avoid the key lookup if in practice quite a few may be required before finding a single row satisfying the residual predicate.

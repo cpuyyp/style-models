@@ -1,0 +1,65 @@
+Other than the minor syntactical difference, this means that the type of is an associated type of the collection being enumerated. This has no benefit for arrays, but will be important if you want to be able to sort other collections. Secondly, since the loop body is only executed when the element at that is smaller than the element at the current I would possibly move the inner if-statement to a where clause: 
+
+This change is only syntactical. Going even further Realistically I would probably stop here, but I'm going to continue to show more of this process and other implementations. Considering the goal of that loop, what it's really doing it "finding the index of the minimum element in the rest of the elements". There is two ways we can approach this goal. The first approach is by first finding the minimum element, and then finding the index of that element: 
+
+Don't worry about the temporary variable. The compiler is going to remove that and it helps with readability. If your delete operation is safe to run concurrently on many objects then it may be slightly faster to run it like this: 
+
+i.e. if the product id exists in then it should be deleted. The implementation of may have to go through the array of ids but it should in most cases quickly discard an object based on its hash which should make it faster. I also find it more readable than an explicit loop. I'm not sure what the method does in your case but it's not safe to add or remove objects from an array while enumerating it. If that isn't the case for you then your code could can be simplified like this: 
+
+The first is pretty straightforward to address, by making the struct generic over an type that is constrained to be and by using arrays of that type: 
+
+The second one is a bit trickier and highlights some constraints in how can be extended to support other sorting algorithms. To make support any kind of collection, it would be natural to also make it generic over a type that is a Swift collection: 
+
+Not only is this an opportunity to refactor that code into a function, but the numbers and (arguments to here) appear multiple times in your code with the same purpose. Instead, define a constant (e.g. ) and use that constant. This means that if you ever want to change that value you'd only have to change the value of that constant once (the value of the ) instead of trying to find the literal all over your program. Use meaningful comments Your functions are commented as so: 
+
+That code required me to re-invent the wheel a bit since I was using an old compiler, and I had not discovered / yet. I've re-written that code to use a single class template called , C++11 and C++14 features, and or . I've also included some additional utilities (inserting a into a , clamping values, computing spec limits based on a value and a % tolerance, etc.). I have not added yet support for guardbands as in the previous implementation, but I plan to do so later. Here is the implementation using . My compiler is Visual Studio 2017 (which can use C++17's ), but I'm only using C++14 features in the project this will be used in. I've provided commented-out code below to use instead: 
+
+But there are a lot of instances where needs to be replaced. At the very minimum you should define 4 as a constant and use that constant in the code: 
+
+Note that it's better to use instead of to check if a character is whitespace. If you need to count how many times each character occurs in the string, simply replace with a which maps each character to the number of times it occurs (as shown in @TobySpeight's answer). 
+
+I like the way this turned out despite the fact that there's some extra typing compared to the private inheritance solution:1 
+
+Pass strings to by reference You are passing the arguments to by value, which means you have to copy the strings. That function doesn't need a copy of the strings nor does it need to modify them, so you can pass them as references to avoid the copy: 
+
+You could consider creating a class that holds the indices for a larger amount of text (for example a paragraph or a section or a subsection in the text). That class would have the absolute index for where in the file it begins and relative indices within the paragraph/section each line begins. Whenever a new line is added or removed only the lines within that paragraph/section would have to be updated and the absolute start index of all the following sections as well. (I don't know what text you write or what you use the line starts for). You could still find a specific line very easily (and probably very fast) by enumerating the absolute indices of the paragraphs/sections and when you find the right section enumerate it's lines. 
+
+If you're following along step-by-step you'll notice that the of the enumerated array is now unused, so you can change it to only loop over the : 
+
+Finding the index of the smallest element I'll make two small syntactical changes to the code that finds the , partly to leverage Swift features but also to prepare the code to be generic (which I'll discuss later). First, I'd like to describe what this loop is doing as "iterating through the indices of the slice of elements starting from the current index". In code I'd translate that into: 
+
+I'll review this in two steps: first the body of and then the higher level structure/architecture. The selection sort implementation Swapping elements First of all, there is a bug (the only one I could find) in the code that swaps two elements that sometimes loses elements while swapping them. The smallest example where I can reproduce this is by sorting which results in , losing the . Looking at this code: 
+
+However, with this change the selection sort algorithm can no longer be used because is a method of rather than . It's possible to constrain the to be a mutable collection, but what if another algorithm has another requirement? With this strategy we would end up constraining more and more to the sum of all the different algorithms requirements. A better alternative is to keep as broad as possible, but to supply no sorting algorithms by default. Instead each sorting algorithm would be added as an extension only where the generic placeholder types satisfy those requirements: 
+
+Use more whitespace in your code It's difficult to read code like . Instead, use more whitespace as in . 
+
+I've developed a set of functions to convert a or to a or insert it into a using . They are intended to be part of a larger library of conversion functions so I've included a few additional functions in the library for demonstration. There are two versions of each function: the normal one in the namespace, and one that uses a compact form of a string in the namespace. For example, the ratio is normally converted to the string and its compact form is . Not all conversions have a compact form, so in those cases the functions in simply call their counterparts in . Conversions of s take advantage of the conversions for s if the period ratio matches a typedef provided by the standard library. Similarly, proper conversions are implemented for period ratios which match a typedef provided by the standard library (e.g. and ). Here is the header file of functions, convert.h: 
+
+, , , and are only defined if can represent the ratio, and indeed on my system they are not defined. Is there a way for me to detect when those types are defined on the system so that I can provide conversions for those types yet avoid compiler errors when they are not defined? Eventually I plan to expand this library to support additional types, not just . Are there any issues with this design which will cause problems when I add this support? The SI symbol for "micro" is really "µ" but I'm using "u" for simplicity (and since the character type of is ). Since I plan to expand this library for wider character types, is it possible to determine if "µ" can be represented properly for a given character type? 
+
+Can my solution be improved? Are there any C++11 or C++14 features I forgot to use that would improve it (I'm compiling with Visual Studio 2017)? Is the name for the container a good choice or is it too similar to the objects it contains? Also, I've made the constructor private and deleted the copy constructor to try to make sure only a can construct a and nothing can copy one -- are there any other ways to construct or copy a that I've missed? Is it a good idea to prevent construction/copies or is it unnecessarily restrictive? 
+
+Consider using more of what Core Graphics gives you. There are methods along the lines of , and that does that kind of basic math for you. It reads cleaner and other coders who are used to Objective-C will immediately recognize them and understand the code. Also, there is some code duplication where you calculate the center x twice and the center y twice. You can introduce two private methods to get rid of that duplication (I've also removed the "get" prefix as it is not commonly used in Objective-C and switched to instead of ). (If you really want to get rid of code duplication then you can create a method to get the bounds of the main screen. I did so in the code below) 
+
+This change was greatly simplified because I had already moved away from the assumption of indices and instead got the index type from the collections associated type (implicitly). In other words, here is of the type rather than . With this strategy each sorting algorithm can be added separately with the type constraints it needs, and a user of this API would have access to only the sorting algorithms that are available for the type of collection they are using. At this point I don't see any value in the wrapping struct, since these algorithm could be added as extensions to the collection itself in the same way. This solutions also has a more convenient and more "swifty" call site syntax 
+
+I see that you're reading the from the array as you're enumerating it and writing that at the , presumably to avoid having to get a to swap the two elements: 
+
+For the same reason as before, it's safe to force-unwrap here. The slice will never be empty. Higher level structure/architecture At a high level there are two limitations to the struct and its underlying implementations: 
+
+The problem is that — because of array's value semantics — this doesn't account for changes that happen to the array since you started enumerating it. In short, you're swapping in a stale value from before you started sorting the array. Now, what you're really doing here is swapping the elements at two indices, and that is best done with . It's also documented to have no effect if the two indices are the same, so you can get rid of the surrounding if-statment: 
+
+You could do the same with the code that acquires the expenses inputs (in fact, you could write one function for both). Don't use magic numbers You've got a lot of repeated code like this: 
+
+Your comments could use some improvement Your code doesn't contain many comments, and it would be helpful to see more of them. For example, it's not immediately obvious why there's a separate function to delete the head () vs. a different position (). You should add comments to explain the requirements of the different functions. Even if you know why you have two different functions today, you might not remember if you look at the code again in a month. Some of the comments you do have aren't very useful. For example: 
+
+I'm looking for suggestions regarding the class design, naming, etc. Also, a few specific concerns that I'd appreciate reviewers to comment on: 
+
+1 When I played with the private inheritance solution in the demo program's I discovered that Intellisense shows all of the underlying container's member functions despite the fact that most of them are inaccessible: 
+
+While it's a good idea to provide documentation on the parameters for your functions, these comments as is are not helpful. They just take up space and are distracting -- after all, I can see the names of the parameters just a few lines below the comments. Instead of simply listing the parameter name, provide some explanation of what values it is allowed to take (e.g. should be between 1 and 12, inclusive), what happens if the parameter value is not valid, etc. 
+
+Check the length before sorting It takes constant time to determine the length of a string but is \$O(N\log(N))\$. If the lengths don't match then you don't have to sort. 
+
+It's a shorter name for the container. This comes in handy when referring to the container and/or its , for example: is shorter and easier to read than . It's easier to change the container. You may decide later to use a instead, in which case you only need to modify the statement rather than all instances of .

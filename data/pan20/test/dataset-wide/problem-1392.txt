@@ -1,0 +1,39 @@
+This seems a bit complex for relatively little benefit. Personally, from these two choices, I would go with the approach for simplicity and slightly improved performance. But I do see your point about the default value, and the readability of the array structure. If you actually do have a lot of parameters which have a default value, your approach might have merit. But since you are going through the trouble of updating legacy code anyways, you could also think about choosing a different approach and create an class. It would also result in readable code, and you could add input filters, increasing your security. The structure is really a matter of preference, but it might look something like this: 
+
+The reason this works seems to be the way works. But this really seems to be more of a side-effect, and it is never a good idea to use those for security related things. Conclusion Regarding performance, security, and readability, a simple replace for , , and with their HTML representation seems to be preferable to your method. 
+
+Performance It works fine for me in Opera and Chrome, but it is buggy in Firefox. Profiling reveals that is responsible (big surprise :) ), and there is not much to optimize without changing the whole concept. Two minor optimizations might be: 
+
+JunctionRule is way too complex. A first step to fixing this would be to extract some logic to functions (for example parsing of neither-nor, parsing of the other case). Dublicate Code Try to avoid duplicate code. For example: 
+
+Security First of all, you should require that install scripts are deleted after installation, as they are no longer needed. But since some users will just rename the install directory instead of removing it, making your install scripts secure is a good idea. Code Execution An attacker that has access to the install directory and knows some valid database credentials (eg via SQL injection) can gain code execution: 
+
+Yes. You didn't post your password_hash code, but you are using password_verify correctly, so if your code is working, everything is correct. 
+
+Honestly, I think neither is all that readable. Without actually looking at the code in-depth, I had no idea what the functions might do, or how I could use them. Naming 
+
+First of all, what you have is an encryption function, not a hashing function (encryption can be reversed by knowing the algorithm and optionally a password, hashing is one way). For passwords, you always* want to hash, not encrypt (because if an attacker gets your source code, they can easily decrypt the passwords). You are using a substitution cipher, which is also very easy to break. You might want to look into block or stream ciphers, if you want encryption that is more secure. As to the code you do have: 
+
+Initialize Set with values Your method of initializing the hashset with values takes quite a bit of space. I would create a static field: 
+
+Displaying errors is not a good idea. It may provide information for an attacker, and it is not really helpful for legitimate users. Your cookies should be set as . Also, I did not see any CSRF protection. Did I miss it? If not, you should add it, at least to the login function (see here for an explanation). Misc 
+
+I would probably reduce the function even further. The building of the email messages should probably be happening in their own functions, and the sendMail function should only send the email. Misc 
+
+I just have a couple of superficial points for now. It's been a while since I created a game loop, so I will let someone else comment on that, but at least your busy-loop () doesn't seem necessary (it will eat up a lot of resources without actually doing anything). Boolean Checks Instead of for example you can just write , which is more readable. Comments A lot of your comments are not needed, as the code is already self-explanatory, for example: 
+
+Nested if Personally, I really don't like nested s. You could rewrite your JavaScript success function like this: 
+
+XSS Your currently protects you against XSS via , , etc. But it is hard to see that , because the cleaning happens so far away from the printing. And if you follow the advice of @Elias Van Ootegem and remove the method (which you should), then you are open to XSS. So you should prevent this directly when printing user input. The other (and a lot more dangerous) XSS attack is . You should definitely filter this with (or use an empty form action, or hardcode it). Naming 
+
+Not really. You are using prepared statements as you should, and you are using the currently recommended hashing approach. Misc 
+
+Structure Now, you sill have some duplication (session destroy and response code setting) which you may want to remove, for example by returning error codes or success messages from the function and only setting it once from the calling code. Your code also does a bit too much for my taste (db interaction, printing, retrieving user input, session management, etc). You could introduce functions such as , etc to structure your code. Misc 
+
+The main reason I would prefer this approach is that it follows the MVC approach (separating the code by model (), view (), and controller ()). This seems a lot more flexible (with your approach, I even have problems extracting the main method to its own class, for example). Misc 
+
+Yes, you are using prepared statements correctly. You didn't post all your updated code, so just remember to always use prepared statements and to never directly put any variables in the query. Returning early Your code is quite nested, which makes it difficult to read. If I want to know what happens in the else cases, I have to try to find the matching else, which can be difficult. If you return early / introduce guard clauses, you can avoid this: 
+
+Note that there are contexts in which HTML encoding may not be enough to prevent XSS. Improving your Code Why are you using different cleaning functions for array values and non-array values in ? It doesn't make any sense to treat these differently. For that matter, if you would use the same functions, you would have duplication in your code, which should be removed (either by using recursion or by extracting the cleaning to a separate function). Also: 
+
+It is practically unreadable and contains a lot of duplicate code. It could look something like this instead (but try to find better variable names than and , I'm just honestly not sure what they represent):

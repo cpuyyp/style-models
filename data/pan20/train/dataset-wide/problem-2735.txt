@@ -1,0 +1,55 @@
+In my experience providing or on strings is a mistake. Instead, strings should be constructed via one of: 
+
+Other answers have handled specific issues, mine will handle larger design issues. Some of my later advice is highly opinionated, but it is motivated by real design problems; be sure to understand the problem before dismissing it. 
+
+Most python users would just use . That's \$O(n log n)\$, which is not that much worse than your \$O(n)\$ solution. But the code you've actually written is just a reimplementation of: 
+
+My preference is to then use so that I can stuff it in a or or set along with any other read- or write- file descriptors. 
+
+Likewise, it is exceptionally rare that allowing mutation of a string after construction/assignment is actually useful. This makes the constructor nearly completely useless. 
+
+Any memory that you read/write from multiple processes (or threads) must be protected either by some sort of mutex or by atomic operations with an appropriate memory order. It would not be enough to . So the following line may be optimized to be an infinite loop: 
+
+If you're using , you shouldn't have the shebang in the second script. If you're using the shebang, you shouldn't use . But rather than use directly, I would the script once at startup, and in it define a function that was called at the later times. You should use instead of to avoid forcing a separate subshell to spawn. I would provide a default instead of exiting if no argument is passed. Something like . Also, I always use named variables as early as possible. Note that if you were using a function (with or without ), you should use to avoid leakage. 
+
+There is no good reason for you to make 4 separate calls. Most likely a single call for would be enough, but even if you have a pressing need for them to be on separate pages, you should still 4 pages in a single call. You don't need to open to get anonymous memory, just pass as the FD and add the flag. 
+
+By the way, \$O(2n)\$ is equivalent \$O(n)\$. However, the bound is actually tighter: \$O(n + m)\$, where is the number of distinct elements. This is, however, an average bound, because it relies on a . If the worst case hash collisions happen, you get \$O(m(n+m))\$ 
+
+All of the above, except for the last two which are special, provide exactly the same public API (except ) and can be implicitly constructed from each other if it makes sense. 
+
+There are many different design-oriented ways to produce a good solution, as demonstrated in the other answers. So I'd like to suggest something different. One should make use of framework classes whenever possible. It avoids potential bugs, reduces the lines of code and standardizes the code. There is an in the called . It has an ordered list of the days of the week. All you need to do is parse the as a as detailed below 
+
+Using the array has a massive advantage here for the output statement. Since the corresponds to the planet's position in the array, you can simply call the appropriate planet's method as . Following two lines will suffice the purpose of the previous . 
+
+You can also use the array to populate the menu itself using loop. This is especially helpful if you have a large number of planets/items in the array. 
+
+I would start from the declaration of . You are an from it but no other class will handle it. You should put your inside a and handle the exception properly. I would also recommend reading everything from the files at once and use that of data in your code logic. A locks the file until it's finished with it. Furthermore, you don't have to call just for the sake printing a new line. Use the escape sequence for doing the same 
+
+Now if you'll be very strict and won't accept the use of a array. You can replace it by extracting the first and second values using function on the first two 
+
+The time complexity of searching a value from a is close to O(1) while a typical looping mechanism is O(n). The speed becomes times slower as the size of the collection increases. You also have a lot of duplicate code in the two statements. To resolve that I'd recommend extracting out the logic outside and calling a common function with a single loop. Something like 
+
+The class would store Earth's G in a constant, because it does not change in any planet's calculation. The constructor should require the planet's own G value and it's name (for the Print statements, discussed further below). You can also add a method to calculate the resultant weight based on a given value, to follow along with the Object Oriented approach. 
+
+It's a 4-line solution by just using available resources in . You can further improve the implementation by introducing an for values between 1 and 7 and so on. To improve the readability you can rephrase the main conversion as 
+
+There are a lot of functions that aren't safe to call in a signal handler. For the few that are allowed, look at the Async-signal-safe functions section of the signal(7) man page. Your current signal handler is almost okay, but any variable that might be changed from a signal handler needs to be declared . Officially it must also be instead of , though I'm not sure how important that is on real-world platforms. You should be checking the return value of and . They will return (which is usually but could theoretically be any negative number) with set to if the signal has been delivered during the underlying system call. That said, there is nothing to prevent the signal from being delivered before or after the syscall itself (before is the nasty case, and doing the syscall yourself won't help unless the signal is blocked around the call). If you want to handle signals in any sort of sane way, you need to them, at least some of the time. Either then unblock them during "safe" runs of code and check the flag periodically or else leave them blocked call (which will not invoke the handler). 
+
+That said, your short-circuit if the lengths mismatch is a good idea no matter which implementation you use. There are some style issues that jump out with your implementation: 
+
+You're matching the regexes in a loop, giving it \$O(n m)\$ performance instead of \$O(m)\$ where \$n\$ is the number of regexes and \$m\$ is the length of the text being matched. Any halfway decent regex engine can match an arbitrary number of regexes simultaneously and then tell you which one matched (a trivial extension to the way is matched; I've done this in C); I am not familiar enough with JavaScript to know if it has one. Possibly since these regexes are fairly simple, you could capture a fixed piece of text and then use that in a dict lookup? 
+
+That way it can be run directly with (and possibly other harnesses, I know the standard requires wrapping them in a dummy class, but I haven't used any others). 
+
+If you don't like nasty bugs, always use for allocation sizes, not . Yes, somebody will do it, this is a fatal flaw in the Qt libraries. You're missing move constructors/assignment. Most likely they should be implemented by moving the ownership logic out to a separate class (if you don't take all of my advice, would work) and then using the Rule of Zero. There's no point in providing a method (this is a flaw of ), you can just use on the iterators (that you need to implement). Most implementations use instead of , or even just a single member which points directly to the string data. and stores size/cap information at offset . Newer implementations often use SSO (Short String Optimization) as well. You're missing slicing operations. Slicing operations should return a class though, instead of allocating a . You're missing , which most people want from a string. Though I'm not convinced it's useful; I treat strings as opaque blobs rather than containers. If you choose to have mutable strings (see below), you're missing , , and . In either case, you're missing . You're missing , , etc. These should allow mixing with . 
+
+I don't know how much advantage there is to a unified 2-method interface, at least as anything other than an implementation detail. You might consider dropping that interface in favor of and (and possibly ). You might also use a sealed class to implement your point observer, rather than an interface. 
+
+You will also have to write some 10-20 lines of boilerplate to get ANTLR to lex and parse the text, then run your listener over it. The two big wins in this approach are that you get to specify your language in EBNF (or an ASCII version of it), and you don't have to write the branching logic yourself. This makes the listener and grammar vastly easier to read and reason about (and have interns/newbies modify) than hand-written parsers. Another cool win is that ANTLR does a reasonable job at best-effort recovery. You can configure it to act differently, but by default it will coalesce the tree to a close legal approximation, and give you warnings (rather annoyingly pushed to std-err by default) when it does. then the nasty bit: you'd have to modify your build system to tolerate the generated code that comes out of your parser generator. The tools for doing this are reasonable on the java side (ant, gradle, and maven tasks all ready to go), but I don't know how they are in .net land. Further, for your situation, this is a pretty heavy-handed measure. If you can get away with writing your parser by hand and never touching it again, doing that is the best option. If you find yourself going back to that parser time and time again I would urge you to consider a solution involving a parser generator. 
+
+as an ANTLR fan, and assuming you dont have a raging hatred for auto-generated code, I'd be remiss if parser generators didn't get mentioned here. With a parser generator, you'd specify your desired syntax in a grammar file and the interpreter in a listener (or 'walker' or 'visitor') C# file. 
+
+I'd encourage you to use the operator instead of . The reason being it gives you a kind of duck-typing with collections: your code (at a source compatibility layer) stops caring about the specific implementation of the add like thing, and instead asks if the type implements a fairly common operator. The single most obvious advantage here is that it allows you to switch from to completely without (source-compatability) issue. 
+
+Even if you address my concerns, I'm no cryptologist, so I would be very surprised if we can come up with a robust crypto system on this forum. I would strongly encourage you to look into one of the many libraries that provide the AES or a modern stream cypher like Spritz or HC-128 if performance is a constraint.

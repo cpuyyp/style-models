@@ -1,0 +1,81 @@
+You need to have a many-to-many table for your message recipients. Think about it this way, each message can be sent to one or more recipients. Also, each recipient can presumably receive zero, one or more messages. This means you have a many-to-many and you need an intersection table to record this information in your database. Consider this ERD: 
+
+In this model each service is for one vehicle, but each service can have many instances of labour, parts and consumables. This model follows the first rule of thumb I mentioned and makes an entity type out of each tangible thing the system cares about. This might be a good first stab at a logical model. One of the issues with the above model is that it doesn't handle one aspect of how your system is likely to want to use the data, at least not very well. One of the most important reasons for tracking all of this data in your system at all is so that you can print off an itemized service invoice. That means that a service line item is itself a thing which is important to your system. If you take that into consideration, you might end up with something more like this: 
+
+First off, apply normalization to the table and make sure that it really is one table with 170 attributes and not several tables jammed together. Then decide whether your table will be sparsely populated and if so, decide whether storage space is a concern that warrants creating sub-tables to hold subsets of nullable columns. If you do decide to create sub-tables, remember to factor in the extra index space when calculating whether a sub-table saves storage or not. 
+
+By all means use an unsigned int surrogate key as your primary, clustered index. However, instead of using sequential values, build some padding into the sequence. This means that you'll have to assign the id manually instead of using . If you use unsigned int in MySQL, the max value is 4,294,967,295. If you expect to have at most 100,000 rows that means you could space each word out by more than 42,000. When you need to insert a word between two existing words, just plug it into the space half way between. Let's say you use 40,000 as your intitial padding value. If you have "house" at 800,000 and "dog" at 840,000 you can insert "nouveau" at 820,000. 
+
+It only uses the , so the insert must use it properly, and you should always insert into a valid position (e.g. it does not treat gaps). It could be improved to provide some constraints. Also, don't try bulk insert or bulk delete, because this trigger expect the rows to be inserted/deleted in the correct order. Now, about the lack of update, if you really need an UPDATE you can: 
+
+You can simple use window function to get the value of the previous row and compare with the current one, then you use to conditionally format as you please. Mapping the "merged" values as (so it can work for any type), it would be: 
+
+Install the contribs package on your system (if not done already). Connect to your database and create the extension: 
+
+Also, unless it is a really huge table, I wouldn't store the result, instead I'd create a view with the first query and just use it on the code. 
+
+You need to assign the RECORD type before sending it as parameter, and a very simple way to do that in your case would be simple assigning it to NEW or OLD even when it wouldn't be necessary, like: 
+
+In this case is the table alias, and / the alias for the columns with the types defined (defining types is only necessary when it returns and doesn't have parameters). EDIT: even though it uses a , still calls the function as it had only one column returned, using method: 
+
+The first seems a little hard at first glance and error prone. The second is simple and works well, to avoid unusual operations on the application side you could create a view to this table (and use only it) that handle the INSERT/DELETE (just issue them on the real table) and UPDATE (do DELETE + INSERT on the real table). Samples at this SQL Fiddle. 
+
+In such way any object (including large objects) created within this session will be owned by instead of . Another option is to use and make it work only within the transaction used to create the large object: 
+
+being the user's login (e-mail, username, etc.), and the plain users password. And the encryption algorithm you are using, being 'bf' the bcrypt. Once your user is there, to validate its password you do: 
+
+Then, you can see the TOC list line by line and compare the output of verbose or query pg_stat_activity to see where in the TOC list is pg_restore in. It is just a rough estimate though. First because each item from the TOC list may take really different time to load (for instance, schemas are fast, but loading data of big tables and building indexes are not), and if you use -j you'll have an item being restored before a previous one has finished. Also, I'm not 100% sure if pg_restore follows TOC list precisely if you don't use -L, but I think it does. 
+
+This will allow you to work with measurements that need time-dependent conversion calculations. 2. Units of Measure Have Attributes Each unit of measure has a few different attributes. The obvious ones are indicative, like a code and maybe a descriptive name. There are also a couple of critical other attributes to keep for each unit of measure. (i) Unit Type and (ii) Conversion Factor to the Base Unit. The first tells you whether your unit of measure is a length, a weight, energy, power, currency, etc. etc. It should also tell you what the base unit of measure is. You should pick exactly one for each unit type. You can use things like kWh if you like, but I'd stick to the base SI units (as applicable) if I were you. The second tells you what your unit of measure needs to be multiplied by to get it to the base. I mentioned that this is an attribute of your UOM, but in fact it needs to be in a child table. The business key of the child table that holds this base conversion factor is the combination of the UOM, its base unit type and a date/time. I would keep both an effective and an expiry date/time on the base conversion factor table. This allows you to quickly find the right rate that applies at any particular point in time. If it happens to be a rate that doesn't change, that's OK. Just use a min-collating effective date and a max-collating expiry date for the one record. 3. Trying to Table-Drive Everything Will Make You Nuts The last piece of the puzzle is determining the calculation for moving from one kind of unit to another kind of unit. You could try to table-drive this kind of calculation but in the end the tricky ones are going to make the design so general (read complicated and slow) that it will be impractical. Instead, create a code-table of conversion calculations and use it to link one kind of Unit Type to another kind of Unit Type. Perform the actual calculations in some code somewhere. Which piece of code you use for any given conversion is what the code table tells you. How the calculation is performed is just in the code. You can have one calculation each for the various easy things, like area needs two lengths and volume needs three lengths as well as the harder ones like work needs energy and time. When you get the details of your design figured out you should blog it and come back here to post a link! 
+
+So, since 9.2 you can just set your custom class variable as you are doing currently, no need to worry about changing . 
+
+Notice that I used the same clause in the window function as the full query, this is really important because you do want to verify the "merging" following the same rule. Now, this is not a presentation mode, as in SQL you only have a table as a result, if you wish to do a real row merging in your presentation layer, you can use another column to just inform if it should merge the rows or not (although it shouldn't be hard to do the full logic there). 
+
+You can also use the to recreate the file or just keep the backup as a directory. Sorry for the not tested solution, but you can try it and I can edit if any mistake is found. 
+
+You can simple use function to get a out of a . To change the table you can use the command. Example: 
+
+Your issue is that your file is missing the database field, and all fields are required (although you can use it for any match). As you are using (that uses the replication protocol), you need supply that as "replication": 
+
+Try to improve the trigger with some kind of flag column; Use DELETE followed by INSERT instead of an UPDATE (inside a transaction, of course). 
+
+See the last query, I'm matching combinations of and , when using configuration (first 4 columns) will only match if both are the same (first 2 ones), but configuration (last 4 columns) will match in all of them. 
+
+At a defined interval, do another basebackup and remove old backups. You can use contrib to remove the old archives (read the contents of file contained in your basebackup to check which files each basebackup needs). This is a broadly used approach, and recommended for its simplicity. Another approach is to extract the basebackup into a directory, add a file and start PostgreSQL to consume the archives. 
+
+But this is weak, as any changes on column positions may break your statements, so I'd recommend the first one. EDIT: So the conclusion and the lesson learned here is: 
+
+Now. You are able to convert a type to an type, using , and so you can dynamically iterate over its keys and values with the function: 
+
+Instead of gauging geographical proximity by presence in a given city, state or country, why not locate services using either a geographical point (latitude/longitude) or by geographic polygons? The scheme you are proposing does not account for these situations: 
+
+Note that I've added an intersection entity type between and . This new entity type: provides the information which is implicit in your model, that a particular department has a give set of jobs of various classifications. Adding to your model as an explicit entity has a few advantages. 
+
+I may be misunderstanding your intended use of the PostId. Presumably it is going to be used like a query string (or MVC-style friendly URL suffix) to retrieve or link to the original post on its home site? If the PostId value is only ever going to be used as a string, i.e. in the context of supplying a URI made up of the concatenation of URL + PostId, then you might just as well save it as a string, because that is the only context in which you are going to use it. Since this is just a natural key and not your primary key, as you stated, this should do the job without being too elegant. If, on the other hand, you mean to do some other kind of processing on PostId (other than string concatenation) then you probably ought not to save PostId as a string, unless you keep some kind of partitioning attribute that tells you which internal function you need to run the string through to get a type safe value. If you are going to that much trouble, you might just as well keep multiple PostId X columns of various types to meet your needs. 
+
+I don't know what your ORM is, but it should be able to handle a self-referencing relationship and a partitioning attribute (i.e. GeographyLevel = { country, state, city }) 
+
+Normalization is not done to make reading data easier or more efficient. Normalization is done to make changing data simpler and less risky. It's when you insert, update or delete data that you will see the benefits of normalization. Therefore, if you are going to update your data much less frequently than you are going to read it, for example, if your data almost never changes, then optimizing for reading might make good sense. However, if you are going to be adding new data and changing existing data pretty often then you will be better off with Third Normal Form (3NF) as your starting point for your database design. 
+
+I kind of dislike that option as it can become a bit obscure to others how it is working, and if you manage other roles to your user it won't inherit them (although that doesn't seem like a problem to you, as with dynamically created user you should have a single role that it directs inherit from). 
+
+Now to the problem... The following trigger function is capable of managing the insert and delete of rows: 
+
+Not sure if only that, but your are not closing the parenthesis correctly. Same code with better indentation: 
+
+I'd came to a solution that uses a trigger to manage the updates properly. To make things better and easier, I added the column that is an array of integer, to keep the value presented by you as . This seems more reasonable to me, as we can order by it correctly (which cannot be done with string, at least no without some treatment) and also is easier to manipulate. So, I came to this table: 
+
+As function returns and doesn't have parameter, you must define the columns and types it will return when calling using an alias: 
+
+So, will get the value of , which is in your case. The solution is to simply expand the column names: 
+
+If the above query returns 1, then the login was successful (login and passwd matched), if it returns 0, then the login failed (either login or passwd didn't match). 
+
+So in your query it will show as or you filter it out. A second, and possible best option, is to have a new column that states when (and if) an area was deprecated: 
+
+is a variable you must declare before (as text or varchar). Casting to and then to will make it double quote the name if not simple (just like ), if you want to avoid it, you can simple join and get (in this case can be of type ): 
+
+If you want to validate your user's password, one of the best algorithms to use is bcrypt. I'd recommend you implement the encryption and validation at your application layer, so you work with plain text data less time possible. But if you are looking for one way to do that on PostgreSQL's side, you can use extension. So you have some steps: 
+
+The column is primary key. The order is defined by the column, probably a column or thing would be better.

@@ -1,0 +1,63 @@
+Your problem is almost certainly that you are entering an email address into the installer to receive information about updates. However this functionality will only work correctly if you also have a valid Oracle Support account. Since you are in a home environment, I would leave the email address empty. The installer should then proceed without generating any HTTP requests to Oracle's servers. You will however also have to download win32_11gR2_database_2of2.zip separately and unzip that into the same directory. 
+
+Caching by Postgres or the operating system isn't going to help much when Postgres doesn't know which of the millions of records in your table fulfill your query's condition(s). The only way to make sure this is going to be consistently performing as you expect is to use indexes. An index on the combination of and is what you need in your case. In your question you note that a query can be relatively fast (like a second for recently inserted data), so I'm strongly suspecting you already have an index on at least one of these columns. 
+
+Most questions and answers assume some sort of "binary tree indexes", but there are other sorts of indexes, perhaps most notably a bitmap index -- which as its name suggests is a bitmap per value with one bit per row to indicate (in)equality with the value. In comparison to tables and binary indexes, bitmap indexes require very little storage and are consequently very fast to work with. The big thing with bitmap indexes is that they CAN and SHOULD be combined for OR, AND and XOR operations on multiple values. See $URL$ for a further overview. 
+
+Multi-tenancy can be achieved in several ways; opaque multi-tenancy doesn't necessarily mean a design with one schema per tenant. It can also be achieved by adding a "tenant ID" column to every single table. As an example, this is the way that SAP has done it for a very long time already. Applying this principle to your design, you would add "tenant ID" to all tables that need to be multi-tenant, while the "customers" table won't have it. Instead you need to add a "tenant_customers" table with two columns; "tenant ID" and "customer ID" to associate customers with tenants. Wikipedia calls this concept an Associative Entity. Alternatively, you can store your tenant-specific data in one schema per tenant and have the customer table and "tenant_customers" associative table stored in its own schema. Instead of "tenant ID" you could use a string storing the "tenant schema name". 
+
+I don't understand why you're asking this question. If you're buying in a service, then backups should be part of the SLA and not your responsibility. If it's not part of the service, then why are you using SaaS? On the other hand, if you need to be backing up something, why are you backing up every hour? Technically, if your application is running on a DBMS with a transaction log, it's possible to be backing up continuously, even replicating logs to (an)other machine(s). Then you have a backup process that runs regularly simply to make recovery faster (a newer backup + a small amount of logs is faster to restore than an older backup + a larger amount of logs). A retention policy on these backups and log files determines how far back in time you can go back to in case of user error (backups aren't just for when your have a "crash", they'll also be needed if someone deletes or modifies data they shouldn't have). The retention policy will often be a compromise between how far back in time you can "go" and how much space you need to store the backups + logs. 
+
+The whole point behind partitioning in Oracle is that it is transparent to the queries. And if your query only needs data from one partition, then Oracle will (if it can) only read that single partition. So if you have a table partitioned on, for example, year so that each year's data is stored in a separate partition, a query such as: 
+
+I wasn't able to force PG to do a fast query to determine both the list of s and the related . But I'm going to try again tomorrow! Attempt 2 I found this link: $URL$ Combining this technique with my query from attempt 1, I get: 
+
+Do you just want to configure this? Or are you not averse to writing some code? In the latter case, it should be relatively easy to write a small program that connects to both the LDAP server and the database and synchronizes the data. I've written such a thing once in PL/SQL in Oracle -- if it's possible there it should be possible in most languages and environments! 
+
+Use a view -- where under "Version" you show "All" or the specific version owned -- for presenting combined information -- but be careful to "overrule" (if that's what you want) in case a customer accidentally owns both the product and particular version of the same product. 
+
+Another approach which should work for you is to install PostgreSQL from the PostgreSQL Global Development Group's APT repository. They provide compiled versions of PostgreSQL for all supported versions of PostgreSQL and all supported versions of Ubuntu (and of course some versions of Debian). $URL$ is the starting point for this. 
+
+If you edit your to allow login as one of the other superusers, then you can login as one of those and then . 
+
+The hint is only needed to instruct the optimizer that it should optimize for retrieving the first 10 rows as fast as possible rather than optimizing for whatever percentage of the table the optimizer thinks it will get. Don't include the hint unless the optimizer gets it wrong. 
+
+When you use the clause in Oracle, you can only provide comma-separated values. If you want to one or more rows from another table, you have to use this syntax: 
+
+You have an error in your query. The CTE will return not a single row, but as many rows as in . Then you are putting all of those rows into the row generator CTE , whereas a row generator construct like you're using should get a single row. What I would do is to define to return a single row with the minimum and maximum values, and then subtract these in to get the number of rows you need to generate. Something like (untested): 
+
+You need to change port 1158 to 1521 in your connection properties. Oracle's listener for database connections runs on port 1521 by default. Port 1158 is the web listener for Database Control, a webgui for managing the database. In addition, the servicename should be something like "database.domain.com", or you can try using SID and specifying ORCL. 
+
+You're using a BIGINT which is 8 bytes. The maximum value you can store in a BIGINT is 18446744073709551615 if unsigned. At your rate of insertion of approximately 100 thousand rows per day, it will take you 459445680541 years to overflow. In short, you have nothing to worry about. In fact, you should consider changing this field to INT which is 4 bytes, with maximum value of 4294967295, which you can use for approximately 110 years before overflowing. 
+
+Don't. Keep all your package sources in a source control system. That way you can go back to a previous version if you need to. 
+
+but it's not any faster than the version with the small dataset. It might scale better though, as no join is required, but the above version aggregates over all the rows, so it may lose out there again. The following query tries to avoid unnecessary work by removing any series that don't overlap anyway: 
+
+This doesn't seem to be specifically an SSIS problem. It seems to me that the logic of the original code is such that the if the previous update statement updates 0 rows that it indicates a concurrent update took place. I'm guessing that the update statement includes one or more extra columns in the where clause on which previous values are matched. The update affecting 0 rows indicates that a concurrent update took place. You'll need to show us the rest of the procedure to determine whether this is the case. 
+
+however Oracle won't allow this as is a view, not a table. You could try to reference the underlying Oracle data-dictionary table, but that probably won't work either -- not least because you'd need two columns at your end -- and -- but also you'd need to be granted the privilege to reference that table. An approach that I would consider -- as recommended above -- is to create your own table listing which tables can be referred to. You could populate this table yourself, or you could create a DDL trigger to maintain it for you! The other thing to consider is what to do when the table is dropped: will you delete the record in your table, or set its contents to using ? 
+
+The problem is that your Oracle Client installation is in the system PATH before your Oracle Server installation (in fact, you even mention that it worked before you installed the client). Proceed as follows: 
+
+-- and I got to use the operator! Note that you have to add to the right as the overlaps operator considers time periods to be open on the right (which is fairly logical because a date is often considered to be a timestamp with time component of midnight). 
+
+Another approach is to use the Oracle Gateway for DB2 which can be used to create an Oracle database link to the DB2 database. Then use a SQL script to "pull" all the data from each table in turn by 
+
+Case 2 is different. It forces your book titles to be different regardless of case and wouldn't allow both of the above titles to be inserted. 
+
+Because the clause is applied first, and the is applied to the results, you need to use a subselect as follows: 
+
+I think you're on the right track. I presume (NB might be a reserved word and cause problems) will have the check constraint or something similar. Then all you would need to do is rename your proposed to and drop the column , and create another table, with columns . 
+
+but there are many other options. See the documentation at $URL$ for full details. NB You must set the parameter to a value other than to actually enable the auditing to take place. 
+
+and is a DBMS table the contents of which are transient, vanishing either at the end of the transaction or the end of the session. It can be used in any SQL just like a normal table. A PL/SQL table which you have defined above cannot be used in SQL but must be referenced programmatically. See $URL$ for an overview on how to do this. 
+
+As with most things, it depends. First of all, if you're not 100% certain that the data will always be valid JSON, use a normal text type instead. If the data is indeed always JSON, I would use a JSON type if for no other reason that as documentation that the column contains JSON data. If there will ever be any chance of requiring indexing of data, go for the JSONB datatype. If insert performance is critical, choose JSON (or even a text type) instead. The JSON datatype stores the JSON data as-is, while the JSONB datatype removes empty nodes and whitespace and even duplicate keys (the last one is kept). This means that JSONB is storing less data, but requires minor reconstruction on retrieval. For all other cases, I would go with JSONB as the "best" generic JSON type in PostgreSQL at present, and this is also the recommendation in the documentation. See $URL$ 
+
+When you login in the terminal, Oracle lets you in because the user on the server is a member of the group on that machine. When you connect from SQL Developer on your laptop, it's a remote connection so OS Authentication isn't normally possible. You might be able to use SSH Authentication, see $URL$ Maybe it's configurable when you click on the "Advanced..." button? 
+
+I'd definitely choose option 2. A game of chess is between exactly two players. Option 1 allows a game with 0, 1, 2, 3 or more players, while the data model in option 2 (assuming on the two player columns) means that you will never have these data inconsistencies. Just remember to also add the check constraint . 
+
+I don't think this is possible for current versions of Oracle. What I understand happens is that Oracle generates an instance-specific salt and adds this to the passwords being hashed using the SHA1 algorithm, the result of which is stored as the hashed password. See for example $URL$ for information about this algorithm. This means that password hashes are installation specific, and I don't think it's possible to generate the expected hash value for a given username/password combination. What you need to do is as @elfcheg suggests to add a on all profiles, or to a single profile, and assign this profile to all users.

@@ -1,0 +1,63 @@
+You can only use the syntax with statements inside a block, and you can nest Blocks.... Note that indentation helps enormously, so I've changed the indentation to 2 spaces, although 4 is more typical, but doesn't always suit StackExchange rendering. 
+
+Using `Val` The function can run into problems when converting string values, depending upon the locale of the user. It is generally safer to use , but it will depend on the input. See Internationalization Tips Indenting/Line spacing Your compiler directives follow on the immediate line after the function signatures, which looks a little cluttered, and hard to spot the beginning/end of the compiler directive. I'd like to see an extra line before and after the compiler directives. Enum ordering I'll let you off the hook for the inconsistent casing of enum members, as I see that you're trying to implement a consistent style, but also trying to maintain the Win32 capitalizations. But, you are using inconsistent ordering of the enum members - sometimes the members are alphabetical, and sometimes they're by hex value. In my experience, it is better to define the enum in hexagonal order (as it's easier to spot omissions), and then rely on the Object Browser/Intellisense to render the enum members alphabetically. Magic Numbers/Constants There are numerous references to magic numbers (like for Office 2000) and string-literals (like ) throughout the code. These would be much better defined as constants (with a view to allowing multi-language support). You make the effort on occasion, but not on others. You also use magic numbers like 240 and 480 (for x and y), but without adding comments (or descriptive constant names) to explain why. Passing 0 to GetDC Your function accepts a Long/LongPtr, but you're passing a integer-literal of . You can avoid an implicit conversion, by using instead of Backward Portability It seems this would almost work in VBA6 hosts, but the compiler constant wouldn't be present. For portability, it might be nice to add a commented-out compiler constant of: 
+
+You could also omit the variable, and just use the count of the controls. But you might consider using a 2D array, or maybe a dictionary to keep track of the names. Referring to the Form Designer/Controls You use as the type of the Form, when, in this case, it will always actually be a , but you don't actually ever need the form... you need the . And the are enumerable so you can use 'For..Each`. 
+
+Early Binding You're using , so your code will fail anyway, if Microsoft Scripting Runtime isn't available. But more importantly, by using late-binding, COM has to work harder to find the methods you're using. It's much better to early-bind by adding a reference to .: Dictionary variable names You've used ambiguous names: and . You'd be better off with more meaningful names (I don't know what your data is, so I'm using less un-meaningful names) like: 
+
+To Collect or Hash The has a number of limitations, but it is enumerable and you can refer to items by index or key. But the VBA implementation of a Collection is 1-based, and they don't have any way of confirming membership, and the method returns a , so they're loosely typed. Did I say method? Yes, that's right, is a method. Let's make it a property while we're at it. Dictionaries aren't enumerable, but they have useful methods like and . They're implemented as hash-tables behind the scenes, so they're faster than Collections for retrieving members and/or for confirming membership. What if I could combine the best features of Collections and Dictionaries? 
+
+Options on Hex Format While I have implemented a to allow for various hex syntax, I'm forcing the hex string to have adjacent characters, but some consumers of the function might want some more flexibility. If I added an optional parameter , then I could do things like: 
+
+Implicit Variant Types You've been diligent with Type declarations, but in you have omitted the Variant type of the ParamArray: 
+
+Clarifying the Form type Access has built-in objects, but also allows the use of VBA . It might be helpful to qualify the type as : 
+
+I don't think you need to activate the cell, or use the selection, just inspect the range directly. I've also made the function volatile so it will update when you calculate. But, for Code Review purposes, you're only getting the interior color, but the cell might not actually appear in that color, for example: 
+
+Referring to the current project I know you probably meant for this code to be generic so that it works across any project, but it would seem that the code is supposed to sit inside your addin. 
+
+That is, usage of members against , like or, more correctly, can be unreliable and result in error . You'll have more reliable code if you first assign the result of to a local variable, and then access the method from that variable. 
+
+I needed to convert some Ascii text to binary in Hex format . I've written an and a function to do the conversion. I've avoided using concatenation in favour of performance. I'm assuming that assigning the results of to a byte array, and then using to convert the array to a Unicode string, is more efficient than assigning the results of to a string array, and then using to concatenate the strings. I need to use this in Excel, so I'm using to return errors, but this could maybe benefit from being more generic. Sample usage 
+
+EDIT Mat's Mug has the best approach in going for an Interface and an add-in, but if you constrain the requirements to a self-contained solution, and you assume the user of the class is unfamiliar with interfaces, then you can have everything in a single class. Your predeclared instance has the private fields and property gets to facilitate passing the variables to new instances. I've added a property (replacing your property) with a scope (should the class end up in an add-in), and I've used VBA's ability to hide an emum member by prefixing it with an underscore, to obfuscate the values that could otherwise be (i.e. Consumers of the class don't need to know what does, and only know that can be . Setting up some Enums As @Mat'sMug pointed out, the error values could use their own Enum: 
+
+is a very slow method for doing what you need. You will achieve much greater performance, and avoid the need for complex error handling, by reading the search range into an array, and looping over the first dimension to find the row, then looping over the second to find the column. Edit: Depending upon the number of rows and columns that you expect, or perhaps even after inspecting the size of the search array, you could squeeze out some extra performance by checking to see if there are fewer columns than rows and then check if the column exists, before checking if the row exists. And if there are fewer rows than columns, then check to see if the row exists before checking if the column exists. Edit2: if you'll be calling this function multiple times, with similar sheet names, row values or column values, you could optimize further by keeping s of column names and indexes, and row names and indexes. That would be the fastest approach. 
+
+Unique keys and Dictionary usage The code to build a unique key and populate the dictionaries is the most expensive, so let's be careful about checking the smallest dictionary more frequently than the large dictionary. Also, there's no need to and then back, when we can just increment the count of the existing entry. 
+
+The final XML will be more complex and have a deeper hierarchy, and the attributes might occur across different nodes. Is XmlDocument and XPath the most efficient aproach, or would Linq to XML perhaps be faster, and what would that look like? 
+
+Providing flexibility in the return type But what about return-type flexibility and/or longer strings that need encoding? The function forces a string on the consumer of the function, but returning an array of hex encoded characters might be more useful, and if a user does want a string, then a string-returning function just joins the results of the array returning function. That way I'd have something like: 
+
+Well, here's a form saved from Excel 2013. Notice the VB_Exposed, VB_HelpID and VB_Description attributes. I set the Description and Help attributes using the Object Browser Context Menu ("Properties"), but a user might have manually edited the attributes in a previous export/import, and so they might be in a different order 
+
+Or maybe the non-existent compiler constant would convert to 0, and thereby False, by default? The Access rendering "32000" limit Access can run into difficulty on large/multi-monitor systems, where the host window equates to roughly 32000 ( the exact limit seems related to the 32000 give or take the borders imposed by various operating system versions) in the X direction. This is, in my understanding, party an Access limitation, and partly a factor of the way that forms are serialized. You may want to check the behavior when an Access window is wider than a typical 1080p monitor (16x 1920 pixels across), or you may get some unexpected problems. 
+
+Use meaningful names Your use of , and are 3 examples of meaningless variable names. Consider more meaningful names. Use independent loop bounds Your Loop uses as the loop variable and the starting index: 
+
+Declare as a String Array tmp is assigned with the function, which returns a String array, so declare accordingly and you'll use a great deal less memory. 
+
+Complete Code This is a pre-declared class. I require that new instances of Point be created from the default instance, and only the default instance of Point (which means that the default instance could do useful things like tracking the number of Point instances), but it isn't much work to facilitate any instance of Point being a valid factory. 
+
+Am I missing something? Why were you using ? Arrays are not objects, so you can copy them using a normal assignment: 
+
+I'd like to get a distinct list of attribute values where the attribute name is in , but my final/actual list of attribute names will number around 30. I have this C# code working using XmlDocument and an XPath query, but I'm unsure if this is the most efficient method. 
+
+Have you considered using Conditional Formats as your rendering cathode ray? I've just thrown this together, so it's by no means complete or optimized, but by assigning sprite arrays of values to specific ranges, I avoid the need for any calls to the of a Range. This approach might also solve your dilemma, as you can just write over the top, or you could even to blends! It's fast. So fast I can't tell if it's even rendering on every frame, but I do see lots of movement. It runs about twice as fast if I omit the removal of the prior sprite location. Theoretically, it's 1500 frames/sec with sprite erase on each frame, or 4000 frames/sec if I omit the sprite erase on each frame. Set up the screen Apply 3 different conditional formats for values 1, 2 and 3 
+
+That would allow me to use the array to build multi-line results. For example, like a hex editor view: 
+
+Making fields more friendly Then, again as per Mat'sMug's suggestion, I'm using a private type to store fields: 
+
+I'm trying to replicate the attributes text that appears in File Explorer, for files and directories. I can't just use the enum names, as the summary text uses a single character for each set flag, and that character isn't always the first character of the enum member. I'm also not using the reserved attribute. So, I'm using a operation to concatenate the flag characters. 
+
+Avoid using magic function/literal values You're referring to the Tab character which incurs time on every line. VBA has a built-in constant for Tab: , which makes it more efficient and easier to read. 
+
+Assigning ActiveConnection is an object whose default property is . When assigning the property, it is better practice to always use , although ADODB will manage things behind the scenes if you forget and just assign the property. 
+
+In this instance, the statement does away with the need for the statement, but if is an empty array, then you'll get a subscript out of range error when you try to ReDim with an upper bound of -1. It may be the cases that will never be empty, but it is still good practice to check. 
+
+But do you really want a Dictionary? Using the existing and optimized approach, you'll end up with a dictionary that is keyed by what seems to be an arbitrary index. You may have your reasons, but if you're not going to use the features of a dictionary, you might be better off with an array: This code runs in just 1.56s.

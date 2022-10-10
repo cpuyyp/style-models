@@ -1,0 +1,49 @@
+You have some of the right idea, but it looks like you're writing in Lisp. ;-) There's no need to surround a single parameter in parentheses to pass it to a function, you mostly get this right so I think this one instance was just a slip up. 
+
+Generally all your types should be at the top of the file, i.e. and . I might use a list comprehension in writing to clean it up a little and reduce potential errors from referencing the wrong value. 
+
+And there we have it. Regarding your question about whether 's pattern matching was exhaustive, the answer is that it is not exhaustive because the definition of contained no case which would match every possible pattern (ie ). It was however "safe" to use because of how was defined, and the case of the empty list was handled through pattern matching at the outer level. In general you shouldn't rely on tricky business like that, it can be difficult to notice when coming back to code you or someone else has written, and can blow up on you if you have to change the definition of the function. 
+
+Performing math on indices definitely implies an imperative-programmer mindset to me. Instead of indices, use the value you really care about! In this case, pair each value with a that indicates whether it should be included in the output. This is easy to do because the pattern of inclusions are a simply repeating cycle. 
+
+Yep, that's what we want. Deriving the Answer There are probably two different ways you might come up with your own solution. Either start at the concrete and generalize, or cobble a solution from typeclasses down. From the Concrete Consider again the type of the function you need. 
+
+I wouldn't use that version, I think it's a little opaque with all of that inlined math. But I would definitely use this one. 
+
+The biggest issues I see look like unfamiliarity with . already exists in as . is poorly named (take from what?) and not very Haskell-y. A well realized Haskell version would be defined as where is a function that returns all of the divisors of a number. However this still isn't quite the right definition because every number is divisible by at the very least 1 and itself (and you skip returning 1) so you're really looking for the first prime factor. 
+
+My goal here was to make everything as correct-by-construction as possible (q.v. the type) and to reduce the opportunities for ambiguity (e.g., a "Fill Field" may mean any number of things if all you're looking at is a literal , so the representation should be as precise as necessary and no more). On the benefits of this approach 
+
+Now when you want to write out to the command line what operation your program has performed, you can format the output in IO, or call a formatting operation (that's what is). 
+
+There's only one more improvement I'd make to this, and that's to call rather than and in . Using both and leads to walking half the list twice in each recursive step where we can walk it only once by doing some more bookkeeping. takes an index to split a list at, and returns the prefix and remainder just like using and separately would. So putting all of that together, here's the final version. 
+
+Note the use of , after you've done your computation in the monad, you get back out by specifying a "default" to use in the case that any value of cropped up, causing the whole -block to return . 
+
+A no-frills solution to this with primitive recursion and pattern matching should be self-obvious (or will be with experience). 
+
+Make things easier on yourself by separating concerns. E.g., each line encodes a position in its amount of leading whitespace followed by an identifier. Parse this representation into a more manipulable form in a single function invocation, don't thread it through your algorithm logic which shouldn't care about serialized representation. 
+
+This isn't mergesort! is a different sorting algorithm entirely, so you end up only performing one merge step before kicking it over to (I believe) selection sort. First let's address the easy stylistic issues so we have a good base to work from. The primary issue is that the argument passed to is a tuple, which is unnecessary, uncurried, and not very Haskell-y. I'll also drop the extra apostrophes where there isn't an actual naming conflict with the Prelude. We use as-patterns to avoid reconstructing patterns we just deconstructed. And let's just toss and , they're not part of the solution! 
+
+Here I've separated out just the betting system aspect of your program, because tracking winnings or choosing ranges are separate functions from determining bets. This way also you can substitute different betting strategies fairly easy as long as it has the same type signature. You'd tie this all together with a simulation function something like this. 
+
+Your solution doesn't work because it's using the empty list you're passing in the final step. You can use instead, it uses the final element of the list in place of being passed an accumulator value. Looking to the s to implement isn't a bad idea, but there are other high-level functions that you can use to write a more terse or readable version. Let's start from a verbal description of what is doing. 
+
+This isn't that much of a mess at all. Let's clean it up, then get a little fancy. Right off the bat it seems a little funky to have a , as it appears you're not actually trying to account for agender individuals but instead providing for the failure to produce a for a particular . Operations that might fail in Haskell usually signal so by returning a value, so let's drop from the definition and see what needs changing. 
+
+When calling , you should always include the module and function name so that users of your code know what function the error actually originated from. I.e, That way if someone calls your function with a negative number they see this 
+
+You can perform eta-reduction again to write as . is a bit of a kludge though, in that it muddies the waters between your pure code and the outside world. Keep your (de-)serialization functions apart from the rest of your program, it shouldn't matter to the core logic of your application whether you were passed a or a value or length encoded sequence of unit values (). 
+
+It seems like you may not quite grasp the interplay between do-notation and monad transformer stacks. Take a look at how I've rewritten here to leverage the actual machinery of . The version you wrote is needlessly verbose due to your manually plumbing the state around! 
+
+Even though and refer to the same normalized type, it signals a conceptual difference in how the value should be treated. 
+
+Note that we can now find the head of the list through pattern matching instead of calling because we don't need to assume the list may be out of order. We do however have to remember to add that element back to the prefix of what we're returning! There's one more improvement we can make though! As it is, our function will walk the prefix of the list equal to the first element twice each recursive step (once for , and once for ). We can eliminate that inefficiency by using which returns the prefix matching the predicate and the remainder in one go. 
+
+Due to the use of for indexing, if the we're passed is out of bounds an exception will be thrown. Better filter the whole list of elements beforehand. uses , , and of course , all of which are O(n) operations on Haskell lists. That's three traversals of the index-encoded list for each element, consider the worst case performer of . This would have to be cleaned up through use of . Using in will walk the left portion of the accumulator list again, consider again that worst case performer. 
+
+I can't seem to download your data set. Could you re-upload a smaller dataset (say, ~5mb? and with your testing statistics for it) to Pastebin or somewhere? The only obvious performance difference with your Python version is that is based on a binary tree, whereas Python's dict is a hashtable. This makes an O(n * log n) operation in Haskell (unless you luck into the fact that your list of pairs happen to all be distinct and sorted in ascending order) but constructing the Python dict is O(n). This should make a significant time difference, but not necessarily space, so at this point I'm out of ideas. Make sure you're compiling with I guess. (There also seems to be a functional difference between your two versions if my understanding of Python hasn't rusted off after years of neglect. will pair with itself, so maybe you want to be defined as .) On issues of style, see the below rewrite. Note particularly the reordering of definitions so as to eliminate the -clause. In your version it was easy to miss due to being inline with the -block, you can do as I did, or try decreasing the indent. 
+
+There's a bit of redundancy in your implementation. is effectively the same as . There's no need to “inject” pure values into a monadic context with , a pure value in scope is a pure value in scope so just use and in place of your and . The parentheses around are also technically redundant. Regardless of the ordering of the application of and you'll still end up with the same list. This is always the case for list cons and append, if you think about it you should see why. Note that the fixity precedence for both functions is .

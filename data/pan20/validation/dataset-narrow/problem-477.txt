@@ -1,0 +1,75 @@
+This reduced the function from 365 lines down to 100 lines, not bad. Now we can see that the block asking to re-roll die X are basically also all the same except for the die number. Now let's store the value of the rolls in an array which holds one entry per die. And because this is C++ we are going to use a 
+
+You don't actually use the index in this loop: . A more idiomatic C# way would be to use a in this case: 
+
+Seems slightly more OO style as it has less s related to what kind of you actually have (static or instance). That leads me to the point of questioning the purpose of static weak actions. Unless I'm missing something those are not really weak and you could just use an to store them for later execution. Potential Bugs/Problems The point of a weak action is to effectively weakly bind to an object so you can call a method on it if it is still alive if I'm not mistaken. Your examples show this basic usage: 
+
+I'm no ruby guy but just from a general point of view I try to see data structures from an abstract interface point of view. And your interface looks like a fixed size FIFO queue. The fact that you implemented it as a ring buffer is just an implementation detail really. So I'd be inclined to rename it to , to and read to which seems more natural names for the operations as you have implemented them. 
+
+is a bad name for that method. seems to express better what it does. is a bad name for that enum. It seems to describe which target should be listened to so why not call it . enums can be used as flags: 
+
+or you use the good old method of copying the reference (this is why there were usually methods to raise the event since it's a reasonable amount of logic which you don't want to sprinkle around everywhere): 
+
+Assuming that is just a plain field or property then the second version is better because you are not creating an unnecessary object. However when you are comparing strings it is often better to use or (available since .NET 4.0) depending of what the possible values might be. Saul's answer already contains the code showing how to do this. 
+
+As the standard naming convention for local variables and parameters is an established practice is to prefix private class members with although using instead works as well. Matter of personal preference I guess. You can remove some in-code comments by creating helper methods which state what they are doing. For example instead of this: 
+
+You don't have to assign the counter on every iteration to the result. Simply increment the counter while the letter doesn't change and then add the count afterwards. Another bug: the way you convert the counter into a string will stop working for any number larger than 9. You want . Also returns the length of the string excluding the terminating character so your is short by 1 in any case. Given the fairly severe bugs you really ought to test your code better. 
+
+However between checking and actually obtaining the delegate the reference could have gone away and now you get a . You could avoid it by doing this I guess: 
+
+Update: As mentioned by Loki in the comments you can use to obtain multiple locks. It's employing a deadlock avoidance algorithm (I guess effectively something like: "try to lock all objects, if one failed, unlock all obtained locks and try again until you succeed"). 
+
+The was primarily added in order to be able to release acquired unmanaged resources in a deterministic fashion. However it also provides a nice way of releasing other resources in a deterministic fashion as you have found. I would not say that this is an abuse of the disposable pattern: You acquire a lock which is a resource and you need to release it at a given point in time. For me this is good enough especially since you said it's some kind of db lock which I assume lives outside of the application (that is unmanaged for me). It provides you with native support through to make sure it's released in case the executing code throws an exception. However I don't particularly like your two public static methods on there. Now you all of a sudden have two interfaces into the class. If you want a factory like interface then make the method a proper factory method returning the lock which was acquired (in which case the ctor should become private): 
+
+I don't think you should treat the units as disjoint entities between which you convert. You have started your post by saying 
+
+If you have followed the suggestions above you will now have a array as well as the with the removed. This should make building the matrix easier: 
+
+When adding items to a list one of the most common operations is to add them to the back of the list. Your implementation makes that an operation while it should be - so consider keeping a tail pointer as well. 
+
+I tried running your implementation on my machine but with the following input (input is 25 random integers within the interval ) never completes (it's stuck in the bucket loop): 
+
+You access the which is the backing data structure directly within () The only public read access to your queue is a method labelled "Do not use" You have a method in your queue as part of your public interface which is commented as "Do not use". Either remove it, or simply state the draw backs so the user can make it's own decision. 
+
+If you stick with your approach, you can get rid of the lock entirely by using InterlockedIncrement/Decrement on the counter. Reading an is atomic in C# so the spinning doesn't need locking (if Interlocked* is used to increment/decrement). Why is this a singleton? There is no reason for that and it's likely to make unit testing code which uses it a pain. Just create a barrier object and pass it to all tasks which need to by synchronized on it. Makes it more reusable as well. What if you have two groups of tasks which need to be synchronized independently? An approach which would get rid of the spinning is to use an event (although this require locking again) 
+
+You compare the hashcodes and then compare the result of the comparison which is a bit roundabout and will make the test result a little bit harder to read in case of failure (two bools are different rather than two ints). I'd change that to: 
+
+Well, you could build a dictionary for the temp array but it depends how often the key (index 1 of each temp row) is repeated. If you have very few repetitions then it could reduce the time because it only has to search through a subset of the 1000 temp rows. Something along these lines: 
+
+You have more than one race condition here: Since the expiration is done via asynchronous tasks you can cause problems even if the cache is used by one thread only (the continuation is most likely to be executed on a thread pool thread). So in it's current form the implementation is essentially broken and will cause random exceptions (depending on the usage patterns). To re-iterate the point which has already been made (since it's important): Because you derive from you have made it very hard (almost impossible) for yourself to actually fix the race conditions mentioned. Even if you protect your methods against race conditions you can't protect the methods because they are not (so you can't override them, you could hide them but that's rather ugly). All in all you've made it very easy to break the assumptions your class makes - classic case of leaky abstraction. It always irks me when classes are being designed to take some sort of time measure and the type is an integer type. .NET has a type - use it. Storing the expiration time as would also remove the need to convert it into one on every single call to one of get/set methods. If you absolutely don't want/can't use a then at least add a suffix to the name indicating the unit. Many timeouts in the .NET framework are specified in milliseconds - so using seconds is less intuitive. Regarding the topic: One of the rules you should always stick to is that if your class owns an object then it should also implement and dispose of the owned object. Doing anything else will get you into trouble in the long run. Your class owns objects which are hence you should implement . To quote MSDN: 
+
+Now you have a generator which creates a sequence yielding for each number if it's a multiple of 3 or 5 and the translated version of it. You can create algorithms to implement question 1 and 2 based on it. 
+
+This condition can be simplified to since if is not unequal to then it is equal to . Also this logic is repeated again in another class - this violates DRY. It should be a method on the (if I got the type right). In some properties reference the - it seems odd that an engine style class has a reference to the UI but there might be perfectly good reasons for it. Just seems a bit suspicious so I mentioned it. In you use in several places. Would it make sense for those casts to return ? Can the constructed objects deal with those parameters being ? If not then you should use a direct cast instead. This: 
+
+You could store a pointer to the last element as well so that add operations become O(1), right now they are O(n). I might be mistaken but right now you can only add elements to the list and remove them but there is no way to iterate over the list or access an element - this diminishes its usefulness somewhat. 
+
+Disclaimer: Above code might not be 100% correct but should get the idea across. It's been a long time since I worked with PHP. 
+
+It seems odd that your class contains two methods which seem like they should be complementary operations however they are named inconsistently and their parameter/results don't really match up: 
+
+is, erm, let's say suboptimal. You have an object oriented language - use it. I wouldn't even accept this in plain old C code. Something like this: 
+
+First: Don't create a base class with a virtual method which simply throws. This moves problem detection from compile time (abstract member not implemented won't compile) to run time (forgotten to override or accidentally called base throws) - usually undesirable. Virtual method says "You can override me if you want but you don't have to". Now your actual problem. Let me see if I understand correctly what you are saying: 
+
+Try to avoid generic s. A more specific exception is better because otherwise you force the caller to always catch all s when they might only want to deal with a very specific one. An might be more suited in your case. is not a very good name. Methods named like i'd expect to return the object as . would convey the intend better. The class owns a of . is and hence you should dispose of the s in the list. I was a bit confused by your usage of and how the whole stuff is put together so I searched a bit and found this MSDN page which your implementation seems to be very heavily based on. I'm not convinced this is the best way to go about it. Essentially it exports the report into a bunch of s which then get printed. In the end you have a whole set of class members which means that multiple calls to will probably yield strange results. I think the design can be changed so that neither the nor the list of streams would be required as class members but rather as transient members being passed around between functions. This would then allow you to: 
+
+The way you handle exceptions is less than ideal. The caller of your methods has no easy way to find out if the call actually succeeded or not - except for parsing the return value of the method. A better way to deal with it is to let exceptions bubble up to the caller and let the caller decide what to do (e.g. terminate the process, retry later, etc.). In addition you could log the exception (requires passing in some kind of logger) Alternatively you could make the return value an parameter and return a indicating if the call was successful instead if you really want to hide the exceptions from the caller. In this case I'd rename the methods to something like and 
+
+You can then implement the methods as you implemented them in your factory class. Rename your utility function into and pass it as parameter an instance to record the data points for: 
+
+As it stands now I probably would not bother adding an additional method however I would introduce local variables to hold the arguments for the call instead. Can make debugging a tad easier. 
+
+The only difference in the different branches are vs . You can store it in a variable first and use that generically: 
+
+looks suspiciously like an algorithm - assuming that iterates over the list and counts how many are selected. You should consider keeping track of how many items are selected in your class. This could be achieved by adding two methods: 
+
+Expanding on Groo's answer a bit. One classic solution to this problem which avoids building temporary node sets is to add a to your class. For simplicities sake lets say we make it a 
+
+The biggest problem however is that will return a new object anyway - even if the pool is empty. This violates your requirement: 
+
+And you can easily swap out the concrete implementation you want to test with without having to change or comment out a lot of code. Bugs Your busy-waiting implementation is broken in that you will need to at least call and on because and are not atomic operations - they consist of a read, an increment/decrement and a store. For example if is and and are executed on two different threads simultaneously then the end result could be , or . 
+
+Traditionally methods in C# follow naming convention (as you can see everwhere in the .NET framework). You probably want to pass the and as parameters to the server rather than hard coding them. - what is that? You have to actually go down and read the code and see that it's passed to a timer and you have to know that the timer expects the timeout in milliseconds in order to know what it means. Something like would be more descriptive and take the guesswork out of what unit the value is. Also consider making it a instead (in which case you can drop the suffix). Use the power of Linq. This:

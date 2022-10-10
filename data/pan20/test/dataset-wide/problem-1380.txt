@@ -1,0 +1,69 @@
+With a breadth-first traversal, you only need to look at two nodes to determine the minimum depth. With the current code, you will visit every node and use \$O(n)\$ stack space in the process. In some cases you will have to traverse every node, but my point is that sometimes you can do better. The only trick is that you also have to keep track of the depth of each node. The idea is to: 
+
+Besides being a little shorter, we are creating fewer objects. Let's say there are \$n\$ words returned by , \$d\$ of which are distinct (up to case). The first version creates \$2n\$ string objects (the \$n\$ returned by and these same \$n\$ words lower-cased) and \$d\$ instances of the anonymous type. The second version creates \$n + 1\$ string objects. This might not be a concern, but since it's an easy win, we should just take it. 
+
+These strings are all constants and should be defined at the beginning of your class. They should look like this: 
+
+Notice how all it is doing is passing the call on the the other methods when it is appropriate. onNfbmCommand Let's look at the onNfbmCommand Method. This part is difficult because it contains a very large nested if statement. This makes it hard to think about, so let's see what we can simplify. It seems both branches are actually almost the same, except for the specific message they are sending. In other words, it doesn't matter whether the sender is a player or not. We can use that to our advantage! First lets create a method that sends a message to the sender with a color if it's a Player and without a color if it's not: 
+
+Again, we're determining whether a block is minable as early as possible. This prevent deep nesting if-statements and prevents repetition. This is the list of checks: 
+
+Things you are doing right Immutable objects Immutable objects have a number of advantages: thread-safety, ease of understanding, etc. You've made immutable. Aim to do this wherever possible. Parameters for SQL statements The importance of this can't be overstated. SQL injection is one of the biggest causes of security vulnerabilites. It is number 1 on the OWASP Top Ten. Use et al. (or the equivalent, if you are using a framework) everywhere unless you really know what you are doing (there are specific use-cases for embedding literals in SQL statements) Salted hash for passwords You are using as your password hashing algorithm. Salted hash algorithms are currently considered to be the best choice for password hashing algorithms as they defend effectively against rainbow table attacks. Read here for an excellent, in-depth analysis of password hashing in the modern day. Validating data (at all) Really. Laziness is the source of many a vulnerability. Always go to the effort of validating data from external sources. 
+
+Here you are giving a warning that the configuration is wrong, but are still continuing with the invalid value. Why not set the value to its default value? 
+
+But honestly, using stream/filter doesn't make it much clearer. Why not stick with the standard approach? 
+
+If the sender doesn't have permission we send a message and return quickly. We don't have to worry about permission for the rest of the method! Let's do the rest too. It looks something like this: 
+
+The implementation seems fine. I would change the return type of the method to be a bit more general. Callers don't care about whether the duplicates are stored in a Set or not. 
+
+Defining them early and making them static gives you less stuff to think about, which is always nice (especially when you're reading this code in six months). The next piece of code is too long and contains too much stuff so lets start breaking it up. First let's create separate methods for both of the commands you're accepting. 
+
+It's clear from your code that the length of the sum is at most , so we can do away with the , copying to a , and reversing. 
+
+As @Pimgd pointed out, it is also incorrect. So how can we fix it? Two strings are anagrams if each character occurs the same number of times, so that seems like a likely approach. Let's write a method to count the occurrences of each character in a string. We'll use a to keep track. 
+
+Immutable structs Yay! ✓✓✓ Format provider It seems odd to see a format provider in a constructor, and stranger still to store a format provider for every fraction instance. Think of the memory overhead -- imagine a use case where I perform calculations on millions of fractions, but only want to print the end result. Whoops This will not terminate: 
+
+I would make it clear that is modifying the array by changing its return type to . This could go either way, as it is nice to be able to chain method calls, but here I would err on the side of . 
+
+Either zero or one row will be returned, and this is easy to check in the Java code, as well as being more efficient. (less data to transfer from your database to the application) 
+
+This problem is also prevalent in . In several methods, you the user from the database to check whether they exist, and then do a subsequent with the column you are interested in, under the assumption that the row will exist. Don't do this; simply all the columns you need a single time. Separate concerns Your class appears to have two separate concerns: 
+
+Firstly, I'm not familiar with the JavaFX nor PostgreSQL technologies, so my comments will be aimed more at Java-specific code practices. See also the answers by Vogel612 and Antot. Use "try-with-resources" Java makes memory management simpler, because it is a garbage-collected language. However, main memory is not the only resource your program will use. Other resources are, for example: 
+
+Notice how it doesn't have to care anymore about whether the block is blacklisted, or the current lightlevel, or any of that stuff, we moved all that to the isMinable method. This allows the onBlockBreak method to focus on one thing, and makes it much easier to read! The isMinable method looks like this: 
+
+This comment doesn't add much and can be removed (after all the code says the same thing). Perhaps it is worth mentioning why you are saving the configuration when the plugin gets enabled. loadConfig 
+
+By breaking down the nested if-statement it becomes much easier to think about. Now we can add new stuff and fix broken stuff much faster. onGetLLCommand This one is a bit easier. 
+
+The most important thing we've done is create a seperate method that will check whether a block is minable. By using a seperate method, we can focus the onBlockBreak method on 'what to do' instead of deciding 'when to do it'. The rest of the method now looks like this: 
+
+The remaining functions don't look as nice as I would like them to. I'll post them here for completeness, but there are (hopefully!) cleaner ways to express them. 
+
+I wrote the code above based on your description "remove non-ASCII characters in a text file", but now realise your requirements are more specific: to remove characters outside the range 32-126. It can be easily modified to support that requirement: 
+
+Here is the code as posted in your question. On my machine, I get a time of 0.8s. How much better can we do? Suppose we could cheat and use the following method: 
+
+I don't see the need to check that each ancestor is of type here. If we remove that check, I would write 
+
+Now, has an overload of that takes a starting position. But where do we start searching? We start searching one position after our last found occurrence. 
+
+You can see this quadratic behaviour by running it on the input , for example. In fact, you'll most likely get a . Now in your test data, you have \$10{,}000{,}000\$ elements, but you're only picking random values in the range \$[0,1{,}000)\$. So... you have lots of repeated elements! Let's run it as-is on my computer (I didn't run insertion sort, as it's too slow) 
+
+We can now use this method in the onNfbmCommand method and we don't have to worry about the difference between player and sender anymore. Hurray, that's one less if-statement to worry about! 
+
+It seems all these variables are only used in this class, in which case they should be made private. You are also mixing naming conventions. Pick one and stick to it. The regular Java convention for variables is camelCase, so I suggest using that one. onEnable 
+
+But we're still stuck with quite a big nested if-statement. To get rid of this nesting we can use something called a guard clause. Which basically means we're checking things as early as possible so we can return quickly. So in this case we can do this: 
+
+Something I didn't fix, but you definitely should, is the use of a single list as both a black- and white-list. It is much easier to create two different lists, and check each of them seperately. because now you have to keep thinking 'is this list a white-list or a black-list?'. Conclusion Methods should focus on one thing as much as possible. By seperating code into methods we reduce duplication and increase clarity. Lastly, by preferring early returns we prevent deep nested if-statements, again reducing duplication and increasing clarity. 
+
+Don't retrieve more from the database than you have to In , all you are interested in is whether a row exists in the table. Instead of selecting every column and then counting the rows, you can run the query: 
+
+Don't check the existence of a database row if you aren't going to lock it In you check to see whether an item exists prior to updating it. However, you haven't locked the row in the database. This means that the row might be deleted in the database by the time you try to update it. You've printed a statement to say the row exists, which might not be true. This might not seem significant for your simple example, but could have greater ramifications for a more complex application. If you want to know the number of rows affected by an statement, use . 
+
+Split these into two separate classes. Don't require a separate call to retrieve error messages In , the caller is required to first check the return value to see whether there were any validation errors, and then make a separate call to to get the errors if the value indicates there were any. This is bad for two reasons:

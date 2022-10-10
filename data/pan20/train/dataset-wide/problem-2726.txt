@@ -1,0 +1,75 @@
+By identifying the smallest bits of functionality that still make sense to talk about, we can write or reuse functions that do only one thing, and then compose them using higher order functions into something that does everything we need in one go. Since this problem is dependent on characters and lists, your first stop as a new Haskell user should be to the Haddock documentation for and to learn about what pre-existing functions you might be able to use for your solutions. Tackling the first bullet point, dropping some elements of a list conditionally on their values should jump out at you as a operation. If we look through the documentation for you may realize that represents all Unicode characters—not just ASCII values—but we're only interested in the ASCII letters. Knowing that is an instance of (from the documentation), we can use list range notation to get just the values we care about in a list. I.e., . Instead of expanding our range to include the uppercase versions of letters, we'll next write a function to lowercase our string using from . 
+
+That error case should be unnecessary, shouldn't return any empty sub-lists, but we include it so that if our understanding is incorrect or future changes to the function ever break things we get a better error than a pattern-match failure (and the compiler stops complaining if we compile with ). Now one thing to note is that if a letter isn't present at all in a given string, won't return a pair for it. In your original that's a problem since it relies on a list of length 26 being returned. Since we have which encodes letter value by position though we can write another version that is more flexible. 
+
+This will print a whole pile of text with various passing and failing cases until it gives up trying to shrink the test case. Run verboseCheck a couple of times and eyeball the output, you should be able to notice that it always reduces the failure to something like the following. 
+
+Makes sense, but you should DRY up your concrete factory at least. Forgive me my rusty Java, but something like this: 
+
+You don't have to use x as the parameter name for the lambda. You can call it model with a small m for instance. 
+
+Put the contents, or all of each if and foreach into their own functions. Unit test the functions. Put everything else into small functions too. In the end your main function should read like a small story: 
+
+AFAIK, you won't get client-side validation of VG2, but otherwise I can't see that it shouldn't work. (There is probably a client-side event and a method you could call to duplicate the behavior for the client) 
+
+Property will expose the current value on postback by it self. You could also expose an event on your control that you refire in the ValueChanged event of the hidden field. 
+
+Instead of wrapping the proxy creation in a concrete service proxy implementation, I'd write a concrete service factory instead which in turn uses the ChannelFactory. The service factory class could also use an interface for creation, so you can have multiple concrete factories. $URL$ That way your code can continue to depend on the interface only, and you can change the way the proxy is created without writing concrete proxies. You could also have a "local service factory" which doesn't go over the wire. Usage would be something like this instead: 
+
+I'd use enums. My suggestion presumes you are able to refactor your existing code a bit. If your control can be modified to keep the position value in one property of the following enum type, this will work. 
+
+This might be off topic, but if you use switch statements for more complex functionality, you should read this before going further. $URL$ 
+
+I don't immediately see any efficiency issues with your code. It's simple and concise. But I do notice that you don't follow all the best practices for plugin authoring described here: $URL$ I guess you'll do something else than alerting ten times in production? ;) 
+
+On this line I would change to . That's the only value will ever be, so it's better to be explicit than to be clever. You have far too many comments that have little to no value. For instance, you can assume that unless you're writing an "Intro to Haskell" book your readers will know what pattern guards are and so you don't need to explain what they are or why you used them. And finally in my version below I've cleaned up the alignment with liberal use of whitespace. This is mostly an aesthetic effect but I find beautiful code easier to read than otherwise, and this is not an uncommon style in Haskell code. 
+
+Now more general advice, you should include a type signature for all of your top-level definitions. This is important for a few reasons. One, it acts as a check on your understanding of what your functions are doing, the compiler will complain if your signature doesn't match what your function really does. Two, it serves as a surprisingly powerful form of documentation for readers of your code. And three, it can help the compiler infer more of the types you use within functions without needing annotations. As an example of that last point, look at how you had to annotate the line with . If you had given the compiler enough information to go on elsewhere in your program, it would have been able to deduce that on its own. Here's how. 
+
+I do question the necessity of writing this particular function. Concatenating and should probably be taken care of separately to prepending a tuple to a list. E.g., 
+
+Now we need , which we could also search for. But this is of course list concatenation. There's one more trick you might not find by searching though, so here is when it comes in handy to have read through the documentation for . handles mapping and list concatenation in one go. 
+
+Or better yet, build the initial list based upon content in a dictionary. That way you don't run the risk of having typos in the switch or the initial setup: 
+
+If you do this, you'll probably see some pattern emerge. I can already see two classes, or rather instances of a- instead of one. Maybe something like Strategy? 
+
+Of course you can expand on that by employing the template pattern for the extra parameter settings. I would also look into extracting the parameters to a "parameter object" instead of several parameters. 
+
+instead of duplicating an existing function. ;) (I like linq, but sometimes, what Jeff suggested is actually more readable) But more importantly: I don't see why you should have to dispose model. Do you have unmanaged resources within the model? If so, shouldn't dispose of the unmanaged stuff and return some plain old Clr objects to you as a model? If the model is adapter(s) for SQLDMO or such, could you translate instead of adapting inside ? 
+
+Overriding the property in modifies the behavior of . Which means you've broken the OCP. Besides, what do you expect to be if you have just set it to 10.0? (Does it even compile when you only override get?) What you could do is employ the template method pattern: 
+
+You should use as predicates on your interface and have the implement that interface. By only using , you won't get translation to L2E etc, but will have to enumerate the entire DB table before you can evaluate the . The interface can be mocked, hence unit-tested without a physical db and also used with other ORMs. It's generally prefered to keep and the in a separate implementation. You can pass the to the repository constructor, which can access an internal property on the UOW exposing the . By doing that you can share the same between repositories, and batch updates to several entity roots of different type. You also keep fewer open connections, which are the most expensive resource you have when it comes to DBs. Not to forget they can share transactions. :) Hence you should not dispose the DbContext in the Repository, the Repository really doesn't need to be disposable at all. But the UnitOfWork / DbContext must be disposed by something. Also, ditch the predicate to . Since you return an , and use an for the predicate, you can keep building the Queryable after the call. For instance . It will still be translated to "select [fields] from [table] where [predicate] order by [orderprop]" when enumerated. Otherwise it looks good. Here's a couple of good examples: $URL$ $URL$ $URL$ And here's how I do it: Model / Common / Business assembly No references but BCL and other possible models (interfaces/dtos) 
+
+One question is what goes in for the where we used to call ? Well, ! One more complex issue of style is the usage of in . Top-level s are better represented as guards in Haskell, it's easier to extend guards and their usage is more idiomatic. 
+
+I would clean this up by bringing what you can to the top level (hiding it using a module export list if need be) as new functions. There are also some sectioning/alias changes that I think would make it more readable. 
+
+This is a very dense function though, I think it might be easier to write if you wrap the version using a snake around a primitive list version. Your snakes will presumably never grow so long as to actually cause a user noticeable slowdown between steps due to list processing, so you might think about tossing out altogether. 
+
+Your usage of is redundant in . You can either just drop the word , or write it more idiomatically as— 
+
+From the Typeclass Down This all depends on which tools you're most familiar with. If you're a fan and used to relying on newtypes you may recognize the pattern of condensing a list of values as . Then you just need to write or choose an appropriate instance, and of course if you're really on top of the ball you'll know that one already exists. 
+
+Now all that's left to do is create a . We could accumulate values on our own, but really that's what is for. 
+
+(I would also replace in 200_success's answer with because that is maybe the greatest programming pun I have ever realized.) 
+
+I can't appreciably increase the performance any further, but I do have a couple stylistic notes. provides a function , which makes writing much easier. 
+
+I think there is probably an even more clever solution—and I suspect it uses the reader instance () and a lifted —but I sure can't tease it out. Comments and edits welcome. 
+
+Even though the code is short and pretty enough, I think you'd benefit from reading about the strategy pattern and state machines. Go ahead and google it for a wealth of resources on good programming techniques. You'd also be much more confident in how it works and how to arrive at those patterns by employing unit-testing and test driven development. (JUnit is a good start) Good luck with your assignment! 
+
+More on extensions methods here: $URL$ Inheritance Put these methods in a base class and have the behavior that differs in inherited classes. [edit]Updated to show how the base class can be generic[/edit] 
+
+Entity Framework implementation assembly References Model and the Entity Framework / System.Data.Entity assemblies 
+
+I just re-read some comments and realize you need paging too. Add a private int page, and a private int pagesize, then add the multiplication of those to foods[i] in CreateButtons, and swap foods.Length with pagesize. You can have as big an array as you want then. 
+
+You aren't renaming it either, you're naming the parameter for the anonymous function the lambda expression represents. But if you don't like the lambda syntax, there's also overloads taking the property name as a string. 
+
+This makes closed for modification (cannot change price / individual price), but open for extension (can add to price). (Naming and structure in my example could probably be improved, but it serves the purpose) The behavior is still possible to modify, though, so an even better solution would be to have some collection or set of rules you can add to, so you don't accidentaly override without calling . 
+
+You could possibly swap with . If you can, you should generally try to avoid too many subqueries. At least attempt to indent them properly. You could also benefit from having a look at common table expressions. These can help you group up the subqueries in predefined results for your query. Makes it a lot easier to read. $URL$

@@ -1,0 +1,97 @@
+The truth is my answer isn't really personal. Since your class obviously looks like a signal class, everything I am saying tends to mean "make your design closer to those of existing signal classes like Boost.Signals2" :/ 
+
+What I tried to do is to have a sparse array whose number of elements is strictly equal to the number of elements that are different from , hence the elements that are deleted when is assigned to them. Here comes a small example: 
+
+Now, being a compile-time constant, I wouldn't be surprised if your compiler already optimized things away for you. Note that you don't need to add anything to when is 0 but neither of our power algorithms return immediately when . Adding a branch to skip the operation might be worth trying even though I suspect that the branch will be too expensive on average: 
+
+You may also want to provide the functions , , and if you want this set of functions to be complete and consistent towards the STL. Also, some would be great for . Also, I like the new function syntax which IMHO helps to separate the function return type and its name, which is especially useful when the said return type is long. However, I read that some people don't like it, so it's up to your own preferences. Conclusion Generally speaking, your code was good and it works, which is even better. I've provided a few tips, but there are probably many other things that you could do to improve it. It will always be up to you when it concerns the readability though, preferences matter in that domain :) Edit: ok, so apparently yout example worked fine, but @Barry's answer seem to highlight more serious problems. You might want to accept it instead. 
+
+It seems that you are feeding a to (when you ) which is supposed to allocate instances, not instances. It should be: 
+
+From a design point of view, one thing I would probably do to avoid passing coordinates everywhere is to create at least two classes, and : class Point: 
+
+computes directly . Morevoer, the CPython implementation should be based on the underlying C function ; therefore, this function is safer than the naive implementation since it does its best to avoid overflows and underflows at an intermediate stage of the computation. 
+
+There is not much to be said actually, the concept-based polymorphism seems to be well implemented. You can slightly improve your method by having it the . It will be a little bit less verbose: 
+
+Generally speaking, well-designed algorithms in C++ work with iterators, not with arrays and size or with full collections. By using iterators, you can make your algorithm work with any standard collection. Since you heavily rely on the indices and make math with them, I guess that you algorithm is only meant to work with random-access iterators, but we can still generalize it with iterators to make it work with arrays, , and with trivial changes. Make it work with any random-access iterator 
+
+Note that I am not sure whether the is needed or not, I coudn't find anything about it in less than 10 minutes. You can also create an equivalent deleter/pointer pair for and replace the raw pointers for and in by instances of and . Here, using function objects instead of function pointers for the custom deleter of has two advantages (besides all the benefits of automatic destruction thanks to RAII): 
+
+That way, it even allows users to provide their own custom comparison functions if they need for example a weak order instead of a total order. It makes the function much more powerful without duplicating the code. 
+
+Generally speaking, it's pretty good. However, there are still a few things that I would have done differently: 
+
+First of all, you should pass the by const reference and not by value, therefore, replace by , otherwise you will make a whole copy of the string everytime you invoke the function. Also, you program may crash if the is empty since you're doing . If , will probably be a big number and you will end up with a segfault due to an out of range index. As suggested by Loki in the comments, you could also use a loop instead of a loop in order for your code to look cleaner. Yet another suggestion by Jamal: using instead of (and removing by the way) would be more idiomatic. The type returned by is not required to be but . Therefore, I would rewrite it as: 
+
+It doesn't seem to incur any additional performance cost or benefit, but it makes the code simpler and cleaner. The left partition is always smaller In libc++'s implementation of , the left and right partitions to merge in a sequence could have any size, so the check to know which of the partitions was smaller was necessary to always make the best of the algorithm. However, in our case, the sequence to mergesort is always split in two parts, the first one always being the smaller one. Moreover, an additional trick is used to shrink the left partition, making it even smaller, without having any effect on the size of the right partition. In the end, when is called, the left partition is always smaller than the right one, and makes the check useless. The function can be simplified as follows: 
+
+Rethink the logic The second loop can be rethought as "what happens when is \$0\$ and what happens when it is \$1\$"? In terms of code, with some simplifications applied, it yields the following loop: 
+
+I was writing some geometry-related code again and had a closer look at my function supposed to compute the Euclidean distance between two points (N-dimensional points by the way, hence the template parameter). Here is a simplified version: 
+
+One fun addition would be to write a method that would create the object in-place. That would require to add the following constructor to : 
+
+It appears that if is , you simply don't need to compute and , which means that you can rewrite your code like this: 
+
+Towards a solution? One way to prevent all this allocator stuff would be to take containers as template parameters, like and let it handle all the allocator-related problems: 
+
+Many simplifications have been applied since we know during this loop that . We end up with a second loop in the algorithm almost free compared to the first one, which means that when we add a number with a big highest set bit to one with a small highest set bit, it could perform significantly faster than the previous versions. Also note that since the last loop ends when , then is always is the post-last-loop operation, so we can simply get rid of it altogether. Now, we can observe that the loop updates with until is . However, is set to which means that is updated with while is \$0\$ except for the last iterations. In other words, is meaningfully updated only once since when we reach , we leave the loop right after the next iteration. So we can tweak the loop to kick the update out of it: 
+
+Note that dropping the reverse iterators lowered the iterator requirements of the function to forward iterators, even though the overall still requires random-access iterators because of . Dropping also means that the code doesn't use any C++17 feature anymore and works out-of-the-box with a C++14 compiler. Sure, it could be made to work with even C++03, but that's not the point :) Avoid a gratuitous albeit small pessimization when sorting an The following line will likely perform a few extra operations if we try to sort an with : 
+
+Well, as you see, there is little to say about what you wrote. It's some pretty good code. Great job writing it! :) 
+
+Another way to simplify your code would be to map directly the strings to the fields of your struct thanks to a : 
+
+Since this is a small project, it doesn't matter much, but if you use SDL with modern C++, don't hesitate to create this kind of custom deleters for SDL objects to use with : 
+
+You don't have to define your own function: it already exists in the module of the standard library. And actually, it works with any integer type. Therefore, you can rewrite as: 
+
+And it is now easier to have the base class call methods from the derived type without having to deal with the pointer. Improving If you want to impose more responsibility on and less on itself, you can still add to to allow easy conversions to and from the class: 
+
+At some point I needed to compute the average of a big collection of integers. I knew the size of the collection prior computation, but a naive average computation was prone to integer overflow while repeatedly adding every elements divided by the size was prone to loss of precision. To mitigate overflow and loss of precision (speed wasn't an issue), I came up with the following algorithm: 
+
+Here is the template utility I wrote to detect whether a template has a specialization for a given type, for SFINAE purpose: 
+
+You can use braces to return from your functions. That way, you won't have to repeat long and cumbersome types (DRY, as much as possible). For example, : 
+
+Note that I removed the types and : they weren't used and they prevent users from using an for since only cares about hasing and equality; it does not care about ordering relations. Also, from a user perspective, I think that functions taking a should rather take a instead (as redefined in "Subtypes correctness"): they probably want to use "values of the graph", not "instance of the key type of the hidden underlying map". That would make more sense. Exception safety Your method in does not seem to provide a strong exception guarantee. It may insert one of the edges and not then throw without removing the edge. You should rewrite your code to have the commit-or-rollback guarantee: 
+
+Genericity Your algorithm currently only works for and nothing else, which is a little bit sad: you could make it work for other sequence containers as well. You could improve this by making you algorithm take two pairs of iterators like the C++14 version of : 
+
+and added a function or or something like that to . That allows you to add new means of earning experience points without having to change the class (rewards from quests for example). It makes it easier to add new elements to the game without having to modify those which already exist. Add it makes the name more consistent. 
+
+I would either pick the first or the second, but not the third. That said, you could also provide another overload that takes two iterators instead of a range. It would make the function more powerful since it would allow it to filter parts of collections instead of full collections only: 
+
+A very simple but useful algorithm: rotate the values of a given number of variables in-place to the left so that the first variable gets the value of the second, the second gets the value of the third, etc... and the last variable gets the value of the first one. 
+
+Rethink All in all, your goal is to test boolean conditions on types. Since the query traits have a member, you may want to create a that checks for and (like or ) instead of checking for and . That would make your intent clearer, but it would be more like a template. 
+
+Moreover, most of the standard library that deal with algorithms additionally accept an optional parameter so that you use use something else than to compare two elements. Assuming you have a C++14 compiler, you can use as a default: 
+
+Moreover, in C++ (and many other programming languages, see Python for example), ranges tend to have the end-exclusive form ; therefore, should contain the indices from 3 to 8, and not from 3 to 9. It is easy to alter the behaviour: 
+
+I have problems getting around the way C++ works with locales and UTF-8. This algorithm is intended to take a string (well, a range of characters with a standard string interface) and returning a copy of it with all the characters converted to uppercase according to a given locale. If no locale (ctype facet) is given, the last used locale is used. Is there anyway to improve this code (taking vs ) for examples so that it would be the most useful? 
+
+Since is a fixed-size C array, and should work. If you don't use a C++11 standard library, you can implement it as follows instead: 
+
+Also, I suppose that a shouldn't alter the object being drawn. Therefore, you better all of your methods. You could also be more consistent with the way you use : you inlined 's method but not while it basically does the same thing. 
+
+If you don't like this alias template solution, I would still recommend not to default the template parameters of but instead to write this: 
+
+Like the other suggestions in my answer, it should algorithmically be faster, but compilers are smart and reduced algorithms complexity do not always yield faster code in real world. 
+
+If you want to zero a , you can take advantage of its public data member, which is a good old C array. Then you can rely on the standard library algorithm to set every element of the matrix to ; the algorithm generally does static dispatch at compile time to call whenever possible. Using it should allow you to always be safe but also to be safe when possible: 
+
+One thing that I find odd is that you duplicate a great deal of standard library code to implement your sorting algorithm: 
+
+To generate other integral constants, I plan to add the user defined literals , , , and whoe implementation is exactly the same, only the resulting type differs. Is there a way to improve this code and/or make it cleaner or more idiomatic? Have I missed some potential flaws? 
+
+So far, so good. However, one very common operation is to compare the distances. Generally speaking, when comparing the distances, the is optimized away and the sum of the squares is compared instead of the distance itself. Therefore, I tried to create some kind of expression template to represent the distance between two points, so that users will benefit from both the ease of use and the "get rid of optimization" when comparing distances. Basically, the call of is not done until the exact value of the distance is needed. Here is the class: 
+
+Yet another set of small remarks to add to what @Snowbody already mentioned. I didn't see anything that seemed to be C++11-related in your code so I will explicitly mention whenever my remarks include C++11 elements: 
+
+You are organizing your algorithms into two categories: working algorithms and non-working algorithms; this is rather Manichean. You should try to design something where an algorithm is not "working" but "approaching the expected result better than the other ones". In other words, don't try to find "who works", but "who works better". The best thing you could do IMO is to get all the results for a generation, compare them to see which ones are closer to the expected result and which ones are farther. In other terms, you should give to your algorithms what I would call a "relative fitness" to know which solution is "relatively better" than the other ones. This relative fitness will help you to generate a new generation with the following steps: 
+
+The three classes above are the most simple ones in the world (ok, it may be a little bit superlative), yet they make your functions signatures easier to read and reduce the risk to pass a size to a position parameter for example. Also, you can return them while you cannot return two integers. Moreover, these classes are so small that any modern compiler should be able to inline the code and make it as fast as if you were only passing integers around. Note that I considered the classes simple enough to be s with members. I did not write any method, but methods such as on could be useful. You can also meaningfully overload some operators that will make the code using these classes easier to write and no harder to read.

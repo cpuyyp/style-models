@@ -1,0 +1,47 @@
+A non-CDB is anything that isn't a CDB; that is, any database before 12c, or a 12c database created without the enable pluggable database clause. If you create a non-CDB it isn't Multitentant and is a single-instance standalone like a pre-12c database. 
+
+For experimenting it's ideal, in my experience. Of course, it's unsupported, but as you won't have a support contract anyway that's a bit of a moot point. As David said, PL/SQL is integral to the database, not a separate component, so it is available in the VM image. You get some tools too, including SQL Developer, but you might have less friction running that natively and connecting it to the DB in the VM. 
+
+If you don't want to do an installation directly on you PC, Oracle provide pre-built VM images which contain an 11g database, SQL Developer and other tools; more info here. They are very quick and easy to set up - no DBA knowledge required; can run on any machine and O/S that runs VirtualBox; and best of all, if (or when) you really mess something up you can trash it and start again. Incidentally, not sure why you are being introduced to 10g when it is already out of support. Don't think you'll notice much difference with 11g at this stage though, the basics don't change much. 
+
+Mostly just for my own amusement, you can do this with a materialized view which has a unique index: 
+
+12c's Multitenant model gives you a single container database that manages the resources at operating system level and shares them with the pluggable databases as needed, potentially significantly reducing the total resources the O/S server needs, and hiding/simplifying the management of the plugged-in dtabases. It's somewhat analogous to running virtual machines on a physical server - the physical server needs fewer actual CPUs and less memory than are allocated in total to all the VMs, and the VM management layer controls the balancing and contention of the resources depending on the actual needs and loads of all the VMs. The VMs themselves aren't really aware of that happening, they just use what they need; similarly pluggable databases aren't really aware that the container is managing their resources rather than the operating system. 
+
+The partition containing my Oracle 11g installation began to fill up with trace files and when I went looking for what are these I've found this disturbing post about how to disable the trace file generation. The two related questions I have are: 
+
+That always eludes me when calculating free space in my tablespaces. Will the following query consider fragmented free spaces of object below the HWM value for each TS? 
+
+And that has a cardinality of a few billions, bytes read around 12gb and explodes my temp. However, if I execute the , which yields (always) 7 records, take these records and change the query to: 
+
+(I mean, values hardcoded) Cost, cardinality, and bytes read drop dramatically and the query executes in a few minutes. Now, I have tried to isolate the "small query" in a clause, tried to use an join instead a sub query and nothing... the result is always the same. Why is it this way and how could I possibly prevent it from happening? Maybe worth mentioning that in both cases (fast and slow) the costly part of the query is a FTS on one of the big tables used in the join. Also, I am using Oracle 11gR2 [EDIT] These are the explain plans of the two example executions The bad one. Notice I didn't use , but rather a simple join adding to the clause. 
+
+The query causing me the issue is too big, but the piece that seems to be the core is quite simple, I will try to go with that: The query has an structure like: 
+
+The Question is: I have an index containing the columns , and (that , which it even uses on the first part). Since there is no further joins, why would it be doing the FTS? 
+
+So quite a lot... but as jonearles shows, you still need to pick your interval size, fixed ranges and transition point carefully as the combination of those effectively constains the maximum value of the partition key. Every interval exists logically as soon as the table is created, though they aren't created physically until relevant data is inserted. You can't 'skip' intervals. 
+
+The let you mount and open the database so that it is accessible to users. Clause Use the clause to mount the database. Do not use this clause when the database is already mounted. You can specify to mount a physical standby database. The keywords are optional, because Oracle Database determines automatically whether the database to be mounted is a primary or standby database. As soon as this statement executes, the standby instance can receive redo data from the primary instance. 
+
+If you're really only looking to learn about the development side and have no interest in the administration or installation side at the moment, a quicker route might be to download a prebuilt developer VM image for Virtualbox. That can get you up and running very quickly, and you can connect to the DB running inside the VM from outside, so you can continue to do your development in your current environment. The overview echos what others have said about licensing kicking in once you ship an application (but Oracle licensing is a quagmire, you'll need to talk to Oracle about it if/when you get past playing around): 
+
+I'm not 100% sure about your scenario, but I think you need to add the option to you command. See the documentation for , and the notes on . However, you really need to understand what you are trying to do, and what the command will do, and not dive in blindly. Hopefully this option will have come up on your course - if not then you might be supposed to be looking for something else 
+
+Now if you don't insist on naming the columns LIST_47, LIST_91, ..., the version peforms worse, but it can be easily reused, by changing the 4 parameters, you can even use bind variables there. The performs better, but if you want to use different values, you need to rewrite the query, because you can not dynamically provide the values for the . needs to know the column names it generates at parse time. 
+
+In your case, the backup is created before RELEASE CHANNEL. The autobackup would happen after COPY, BACKUP ... ARCHIVELOG and BACKUP ... CONTROLFILE, but since these are in the same RUN block, why perform the work of creating the autobackup 3 times unnecessarily, when it is enough to perform the autobackup after the last BACKUP command? The size is different because the autobackup contains the SPFILE also. The autobackup finishes after the controlfile backup, so the autobackup contains the entry pointing to the previous controlfile backup, but the previous controlfile backup doesn't know about the autobackup, that is another difference between them. When the controlfile grows, it gets more space allocated than it immediately needs, leaving some empty space in it that can be used later. Because of this, the controlfile and the controlfile autobackup can be the same size (when no SPFILE in use), but their content will be still different. Outdated entries can also be reused in the controlfile to prevent the controlfile growing too big. 
+
+The default value of is , but in your case, connections should go to the first server, and go to the second one only if that fails, so is needed, otherwise connections would be distributed between the 2 servers. 
+
+Mind that I am not asking "how to rewrite it more efficiently", but rather how do I find witht the explain plan what the most costly operation there. Meanwhile I am reading about it, but I'd appreciate some help. 
+
+The good one. All I did here was taking the result of (seven records), and added an to the end of the big query. Same as described: 
+
+Can I simply delete these trace files from my FS w/o consequence ? (I know, if they apeared one should probably look at them.. but won't happen and the database has no production use whatsoever. Going to have to happen another time.) What should be done to prevent it from appearing again? 
+
+I'd use a to generate a list of components a certain customer has and compare it to another list generated the same way somewhere else to detect inconsistencies. The problem is that sometimes a customer can have too many components and exceed the maximum output of . I was wondering if there could be a way to generate a hash from a group of ordered rows, in a way I could use to make the same validation. Sort of: 
+
+I am running a query in some big tables, and although it runs fine even tough is a lot of data, I'd like to understand what part of it weighs on the execution. Unfortunately I am not too good with explain plans so I call for help. Here is some data about these tables: 
+
+(That would be in Oracle 10gR2) In short, I want to know how much (the total, over and below the HWM) space does Oracle have to keep inserting things. If my query is wrong, can someone provide one that does that? pd. I also have other messy queries summing the segment sizes of objects, but then again, I do not know how all this wraps together with fragmented space and HWM. An explanation here would be highly appreciated.

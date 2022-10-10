@@ -1,0 +1,57 @@
+In the first call, you're copying exactly half the list. Slicing a list is linear in the length of the resulting slice. So this alone is O(n/2) = O(n). Due to recursion, you get O(n/2 + n/4 + n/8 + ...) (still O(n), though). So your algorithm is actually linear due to copying. However, this is fixable. Instead of slicing storage, pass in offsets (/), calculate . Then recurse using or . However, instead of re-inventing the wheel, why not look at the Python bisect module? $URL$ (I'm intentionally pointing at the source, because I'm going to copy the code, not call the module) 
+
+Seeing patterns So now the movement is cleanly separated outside the blocks, as well as the determining of which of the moves to make. But we still have 9 conditionals, but luckily they are quite short, and we can start to see patterns. To 'see' the patterns, you need to think about the physical form of the game a bit. When is (move up) part of the list? Well, always except for when (That is, always, except when the hole is at the top). Similar statements can be made for , and . 
+
+Ok, you have written just a few testcases, but I think you see my point: you'll miss the errors. Better would be just 
+
+Which is much better. Getting the (random) element. Defaulting You already mentioned you were not sure about the defaulting. Important should be the question 'why the defaulting'? From what I can see, the only reason for the defaulting is the recursive algorithm you use, which is a recursive bisection algorithm (or binary search algorithm). It would be good to separate the bisecting from the choosing. 
+
+Ooh, see how they now have almost the same body? All that differs is the calculation of the radius. Let's move getting the radius outside of the construction of the circle. 
+
+You have a race condition! But not just the one you expected. Let's take out the 'beef' of the algorithm, and make something simpler: 
+
+(Note: I myself prefer using a double underscore instead, but convention is .) Encapsulation Not sure if you are at the level of classes yet, but I'd suggest learning about them. Instead of 
+
+It's a bit hacky, perhaps, but it should lower the number of queries, and as such improve results. [edit: I just found a better way] Using ($URL$ you can rewrite it a bit: 
+
+Your code is doing too much in the same place. First, it converts the numbers to lists of digits, merges them, and finally builds up an integer again. It would be good to separate this into multiple functions. In pseudo-code: 
+
+Another point of incorrectness In , you check that the length is > 2, but then you filter on . This should be the other way around. A tiny suggestion. Floating point arithmetic is challenging for problems like these. Maybe look into the fractions module? 
+
+Let me start by saying that there's nothing wrong with your approach, and almost nothing wrong with your implementation. Just two things I would like to remark. Use of . Because of your use of , you actively prevent subclassing. In Python 2.7, you're supposed to spell the name out long: 
+
+My first suggestion would be to use some extra functions. However, let's look at it in several parts. First, the getting of the class number. You have 
+
+Then, using , it will run your the parts prefixed by , and check the output matches. I fixed the example, because the tie-resolution was not done properly in your example. 
+
+By using instead, everything is fine again. Subclassing list You're subclassing list, which causes to make a shallow copy of the supplied iterable. I myself would prefer composition: 
+
+I'm doubtful of you using for this. But I don't see a better builtin for it either. But I see a lot of logic here which I'd like to separate a bit more: 
+
+As for your replace-loop: it could be simpler. Most often you don't need to iterate multiple times, because replaces all (non-overlapping) occurrences. For the outer loop, in other languages I would use a do-while loop. 
+
+In this case, there are 3 valid moves. Moving up gets chosen with a probability of 50%, left, do-nothing and right would each be chosen with probability 16%. In a fair case, I'd expect all three to be called with about 33% probability. Improving? Where to start? When looking at code, there are two ways I consider if it needs improving. Sometimes I try to look inside-out, and sometimes I look at it from a distance and think 'no'. This is the second case. I want to get rid of the huge -tree. To do that, you need to consider what each of the branches is doing. And because all branches differ (a bit), that is actually not that easy for me. Making it more fair. However, thinking inside out is still the way to improve. Because the first thing I want to fix is the unfair distribution and the no-op moves. So let us take the one with the unfair distribution, and try to make it fair. 
+
+This is not as expensive as a database hit, but it's still someplace that might need some optimisation, or at least a bit of a refactoring to make it cleaner. 
+
+First of all, I noticed that is valid, but is not. I would recommend also checking the bounds in the first case. This can be done by dropping the first special case. On the other hand, the downside is that it never makes sense to call with an empty list, as no argument would be valid. I think that's ok, because the concept doesn't make sense in this case. How you determine and is quite clear, but I would propose using from for this. 
+
+Here, for all the positions on the screen, you're looping over all the drops. Ideally we'd turn that around: 
+
+In general I would recommend only using for functions that are side-effect free. Another thing I'd like to remark is where you build the . You do it inside the function, building a new class for every task you add. Please move that code outside of the function . 
+
+string formatting Probably not your biggest concern, but if you ever want to make translation easy, start now by using Python string formatting. Instead of 
+
+If you do want to have pushToTop [] n work, my own suggestion would be to replace 'Nothing' with 'Just xs' in the above statement, so that the handling of index-out-of-bounds is consistent between and . 
+
+To add to Gareth Rees's excellent comments, I'd like to suggest the following: Replace the top/bottom lists with a list-of-lists. That way you can use the same implementation for when you are looking for a region in multiple aisles. Furthermore: don't bother with the stalls, just make in the list mean: no occupant, and a value mean 'occupied by …'. 
+
+First of all, the function name is too generic. Instead of , you should use or something similar, describing that it calculates the CSS class based on status code. Second, why is this function responsible for getting and parsing the status code? It should be passed directly. Third, what do the conditions mean? The conditions probably represent error conditions. Why not make that clearer by calling a function ? Taking these into account, you'd end up with: 
+
+Now, I see how both the branches of the end with the same: the (and a comment which I'll ignore ;) ). 
+
+Moving same lines out of if Notice how the last two lines always read the same? Let's move them outside the blocks. 
+
+(In reality I'd rather yield the results instead of adding to a queue. Anyhow, I'm shelving that for now) takewhile vs slicing. In the you write takewhile. By the loop above, you already know that will be all but the last value. So, write 
+
+What do we need to do to make it fair? Make sure that it always does a valid move, and makes all the moves with an equal probability. How can we do that? Let's just enumerate the possibilities. We currently have (expanding the to all its expansions)

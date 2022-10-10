@@ -1,0 +1,77 @@
+P.S. works fine for owner, group and permissions, but not for SELinux. If the partitions are already mounted, puppet complains: 
+
+If the NS server don't have an A record how can BIND find out their IP address in order to query them? It can't, so it can't resolve domains served by them. On a side note I've run a test myself and I've noticed that I can resolve 10gb.co.il using the DNS servers of my ISP, but I can't by running (this uses the root name servers). Your issue is caused by an improperly configured domain. My guess would be that the DNS servers of my and your ISP have the address of 10gb.co.il in their cache, while the current setup of the domain is incorrect. 
+
+then start Apache. Note: On the Fedora Linux distribution and probably others using systemd, some services don't see the mounts done after they were started because of some security features enabled by default. For more details read systemd for Administrators, Part XII. Also if using SELinux, the files need to have a proper label like for example. 
+
+You didn't specify the transport and the default transport is tls. The documentation regarding transports also says this about tls: 
+
+When you do a reverse lookup of your IP address, does the name that is returned resolve back to your IP when looked up as a forward address? For example: 
+
+I recommend reading the revision number from a file rather than reading from an environment variable. There isn't an easy way to ensure that your current environment is the same a the environment that Apache is running under. Also this ensures that the revision number in the php code survives reboots, etc. You should set Subversion to ignore the svn-revision file so you aren't checking it in. 
+
+You didn't explicitly state how Subversion is served, but based on your tags, I'm assuming Apache. Using Apache 2.2 to serve Subversion with authentication by AD is pretty simple. In your Apache config, you need to add the appropriate Auth parameters to the location block for the repository. For example (restricted read and write access): 
+
+From reading your answer it sounds like this is a client-side issue. Subversion does not support client-side hooks (from what I know) so I would recommend writing a small script similar to the following to perform your update and also update the revision number in a file. 
+
+I want to manage the mounted partitions from puppet which includes both modifying and creating the directories used as mount points. The resource type updates just fine, but using for creating the mount points is a bit tricky. For example, by default the owner of the directory is root and if the root (/) of the mounted partition has another owner, puppet will try to change it and I don't want this. I know that I can set the owner of that directory, but why should I care what's on the mounted partition? All I want to do is mount it. Is there a way to make puppet not to care about the permissions of the directory used as the mount point? This is what I'm using right now: 
+
+Not exactly an answer, but I would recommend using SFTP instead of FTP. It's easier to setup given the fact that every box comes with the OpenSSH server and client. It's also more secure and SSHFS is nice bonus, although I don't know if RHEL has support for it. 
+
+Make the file immutable with chattr i.e. . Then no one will be able to change it, not even root, unless the attribute is unset. Note that only root can set or unset this attribute. 
+
+You need to include all of the parent directories down to the desired directory before using the exclude rule. For instance, I use the following in a backup script: 
+
+You may need to talk to you AD administrator to set up a service account for Apache to use to connect to AD (if your AD requires you to bind before performing a search). If you wish to allow anonymous reads while requiring users to authenticate to write, replace the line above with the following: 
+
+I strongly recommend against having Apache run as any real user. If an exploit is found in your sites, a malicious user can read or alter your personal files. WordPress will run fine with the files being owned by your user account and with Apache running as a different user. There are a few files and paths which you should to the same group as the Apache server and make group writable. That way Apache can make the necessary changes without the risk of a user having full access to the rest of your files. You should read the WordPress document on Changing File Permissions. 
+
+There are definitely more advantages and disadvantages than I have listed, but those are the ones that come to mind quickly. At work, we use instance store for all instances unless there's a very specific reason for having an EBS instance. All EBS instances are duplicated in every available availability zone within a region to help ensure some instances continue running in the event of another EBS outage. I like to draw the line at customization: if an instance needs a lot of custom work to function, then use EBS, but if not, use instance store. I define custom work as tasks that need to be done by hand and are not automated. We use Puppet to deploy instances from scratch using the stock Ubuntu AMIs. I wrote a blog post about how we are able to take generic AMIs and place them in service without user intervention. If you're going to use AutoScaling or similar technology, I highly recommend investing in automation, even if you will roll your own AMI, as there will likely be changes you'll need between AMI builds (code deployments, etc). Regarding building instance store AMIs, there are a large number of tutorials available online showing how to build instance store AMIs, as instance store has been around a few years longer than EBS. The AMI tools are available at $URL$ . 
+
+prints a relative timestamp upon entry to each system call in case it's needed later for extra performance analysis. traces child processes and it might not be needed. The output looks something like this: 
+
+The link needs to be created where you're building the RPM and it also needs to point where you're installing the RPM. Before creating the link make sure that the destination directory exists, i.e. . You can use or for this. 
+
+Enable the modules. I suggest starting with the corresponding file underneath the directory (I used ). Prepare the kernel for modules: 
+
+In case it matters, I'm using puppet-0.25.4-1.fc13.noarch.rpm and puppet-server-0.25.4-1.fc13.noarch.rpm. 
+
+This will delete all the jpg files from , which haven't been modified in the last 7 days (168 hours). If you don't care about the case of the filenames use instead of . Here's a correspondence between the parameters of forfiles and the parameters of find: 
+
+Remove from the boot command line and start in text mode (runlevel 3) to have a better idea of what's going on. Then consider reporting a bug. P.S. It seems that someone else has already reported this bug. 
+
+If you use Postfix, you can set the mailbox_command option to run your Python script on every message, but I think you'll have a lot of functionality to implement. Another solution would be to use procmail for local delivery and configure it to send (pipe) the messages to your Python script. This autoresponder example might help you. The advantage of this solution is that your script can be simpler. There's no need for it to be a full local delivery agent. 
+
+One tool that you can try is sshfs (you can use this from the command line without needing a GUI). You do not need to do any setup on the server side. Connecting from the client is as simple as: 
+
+If the name for the reverse address does not match the forward address, it is likely that the name you see was the name assigned to your IP address when the IP was used by a different customer of your provider. If the name does match, you should talk to your provider and make sure something else isn't going on. If possible, please revise your question with some examples of what you're seeing. 
+
+Rsync can be confusing about selective copies like this. I use the following to do the task that you're asking for: 
+
+There are some advantages and disadvantages to EBS and instance store. In general, I recommend instance store over EBS for most scalable applications. Some advantages of EBS: 
+
+What do we need to do to make the disks be recognized? Any other things that we need to try? EDIT Here is the output of : 
+
+I recently had a similar problem on a Debian Lenny box that was set to UTC when I wanted localtime. First you need to copy (or symlink) your correct zoneinfo file from to . For example I ran on my system. Second you need to edit to reflect your timezone as well. On my system, the file states . Once both of those files are taken care of, it is a good idea to restart crond to ensure the proper timezone is picked up. 
+
+I have just tested an automated kickstart install (driven by cobbler) and it works fine for me. All I had to do is press Ctrl+Alt+F2 (virt-manager has a menu for this). The only problem is that the shell is not avaialble right away, you have to wait for the installer to reach a certain stage. Regarding debugging, you might find the Anaconda logging page helpful. 
+
+This sound to me like a DoS attack, which means that you can't do anything except ignoring the attacker which you've already done. You might also want to ask your ISP to block him. As for tcpdump still seeing those packets, this is normal. They still exist on the network, but the kernel makes sure that a regular application doesn't see them. 
+
+Most Unix programs don't use locking or when they use it, it's not mandatory, so I doubt locking is stopping your log from growing. More likely the SCP transfer is slowing down the log writing. 
+
+CentOS doesn't have as many packages as other distributions and some of them are old, too. Add the EPEL repository and see if it has the necessarily packages. The python-reportlab and python-psycopg packages are available in the RPMforge repository. I would recommend installing packages from this repository only if they're not available in CentOS or EPEL. This can be done with yum-priorities. 
+
+After many failed attempts at verifying BtrFS on the server, I decided to try this same test using an old laptop (remove the RAID card layer). The initial attempts of this test using both Ext4 and BtrFS on the laptop fail (data not TRIM'd). I then upgraded the SSD drive firmware from version 0001 (as shipped out of the box) to version 0009. The tests were repeated with Ext4 and BtrFS and both filesystems successfully TRIM'd the data. To ensure the TRIM command had time to run, I did a before performing validation. One thing to note if you're attempting this same test: SSDs have erase blocks that they operate on (I don't know the size of the Crucial m4 erase blocks). When the file system sends the TRIM command to the drive, the drive will only erase a complete block; if the TRIM command is specified for a portion of a block, that block will not be TRIM'd due to the remaining valid data within the erase block. So to demonstrate what I'm talking about (output of the script above). This is with the test file on the SSD. Periods are sectors that only contain zeros. Pluses have one or more non-zero bytes. Test file on drive: 
+
+Use the EPEL (Extra Packages for Enterprise Linux) repository. The easiest way to enable it is by installing the package. Here's how if you have RHEL 5 x86_64: 
+
+You could try making it harder to reset the permissions of the root directory by making it append only with chattr: 
+
+This could be caused by hard links which means that the files you deleted still exist under other names. To find them, run . 
+
+Adjust the and parameters as you like. The is needed so that every occurrence in a line gets replaced, not just the first one ( stands for global if I remember correctly). You can also pass a value to to make a backup. 
+
+The manual for ST32000641AS (alternative link) says that the drive has 3,907,029,168 guaranteed sectors, while the specifications for WD2003FYYS (alternative link) say it has 3,907,029,168 sectors. Therefore the drives have the same capacity. 
+
+Short explanation of the AKW one-liner: is the PID, is the timestamp, is the remote port and is the remote address. The advantage of this solution is that root is not required if the server runs under the same user. The disadvantage is that all connections are counted, there's no filtering, so it won't work if the application listens on multiple ports.

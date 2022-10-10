@@ -1,0 +1,109 @@
+(Seems like I'm able to post detailed answer here today... let me know if this has helped you) Here is a test output for you... 
+
+Also loading into/from memory tables is much faster but based on size you've mentioned I suspect we have sufficient memory (you might see table-full errors and issues due to that...)! Anyways, try following commands and share the speed results: 
+
+The behaviour is correct and it is incorrectly observed as per update from the questioner. This got verified by further debugging the dumpload adding a debugging select syntax after the erroneous SQL in the dump. 
+
+You can replicate Transaction to Reporting without any issues are it's "independent" but Reporting to Transactional may cause issues depending on your foreign-key settings. You can easily replicate single table with the help of replication filters (in your case replicate-do-table or replicate-wild-do-table). There are plenty of blogs for replication setup instructions, say this one from Percona. 
+
+Use mysqltuner for some quick suggestions. At a glance it's easy to tell that you will be alerted for high memory allocation!! Your innodb-buffer-pool is much higher WRT available memory. About high CPUs, what does your processlist or slow query log tells you? Sort or long running queries, using tmp tables? Queries not using indexes? Make sure you have well indexed tables for respective queries. Use to review and optimize your queries. 
+
+ALL privileges includes "ALL" of them except "wITH GRANT OPTION"... Thus above command will let admin user create the database too. You might want to show the error that you're getting. Note that in above GRANT you have not specified the password for admin user too. Update: You should be able to do following: login as root and create user: 
+
+As you mentioned of 5.6 i guess tables are Innodb... Where we have PK stored as clustered index. The rows are stored in an index or say leaf node of the PK index is data itself. Secondary further contains the PK key columns as well. So a long PK key => longer Secondary index (WRT size). About large indexes, you might need to look out for duplicate indexes. Also one thing to make sure is having large enough innodb-buffer-pool to make sure indexes are in memory for quicker access. Refer: 
+
+Try to locate my.cnf or my.ini file. You will see config items and importantly datadir. See if that location exists. Default installation layouts are explained here for you to look as well. You can search your computer for *.ibd/*.myd/*.frm files and look into respective folders. As far as you can find the datadir (data) you should be ok to reinstall MySQL! (Yes there are some version differences issues but let's find out mysql data first) 
+
+You want final answer as because both "v" and "d" are "n" at-the-same-time (for id). If this is right requirement then below query should work. 
+
+and I think we have seen a lot of with-power-comes-responsibility thing! Do you know SUPER grant has made them introduce a new variable to avoid accidents -> super_read_only. So if you think "dbuser" shouldn't do what SUPER user can do, revoke it. Ideally you should give the least priv. 
+
+Innodb is rather advanced and complex engine than myisam. It is a default storage engine for reasons... you said the system is upgraded from 5.1 to mariadb 10 (eqv to 5.6). So the upgrade path was mysql 5.1 -> maria 5.5 -> maria 10? 
+
+Consider the source database name is databaseA and destination is databaseB. Step-1. Take dump of tables to be loaded to new host: 
+
+Find all my.ini file Replace no-beep from everywhere (not only client) 'coz there is no such option. But to do a temporary fix you can use as follows: 
+
+How about setting a slave replicating only tables of choice? Did you know about mydumper/loader? That can take faster dumps than mysqldump. Are you backing up your data daily? If yes then why don't you setup an automatic nigtly restore process that restores your dev with latest backup? You may also choose to play the binary logs from production and discard other tables: 
+
+As such not a part of question but out of intereset, you can also list content of the 32G dump using mysqldumpsplitter: [More how-tos] 
+
+See the MySQL documentation or a Step by step replication setup blog if you need to review. If these doesn't help please share the output of (as such it appears connected) and also output of of master/slave. Mainly you need to worry about server-ids, replication filters (replicate-to-db/table etc) 
+
+Not sure if you just want to create a read replica clicks away from you? If not then I guess you need to restore from a dbsnapshot. You can: 
+
+You can use pt-table-sync with --verbose to generate the differential sql and verify the data from there. Whichever version you feel is correct you may choose to keep. I'm not aware of any tool which will merge, as such what will be the merge condition upon conflicts? Writing on both nodes in master-master can cause bad bad data! I'd try to avoid that. 
+
+Well that appears the correct way as far as you're using right path to binary mysqldump! Can you confirm if you can login (and it behaves well?): Not sure if there are some security issues! Run the command prompt as administrator and attempt to run the mysqldump again. 
+
+No. This is not possible using command. All you can do is write a procedure to grab the table & column-name. Get the column definition from information_schema. Create alter-table-modify-column syntaxes & exec... Something like following: 
+
+If you are interested you might want to refer this blog post which explains various use-cases for loading delimited data to mysql. 
+
+If you have binary logging enabled, you can analyse your binlogs to identify types and number of statements executed. 
+
+You should rather monitor your slaves for replication lag or if it's actually catching-up / connected with master or not! You may simply write a shell script to look at io_thread and sql_thread values and alert if they're NO. There are already many scripts available for reference. You can use Percona Monitoring Tools's pmp-check-mysql-replication-delay / pmp-check-mysql-replication-running. You may google for setup instructions to setup with Nagios or setup with Zabbix or this. Btw, 7 days worth binary logs (with backups) are sufficient but again depends on policies! If you are to avoid disconnects due to transient network issues, depending on which MySQL you're on you may want to set combination of master-retry-count / slave-net-timeout / master-connect-retry. (but it's better to fix network right?) 
+
+Updated answer as per updated question: I'd try to understand your question. You have following table: 
+
+You might need --base64-output=DECODE_ROWS for row based binlog format. You can analyze your day worth of binlogs or use --start/--end options to select time. Check out this and this blog posts. 
+
+Notes: - Here HOSTNAME is the hostname/ipaddress of the destination Just to add, if your databases are on same machine, (which is not the case here, but still saying) you can use RENAME operations to move tables: 
+
+--> use --no-create-info to dump only data. (onlydata.sql) --> Have standard table definitions ready and intact for dev server. (definition.sql) --> Refreshing dev => load definition.sql and then onlydata.sql 
+
+If this condition fails, you can conclude your backup is a failure... Another mode is to using which should tell you "Backup completed successfully" So if only worry is if-it-was-successful, then you can use above methods to determine. Xtrabackup is physical while mysqldump is logical, which is mostly a decisive factor in choosing one over other. In case you need to restore individual table/database, with mysqldump it is possible but not with xtrabackup (unless you do complete restore). Physical backup is fast comparatively but also asks for frequent restore tests like data corruption is not easily identifiable (I think so) for hot backups. There are more pros and cons you can consider looking around but if you think this time is too much and you have identified your restore requirements fit in with Xtrabackup, go with it. Here is holland-xtrabackup setup steps if you'd like to configure it that way. If you're worried about speed and still want a logical backup, go with mydumper. If you're fine with physical backup go with Xtrabackup. 
+
+Also your tests you performed contains multiple parameters for comparisons. You might also want to test with sync_binlog and flush_method changes. Mainly consider variable optimizations for better performance. 
+
+I have never tried but I am quite positive about editing index file. You can add filenames to index without restarting. That said you actually don't need to. You can copy over the files to slave and play the sql. Generate sql using mysqlbinlog utility. 
+
+After all these slave will have the "latest" data. Assuming that that's the only thing we have got: - Restore your master from slave's backup. - Reconfigure replication from master to slave afresh. For next time onwards: 
+
+If you are only needing data that's changed since last backup, and your tables does have modified date as one of the columns (consider to add if you can to ease the process?) you can: 
+
+You do not want writes to be replicated from A to B then A better be slave of B, master. again, to complicate things you can use master-master with replication filters but let's not get there if you do-not wish to. That said, writing on slave is sort of risky business where you're going to "accidentally" write on databases being replicated from master and that's not good! As long as you're making sure you're only writing to slave-only databases it should be fine. You should choose to create dedicated users for such activity. You might also want to wonder: - What about backups of master data? - What about backups of slave data? just saying... but yea to answer your question go with master-slave. 
+
+So, make sure that the tables which are not "visible" have proper permissions for mysql to access it. Also, when you say you moved "database" do you mean all-databases-on-server or single-database? If your database have innodb tables you cannot move them like this! 
+
+"I know its different for every application" 15G is not a large data-set unless you tell me it's a single table! Your data can be contained in innodb-buffer-pool and performance should be better. Importantly, you should make sure your queries are well written and tables are indexed correctly. (log-queries-not-using-indexes) I'd start with 1 Sec and review the amount of queries getting logged and work on improvements. long-queyr0time is dynamic and you should be able to play with it depending on load it generates. 
+
+Is your slave of older version than master? Say 5.5 or less. As you say fails on slave => you're on older slave and that is not required on slave as well. 
+
+In case of logical backup you can extract single database from mysqldump and put it in a different database. 
+
+InnoDB is performing well and it does have fulltext as well (though performance is a bit of something being worked over there.) InnoDB is even a default storage engine in latest MySQL versions. If you really really need performance from FULLTEXT go with MyISAM (Note that, you have FULLTEXT in InnoDB and you can try it.) is (default) good choice. There is one more reason to avoid InnoDB in favour of MyISAM is possibly due to "Storage requirements" (it takes 3x space) but that shouldn't be a reason actually. There are more reasons to avoid MyISAM than to use it. Go with . (As every one here seems to comment) 
+
+--> You might consider setting up a special slave on which you make your changes and then do a full datadump. --> You can prepare SQL commands to run after dump load finishes as follows: 
+
+Server is responsible to purge their own file. Guess what happens if your master has two slaves and one of it catches up faster deleting logs required for second?!! So yes expire_logs_days is the way to go. Set that value wisely and let master do its business. That said why do you want to purge logs? You have command but I'd still let purging upto master unless disk is critical. If you want it, then you can script out the manual purging logic: Check all slaves have caught up to latest Purge a logs before the exec_master_log_file. In my opinion this is absolutely unnecessary unless there some odd requirement that u just can't think about... 
+
+I'd agree with comment that asks for "purpose" of the mysql instance though these days you get decent configuration in-built provided with my.cnf. You should look to use them, my-large/huge/medium.cnf etc... I see you have query cache and this link will help you understand best value for it. Checkout this blog post for configuring few important parameters. Finally I'd also like you to review this config wizard. Again... none of this will give you exact and perfect config... Be ready to monitor and make according changes. 
+
+This will extract your table in "out" folder and then you can import that to the workbench. Source: MySQLDumpSplitter 
+
+"Nov 11 09:05:14 localhost kernel: [ 5931.834129] Out of memory: Kill process 6761 (mysqld) score 233 or sacrifice child" You are crossing system memory and then kernel is killing highest user of memory - in your case that'd be mysqld. Consider revising mysql global and per-thread variables in order to limit total usage under control. You may use this procedure to estimate MySQL memory usage or you might want to fill in here to check the usage details. Also... Swapping is not good for MySQL, it's better to have swappiness set to 1-10 or 0 depending on your kernel version. Refer here. 
+
+A1. How large are the databases? If you need logical backup, you can use mysqldump (--single-transaction, --master-data are some options you need to review and use). For speed, you want to go with mydumper/myloader tool. It will also make sure of taking individual dumps. Advantage here is you can grab the database you need to restore without having touch other databases of the instance. If you choose to go with mysqldump, you still can use mysqldumpsplitter to extract the tables/databases of your choice to export from full dump. Alternatively, you might want to use the physical backup using Percona's Xtrabackup which provides hotbackup. Here is a post to setup Xtrabackup using Holland framework. A2. Backup from Active Master? No! If we have replication failure on read-only master than priority is to get it fixed and then take the backup. But try to avoid backsups from Active Master. It's also advised to make sure your backups are stored on a different location other than read-only master! A3. Binary log backups provide point-in-time restore. You can store binary logs to a separate partition and have it backedup/snapshot or scripted to copy files to a separate location. Check out these two articles: 1 & 2 Hope this is helpful!! 
+
+The ".frm" file holds table definition. You might want to check mysql file-types info. Usually when you move data-base physically do following: 
+
+Nice! Now the case is you have lost your datadir on master and some how you have the master log position!! Care to tell us how? Anyways... In such case we will have to reconstruct the master from slave. But because your slave is behind master (not caughtup with binary logs) we need to fix that first. Backup your slave before working The slave co-ordinates are mysql-bin.000040 and some-log-pos... This means that when your datadir was getting "lost" slave was still lagging behind. Now, if your slave has fetched all the required binlogs (relay logs) from master before master went down then just start sql thread and let it catchup. On Slave: 
+
+No. For ibdata files you have variable you can specify one or more but not for individual table spaces. 
+
+AFAIK it isn't correct way to pass argument. It should not be accepting that argument. Never done that; importantly it isn't even necessary for default location!!! 
+
+If you check kernel log, you should see OoM Killed messages.. Kernel will usually kill the largest offender which is MySQL in ourcase. 
+
+You can setup second mysql instance with replication. If you need to "copy" only during certain time period, you may choose to cron a script which will start and stop replication according to the time. Again you can only choose to replicate-do-db certain databases as well. 
+
+Note that APP2 will read eventually consistent data and it will have to handle writes to DB1 itself. (I do not tend to like master-master replication setup and writes to both ends due to past experiences but it is also an option.) You said no links but below this link includes steps for setting replication, you might want to refer. 
+
+So, "Does innodb_flush_log_at_trx_commit = 1 wear out SSDs more than innodb_flush_log_at_trx_commit = 2?" -> Regardless of disk type, value of 1 is bound to do more work (disk ops) than value of 2 and hence the performance difference. 
+
+So here I'd suggest to implement triggers on the tables you require the logging. It'd create additional load to the system but if that's the requirement... 
+
+Tables are InnoDB: If we have InnoDB tables in the picture then things are not as simple. Considering you have Xtrabackup. You will have to import tables one after another. Refer Importing-Exporting-Tables-using-Xtrabackup OR how-to-recover-a-single-innodb-table-from-a-full-backup (For this to work you should have used xtrabackup as backup option.) Splitting mysqldump If you want to extract only one database from full mysqldump then you might want to extract single database from mysqldump and load it (saves you from loading full dump). 
+
+Confirm that the meta_value and term_id are indexed in both the tables. If not, indexing them should be faster.

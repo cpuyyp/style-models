@@ -1,0 +1,73 @@
+Programmatically, it is stored in the registry. You can see this here: $URL$ However, you'd typically specify paths, names, sizes etc in your CREATE DATABASE 
+
+Committed transactions are never rolled back. It's how all RDBMS operate, on ACID principles Now, there are some different cases where it may look like this rule has been broken. But it hasn't. Before we look at these cases though, different user sessions do not share a connection. Each user/client has one connection to the SQL and all are isolated from each other. Connection pooling does not affect this. Savepoints You can SAVE a transaction and rollback to this savepoin, That is, you can partially commit/rollback if you use savepoints but I've never seen anyone do this in real life code. I won't expand more. Nested transactions You can nest transactions but they don't really mean anything Simply put, SQL Server does not really have nested transations even if @@TRANCOUNT can be higher than one. 
+
+Using INSERT...WHERE NOT EXISTS (As mentioned in comments) will use the index, so will be efficient anyway. There is no benefit in dealing with exceptions unless you have a real need to. 
+
+The query will be executed every time. SQL Server does not cache results. Proper paging won't be implemented until SQL Server 2011, but until then your options (as you identified) are: 
+
+No experience of this and don't know of any alternate reference, sorry. I tend to stick with DMVs because DTA you needs db_owner. On prod (as a Developer DBA, not a Production DBA) I don't have permissions to run this... 
+
+DELETE does not reclaim space, it deletes rows. Space can remain allocated for several reasons, 3 of which are: 
+
+One approach is to use SQLBulkCopy class. This allows you to insert many rows in one go from some source DataTable or Reader 
+
+The SQLCat team ideas and articles are sometimes pitched at edge cases that most folk will never see given their load or database size. Saying that, the ideas they give there are common techniques to improve performance (eg change OR to UNION) Temp tables have some issues around stored procedure compilation etc, but don't confuse these with table variables (the SQLCat articles mentions this). Also, temp tables should be local not global to separate processes don't affect each other Personally, I use temp tables quite often to break queries down: but not all the time. If I can do it in one SQL statement that runs well enough (for it's frequency of use) then I'll use that. In your case, I'd identify a few problem queries and see if using temp tables suits these better. If you can't see any problem queries then do nothing. 
+
+Note: if you come from MySQL, do not make assumptions about SQL Server. It (like other RDBMS) are more complex and mature then MySQL in many respects 
+
+If the same user owns both table and stored procedure (usually dbo), then permissions are not checked. This is known as "ownership chaining". So you could have a DENY on the table and it won't be checked. db_datareader makes no difference: it isn't checked. If the owners are different (and note that it's the owner of the schema that matters) then rights will be needed. See the MSDN example above. Anyway, you need to catch the errors to make sure, either by TRY/CATCH or via SQL Profiler 
+
+"it depends" Using a table variable or temp table with requires overhead of creating populating this object However, if the you require multiple processing steps then this is small compared to querying the same data over and over, especially as the query gets more complex. Also, for multiple steps, using a table variable or temp table means working on the same set of data for all steps. Typically the underlying data usually changes as a result of other processes. Finally, have you tried both techniques and benchmarked for your real situation? I use both approaches depending on all of the above factors. Sometimes it doesn't matter of course... 
+
+Until SQL Server supports sequences (next version "Denali") then you'll have to have a common table. However, if I understand you, I think you're looking at the subtype/supertype pattern. A sequence would be nice but if you designed using, say, Object Role Modelling then you'd generate this pattern/schema Basically, you have a common "Contract" table: 
+
+Postgres supports foreign keys to unique indexes (a primary key is a special case of a unique key). From the documentation 
+
+Yes, it is there correctly. You have run CREATE LOGIN correctly. The number of stars in the SSMS box is just a mask and is unrelated to your actual password. SSMS doesn't know or try to read your password from the server Note that SQL Server doesn't store your password so it can't relate to the in SSMS anyway. SQL Server hashes it into the column of sys.server_principals 
+
+Note: the order of "Keyboard" and "USB cable" is arbitrary. They both have position = 0 To tie-break positions based on item, add a secondary sort 
+
+There is no "standard" load balancing set up for MS SQL Server that you can run via a wizard. This would be a database architecture decision and implemented at the database level not the server level. Techniques would be: 
+
+However, you can't build this into a larger query on the local server. UDFs + linked servers + parameters just don't play nice together... 
+
+For speed (eg less downtime) backup/restore. Backup/restore is quicker because of Instant File Initialisation (only for MDF). The actual backup file is a lot smaller then the MDF/LDF sizes so copies quicker. It's arguably slighty less risky because there is no downtime on the SQL 2000 instance. However, detach removes access to the old database. You'll have to take this offline with a backup/restore. If there is a risk of end users connecting, use this (or take offline as soon as backup is complete) Basically, it's whatever suits you best. I've used both methods for a recent server migration. 
+
+Are you 100% sure the gives one row? You said it was simplified code so this may not be the case. This should be an IDENTITY column because 2 processes can insert the same row and you don't require an aggregate over the current data. Anyway, how to fix it. Change to this (MAX without GROUP BY always gives one row) 
+
+Personally, I'd use NULLs and avoid empty strings unless there is a good reason for doing so. Mainly for sanity and consistency. Bollocks to theory. 
+
+Your EXECUTE AS is executed based in info in sys.server_principals but requires an entry in sys.database_principals. Here, I have a login that maps to user in my GBN database. My stored procedure works OK 
+
+Edit: Now with added corrections. You'll have to add the date filter in as a constant. When you check for "no rows" there is no row to pull the data from of course 
+
+You can't hide a column dynamically unless you use dynamic SQL. This quickly gets complicated: what if the zeros are in different columns on different rows? What should the output be If the zeros/nulls are in the same column, then you can "hide" a column by not selecting it. 
+
+I suspect the one of the values is NULL, so the whole expression concatenation is NULL. You'd need this: 
+
+will invalidate any optimal use of an index (it isn't covering) even if hash is indexed. Your index scan is most likely on the clustered index because of this. Personally, I'd start with 
+
+Usually you'd do weekly or daily depending on your usage and maintenance windows. You pretty much never shrink, especially not scheduled. For rebuild/reorganise and statistics there are scripts (such as SQL Fool's one) that do a better job. Note: reorganise and rebuild are not exclusive but work different ways. 3rd party scripts can choose the best option (based on fragmentation). We use weekly index/DBCC and daily statistics. And never shrink. From Simple-talk: Don't Forget to Maintain Your Indexes Edit: The URL is has ’ that messes up $URL$ 
+
+Two usual methods: aggregate and ranking function. The aggregate works on SQL Server 2000. Both ways can use a CTE or derived table For performance, I've found the aggregate works better. However, it looks like SQL Server 2008 ranking functions run far better than on SQL Server 2005. I'm not using SQL Server 2008 day to day yet (large dinsoaur corporate) so can't comment. There are 2 relevant SO Questions but I can't find them currently. One is a questions about high logical IO with ranking functions, another is testing of ranking in comments over SQL 2k5 vs 2k8. Sorry. 
+
+The GUID identifies the job in the ReportServer database too. So don't change it. That is, the schedule uses uniqueidentifier datatype in the table: the value matches the job 
+
+Your master DB is generally very small. Just back it up with the rest of your databases, at least daily. Does it matter? Personally, when SHTF I'd like a master db backup that is a few hours old, even if I have 400 other identical ones going back 400 days. I don't want to think too much in the case I have to restore it... 
+
+In this case, only EXCEPT and NOT EXISTS are always correct. NOT IN will fail in t2.c2 is ever NULL. And you need DISTINCT in the LEFT JOIN. Note also that the LEFT JOIN filter is in the ON clause. To remove this you'd need a derived table or a CTE. I would also say that the subqueries these days don't matter too much given the sophistication of the query optimisers (unless abused of course) Personally I almost always use EXISTS and NOT EXISTS (maybe INTERSECT or EXCEPT for clarity) so my code is consistent and works in every case. I don't have to worry about bollixing a LEFT JOIN into an INNER JOIN, or NULLs in an NOT IN. 
+
+You used NORECOVERY which leaves the database ready to receive diff/log restores You can remove it above, or simply run this 
+
+Note that "MyDomain\MyGroup" is not mapped: only discrete NT users and SQL logins. Not NT Groups. This is all described in "Security for Linked Servers" 
+
+Your DELETE is on the 2nd column (RespondentID) of the current PK which means a scan, not a seek. Pointless ROWLOCK hint Your "UPSERT" pattern is not concurrency safe. The test for existence may pass for 2 overlapping (in time) concurrent threads giving an error. 
+
+The downside would be increased page splits as data inserts would be distributed throughout the data, instead of at the end. Where you do have FKs or NC indexes, the using a narrow, numeric, increasing clustered index has advantages. You only repeat a few bytes of data per NC or FK entry, not the while business/natural key. As to why, read the too 5 articles from Google Note I avoided the use of "primary key". You can have the clustered index on the surrogate key but keep the PK on the business rules but as non-clustered. Just make sure the clustered is unique becauuse SQL will add a "uniquifier" to make it so. Finally, it may make sense to have a surrogate key but not blindly on every table: many-many tables do not need one, or where a compound key from the parent tables will suffice 
+
+It also depends on size: will this be char(1000) for a few billion rows? Or tinyint for 100k rows? If the latter consider the added complexity of point 2: not worth it. 
+
+I'd use the same dimension table. Especially for a date dimension This is a Role Playing Dimension also here I would not let a client tool (or an Oracle forum post!) determine my SQL Server DW design. 
+
+If I understand correctly, I wouldn't use SSIS. This is invoked on demand or scheduled to shift data whereas I read this as "automatic shift" of data So, I'd consider replication or database mirroring and the let the DB engine move data for you:

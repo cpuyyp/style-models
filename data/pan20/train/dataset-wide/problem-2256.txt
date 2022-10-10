@@ -1,0 +1,45 @@
+Problem I'm trying to figure out how I would query the database if I don't know if a device is active or archived? For example, if a user has a serial number and wants to find out information about the device, and they are unaware of whether it has been archived. Option 1: Create a view based on a union all? Option 2: Query the active database and then query the archive if the first query returns nothing? The saga continues... An associate suggested that I eliminate the archive database and use a soft delete scheme. I built a model using this idea, and then started running into a host of other problems. Here are the same tables using the soft delete scheme. Soft Delete Example 
+
+This question regards the proper use of NULL and utilizing CHECK constraints for business logic vs stored procedures. I have the following tables setup. 
+
+For the record, this design seems a bit absurd even to me, but this is my thought process. In this one, the presence of a in the table is equivalent to saying = true in Design 1. The has a foreign key constraint and is used to ensure only networkable devices are entered. Can do this using a CHECK constraint (see below), and by making a computed column that is equal to . 
+
+I'm designing an asset management database that tracks IT hardware. I decided to use a supertype/subtype design. I'm at a point where I want to track history of changes for devices. I wanted to use a separate history table, but I can't decide how to track history for changes made to subtype tables. If I use separate history tables for each subtype table I can reconstruct records by joining them with the supertype history table, except in the case where subtype history tables change independently of the supertype history table. By independently, I mean there are x updates to data in the supertype table, creating x supertype history records, and y updates to a subtype table creating y subtype history records. If the changes are made on the same day, how would I reconstruct records? Is this a good use of supertype/subtype, or should I denormalize the tables? Otherwise, can anyone suggest any way to approach the history issue for this type of design? Using MS SQL Server 2008. Here is a very simplified ERD: 
+
+With this setup, devices are archived by setting field to true and entering an . I could query any device easily whether it is active or archived. (Please ignore the field, as this is used for an unrelated concept). Take notice of the Phone subtype table, where I had to propagate an index of DeviceID and IsArchived flag because phone numbers must be unique for active devices. I have to do this with other subtype tables as well. I don't know if this is a good or bad design. This part really confuses me... What are best practices for handling soft deletes where foreign key values can be marked as deleted. The only thing I can think of is create a routine that searches for all records that are related to deleted data, and create a report for users to resolve the discrepancies. For example, if a table of locations is related to the devices table, and some locations are soft deleted, then the devices refer to locations that no longer exist and must be moved. By the way, I'm using MS SQL Server 2008 R2, and I plan on using Entity Framework 4 in my application. I value database maintainability over performance. Thank you for reading. 
+
+The issue I have with this design is I'm not sure if the relationship with and / is a good or bad design decision. Is propagating a non-key field like to other tables a bad design? I don't have enough experience with database design to make an informed decision. 
+
+Due to this design's granularity, I could theoretically allow any mix of statuses for devices with this design, but I wanted to control it so I wrote some triggers to only insert the correct mix of statuses depending on whether the device is network capable. Triggers as follows: 
+
+deleting child rows in a trigger. constraints. execute multiple delete statements on the various tables involved, in the right order. 
+
+You don't have to write twice if you don't need to retrieve it; if you're only interested in the s having a then the following is perfectly valid: 
+
+You need to change port 1158 to 1521 in your connection properties. Oracle's listener for database connections runs on port 1521 by default. Port 1158 is the web listener for Database Control, a webgui for managing the database. In addition, the servicename should be something like "database.domain.com", or you can try using SID and specifying ORCL. 
+
+If you just want to forcefully close the file, you could use a tool which lets you close open files. Googling I found OpenFilesView. See $URL$ 
+
+The hint is only needed to instruct the optimizer that it should optimize for retrieving the first 10 rows as fast as possible rather than optimizing for whatever percentage of the table the optimizer thinks it will get. Don't include the hint unless the optimizer gets it wrong. 
+
+According to $URL$ and $URL$ the only way to do this is to use the parameter to to create a script. Then replace with and then execute the script. 
+
+Oracle does not support this concept of partial indexes. This syntax is valid for PostgreSQL versions from 8.0 and higher but not for Oracle. Oracle does however support indexes on partitions. If you have a license for the partitioning option, you can create a partition for the values of isdefault = 'Y' and index only that partition. I'm not sure which versions of Oracle support this; it could possibly be only 12c and higher. 
+
+You'll need to execute your SQL statement. Use for this. And because you're selecting a value you'll need to it, something like this (replacing with your own where condition: 
+
+On the other hand, if you just have as a property of the document and it indicates "how many times the document has changed", then I would go for the optimistic locking approach, something like: 
+
+relies on your session's NLS settings to convert between datatypes. You should use with an explicit number format model, something like: 
+
+You'll need to use a instead. If your data is indeed distinct, use a for better performance -- the step to eliminate duplicates is eliminated. 
+
+I don't understand why you're asking this question. If you're buying in a service, then backups should be part of the SLA and not your responsibility. If it's not part of the service, then why are you using SaaS? On the other hand, if you need to be backing up something, why are you backing up every hour? Technically, if your application is running on a DBMS with a transaction log, it's possible to be backing up continuously, even replicating logs to (an)other machine(s). Then you have a backup process that runs regularly simply to make recovery faster (a newer backup + a small amount of logs is faster to restore than an older backup + a larger amount of logs). A retention policy on these backups and log files determines how far back in time you can go back to in case of user error (backups aren't just for when your have a "crash", they'll also be needed if someone deletes or modifies data they shouldn't have). The retention policy will often be a compromise between how far back in time you can "go" and how much space you need to store the backups + logs. 
+
+If you remove all newlines and whitespace from the output before grepping, it should work for you. Use 
+
+I wasn't able to force PG to do a fast query to determine both the list of s and the related . But I'm going to try again tomorrow! Attempt 2 I found this link: $URL$ Combining this technique with my query from attempt 1, I get: 
+
+All I've done is move all the code into a stored procedure, and redefined the trigger to CALL that procedure. 
+
+What I would do is maintain a SQL script for the indexes that you've added to the "virgin" database. Store this script in a version control system, as you'll be adding indexes to fix performance problems. I would employ a naming strategy to make it easy to identify which indexes are "yours" and not part of the database as delivered. I'm not sure what features MySQL has, but in Oracle for example you can store these indexes in a different tablespace making it very easy to identify them as "added". When your vendor supplies an upgrade, first remove your added indexes, then apply your vendor's upgrade and afterwards execute your script to add your indexes. Of course, you should also have a QA environment where you can test all of this before applying it to your production system. You'll need to do this to discover if any indexes will conflict with indexes that the vendor may create in a future version.

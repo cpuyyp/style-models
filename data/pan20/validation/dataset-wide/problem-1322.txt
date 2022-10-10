@@ -1,0 +1,41 @@
+Think about what happens if (say) 27 is divided by 5. You get 5 plus remainder 2. You do not have to check any numbers greater than 5, because if anything succeeded you would have found it earlier. I just threw that together — you should check the edge cases, e.g. <= vs just <, or what if you have a perfect square. 
+
+I skipped in my first answer. I come back to it now. First, rather than knowing about the grade and letter members of the student class, it should be a separate function that the student class then can use. It is a function that takes a number as input and produces a letter grade as output. It doesn’t have anything else to do with the specifics of that class, so it should not know about anything else. The only thing it needs to know is passed as input. The result is returned. 
+
+Did you notice that there are three functions with exactly the same contents except for the name of one variable? At the very least, use a helper function to condition the variable: 
+
+Also, use . And pick a name for the symbol here that you know will never clash with anything else in the project including other third-party libraries. That is, use a UUID. 
+
+Don’t define an empty destructor. Let the compiler supply it; it will generate better code that way. If you must, just declare it as in the class. 
+
+Did you know that vector elements are always initialized? And what will it use do you suppose? The default constructor of the element, of course! So just write: to add 10 default locations to the end. 
+
+You should mark this as . You have no idea how handy and useful it is to always have virtual overrides marked. It allows you to make changes to code more reliably, as well as initially making sure you are not accidentally making a different function by the same overloaded name instead! 
+
+So this first form will take the latter two types, as well as . You do not need to overload to take separately. You do not need to overload to take for both parameters, because the will take those! So, two of the overloads should just be removed. The last one, that takes a delimiter, needs to take the for so it will handle different types for that — you have it taking a only, which will be inefficient (copied!) if passed a or . 
+
+you are missing . Member functions that are accessors should always be declared . This HexDouble class seems like a lot of work over just using the union in your code. Since it’s a local class used in one place, just use the union. But, technically this is undefined behavior. There is a long history of using unions and casts in just this way, and real compilers go to some trouble to recognize this and not optimize it away to nonsense. But really, the compiler is allowed to see that you’re reading from a variant of the union that was never set, and assume that this path in the code is never taken. 
+
+Correct, has a destructor — that is part of its defining nature. Don’t write one for the class, and the compiler knows it should just call the destructors of all the members. 
+
+(deeper thought: I kept the params to by simple value passing, which is probably right for types you’ll use for this, and you always copy on returning anyway. Just make sure it’s move-friendly and optimization-friendly for other types such as large strings) 
+
+The usual: don’t use an “out” parameter. I assume the is due to this being data kept by the GUI framework? Making this nicer is more advanced than you need right now. But use in the next line; you are naming the type twice. I’m guessing the use of a pointer rather than the or somesuch is another artefact of the GUI framework. It would be good if functions that need such “bad C++ due to API” are clearly labeled as such. 
+
+Don’t use naked /. You have a pointer and a sz; why not just use a ? Or in general, use (which works with arrays now) rather than a raw pointer. 
+
+Destructor: By making the pointer a , this now goes away completely. Don’t declare or write it! The auto-generated one is better. 
+
+Hmm, you are finding the actor twice? Find it once, throw away the result, find it again to push it? No. That conditional use-if-exists construct is directly supported by C++. 
+
+Though the docs give an example of this using and then . Because I want to play around with this some more, I put the guts of the loop into a separate function, even though it is small enough I would normally not have. I want to be able to comment-out the loop and put in a different one, easily. top of source file 
+
+is fine here. It's used where you would have used a plain pointer before. But don't use naked — use make_unique. Oh, and I think a unique_ptr of array types was not in C++11 but needs C++14. Don’t use (void) for () in parameter lists! That was never proper, even in c++98. (it was supported to allow compatibility with C headers, but in Bjarne’s own words it’s “an abomination”. Don’t write an empty destructor. Use =default to emphasize that it exists, or just leave it off completely. Why have a private static function instead of a non-member overload of that anyone can use? Another important new feature you have not embraced yet is the range loop. Use that instead of the lagacy loops you have that go over the whole array. 
+
+Modulo is very slow and jams up the CPU so it is even slower than you would think! Minimizing the number of tests will give you big benefits. When you test , you test every odd number less than . You only need to test prime numbers up to √n, which is much fewer! So, note each found prime in a vector, and have consult the list thus far to do its job! 
+
+In the constructor, use the member init list, not assignments in the body of the function. Some of those can be default initializers on the data members (tileID, elevatedTilePosition). 
+
+That is a symbol reserved for use by the implementation. Writing your this in a way that mimics what you see in the compiler-supplied headers is exactly wrong! For this and other reasons I suggest leaving that out completely and just use #pragma once. If you ever find a platform were this pragma is not supported, a script can add the one-time-include symbols automatically and correctly. 
+
+It’s been a good many years since I wrote significant code in x86 assembly language, but I’ll wade in here. Yes, is a fat pig of an instruction. It not only takes a ridiculous number of clock cycles, but it uses many of the dispatch ports, clogging the CPU so it can’t do much else while waiting on the result. See the links in this S.O. answer. This is because division is difficult. You could look up how to transform division by a constant (10 in this case) into multiplication and code that. But, successive division/modulo by 10 is now I learned it. The biggest speed benefit will be from allowing pipelining to work well and not stalling. Sometimes you code two or three different copies of the loop and interweave them so that there is more independent calculations to work on at the same time. To that end, you might start by dividing by 10000 once and then doing high digits and low digits separately in interwoven loops. But, using the instruction makes that difficult because it has pre-targeted registers that it uses, and worse, the instruction does not pipeline. I think the fastest would be to use the div-less algorithm with vector SIMD instructions to compute multiple digits at the same time.

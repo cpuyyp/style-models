@@ -1,0 +1,71 @@
+This approach can be taken for all callbacks. Keep in mind that they all have to use the same UserPointer. 
+
+However because you just compare it against a distance you can do away with the square root and compare it against the square of the distance: 
+
+doesn't change the stack. So it should also be . Consider adding a method that returns a reference to the top value of the stack (with const and non-const version). 
+
+Using static local variables like that is not a good idea for a few reasons. First there is no way to reset it for the next run. It's also not thread safe. Instead pull that out into the main function: 
+
+Having said that, lets you slice out the internal nodes and splice them into another . So implementing that functionality yourself is not needed and using will simplify a lot of your code. 
+
+numbers.splice is the culprit, this will take O(n) time each time it is called. And it is called O(n) times. do a proper sieve instead: 
+
+There is no need for the FutureTask, the executor service will create a future that you can use to wait on the task and get the result (if any). 
+
+you shouldn't be using an infinite loop and sleep in a gui, instead use the timer functionality of FLTK using and 
+
+will allocate a new list (as the name indicates) so there is no reason to wrap it in a . What you have is a defensive copy. This won't allow propagation of changes back to the queue, but requires you to get a new list each time you want an update. If you still want a queue backed view then you should return : 
+
+There is a danger for an infinite loop. If calls and handling that object also causes to get called etc. then run will never return to the EDT. You can fix this by using 2 queues; one for aggregation and one for handling the current set and swapping them when entering . This also fixes the race as when setObject is called while some are being handled then they get pushed to a new queue and the run gets scheduled again. 
+
+here there is only 1 branch compared to the 2 you had before (possibly 3 depending on how was implemented) 
+
+You can't really help the constructor but you just need to make the destructor of virtual and let it do the closing: 
+
+Instead of using a fixed order of filling in cells you can first take the cells with the least amount of options left. In other words if you know that cell 5,8 can only contain 5 and 6 then try each of them now and reduce the possibilities of the other cells instead of having to come back millions of times just to find out that the cell can't be filled any more. This requires that you track the number of options in the board. With a bitset it's doable, though un-setting a square is harder because you need to readjust all affected squares. 
+
+To get a normal integer from a hex string you can use the built-in Integer.parseInt(String, int) which simplifies things to The actual parsing code can be simplified by knowing that this allows you to do away with the pow operation: 
+
+You are using strings to store numbers and booleans, bad idea™. Store them as the type they need to be and only convert when needed (JSON allows floating point and boolean values without the explicit conversion to string) I'm not a fan of hungarian notation. The prefix is unnecessary and just adds clutter to the names. A good ide will allow you to highlight field differently from local variables. You should add getters for the properties. You have 2 different key-to-field mappings. I suggest that there should only be one of them. You can convert to 3 different objects I suggest that there should also be a way to get a LocationInfo object from one of those (and make sure the round-trip is valid). add and 
+
+I note that should remain volatile. I put the in the block in a while loop to avoid the race where the thread has just tested the first while condition and is about to enter the block but then gets called; putting back to and the thread waiting anyway. This can lead to the thread blocking while waiting on a that never happens. To help any more I need to see what exactly happens inside that while loop. 
+
+Asserts are kinda useless in java, they only work when the jvm is started with the -ea flag (or you do some reflection). instead just test and throw the IllegalArgumentException in the public method and remove the obvious assertions that would throw anyway. 
+
+consider also adding a moveable push that you can call with Your doesn't, looks like a typo during debugging: 
+
+The integral part of that will contain the exponent while the fractional part will contain the digits of the mantissa. Putting just the fractional part in the exponent of 10^exponent will create a number between and which is scaled by an exact power of ten. So we can multiply that number by 10 and round it for the result: 
+
+this makes the code independent of the name but will make it dependent on the order the enums are declared in. and makes the file less human readable 
+
+If you define a destructor you should also define (or disallow in this case) the copy construct and copy assign. Failure to do so will result in dangling pointers and double frees: 
+
+The memory model of the jvm doesn't allow double checked locking like that to work like you think it does. The jvm is allowed to assign the object before running the constructor. 
+
+the first issue I see is that is not thread safe. Instead use an AtomicInteger second is that the thread gets into a spin lock when it is awake and it's not its turn. the solution to this is to do: 
+
+This assumes that the container holds raw pointer and it owns the pointers. it is a better idea to then let the container hold smart pointers. These will automatically clear the object they hold when they get destroyed (using by default). 
+
+You can do the merge sort without using too much memory by reducing the initial block sizes. However with 64 bit you can just mmap the entire file into memory and sort it just like an array and let the OS deal with pulling in and flushing out blocks as you access them. If you do wish to continue with the bubble like sort then I would suggest keeping more values in memory to reduce the number of passes you need to do. You can do this by keeping a min heap of a max size: 
+
+The culprit is in the last else branch. This is not needed because you know that the entire list from to should be sorted and you need to continue from the old . Take the following step: 
+
+Storing in a vector leads to leaks. instead use , which will manage its own buffer and delete it as needed. 
+
+You can put the in a so RAII can delete them safely. This is safe because you will not be copying it around. 
+
+Another, perhaps simpler, option is to locally copy the dll and load the copy. Then regularly check the original dll for an updated last modified time and then unload the copied dll, make a fresh copy and load the new copy. Do keep in mind that when debugging a dll has a pdb file associated with it and loading the dll also locks the pdb. You can work around that by making the compiler emit the pdb with a different name each time. 
+
+The creation task checks I think you mean there. Release shouldn't be blocking. Instead if the pool is full just discard the object. 
+
+besides that your didn't. only one thread ever got out of the synchonized block in doWait, which means that deadlock would occur if more than one thread was waiting and the wrong thread got notified. 
+
+Depending on how many types of items you will have and how many items will be live at any one time it may pay to use the flyweight pattern. Where each item stack has a pointer to an item type which holds all the behavior, and hold the data that makes the stack unique and/or is used very often (how many items in the stack, id for the sprite to draw, ...). Making the objects fixed size (with a pointer when the you need that extra storage space) will let you make an inventory hold a instead of a . The first will have much better performance when iterating over all items in an inventory. Hold by value what you can and use as few pointers as possible for the rest. I'm not a fan of complex inheritance trees, either you need a virtual function in the base class anyway or you need s all over the place. as a tag type is a pretty bad way of making something stackable. You will need to to find out whether it can stack and the stackable items may each have a different max stacksize that you then need to query. So just create a single in the base class of the item type. 
+
+Many gui libraries use a single thread and callbacks to manage events and draws, if you block in one of the callbacks then it can't handle any other event while it is blocking. This was the reason redraw didn't work. is like except that it adds (the time until callback should happen) to the time the current callback (should have) happened instead of . This way the time between getting called and it calling is not a factor. 
+
+if multiple threads try to read they may each decrement the buffer if one thread was interrupted right before it could decrement and after it passed the while Instead use a Semaphore which is designed for just this: 
+
+Many sorting libraries will sort an array in place instead of allocating a new array and returning it. They will require a mutable array to be passed in. You test the count of elements in the input array and then have special cases for when it is almost empty. It's clearer if you test if there are more than 1 elements in the and put the special cases after the loop: 
+
+Then when you need to start it you just call . Other than that please keep a consistent format, especially the indentation and brace style. It will vastly increase readability. Compare the listener I provided to your listener. Also the fixed layout of the components will do odd things when the user tries to resize the window, I suggest using a layout manager.

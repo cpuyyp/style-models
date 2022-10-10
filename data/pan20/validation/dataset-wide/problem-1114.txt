@@ -1,0 +1,61 @@
+You say that performance degrades with the number of executions and that "restarting the deployment" fixes it. I'm unclear what you mean by that particular phrase but presuming that it involves stopping the loop and then restarting it after some period then one possibility is ghost records. I created a table as below (with one row per page for easier maths) 
+
+The use of here could provide benefit if you were removing an included column though - as in the second example (as the original index would both have the desired order and cover all columns). The plan for this shows that the original index was read to create the replacement. 
+
+According to this article referencing Paul Randal the reason for taking this shared HOBT lock is to prevent reading of unformatted pages. 
+
+I've come across another case where / do not short circuit. The following TVF will raise a PK violation if passed as a parameter. 
+
+The top branch gets all rows where the are the same and at least 2 out of the three other columns are the same. The join on is likely to be pretty selective in itself. That just leaves one other possible three column combination left which is dealt with by the second branch. Both branches of the have an equi join so it should perform better than a join with some complicated condition. 
+
+The additional page shown in use by is an IAM page. This is not used for storing data but just for tracking the pages and extents comprising the index. 
+
+No. I don't believe this is possible. In the case that the average length is greater than that calculated by the heuristic but still less than 4,000 bytes it is possible to massage this upwards with a but even then you might need some hacking about with the query syntax to encourage the to happen before any memory consuming operator that depends on the estimated row size. In the case that it is less the to a shorter size obviously won't work without the possibility of truncating data. The possible down side of a mis-estimate is that the memory grant may be calculated based on incorrect information. I've wondered before why the statistics on string columns don't keep track of this. Maybe in the scale of things it simply isn't regarded as objectively that important. 
+
+There's no way to do this automatically but you can query the catalogue views to find constraint names not in the desired pattern then generate the desired script that way. Something like 
+
+You can rewrite it as an inline TVF returning a single column and row and CROSS APPLY it to get the benefits of inlining now (parallelism, no overhead of switching execution contexts, holistic query costing and optimisation) without having to wait for the work done on inlining of Scalar UDFs to get released. So your function definition would be 
+
+I agree that "correct answer" isn't correct. You can't indexes that have been dropped, you would need to them again, and it would make no sense to do the insert last after the indexes have been dropped and created anyway. I presume the correct answer is in fact something like 
+
+As alluded to by @Souplex in the comments one possible explanation might be if this column is the first -able column in the non clustered index it participates in. For the following setup 
+
+The difference is between CLR static methods () and instance methods () Static methods are defined on the type itself and are generally utility methods that get everything they need to operate passed in as method parameters. Instance methods operate on an object of a particular datatype and are able to access the private state of that object and mutate the object or return a result that uses that state. always returns the same result. will return a different result dependent On what is. 
+
+The rows are filtered out as they do exist in the other table so don't meet the , the remaining rows are grouped by and assigned a sequential number within each group. In this case the yellow rows would meet the condition and be updated. However there is no guarantee exactly how these numbers will be assigned within each group unless you use a clause on an expression guaranteed to be unique. Without this it could potentially change even between successive executions of the same statement. 
+
+You can use to loop through all the tables and process as below (might need tweaking if you have non standard object names containing the character but I'll leave that as an exercise.) 
+
+You need to give the views a different owner than the tables so that the ownership chain is broken and the permissions are checked on the base objects. 
+
+And then call it in a function and Replace all with empty strings. The below uses to map all to and a final to remove all the s. You could also simply use 6 nested (if you are on a version < 2017 you will have to anyway) 
+
+This is a decision of the cost based optimiser. The estimated costs used in this choice are incorrect as it assumes statistical independence between values in different columns. It is similar to the issue described in Row Goals Gone Rogue where the even and odd numbers are negatively correlated. It is easy to reproduce. 
+
+For each distinct in it performs two operations instead of one but this operation is significantly cheaper than constructing the XML and then reparsing it. 
+
+You have a on . The query on can be satisfied by reading this unique index. From the message you are getting this must return no results. Similarly the query can also use this index to locate the row of interest (though it still has a residual predicate to evaluate were any row to match). Your other query is different 
+
+Running this inside a transaction at default level will fail under load. The reads aren't mutually exclusive and serialized so two concurrent transactions can both read that the row does not exist. You could add hints to the . 
+
+The index suggested by the system is a much better fit for the query you have shown. You should aim to have columns with equality predicates as the leading columns. Consider a phone book ordered by . If your rquirement is to find all people with surnames between "Brown" and "Yates" and a first name of "John" then you need to read most of the phone book. If the phonebook was instead ordered by you could easily find the "John" section and the first "Brown" in the section then all you need to do is read all the names until the is after "Yates" or a new firstname is encountered. It might not be the ideal index. Potentially you should just change the key columns in the clustered index to this order rather than creating a new one though. You need to evaluate this based on knowledge of your workload. 
+
+When the optimiser has no usable statistics at all for a column it will guess that an predicate will match 10% of rows, 9%, and any of will match 30%. If there are column statistics available an predicate will be treated differently as below. 
+
+That would imply that the simpler WHERE clause is evaluated in its entirety and only if that fails is the second one evaluated. For 
+
+but technically a sort could be avoided if you could get a plan that processed the partitions in order and just concatenated one ordered result to the next. If you are happy to assume that the partition numbers will be in order of value (I don't know if this is actually guaranteed but it seems to be the case even after partition splits) then adding a leading column to the sort of the partition number achieves this 
+
+Also sometimes previous changes that were implemented as metadata only are deferred and will be written to the row now it is being updated anyway. An example of such a change would be this is generally a metadata only change at time of execution and the physical row won't be updated to reflect the additional 12 bytes for this column until next time it needs to be written to. 
+
+The difference being that the first one calculates concatenated strings for all rows in and then removes duplicates for . The second one finds distinct first and then just performs the string concatenation work on those distinct values. So in your example data instead of performing the work 5 times (twice for test and 3 times for Nadal) then throwing away three of them it will just perform the work 2 times, once for each. 
+
+But I don't see any benefit of doing so. The original query is clearer and likely to be equally or more efficient. The execution plan I see is 
+
+None of the names in happen to be parsed as valid dates so all end up returning null. The above shows that for some reason calls the method and catches the exception rather than using the built in method that would likely perform better in this case. 
+
+This is somewhat subjective but I'm not at all a fan of anyway and normally replace it with an explicit and as the datatypes, column names, and nullability can then be seen much more explicitly (and both can be minimally logged). In this case if you were to create the temp table with an unnamed primary key constraint on the column up front 
+
+So one potential explanation for the observed performance differential as alluded to by Alex is that it is this additional work maintaining the system tables in that is responsible. 
+
+This will output the lock events to the messages tab, it is often best to execute the batch twice as the first run will contain lots of stuff related to compilation as well as the execution. It is also possible to use SQL Server Profiler/Trace and extended events to see locks acquired and released. Again this is best done on a dev server as these are potentially extremely frequent events and even with filtering would likely add a great deal of overhead on a busy server.

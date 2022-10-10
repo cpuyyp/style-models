@@ -1,0 +1,95 @@
+After executing sp_addarticle, execute sp_addsubscription to add the article to each existing subscription. Then generate a new snapshot. The Distribution Agent should then copy the schema and data for the newly added article to the Subscriber(s). 
+
+The Snapshot Agent process account used to connect to the Distributor must be db_owner in the distribution database and have read, write, and modify permissions on the snapshot share. The account used to connect to the Publisher must be db_owner in the publication database. The Log Reader Agent process account used to connect to the Distributor must be db_owner in the distribution database. The account used to connect to the Publisher must be db_owner in the publication database. The permissions required by the Distribution Agent process account depend on whether you are using push or pull subscriptions. For push subscriptions, the Distribution Agent process account used to connect to the Distributor must be db_owner in the distribution database, be a member of the PAL, and have read permissions on the snapshot share. The account used to connect to the Subscriber must be db_owner in the subscription database. For pull subscriptions, the Distribution Agent process account used to connect to the Subscriber must be db_owner in the subscription database. The account used to connect to the Distributor must be a member of the PAL and have read permissions on the snapshot share. The is all covered in the section Permissions That Are Required by Agents in Replication Agent Security Model. 
+
+Add the Merge Agent parameters -OutputVerboseLevel 4 -Output C:\TEMP\mergeagent.log to the Run Agent Merge Agent job step to find out where it is timing out. 
+
+For push subscriptions from the subscriber you can query MSsubscription_agents to get the publisher and publisher database. For pull subscriptions from the subscriber you can query MSsubscription_properties to get the publisher and distributor. Have a look at the columns publisher, publisher_db, and distributor. The distribution database name will likely be distribution. 
+
+Please see Add and Remove Publishers from Replication Monitor to add the mirror server to Replication Monitor. 
+
+The problem with Red Gate's SQL Data Compare, Sync Framework, and ApexSQL Data Diff is that they all either require extra licensing and/or development time. The most lightweight, easiest to setup and maintain synchronization solution that meets your needs of a daily refresh is Snapshot Replication. Snapshot Replication will have less of a performance impact on the production database than Transactional Replication as it does not require a Log Reader Agent agent. However, all of this might be overkill. A backup and restore solution might better suit your needs. 
+
+Merge Replication is bi-directional by default so if you delete a row at the Subscriber, that change will replicate and the same row will be deleted at the Publisher, and vice versa. 
+
+Primary key conflicts/violations will not be resolved automatically. You will need to manually delete one of the offending rows to get the primary key conflicts from reoccurring on every synchronization. If you expect primary key conflicts to occur regularly then you may want to consider doing one of the following: 
+
+I believe you want to mark the trigger NOT FOR REPLICATION. This will prevent the trigger from firing when the Merge Agent makes the update. Have a look at All about "Not for Replication". 
+
+This is done in Merge Replication by using Parameterized Row Filters. They allow for different partitions of data to go to different Subscribers without requiring multiple publications. 
+
+I think backup and restore would be the fastest way to get a new copy of the database from PRODUCTION to TEST. This can be automated easily. I don't think replication is the best feature to use here in my opinion. Unless you only plan on replicating a subset of the data. In that case, Snapshot Replication may be a good fit. 
+
+Horizontally partition your data by adding a location specific identifier column and extend the primary key(s) to include this column. Then have subscribers only insert rows belonging to their partition. Set the Merge article property @compensate_for_errors to true which sends a compensating change to the source replica to undo the failed change when a primary key conflict occurs. 
+
+The snapshot folder is configured per Distributor. The stored procedure sp_helpdistributor returns a column directory which is the snapshot folder for a specified distributor. 
+
+From your description it seems as if you require bidirectional replication. You may want to consider using Merge Replication, Bidirectional Transactional Replication, or Peer-to-Peer Replication. I suggest reading through Selecting the Appropriate Type of Replication to see what type of replication best meets your application requirements. 
+
+Are these push subscriptions? If so, the Generate Scripts option will not be available on the subscribers. To generate scripts for push subscriptions, right-click on the Publication on Server 1 -> Generate Scripts... The generated script will contain T-SQL necessary to create the publication and the push subscriptions. Pull subscriptions should have Generate Scripts option at the subscriber. 
+
+Replication across non-trusted domains or workgroups can be done using Windows Authentication by configuring pass-through authentication. Create a local Windows account on both the Publisher and Subscriber that has the same username and password. Use this account for the replication agent process account and have the connections to the publisher, distributor, and/or subscriber impersonate this account. Ensure the account has the permissions required in Replication Agent Security Model. This approach is covered in the section Use Windows Authentication to Set Up Replication Between Two Computers Running SQL Server in Non-Trusted Domains in HOW TO: Replicate Between Computers Running SQL Server in Non-Trusted Domains or Across the Internet. 
+
+You will need to run a validation to determine how out of sync your publisher and subscriber are. Then, use the tablediff utility or Red Gate SQL Data Compare to generate the script(s) necessary to get the subscriber back in sync. Then apply the script(s) at subscriber to bring the data back into convergence. 
+
+Yes, this can be achieved with Transactional Replication by using Static Row Filters. Static row filters use a WHERE clause to select the appropriate data to be published. In your case, your filter clause would be . Here are some links to get you started: Filter Published Data Define and Modify a Static Row Filter 
+
+It depends on your workload. As a baseline, use Performance Monitor and log the network counters when not using Log Shipping or Transactional Replication and measure for 1 hour. Then setup Log Shipping and use Performance Monitor to log the network counters for 1 hour. Then setup Transactional Replication and use Peformance Monitor to log the network counters for 1 hour. The network bandwidth that Log Shipping and Transactional Replication consumes is the difference between the collections and the baseline. The same can be done for memory and I/O. 
+
+You can use sp_showlineage and sp_showcolv to inspect the lineage and columns that have been changed. The sp_showcolv results contain a column, colidx, which is the index of the column(s) that were changed for a given version of the row. If you need to take a more proactive approach, you can setup an auditing scheme. I've provided an example of how to setup an auditing scheme on my blog: $URL$ 
+
+This is a common requirement. Transactional Replication is typically used to off-load reporting to another server/instance, which can be near real-time in a best case scenario. One of the benefits of Transactional Replication is you can place different indexes on the subscriber(s) to optimize reporting. Another benefit is that you can choose to replicate only a portion of the data if only a subset is needed for reporting. So to answer both of your questions: 
+
+OS error 5 means Access is denied. Instead of using SQL Server Agent service account — use pass-through authentication. Create a local Windows account on both Publisher and Subscriber that has the same username and password. Add the Windows account to SQL Server logins on both Publisher and Subscriber. Use this account for the Distribution Agent process account. Ensure the account is a member of the db_owner fixed database role in the subscription database, a member of the PAL at the Publisher, is a login associated with a user in the publication and distribution databases, and has read permissions on the snapshot share. Replication Agent Security Model 
+
+Yes, this still holds true. It is covered in Upgrade Replicated Databases in the SQL Server 2014 documentation. 
+
+According to Release notes for SQL Server vNext on Linux, under the section Unsupported features and services, Replication is not currently supported. 
+
+Yes, you can use custom replication stored procedures to do this. Custom replication stored procedures are especially useful when an application requires custom logic such as this and can allow the data to be transformed in-flight to Subscribers. Have a look at the sections Default and custom stored procedures and Considerations for Using Custom Stored Procedures in Specify How Changes Are Propagated for Transactional Articles, and the section To generate and use custom stored procedures in Set the Propagation Method for Data Changes to Transactional Articles. 
+
+Just keep in mind that the indexes that you place on the subscriber(s) will need to scripted out and included in a post-snapshot script in case you ever reinitialize the subscriber(s). 
+
+If you attempt to bulk insert more rows then available identity values between syncs you will get an error: 
+
+You will need to do something like utilize Change Data Capture but you will need to roll your own sql statements. I'm confused why Merge Replication won't work for you here. If you set the retention period high enough, it can go disconnected and pick up where it left off once connected again. 
+
+Then, grab the snapshot files from the publisher and compress it. For example, on my server I compress the snapshot folder found in C:\Program Files\Microsoft SQL Server\MSSQL10_50.MSSQLSERVER\MSSQL\repldata\unc. I then copy the snapshot folder to the subscriber using file-copy or FTP and decompress it in a folder called C:\TEMP\unc. So looking at this on the Subscriber I would see this for the snapshot folder: C:\TEMP\unc\PACIFIC_TESTDB2_TESTMERGEPUB1\20130207200123 Then from the command line on the Subscriber, run this: 
+
+I agree, this appears to be a deficiency. As a workaround, you could perform the XML schema update on the Publisher and then post the XML schema update to Subscribers using sp_addscriptexec. 
+
+According to Publish Data and Database Objects in the section Considerations for Publishing - Limitations on Publishing Objects: 
+
+To do this without recreating the publications and subscriptions - backup the publication, msdb, distribution, and the master databases. Then restore them on the new Publisher that has the same name as the old Publisher. Use the keep_replication switch when doing the restore. A DNS flush may be required but afterwards the Subscribers should begin synchronizing. This may or may not work for you. I highly suggest testing the migration out in your test environment prior to production deployment. I would also like to add that you may have to back up and restore the Service Master Key to the new Publisher as well. The is tied to the distributor_admin login that is created for the linked server when you Configure Distribution. If this doesn't work for you - you can you can configure Distribution on the new Publisher/Distributor, and recreate the publication and subscriptions from backups. The subscriptions could be configured as replication support only if done during a maintenance window with no changes occurring. This would avoid sending down a new snapshot. If not done during a maintenance window, run a data validation to see how out of sync you are with the Subscriber and use tablediff utility or SQL Data Compare to bring the Publisher and Subscriber back into convergence. Reinitialization is an option as well. Also, if you are upgrading the Publisher SQL Server version then there are considerations to make which are covered in Using Multiple Versions of SQL Server in a Replication Topology. It depends on your replication type. 
+
+You are likely using the Express Edition. Note that Express Edition can only act as a Subscriber. Try using Standard Edition or above to Configure Distribution and Publishing. 
+
+I believe your DBA is referring to Publishing Stored Procedure Execution in Transactional Replication. With Transactional Replication you have the option to published the definition of the stored procedure or the execution of the stored procedure. Publishing stored procedure execution can provide significantly better performance for large batch operations since only the procedure execution is replicated, bypassing the operation being sent to Subscribers as a large, multi-step transaction. If you have anymore questions please let me know. I hope this helps. 
+
+Your Snapshot Agent process account does not have sufficient permissions to access the snapshot folder. In the section Permissions That Are Required by Agents in Replication Agent Security Model, the Snapshot Agent process account requires db_owner in the distribution and publication databases and needs read, write, and modify permissions on the snapshot share. Have a look at Lesson 2: Preparing the Snapshot Folder for more information. 
+
+Please follow the steps in Create a Snapshot for a Merge Publication with Parameterized Filters to generate a new snapshot. You must first generate a standard snapshot, then generate a Subscriber-specific partitioned snapshot. After generating the snapshots, mark the Subscriber for reinitialization and start the Merge Agent to pull down the schema and data for the filtered subscription. 
+
+Yes, you can replicate from Enterprise edition to Standard edition. The only caveat is Peer-to-Peer Replication requires all nodes to be Enterprise Edition, and Web and Express editions are Subscriber only. Features Supported by the Editions of SQL Server - Replication 
+
+I believe you are running into the desktop heap issue described here (support.microsoft.com/kb/949296) and here (support.microsoft.com/kb/824422). 
+
+The key here is to allocate range sizes large enough to accommodate for the amount of inserts that may occur between syncs. You can specify the range sizes in article properties when adding articles to the publication. 
+
+With Merge there is an option to upload pending changes before reinitialization but since your subscriptions have been removed you won't have this option. The way to handle this is to manually sync the databases using tablediff utility or Red Gate's SQL Data Compare. Then recreate the publication from the manually merged database - then subscriptions. 
+
+To immediately alleviate the constraint violations and conflicts from occurring on synchronization you can mark the foreign keys as NOT FOR REPLICATION. This means that the foreign key constraint will not be enforced when the Merge Agent performs an operation. To mark the foreign key constraint as NOT FOR REPLICATION please see Controlling Constraints, Identities, and Triggers with NOT FOR REPLICATION. Another approach is to increase -UploadGenerationsPerBatch and the -DownloadGenerationsPerBatch Merge Agent parameters to avoid splitting parent and child changes across generation batches. 
+
+I'm not sure if you'll be able to reliable tell if the server has ever used replication or not. For example, if someone drops replication properly, there will be no trace left behind. 
+
+The MSmerge_history table does have a column named and it's of the type , it just isn't documented. To answer your question, based on my tests it appears to be local server time. The column has a default value of . 
+
+If your subscription(s) do not require this behavior then a client subscription will work just fine. This is covered in Subscription Type. The Merge subscription type can be specified on the Subscription Type page of the New Subscription Wizard or by specifying a value of local (client) or global (server) for the @subscriber_type parameter in sp_addmergesubscription and sp_addmergepullsubscription. This is covered in Specify a Merge Subscription Type and Conflict Resolution Priority. I hope this helps. 
+
+The max text repl size options exists to limit how much LOB data can be added to a replicated column. If you turn off the LOB size limit and a user inserts a large amount of LOB data, latency will increase and replication will come to a crawl. The max text repl size option can be used to prevent this. 
+
+Yes, this type of topology is known as the Central Subscriber Model. To make this work you should horizontally partition your published data, utilize static row filters, and set the Action if name is in use article property to Delete data. If article has a row filter, delete only data that matches the filter. The MSDN article does not detail the implementation very well but I have covered it in Central Subscriber Model Explained. 
+
+The Snapshot Agent (snapshot.exe) runs on the Distributor. From Books Online: Replication Agents Overview 
+
+You will need to manually merge the existing databases and initialize from that source. One challenge you might face in manually merging the databases is conflicting primary keys. If so, this is typically handled by adding a location-specific identifier column and extending the primary key to include this column. This is known as partitioning your data.

@@ -1,0 +1,57 @@
+You can reference a remote table in a procedure or a package. Here's an example with a loopback link: 
+
+You can use hints with subqueries, after having them qualified with the hint for example. In this case however a simple hint should be ok. Here's my setup: 
+
+This shows that we have lost data during the second step: the century was lost! The third step has to make up for it and uses the default rule of : 
+
+In this case I would go with the third option: in general you can't update the parent in a parent-child join. 
+
+In an extreme case such as this one, where the optimizer makes a poor choice of plan or can not build a plan in a reasonable amount of time, you could try to force the plan yourself with the use of hints. In a scenario similar to yours with a legacy app and an old version database, I've managed to work around an apparent bug of the optimizer by following the method described in the post Full Hinting by Jonathan Lewis. 
+
+If you shutdown the database normally (or transactional or immediate), Oracle will wait for the process to complete so that the database is left in a consistent state. If you shutdown , the database will be left in an inconsistent state (uncommited data written to disk) and Oracle will resume the rollback as soon as the database is restarted. The rollback is handled by smon, I wouldn't try to kill it. 
+
+This will wait 10 seconds before giving up. The WAIT instruction has been available for a long time (9i) for DML: 
+
+Most likely when you write this kind of trigger you would expect the query (2) to see the row inserted on (1). This would be in contradiction with both points above since the update is not finished yet (there could be more rows to be inserted). Oracle could return the result consistent with a point in time just before the beginning of the statement but from most of the examples I have seen that try to implement this logic, people see a multi-row statement as a serie of successive steps and expect the statement [2] to see the changes made by the previous steps. Oracle can not return the expected result and therefore throws the error. For further reading: "mutating table" on Ask Tom. If as I suspect the cause of the mutating table error is a trigger, one way to avoid the error is to move the logic out of the trigger into procedures. 
+
+You can avoid row lock contention by making sure that the row is available for update beforehand with a and either or , e.g: 
+
+The child table doesn't need to contain the partition key (here the log date). It inherits the partition key from the parent table. 
+
+You're applying on a datatype. It is not only superfluous, but it actually causes unexpected behaviour. Here's how Oracle analyses the expression : 
+
+This is assuming that all records in have an existing recode in . If this is not the case, you'll have to use a LEFT OUTER JOIN to have an equivalent query. 
+
+First of all export is not backup. You will not recover a physical copy of a database from exp-dump, only an unconsistent copy of its data (you can make them consistent but the option is rarely used). I'm really not sure you can apply the contents of logMiner on such a copy. Your best bet would be to apply undo statements to your current copy of the DB to return it to its original state, such as described in the documentation: 
+
+The problem with your query is that currently a subquery in Oracle can't access a value from a parent query more than two level deeper. You could also use a PL/SQL function that would contain the inner SELECT. 
+
+Your materialized is not defined with a NEXT clause, therefore it will only refresh when you ask for it explicitely. You can use either DBMS_MVIEW.REFRESH directly or create a refresh group with DBMS_REFRESH. In order to automate the refresh, you could program a job with DBMS_SCHEDULER or DBMS_JOB (dbms_job is deprecated in 11g). You could also define your MV with a NEXT clause, for example this will refresh the MV every hour: 
+
+Edit: By definition, describes materialized views owned by the current user while describes the materialized views accessible to the current user (the user needs to be granted SELECT on the mview either directly or through a role). 
+
+You can't use interval partitioning with reference partitioning, however, It's possible to mix range partitioning and reference partitioning, as shown in the example of reference partitioning in the 11g doc: 
+
+The APEX administrator accounts are not linked to a database schema. Reciprocally, creating a database schema won't create an APEX account. You'll have to create the administrator account via the web interface. 
+
+You're updating lots of rows. It will take time no matter what. You could try to update the join though (since we have an on the lookup table), it will surely work better than an inline index loop: 
+
+Also don't use or format in your code since they are dependent upon language. Don't use since this can be confusing (ever heard of the Y2k bug?). Both formats are ok to display information to your users of course. 
+
+So your two clauses are not equivalent at all. The second one selects the whole day feb, 15th whereas the first one only selects the first second of the day. I suggest you use the following constructions when writing date range: 
+
+Oracle: Since Oracle doesn't index entries where all indexed columns are null, you can use a function-based unique index: 
+
+Most tools (PL/SQL Developer, Toad...) will display these comments in appropriate fields when you browse the database schema. The comments can be queried directly with the dictionary views, such as . 
+
+If you're transitioning from SQL Server to Oracle, I would advise to try heap tables at first because they are the standard form of storing data in Oracle. For most workloads, heap tables with regular indexes in Oracle are the most balanced forms of storage regarding DML and query performance. If later you find that you have performance problems or bottleneck, you should look into specialized advanced storage methods such as IOT, partitioning, clusters, reversed-key indexes, etc. Regarding IOT in particular, I would advise against their generalized use because there are lots of "gotchas" that you may not want to get into as a beginner: 
+
+Locks in Oracle are managed at the row level. Concurrent disjoint transactions should not interfere with one another. Unindexed foreign keys are an exception, since it can result in a complete TABLE LOCK. You should get the SQL in the trace file of the deadlock and that should help you narrow down which table / foreign key is responsible for the lock. Once you know which table is affected by the deadlock, make sure that all foreign key references to this table are properly indexed. E.G in your example should be indexed if it points to . Alternatively you could use Tom Kyte's script from the above link to determine if you have any unindexed foreign key. 
+
+Aside from that, I don't see anything wrong with using in an exception clause (in fact you can't use it anywhere else). 
+
+This explains why rollback can take a lot of time. You have few means to accelerate the process. In any case you should not: 
+
+All dates in Oracle have a time component. I'm pretty sure you want all rows between the 13th and the 15th included. However, when you write: 
+
+Replace 1000 by the maximum number of elements (or calculate it with an inner subquery). Each row will only be queried n times (where n is the number of commas). Also if performance is critical, use and instead of .

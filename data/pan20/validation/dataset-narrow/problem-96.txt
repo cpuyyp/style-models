@@ -1,0 +1,73 @@
+Possibly you have ARP entries for 172.16.40.204 on other machines in your network. In that case you can skip the first two steps. The MAC address may also help you identify the brand of machine providing these DHCP services, by using a vendor lookup tool like this one. 
+
+SNMP is not a user, it does not have a privilege level in that way, so you're not able to retrieve this information. 
+
+One thing to keep in mind: refusing DHCP requests from specific hosts does in no way block them from accessing the network. 
+
+So Edge POPs are locations where Google interconnects with other networks. I'm not sure, but I don't think Google is Tier1 (yet?). It's not mentioned on the list of Tier1's on Wikipedia at least, but I can't tell for sure based on the routing tables I checked. The third question is impossible to answer, it's too broad. It all depends on the length and location of those fibers, if you want to buy existing ones or place them yourself, etc. But you can be sure it isn't cheap. 
+
+Make sure the machine you're using to lookup the ARP table is in the same broadcast network as the MAC addresses you're looking for. If that's the case, generate some traffic towards the hosts you're looking for so that ARP requests will be sent. You can do this using for example, or sweep an entire network using . After that, you should see an ARP entry in your ARP table if the device is online on the same broadcast network. 
+
+You almost answered your own question: VOIP packets are tagged with the VOIP VLAN tag, internet packets are untagged, since that's the native VLAN on that port. 
+
+These reserved IP-ranges for private networks are defined in RFC1918. 192.169.0.0/16 is not in them. You can verify using a WHOIS service that this /16 is divided into a number of smaller assignments to various networks. 
+
+I've never seen it used in professional networks (which does not mean it isn't used anywhere). BGP security is a bit of a broad subject, but the one feature which has been gaining some traction recently is route validation using RPKI. 
+
+MAC addresses and IP addresses operate on different layers of the internet protocol suite. MAC addresses are used to identify machines within the same broadcast network on layer 2, while IP addresses are used on layer 3 to identify machines throughout different networks. Even if your computer has an IP address, it still needs a MAC address to find other machines on the same network (especially the router/gateway to the rest of the network/internet), since every layer is using underlying layers. On the page mentioned earlier you can find some nice diagrams explaining the protocol suite in detail. 
+
+In addition to the good answers already given by Jens Link and Ron: There's no absolute, objective answer how many routes are active on the internet. The number constantly changes due to networks connecting and disconnecting, routers having outages, etc. Some prefixes are announced only to specific other networks (e.g. using a no-export community) and are meant to be seen only in specific parts of the internet. In addition to that, there's filtering: not every network filters routes it receives the same way. Some don't at all, some filter so that small prefix (/24 upto /32 in IPv4, /48 upto /128 in IPv6) won't be accepted. Every network has its own view of the internet. And more prefixes in a routing table isn't always better, it can also mean bad filtering, accepting a lot of deaggregated routes, etc. 
+
+capture DHCP traffic from the server check for the source MAC address look up this MAC address in the forwarding tables of your switches to identify the switch port to which this server is connected 
+
+In general, traffic to addresses within your network should never go via your upstream ISP. Routers in your network should have a route for the every IP prefix in your network and exchange those via iBGP. In addition, it's good practice to never accept routes towards (more specifics) of your own IP prefixes from your upstreams, since you should always be the one originating those prefixes. If you receive them from your upstreams, it could indicate a BGP hijack and accepting the more specific could result in (even more) damage within your network. 
+
+Each SFP port can host an optical transceiver which has a send and receive port. So you connect one fiberpair to one transceiver. If your switch has room for two transceivers, you need to connect send and receive to one transceiver, and you have room for one more fiber connection. 
+
+This will work without any problems, but of course A and C cannot reach eachother as well as B and D, unless there's a router connected to both IP networks. 
+
+means the interface is in layer 2 mode, forwarding frames as a switch. means the interface is in layer 3 mode, routing packets. 
+
+Private MIBs are usually vendor specific. They contain additional information for their specific equiment which cannot be provided through RFC-defined MIBs. This way the vendor can provide more information. To answer your second question: sometimes vendors provide both: the RFC-defined MIB contains all that can be contained there (so most software using these MIBs can use it) and the private MIB contains the additional data (and sometimes the RFC-defined data as well). Basically it's all up to the vendor to put in the MIB what he deems useful, but it's very useful to use the RFC-defined MIBs where possible so many tools can use it out of the box. 
+
+You configured a next-hop which isn't directly connected. A next-hop needs to be directly connected to be valid, so you should set the next-hop to a router which can be reached directly, at this moment your router does not know how to reach . 
+
+become a LIR (Local Internet Registry), you get a /22 of IPv4 space buy IP space. There's a number of IP brokers where you can buy any number of IP addresses 
+
+That won’t work, satellite and WiFi are very different protocols using different physical transmitters and receivers as well as different protocols to communicate. 
+
+It doesn't work that way. Broadcast packets are sent to the broadcast address, which every host on the network should listen to. So there's only one packet, it does not get replicated. 
+
+That's becoming more and more normal. IPv4 blocks are being leased and traded all over the world due to the lack of unassigned IPv4 blocks at most RIRs. 
+
+One of my BGP transit customers has asked me for a solution to make it easier for him to blackhole traffic within our network when he's suffering from DDoS attacks. Usually, BGP blackholing is done by blackholing the target, however, my customer is looking for a solution to blackhole based on the source address so the target of the attack won't be taken offline. Building a blackhole solution based on the target address isn't that hard: just have the customer announce the target as a more specific route via a seperate BGP session or have him tag it with a specific community, then use a routing policy to set the next-hop to some discard interface. Building a blackhole solution where sources of the attack (which are not within the customer's IP-space) are blackholed seems to be a bit harder. If I'd use the same solution as for filtering destinations my problem is that I only want to discard traffic from specific sources towards this specific customer, so inserting discard routes into my routing table isn't acceptable anymore since it would affect other customers as well. So I need some way to create a filter which only applies to this specific customer. The first solution I was thinking about was to use BGPFlowspec. Unfortunately, this won't work for this specific customer since his equipment doesn't support it. So what I've been looking for is a way to create a dynamic firewall filter based on some routing property, most likely a community set either by our customer or by us when receiving a specific route via a dedicated BGP blackhole session. This filter then can be applied on the customer's interfaces to block unwanted traffic. Unfortunately, I haven't found an easy way to create a firewall filter (or prefix-list) this way. I did find $URL$ which 'misuses' SCU/DCU to more or less achieve what I'm looking for, but it does sound like a bit of a hack. One of the other solutions I can think of is to create some static filter on our routes and build an interface which allows our customer to modify the prefix-list used by this filter. However, pushing configuration changes on my routers every time the customer wants to add a blackhole isn't really what I want. Some solution using BGP would be preferred. On our side routing is done on Juniper, for a solution I'd prefer to have something which can be used on a variety of platforms, so it basically should just us BGP via a separate session or tagging routes via a specific community. This way I can use it for other customers as well. I'm really interested if anyone has a nice solution for this (other than the SCU/DCU one). 
+
+Since RTBH is just BGP using a dedicated session and/or communities to indicate traffic towards which destinations of the customer to discard, it's a lot less risky: filters are easy to write and blackholes can only affect the customer announcing it. Also, since it's just BGP, it can be implemented on any BGP speaking device. FlowSpec has some features RTBH is missing (for example the ability to match on source and destination IP's, protocols and ports), but it's mostly used within a single network. RTBH on the other hand can be used with upstream providers, allowing customers to have them drop traffic towards a target, thus not congesting their costly transit links. 
+
+Both these options do cost money. Option 1 has an additional yearly fee, option 2 mostly depends on the number of IP's you're buying. 
+
+It does not. ARP traffic stays within a broadcast domain, so it won't pass the gateway, it's all switched, not routed. 
+
+If you don't see those logs there anymore, they've most likely been rotated to reduce disk space used, but it could be that contains logs from July, it all depends on when that log was created. So you could use to check that. You can change the number of files stored on disk: 
+
+Though there are (as far as I know) no strict definitions, you say that policies are the abstract, high level definitions of what traffic should and shouldn't be allowed. Firewall rules are the translation of policies into practical configuration. For example: the policy "allow only management traffic from trusted networks" is translated into rules which allow traffic from to and from to . 
+
+It all depends on what the ISP is willing to do for you, but technically it's possible. Either by adding your IP-space to their ASN and announcing it that way to the rest of the internet, or by setting up a BGP session with your equipment, accepting the IP-space from your ASN, which can be either public or private. 
+
+The exact way to check depends a bit on the OS and/or drivers of the client, but for wifi you should be able to look up the BSSID (Broadcast Service Set Identifier) which is the MAC address of the access point. On OSX you can check this by alt-clicking on the wifi icon. You can check the forwarding tables of your switches and access points to find out which one originates the MAC address of your device if you want to check looking from the network perspective. 
+
+Typically, an unmanaged switch wouldn't send BPDU's, since it won't support spanning-tree. So you can only see your own BPDU's coming back to you on another port then. If you're running spanning-tree, you can use a BPDU guard on Cisco to stop the loop by shutting down the interface: 
+
+I know at least F5 LTM has a feature where it monitors performance of each pool member and adjust its loadbalancing method based on this: 
+
+You could use an event-handler for this I guess, but the easier way to do this is by using a syslog analyser, XMPP client and/or snmptrapd daemon which handles these messages sent from the switch. Two downsides on the event-handler approach: 
+
+SSH on the 6500 series is a software feature, so the best thing to do is use the Cisco Feature Navigator to select a software image with SSH support and install that. 
+
+That depends on how the access point is configured. If it's configured as a router you'll only see one address of the access point itself, but if it's configured as a bridge between the wireless and the wired network, you'll see a MAC address for every connected client. 
+
+That's hard for us to tell, we don't know your application, but if you're looking at /24's, I'd take . 
+
+I'm not sure what makes you think it's not (and I'm also not sure if it is or is not), but the main reason is that to do ARP spoofing, you need to be in the same layer 2 broadcast domain, which makes it hard(er) to do remotely. 
+
+I have no practical experience in running CoS/DSCP in ISP networks, but a logical explanation would be that it doesn't make sense to just change fields in a header. Even if I as an intermediate ISP wouldn't be interested in these fields, the receiver or some other intermediate party could be. Resetting DSCP fields just because I'm not using them sounds like a waste of resources and unneeded meddling in my customers' packets.

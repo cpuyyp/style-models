@@ -1,0 +1,81 @@
+Oracle database licenses are quoted per processor, not per machine. They don't care whether you have two machines with two cores each or four machines with one core each. Both equate to 4 licenses you need to purchase. For clustered installations, you need to purchase the appropriate database licenses and the RAC licenses. 
+
+You can then include the as a reference in the table (with no reference to ). You'll need to ensure that you can't change the parts and tunings for a configuration or implement some form of versioning on this table to ensure you can reconstruct the exact details used to set a given time in the past. 
+
+The fundamentals of indexing etc. all work in exactly the same way, so strictly speaking the only difference is the cost of getting this wrong! That said, here's a (not necessarily complete) list of things worth bearing in mind: 
+
+Before doing this you should verify that there aren't any objects still allocated to the tablespace for other users however. You can find this by running: 
+
+As you've identified, storing the price on the order makes the technical implementation easier. There are a number of business reasons why this may be beneficial though. In addition to web transactions, many businesses support sales through other channels, e.g.: 
+
+It is possible to do this in a single FORALL statement, provided you create the nested tables as SQL objects. This allows you to reference them as tables with the SQL. You can then use INSERT ALL to do a multi-table insert: 
+
+There's a lot of restrictions on using long columns which make them tricky to work with. One way around this problem is to convert the data into an XML structure. Once you've done this you can use XPATH expressions on the XML compare the field values. The conversion to XML can be done using passing in your query as a string, like so: 
+
+Using start and end day ranges is a valid solution to this, I just think it's better to explicitly store the days the resources are allocated because: 
+
+A cursor is a pointer to a result set for a query. By returning a you allow the client to fetch as many or few of the rows from the query as it requires. In stateful applications this could be used to page through results. A cursor can allow more flexibility than writing a PL/SQL function that returns an array as it's completely up to the client how many rows to fetch and when to stop. That said, I've not found many cases where this additional flexibility is useful. It's worth noting that the is weakly typed, so you can return pointers to queries which not only have different from or where clauses, but different numbers and types of columns as well. Alternatively you can use strongly typed cursor where the columns in the result set are fixed. This enables you to write functions which return different queries, like so: 
+
+The hybrid approach is often used, with many of the main DB vendors having a complimentary in-memory database to synchronise with their traditional database: 
+
+If you just want an overview of your system in a time period (including "heaviest" SQL statements), the AWR report itself gives this. You can find an intro to this on oracle-base. 
+
+To find if there's changes, have a read of Kerry Osborne's unstable plans article and look for the "awr_plan_change" script. If you are switching between plans, you can force it to keep the good plan using SQL profiles. Again, Kerry Osborne has a detailed article on this. Note that it's possible that the SQL you're interested in isn't stored in the AWR, as only the worst performing statements are kept. We can force details of it to be kept by "coloring" it however, as discussed by Dion Cho. 
+
+However, to get these benefits you need tables where you (nearly) always include the leading column(s) of the primary key in queries and you're likely to be fetching several rows at once. Some common examples of such tables are: 
+
+Do you like gambling? (2) So you still need a an index with lots_vals as the leading column. And at least in this case the compound index (few, lots) does the same amount of work as one on just (lots) 
+
+Then I would go with storing a row for every day each resource is assigned to a project. While these kinds of query are possible when using start/end date ranges, they're harder to write. Overlapping dates are also easier to prevent entirely using constraints or identify using queries. So your table would be like: 
+
+Do you (or will you) have additional attributes of the city (e.g. population, county/state, display name etc.) Are you executing a query to generate a list of distinct cities to pick from (your comment suggests yes) 
+
+To get the total, you need to put the and within a and exclude these from the . This will result in you having just one row for each , pair. Also, you don't need a clause when you have a - the grouping will remove the duplicates for you. If you're getting duplicate values you weren't expecting, it's because your group by columns are wrong. This gives you a query looking like this: 
+
+You'll then need to extend your model/add further checks to ensure that resources are inserted into the correct allocation table depending upon their type. UPDATE To show the unassigned resources: 
+
+If you have complex constraints you want to apply "invisibly" in the database, you can do so by creating a materialized view then applying constraints to that. In this case, you can do it using an MV outer-joining to . A check should then be made that neither of these are null when the , like so: 
+
+This can be done in a single statement, but you have to wrap the sequence call in a function. By calling a function in the select (as opposed to the sequence directly), you overcome the problem of getting ORA-02287 errors. However, the function will be called once for each row in A, which is not what you want. This can be overcome by defining the function as deterministic. This allows Oracle to optimize the function so it is only executed once for each distinct parameter value passed in. To make this work in this case, you'll need to pass in : 
+
+The key to determining whether your table is in 3NF is the transitive dependencies. To figure out if you have any of these, the best question to ask is: If I change the value in column x, does that imply I also have to change the value in column y? for all non-prime columns. If the answer is yes, you're not in 3NF. In this case, you have to answer yes for the and columns. If line three was dog food instead of gas, that also implies you have to change to someone other than British Gas. To get this into 3NF, you need a separate table, which lists the name of the product and the vendor. You would then have a foreign key from to the primary key of this new table. 
+
+Also create a function P01 which does something undesirable (in this case just creating a table, but you get the idea): 
+
+No quotes anywhere, but we've still managed to execute the "hidden" function P01 and create the table ! While this may be difficult to do in practice (and may require some internal knowledge/help), this does show that you can inject SQL without having to have quotes. Altering the can allow similar things to be done. The original findings for numbers were by David Litchfield and you can read his paper here. You can find Tom Kyte's discussion of how dates can be exploited here. 
+
+Yes. The optimizer can remove redundant tables from a query when RI is enforced in the database. For example, here are two tables: 
+
+The row_number() clause is to enable the conditional insert (when r = 1). Without this, you'll insert into a for every value present in your outer_tab. 
+
+You can then parse the date/timestamp into an actual date. Having done this you can use it for comparison against an actual date to return you a list of the partitions affected: 
+
+The explain plan is just a prediction of the join methods that will be used when executing a query. This can make it hard to infer which step is the most time consuming, as a different plan may be followed when the statement is executed. To get actual stats about how long each step takes you'll need to run an sql trace of the statement and review the trace file - manually or using a tool such as tkprof. This will show you how many rows each step processed and how long it took. That said, looking at the listed at the end of each line will give an indication of how many rows are to be processed. Steps processing more rows are likely to take longer to execute as there's more work to do. So in your example line which is expected to process 102,068 rows is likely to be the most expensive as the other steps are predicting one row. This is only true if these cardinality estimates are accurate however; you'll need to verify that these cardinalities match the actual rows returned. The easiest way to do this is via an sql trace as stated above. 
+
+As this solution implements the constraints in the SQL layer, it overcomes some of the concurrency issues discussed in the procedural solution however. UPDATE As pointed out by Vincent, the size of the MV can be reduced by only including the rows with stage_id = 1646. It may be possible to re-write the query to consume no rows, but I can't think how to do that right now: 
+
+Joins across database links can lead to sub-optimal execution plans as Oracle doesn't have all the information available about both sites. Queries across db links can (and do) perform just fine when joined to local tables though. If writing a new query with local and remote tables I'd start joining it all together (set-based) then only break it into separate queries if performance is unacceptable and other tuning hasn't worked. Given your query is just a simple minus with no joins to the remote site, I would expect the refactored set-based approach to be quicker. Make sure you test it though! 
+
+A downside is that inserting data is slower, so you need to weigh up the costs and benefits. Ultimately, it comes down to knowing your data and understanding how it's to be used which should guide the decision. 
+
+You must bind the elements of an IN list, otherwise Oracle will consider these separate statements. Any differences in the text of the SQL will cause a new statement to be parsed (excepting some cases when ). Therefore your examples with and will be considered different SQL statements. Each element must be bound to a separate variable. If you bind to one variable, Oracle will look for the string "fred,nick", instead of the separate items fred and nick. If you have variable in-lists, but don't want to be parsing a new statement for each additional item, you'll need to pass the elements as a comma separated string into one bind variable, then parse the elements out yourself. Tom Kyte discusses a couple of ways to do this here. Basically you can do this by writing a function which returns a nested-table which you can wrap a function around to make it a row source. Alternatively it can be done in pure SQL by using the trick to generate the number of elements you need and parsing the bind variable that way. 
+
+With fewer different values in the leading column compresses better. So there's marginally less work to read this index. But only slightly. And both are already a good chunk smaller than the original (25% size decrease). And you can go further and compress the whole index! 
+
+You can do something like this to dynamically generate a query against the tables with a nullable ID column to see whether they actually contain nulls or not: 
+
+You could then have further child tables below hardware or clothing, if there's more specific details required or just add columns to these tables (which may be null for some clothing/hardware types). It's fine to have nullable columns, though if a large percentage of the columns will be null due to the product type most of the time, you should think about splitting the table into separate child tables, similar to above. If you need to say which products a vendor sells, you can link them via a table. 
+
+I would go for option 1 possibly introducing option 3 if you have a large number of products with very different attributes. This will give you a "master" product table, holding attributes common across all (or most) products (e.g. name, price, etc.) and separate detail tables with more specific entries for each product type. From your question, it sounds like you have (at least) two main classes of product, "hardware" (padlocks, chains, etc.) and clothing (hats). So you would have tables something like this: 
+
+If you find you want more (or less) data than 24 hours you can then just update your table as appropriate. It's worth looking into partitioning as well though, as Justin's suggested. 
+
+As the where clause is evaluated before the columns are selected, the value passed to the function isn't set until after the context is read. The location of the sys_context call in your query (select, where, group by, etc.) will affect exactly when this value is set. 
+
+It looks like this is a bug with the handling of functions on collection variables. Given the following function: 
+
+I think what you're missing is a table. This will have an FK to the table and have and as children, like so: 
+
+You could create a materialized view containing data just from the last 24 hours. To do so, you'll need to create a single row table containing just the date after which you want data to be returned however. Your refresh process will need to update this table to the date you want before doing the fast refresh: 
+
+Notice that the clustering factor for few_lots is 10x higher than for lots and lots_few! And this is in a demo table with perfect clustering to begin with. In real world databases the effect is likely to be worse. So what's so bad about that? The clustering factor is one of the key drivers determining how "attractive" an index is. The higher it is, the less likely the optimizer is to choose it. Particularly if lots_vals aren't actually unique, but still normally have few rows per value. If you're unlucky this could be enough to make the optimizer think a full scan is cheaper... OK, so composite indexes with few_vals and lots_vals only have edge case benefits. What about queries filtering few_vals and many_vals? Single columns indexes only give small benefits. But combined they return few values. So a composite index is a good idea. But which way round? If you place few first, compressing the leading column will make that smaller

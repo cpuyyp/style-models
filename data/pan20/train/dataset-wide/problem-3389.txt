@@ -1,0 +1,83 @@
+It shows what's on the wire on that NIC. Only exception to that being checksums if hardware checksum offloading is enabled, egress packets will have null checksums in that case. 
+
+Firewall rules are correct. Probably a host firewall, or wrong subnet mask on a host, or missing/wrong default gateway. 
+
+Sounds like you're either missing a firewall rule on the second interface to allow Internet access, or your NAT is missing the other subnet if you're using manual outbound NAT. 
+
+Yes, how depends on whether you're talking about an authoritative DNS server to host DNS for your domains (in which case, use the dns-server package), or whether you just want something to use as the DNS server on your internal hosts. In the latter case, the built in caching DNS forwarder is great for that. 
+
+Hard to tell definitively without seeing the server log too, but usually logs along those lines means the client can't communicate with the server on UDP 1196. Without knowing more about the setup as a whole it's impossible to pinpoint a cause, but in general the following are the most likely: 
+
+That hardware is fine. Way, WAY more than you actually need for that, but if that's what you have and want to use, you're good. 
+
+Definitely better to use HA w/CARP in that case. That gives you redundancy that you can't get at the hypervisor level, like not going down when doing upgrades. 
+
+If you're referring to a DHCP server on the WAN side, you're probably blocking DHCP traffic. Check your firewall logs. 
+
+Yes it's possible. Create the virtual switches in ESX, and assign the NICs on the VMs accordingly. You'll have one vswitch for the public network, and at least one additional with no physical NIC associated with it for the private network. You probably don't want both a public and private IP on the Windows VMs, as that would defeat the purpose of having a firewall. Unless you can't NAT for some reason. The Windows servers probably should be private-only, and only connected to the private vswitch. 
+
+Your traceroute seems to indicate your routing is screwy. Should never see your default gateway as the hop multiple times. Maybe you have a subnet mask that's way out of whack or something similar. What does Diagnostics>Routes show? I doubt you're blocking it, seems more like a routing issue. 
+
+You need the option to bypass filtering for static routes, under System>Advanced. Can't filter the traffic in that scenario since it's asymmetrically routed. 
+
+Probably pieces (maybe more than just dirname) of stock FreeBSD that we don't include in pfSense as they aren't needed for firewall or related purposes. You can just copy over from a stock 7.2 release for 1.2.3. 
+
+Not getting far enough to be MTU-related. You're sending a SYN, getting a SYN ACK in reply, then RSTing the connection rather than completing the TCP handshake. Something is aborting the connection. That's an unusual circumstance, nothing about that suggests a specific cause. Looks like that capture reference point is your WAN, try the same on LAN to see where the RST is being initiated. 
+
+You can't have two untagged VLANs on a single switch port, and wouldn't want to do that regardless. You'll likely need two NICs in your machine, one on each VLAN, if you can't route between the VLANs. If your OS supports VLAN tagging and treating that as a separate interface, you could have one untagged and one tagged VLAN configured to do that on a single NIC. 
+
+The server didn't accept the key your client provided. The client provided only "/Users/kosmos/.ssh/id_rsa_old", guessing that's not the key that's in your authorized_keys file on the remote server. Check the auth.log on the server, it should contain something helpful as to why. If the public key for that id_rsa_old is in your authorized_keys file on that server, it's probably refusing it because the permissions on authorized_keys are excessively permissive. Make it 600 or 644. 
+
+You have a problem there that should be fixed, rather than creating a work around to the actual problem. From the sounds of it, you have mismatched lifetimes, and aren't using DPD (or maybe are on a version pre-2.0 where DPD in ipsec-tools didn't work). First fix your lifetimes, and then enable DPD on both sides if possible. 
+
+Packet capture of the traffic is the way to figure out what that traffic is. You can do it right on the firewall, no need to setup a span port in this case. Just go to Diagnostics>Packet Capture, choose interface LAN, set count to 1000, and click Start. A couple seconds or so later, browse back to that page and you'll be able to download the capture. Open it up in Wireshark and you should be able to see what's happening. 
+
+That's where it switches to the serial console, that's normal. Plug up your serial console and it will continue from there. Also you shouldn't be using that old release, get 1.2.3 release at a minimum, and 2.0 is preferred at this point. 
+
+I suspect this has more to do with Sharepoint than anything else, and I'm not familiar enough with it in this regard to offer suggestions specific to it. For VPNs in general and pfSense, make sure you're on 2.0 release or newer, which include MSS clamping by default to 1400 on VPN traffic. Generally hit and miss connectivity problems (if that's what it is) are because of large packets getting dropped. I suspect that's not likely the case though since it opens in WordPad but not Word, the network and firewall have no idea what application you're opening files in and would be impacted in the same way if it were the cause. 
+
+There isn't really a way to accommodate that. Not a practical one at least. PPTP is no longer a VPN, it's effectively an insecure tunnel. The answer is really that you shouldn't be using PPTP. No modern, secure VPN option will have a problem with 1 client or a million. There isn't any built-in functionality for a PPTP client in pfSense. It's not all that difficult to hack in if you really understand all the underlying pieces. Really sounds like you need a site to site VPN via something that's actually intended for site to site VPNs and is secure (IPsec, OpenVPN). I wouldn't bother trying to get PPTP to work in this scenario. 
+
+It's unlikely you're having a web interface problem, almost certain it's a general network connectivity problem. Troubleshoot it as with any network problem. Can you ping it with no loss? You don't have the same IP in use somewhere else on your network? eg 192.168.1.1 on the VM and that IP is also the router on your physical network. 
+
+Traffic that matches your SPD (local and remote subnets as defined in your IPsec connection(s)) goes through the VPN, regardless of your routing table. Anything that doesn't, won't. Change your IPsec config so it matches what needs to go across. Or switch to OpenVPN, which is easier to deal with from a routing perspective since it uses the routing table. Refer to the pfSense book for details on either of those scenarios. 
+
+Proxy ARP isn't going to break anything (assuming it's configured correctly, it's possible to screw up any type of IP configuration and break things), CARP and proxy ARP are just two different means of accomplishing the same end result. If you have redundant firewalls, or want to add a secondary in the future, use CARP. If you need anything running on the firewall itself to bind to the addresses, you have to use CARP (or IP aliases in 2.0). If you don't have a secondary and don't ever plan on adding one, and don't have a need to bind anything on the firewall to those IPs, it doesn't matter either way. Sometimes proxy ARP is preferable if you never want anything on the firewall to be able to bind to those IPs, you're strictly using them for NAT. The various virtual IPs and which to use where are covered in much more depth in $URL$ 
+
+VPN-connected clients don't register their hostnames. Would have to statically assign them via client overrides and manually add to DNS forwarder for them to resolve. 
+
+Get a packet capture on LAN and see what's happening. Is the lost traffic making it to the LAN side? My guess is it's not, most likely causes would be either an IP conflict or a MAC conflict (such as using the same CARP VHID on a different pair). 
+
+In addition to what Chris S mentioned, which I agree with, I would also go with CARP because what happens when you're upgrading a firewall or doing any other kind of maintenance requiring a reboot or power down? With FT, you're down while it reboots, with CARP, it's completely transparent. Or if you need to change something on the VM that can't be done while it's live, you have to cut off everything. Use CARP and you're in good shape in all those scenarios. FT is mostly to protect from hardware failure, where CARP accommodates any imaginable maintenance needs with no downtime at all, as well as protection from hardware failure. 
+
+Creating queues under your limiters, weighted to give VoIP priority and then rules configured so VoIP goes into the appropriate sub-queue, is your best bet there. 
+
+There's no such thing as a configuration to increase upload speed. Most often, if there are no limiter or traffic shaper configs in place, that's because you have a duplex mismatch. Your provider expects you to force speed and duplex and you're set to auto, or vice versa. That tends to affect upload more significantly than download. Make sure your WAN port is set how your provider expects it to be. 
+
+You're breaking your DNS. Most likely what you have is the primary DNS server pointed to the firewall interface IP, and when you take that rule off it's blocking that DNS attempt, so it has to wait for it to timeout, and then that host falls back to using other configured DNS server(s). Change that rule to only permit DNS. 
+
+Never use PPTP for site to site VPNs, use IPsec or OpenVPN. It's also pretty much never a good practice to put multiple locations on the same subnet, each should have its own unique subnet with routing between them over the VPN. 
+
+Sticky connections allow you to maintain a single WAN per remote IP, but that's not enough for some sites as they involve communicating with different IPs. I generally recommend not load balancing HTTPS for that reason. In most networks it doesn't use a significant amount of bandwidth, and doing only failover for HTTPS eliminates nearly all the problem scenarios with sessions being bound to a specific IP. 
+
+Looks like what happens when you have a misconfigured PPTP server and a client disconnects. PPTP server should never use a real assigned IP as its server IP. 
+
+Just remove the NTP server under System>General Setup. You can't use any of the rc stuff from stock FreeBSD. 
+
+2.1 can do a gateway group on IPsec. Earlier versions require manual intervention for tunnel mode IPsec. Transport mode + a tunnel + a routing protocol, or more easily OpenVPN+a routing protocol, can accommodate that in all 2.x versions. 
+
+Duplicate your existing P2 (click the + to the right of it), change local from 10.0.2.0/24, leaving same 10.172.0.0/16 remote. Do the same, flipping local and remote, on "other router." Then you'll be able to communicate between. 
+
+You don't want it allowing external DNS lookups. The built-in DNS Forwarder and Resolver are strictly for providing name resolution for your internal machines. If you want a public name server, use something that's designed to be a public name server. The BIND package if you must run it on the firewall, best to use a service provider or something on a separate server. Your note on another comment that you switched to DNS Forwarder and opened it to the entire Internet means it's only a matter of hours likely until you're being used as part of a reflected DNS amplification DDoS attack, because you opened a recursive DNS resolver to the world. Take that rule off WAN so no one from the Internet can reach port 53. And you'd be better off switching back to Resolver, Unbound replies with "query refused" for good reason - its built-in ACL capabilities help ensure you're not able to make yourself open to flooding garbage traffic as part of a DDoS. 
+
+Looks like you don't have DPD enabled on the Sonicwall. Make sure it's enabled, and that the settings match, or else disable DPD on the pfSense side. 
+
+The L2TP is strictly L2TP, not L2TP+IPsec which is what iOS requires. L2TP+IPsec is not supported in pfSense at this time. PPTP and IPsec will both work no problem with iOS. IPsec is more complex but not all that hard. $URL$ PPTP is basically impossible to not configure correctly. The fact it doesn't work suggests you either have basic WAN-side connectivity problems, or are using a 3G/4G carrier whose CGNAT doesn't pass GRE, which is common in many places and means PPTP cannot function on that 3G/4G network. IPsec has no such issues. 
+
+If you're keeping the hosts behind pfSense on 192.168.1.0/24 then you can't make it a transparent bridge as it has to route to and from that network. You could bridge if LAN and WAN were on the same subnet. The VPN needs the additional route for that subnet via an additional phase 2 (how Linksys refers to that in its GUI I don't recall offhand), you need a static route on RV082(B) for the 192.168.1.0/24 network, and to disable NAT on pfSense. 
+
+Read the book. $URL$ The ordering is described in detail there and is all applicable to 2.0. In short, port forwards and the server load balancer both win over 1:1. You can't do CARP on the WAN IP, each WAN must have its own IP and it cannot fail over. Same as HSRP, VRRP, etc. 
+
+Theo and others can make claims along those lines, but history suggests it's not a significant concern. Security researchers have been looking for vulnerabilities in hypervisors for years, and by and large they've escaped unscathed from at least major repeated vulnerabilities. Not entirely, you'll have to patch your hypervisor as needed where you generally never have to patch physical hardware for security reasons, but there really hasn't proven to be a significant difference in practice. It's beyond a home networking question in general. There are numerous critical production pfSense installs running in hypervisors, largely ESX. We have 4 colo datacenters on the *.pfsense.org hosting infrastructure that strictly run virtual firewalls. I like it because we can scale way up on CPU power, RAM, etc. as needed without dedicating expensive servers to firewalls, and based on history I'm not concerned about the security of the hypervisor (but keep an eye on new developments). You do need to take care to ensure the host OS of your hypervisor cannot bind IPs to the NIC that goes to your unfiltered Internet connectivity. That's the significant risk in running your edge firewalls as VMs, it's easier to screw up the networking on a hypervisor than it is to plug physical cables into the wrong place. 
+
+You can with hardware that supports bypass mode in its NICs. That's uncommon in general, but many appliance platforms focused on firewall/other network security roles (from Lanner and others) support bypass. There may be some PCI/PCI-X/PCI-e NICs you can buy that offer the same capability. Can't say I've heard of any offhand, but I've never looked. That's strictly dependent on the hardware and doesn't have any relation to the software. It's controlled in the BIOS setup in all the systems I've seen that have it.

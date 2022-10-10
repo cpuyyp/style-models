@@ -1,0 +1,95 @@
+If you want to learn more on MySQL indexing check out resources such as $URL$ Indexing in general is well detailed by Markus Winand $URL$ Your queries using 
+
+Review indexing on cours table as you're getting a full table scan there. $URL$ Great indexing tips there ^ 
+
+You do not need to change the sort_buffer_size from default. You misunderstand it's use based on the question. You should begin by examining the SQL to see if you are able to tune it and satisfy ORDER BY/GROUP BY conditions using an index. It will generally be a composite index. Further: $URL$ 
+
+Using InnoDB and the Barracuda file format permits you to deploy the Dynamic row_format. This configuration will aid you due to the way it will store the BLOBs off page. Queries not using the columns with the BLOBs shouldn't need to touch their pages; $URL$ 
+
+In that case, go to McAfee audit plugin as it's compatible with MySQL from version 5.1 to latest GA. This plugin outputs in json nicely for you and you can filter nicely on the events you do and do not want. 
+
+Slave_SQL_Running: No The above indicates that although the replica is connected to the master it is no longer applying SQL statements to the dataset. This is due to the problems exposed in the 'Last_Error' field. You should resolve these issues either by aligning the data or skipping the transaction and syncing the data thereafter. You've likely arrived at this scenario because of data or database object inconsistencies between the nodes. You should explore monitoring the replication health using any of the popular methods for example using Nagios and Percona's Monitoring Plugins for MySQL. There is a broad choice in this space. 
+
+Webscalesql is a project born in order for those organizations that maintain their own MySQL patches to use, and review each other's code. So engineers from facebook can improve twitter patches can improve Google patches and so on. It is necessary for now at least, because its seemingly difficult for Oracle to accept, QA, test and ship external code. Note the use of "seemingly". Some would argue it is not. Webscalesql is not supported by anyone so I would advise against running it in production environments without your own MySQL engineering team. Oracle, Percona and MariaDB should be the direction to look to for an implementation. 
+
+The query cache is only helpful for low write, high read workloads and should be pretty handy on a blog with this access pattern. If you issue any DML then you invalidate the QC for that table and repopulation would be necessary. Have you calculated the QC efficiency based on your local status? $URL$ The table cache is a different animal. It caches tables in memory so that MySQL can avoid the overhead of opening them. There's a recipe for tuning this, which is something along the lines of but I doubt this us causing you trouble. It's likely that you would be better off tuning the key_buffer (MyISAM's cache for indexes) or the Innodb_buffer_pool_size (InnoDB cache for data + indexes) to reduce load on the server. $URL$ 
+
+It's likely the disk space is the root cause. Watch the space free in the tmpdir location whilst the ALTER is running. 
+
+Get advice from the vendor. If you're using the commercial product you're paying for expert advice from Oracle themselves. 
+
+My full conclusion here is that you should spend some time learning about indexes on BTREE data structures. The implementation in MySQL isn't very complicated and the sharp edges are evidently unknown. I've added some resources to my original answer and if you're serious about the performance of this and future applications you write/optimise with MySQL you should do your homework. Feeding you the fish here will not help you longer term. 
+
+Syntax issue in the . I've not written any procs with this notation so for me it rang alarm bells. I checked both with and without and dropping the 'OR REPLACE' allowed the proc to be created. You can 'DROP PROCEDURE' in advance of creating is for the same effect. Try with; 
+
+When seeking a dump which provides binlog position you will instruct MySQL to call Flush Tables With Read Lock. The acquisition this lock can block. This where you could impact the system. If you have long running transactions you may see problems but you can check this before starting the dump. Your command looks fine to me. 
+
+I wouldn't say this is impossible (MySQL is open source so hacking the source code could bring about this change) but I wouldn't advise it. Information_schema is an ANSI standard and isn't limited to MySQL. It contains virtual tables or views describing metadata about the server. More detail here. $URL$ Hopefully this will enlighten you to why it's there and why it's managed by the server not the user. 
+
+My $0.02; perform the calculation app side. It will scale better. Its possible to perform the calculation in an or an statement. 
+
+This will ensure that MySQL will use a file per table to store data and therefore easier to recover space moving forward. Drop all the data and restore logically from the backup file. This will populate each table per file and future tables are going to be created in their own file. 
+
+Track the activity on your server with one of the off the shelf audit plugins available. McAfee Audit would be my recommendation here sincemyou likely just want to know calls filtered around the stored procs. 
+
+The right direction for this is to use an audit logging plugin. There are some choices out there. Please check out the following post for more information $URL$ My personal preference is the Percona Audit Plugin but you should be using Percona Server (MySQL Alternative) for this. 
+
+This is an [info] message and displays due to the steps taken by the Debian mysql startup script. It is not an error. 
+
+You may have fragmentation in the table meaning that you could reclaim space by running the optimize command on the table. Check the free_data column from . Further reading; $URL$ If you are using the innodb storage engine (and you generally should with narrow exceptions), then you could consider using innodb row compression. Caveats here are that it's not recommended on a CPU-bound workload and you need to ensure that you're working with innodb_file_per_table enabled. Further reading; $URL$ 
+
+Using the INSERT (SELECT)...ON DUPLICATE KEY UPDATE should permit you to visit these rows and update them with original values. Also you're not correct about REPLACE. This is the mechanism used by pt-table-sync to correct data drift. The documentation details a REPLACE == DELETE AND INSERT but that's not done within the scope of AUTO_INC. 
+
+Using Xtrabackup for full backups every 15 minutes is overkill IMO. You should ensure that you have binary logs enabled and then mirror them off to another server using mysqlbinlog from MySQL 5.6 (it's backwards compatible) so that you can perform point in time restores. The binary logs contain all changes that occur on the instance whilst a full xtrabackup would contain the entire dataset. This will have obvious overhead. Alternatively look at the incremental backup capabilities of Xtrabackup and if you're having any issues using it head over to Percona's forums for some assistance. 
+
+How large do you expect the data to grow? No harm in keeping older data in the same table. You could plan to use partitioning and implement date range partitions (per year). Using WHERE statements is completely natural in SQL so don't consider this as "messy" at all. 
+
+This all depends on the size of the table. You're doing a full table scan without a where clause so an index isn't going to help. The use of the rand() function for sorting is going to produce a temp table and this will harm performance. If you have a primary key you could generate a random number in the app and perform a query where a single row is selected and can make use of the clustered index. You're likely to be serving this all from memory if you're using the InnoDB storage engine. 
+
+It's tough to optimise Aggregation (AVG), Group By and Order by. These operations even if well indexed will generally cost internal temp tables and regularly on-disk temp tables for grouping and sorting. It's widely accepted to cache the results for re-use rather then rerunning this at any level of concurrency. You may have heard of summary tables to record such values. Worth a read, google is your friend. 
+
+Joel, there is a lot of unknowns. If you post your my.cnf, queries, table definitions and queries, EXPLAIN plan output, then you might get more precise answers. You say "disabled query caching and other caching" what 'other caching' are you referring to? What steps did you take to disable QC? Did you restart your MySQL server between tests to flatten any buffers? If no and the KVP table was smaller and fit into RAM then InnoDB might have been able to serve queries fitting a certain criteria from data in the innodb buffer pool. You also refer to memcache. With MySQL 5.6 there is a memcache api. this means you can use memcache calls to access data stored in innodb. This will not be incidentally speeding up your queries. There is also another method of bypassing the SQL layer within MySQL called HandlerSocket. These are a couple of subjects that I would point you at should you continue to desire this type of access to your data with the added bonus of having MySQL persist the data to disk and also be crash safe through InnoDB's crash recovery process. 
+
+It's possible. You will potentially lose capacity to serve all data requests from in memory buffers but that depends on how large your data is. select ROUND(SUM(data_length+index_length/pow(1024,2))) as TotalSizeMB, SUM(table_rows), engine from information_schema.tables where table_schema not in ('mysql','information_schema') group by engine to see your distribution per engine. You'll be able to judge whether all data and indexes fit inside the innodb bufferpool or indexes within the myisam key buffer. Assuming you set these buffers up yourself in the my.cnf config file and you're not running with the defaults. 
+
+Use pt-archiver tool. It can delete data that it moves. Alternatively use drop & create after the select into outfile. 
+
+Looks like an issue I have encountered recently. With MySQL stopped, move the ib_logfile* from the data directory (perhaps to /tmp to be safe). Then start mysql and watch the log for progress. I didn't check for bugs yet but I'd wager something has been logged. Let us know how you get on. 
+
+You should use the MySQL event scheduler to run a a query to update all rows where the age of the row is greater than your threshold and have it execute the update at a suitable interval. 
+
+are unable to use indexes because of the wild carding. You can switch to using FULLTEXT matching. The LIKE pattern is not scalable and will cause full table scans all the time. 
+
+Use the information_schema.columns table i.e. select table_name,column_name from information_schema.columns 
+
+The best performing way to delete a lot of data is to chunk your activity. There are tools to complete this such as pt-archive and oak-chunk-update. This avoids the build up of undo and performance issues. 
+
+I would advise you to drop mysqldump and move to Percona Xtrabackup. It will give you a filesystem level backup that can be made online. Restoring those backups will be orders of magnitude faster. 
+
+The duration of the creation of the index will be directly related to the size of the index. I don't think it would be wildly different for the 2 options provided. Under the hood MySQL is going to copy the table to recreate it in the new structure, so consider the amount of time MySQL will take to read the data and write the data. The process is single threaded too. If your storage is slow this will take some time. Tips: - Ensure that fast_index_creation is enabled - Group multiple ALTERs - use pt-online-schema-change tool to perform it online. This will take longer but will permit you to continue to use the table. 
+
+There are multiple audit logging products available. If you are using Percona or MariaDB flavour of MySQL you have the option of their plugin. If you are using Oracle MySQL you can pay for their enterprise version of audit plugin (as part of Enterprise Edition). There is also an audit plugin from McAfee that will fill this requirement and is generally available cross-alternative and from 5.1+. These products permit you to log both logins and queries. Finally there's a plugin to track logins only from a community contributor. Links to all below. $URL$ $URL$ $URL$ $URL$ 
+
+Only filtering, aggregating or ordering involving the left most column will be valid for this index. i.e. 
+
+It could be related to indexes. Think about how a constraint could affect inserts. PK is unique by design and you have three columns and with your 3 col PK MySQL needs to check each time a new row is inserted whether that PK is unique. Why can you not simply use the 1st column as your PK? Secondary keys need to be updated when you add new data, ensure that you have expand_fast_index_creation turned on. FK relationships need to be maintained based on their inclusion in the table. What rippling effect does your INSERT have on related tables? On the other hand it might be due to your settings. Check and tune the following: innodb_buffer_pool_size innodb_log_file_size innodb_flush_log_at_trx_commit Some tweaks to these could spin you up a few notches. 
+
+You should consider some group ID within this or another relataed table. Marking accounts with the same group ID you can have 1 or more of them as an enhanced account type. Make sense? 
+
+There is no core method for gathering this information. It could be sought by utilising an audit plugin. By collecting all of the queries occurring in the server you could analyse the logs. Using the McAfee Audit plugin you can filter the events to only long on certain schemas and that might make lighter work of the analysis. 
+
+Check the version you used to backup the data is the same as the one you are trying to use to restore. This can bite. 
+
+Your data is corrupt. You might attempt starting the server iterating through the $URL$ documentation. If it starts you can attempt to save the large table (mysqldump/mydumper export) or drop it if it's not needed. 
+
+Alternatively you can install and deploy the Maria DB audit log to enable a trace on the objects and access you require. $URL$ 
+
+errno: 13 should be enough of a clue here. 13 is generally permission denied. Check the .so file in your plugindir. It will likely have privs that will prevent the user running MySQL from opening it. 
+
+You could investigate the MariaDB storage engine 'CONNECT'. It's in beta but could simplify your process. It is not OSX, however. $URL$ $URL$ This storage engine permits you to read and write to 'other' data files. Take a look as it's a very interesting component. 
+
+One method to address this issue is to use a logical backup tool, such as mysqldump to backup the database. Refer to your my.cnf (usually under /etc/my.cnf) and then ensure you have the setting 
+
+You could also use MySQL events (like internal cron) and select into outfile. Advantages of this method? Your backups will contain this logic. Both approaches are valid IMO just depends on your preference. 
+
+Mysqldump is single threaded so you’re bound by the speed that 1 core can run at to play all your SQL commands in serialised fashion. There are some config variables that can be changed to reduce the amount of disk flushes needed and permit larger memory buffers for speed. Innodb (if that’s what engine you use) variables (plus others)

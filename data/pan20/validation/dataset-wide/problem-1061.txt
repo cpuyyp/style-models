@@ -1,0 +1,67 @@
+Could be nothing important according to KB 811484 However, I'd schedule a chkdsk on that drive on next boot, and makre sure all my backups are in order. 
+
+I would use my own identifier. The species name may be unique but - it's too long - it's a string For example, in SQL Server, if used as the clustered primary key it will be used in non-clustered indexes, thus repeating the long string. And typically foreign keys omn child tables will go to the primary key, thus repeating it again As a string, you have the overhead of sorting and comparison (case, accents, etc). Using a surrogate numeric key avoids these problems: but you must create a unique non-clustered index on the species name. Is species name a good long term identifier too? Not my area of expertise but don't many species have alternate names, or controversies, or get reclassified, or "maybe this species"? Example: how many Giraffe species are there? 9? 2? 6? 8? 4? 
+
+The query plans here should show a lot of scans because you have poor indexes for the operations you are doing. Target table indexing appears OK Another observation: uniqueidentifier and varchar are bad choices for clustered indexes (your PKs here): too wide, not increasing, overhead of collection comparisons at least Edit, another observation (thanks to @Marian) Your clustered index is wide generally. Every non-clustered index points to the clustered index, which means a huge NC index too You could probably achieve the same result by reordering the clustered PK. 
+
+That index suggestion by marc_s is wrong. I've added a comment. (And it was my answer accepted too!) The index for this query would be 
+
+You can't. They are set per connection, but not in the connection string. So run some SQL after creating the connections 
+
+If there is a 1:1 mandatory relationship then you don't add much value by splitting the table. There are cases were 1:0..1 relations are best as separate tables though. And your keys would go out of synch quickly. Assuming you'll insert into both tables in a single transaction, a failure on the first insert would generate a gap that doesn't happen on the 2nd table. If you had an AUTO_INCREMENT on one table and used LAST_INSERT_ID, then you lose the ability to do multiple row INSERTs The KISS principle applies... 
+
+For each single quote you want in a string constant, you need to use two to represent it Two quotes in the string requires you to use 4 like this: 
+
+Option B is correct. Quite simply: each row/column stores one and only one item of information A multiple table design is quite normal: it comes out of the normalisation process which starts with option A as your business data model. 
+
+That's a long question. First off, my current project (I'm the database guy, there are MMO engine experts to deal with that) is a form of MMORPG based on an off-the-shelf engine. Volumes would be like Eve Online" or "World of Tanks" volumes. Now for an orthogonal short answer: 
+
+The whole "inserting multiple records with XML" has pretty much been superseded by table parameters in SQL Server 2008. And mentioned in Erland Erland Sommarskog's Arrays and Lists in SQL Server 2008: the definitive article on this subject. .net has better XML handling than the SQLXML implementation too. 
+
+Standard to Workgroup is a downgrade This is the BOL page on upgrades Unfortunately, you'll have to uninstall and reinstall. On the bright side, the master, msdb etc will simply restore into the "lower" version as long the version number is the same. 
+
+No, their is no better way then cross joining on yourself in MySQL. You can make the SQL slightly more elegant using, say, a CTE in other RDBMS, but what you have is the best way IMO. By "best", I include "efficient" too: set based/no loops, and no temp tables 
+
+Now, you have safe+tested change and rollback scripts to apply whenever. And of course you backup the database before any change because statistically shit will always happen eventually. The Red Gate tools can also compare against a folder which is under source control. We then capture the ALTERs etc in our source control separately to the actual change scripts. 
+
+Both your assumptions are correct. CASCADES flow from the 1 (column1) to the many (colummn2) side. NO ACTION and RESTRICT do the same thing: they would prevent the delete from column1 in this case. The column2 delete would be allowed because it is on the many side 
+
+For SQL Server 2008, a filtered index that matches the where clause should speed this up. If you want to have parameters, not constants, then an indexed view will can have this pre-calculated with a GROUP BY on Bar and Baz 
+
+You could also use computed columns to add a column that says "department" or "division" Another way: mandate that each department has at least one division... 
+
+2 results sets in a stored procedure. Page on the first (IssueID) then "JOIN" back to the 2nd to get detail tows Add a DENSE_RANK() OVER (ORDER BY issueID) to generate a number for paging 
+
+Edit, Jan 2012 Note that deleted records are not physically removed on DELETE. A "ghost clean up" process does that afterwards. 
+
+It doesn't really in any measurable fashion Statistics are stored as histograms, with at most 200 entries per index/column. This is trivial, compared to the actual column or index. See $URL$ 
+
+No, there isn't. SQL Server doesn't support UTF-8. You need to define your columns as nvarchar/nchar if you want unicode data. Note, internally SQL Server stores this as UCS-2. Note that this has ben requested from MS on Connect and there is an older KB article. And some info on this blog too 
+
+There are several solutions for "dbo.SomeSplitTVF" on SO, but you could start with this article by our own Aaron Bertrand 
+
+Even though MySQL requires statements to be terminated, the last one in a MySQL batch (or highlighted code) doesn't require it. So it's back to good old developer discipline and separation of environments 
+
+Socket here means physical CPU plugged into the motherboard. Note that a single socket will consist at least one "core". From the MySQL products page: 
+
+I assume you mean tempdb? There is no such concept as "temporary memory size" If so.. You can subtract allocated data from tempdb data file size, but you won't see all objects because of "Metadata visibility" and the fact that temporary tables are local to a connection And the data files should grow to accommodate your data anyway. The idea of checking before importing is odd. I've never felt the need in 14 years of working with SQL Server 
+
+A foreign key does not have an index by default. You have to create one. In this case, I'd suggest either of these. It depends on relative selectivity of the 2 columns 
+
+No version of SQL Server has this. It would be useful (PostreSQL has the same and I like it). In SQL Server, there are table types (), temporary tables () and table variables (), but you can't mimic or inherit a table definition using or 
+
+When you transferred data, you probably compacted data by an implied index rebuild. Or the REPAIR_ALLOW_DATA_LOSS lived up to it's name... 
+
+"It depends" If you add a column that does require adding data to the rows, it can be quite quick. For example, adding an int or char requires physical row movements. Adding a nullable varchar with no default shouldn't (unless the NULL bitmap needs to expand) You need to try it on a restored copy of production to get an estimate Creating a new table, copying, renaming may take longer if you have to re-add indexes and keys on a billion row table. I have changed billion row tables that took a few second to add a nullable column. Did I say to take a backup first? 
+
+The relative cost of the components of an execution plan is not always reliable. The INSERTED scan or deleted scan shouts TRIGGER to me. This is your problem most likely. Are you looping over 400 rows and sending an email in an extreme example? 
+
+If you have locking problems then you have a problem with your code: it isn't the database engine It isn't a magic bullet You may add more problems 
+
+Ignoring both physical and VM memory issues for now. Queries that take longer and longer to run can be cause by several things, but I will guess that you perhaps do you have regular index and stats maintenance. 
+
+Don't use a trigger. Use a stored procedure instead to decouple the logic from the INSERT. Personally, a trigger failing means some complex DRI has failed or I can't write to a history table. That is a bad thing... Edit: 
+
+If you mean "sleeping" in sysprocesses, then this is most likely OK. Your calling code will use connection pooling to "logically" open and close connections. This avoids overhead of actually opening and closing connections which is expensive. Examples: MSDN for .net4 and for JDBC 
+
+It would typically be better to use a view to hide columns as needed and then GRANT permissions on the view. This decouples the table structure and permssions. If you change the table or recreate it, permissions will be lost. Or add a new column that now need separate permissions. a.k.a add some views to simplify the permission set hierarchy.

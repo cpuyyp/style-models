@@ -1,0 +1,43 @@
+So yes... the filesystem must be able to handle such events. There are commercial offerings for filesystems that provide resiliance to power loss, but it's not my place to recommend one. Of course, using a read-only filesystem as much as possible is a big benefit - for example having the OS on a read-only filesystem, and the configuration (etc...) on a read-write filesystem. This could potentially help you to recover from corruption and resume service. Additionally, journalled filesystems will typically handle such events better, but don't assume any level of guarantee... my log file above was on an filesystem with journalling. Storage Medium You mention SD cards as the underlying storage... which is concerning. In fact all flash storage has issues with losing power unexpectedly. This is due to the way they work - wear levelling is handled entirely by the storage controller, and as such it can decide to move pages around whenever it wants. Additionally, a write to a page often consists of a whole set of operations, and there is no guarantee / standard to dictate which order they occur. 
+
+This depends on many factors - including your chosen editor, the filesystem and storage technology... Editor Some editors will simply re-write the file. However many editors will create a temporary file, which is written to completion and then renamed to replace the old file. This makes the "save" operation atomic - that is, the file will definitely contain either A) the old content, or B) the new content. Writing the file 'in-place' opens up potential for partially written files or corruption if part of the system fails (e.g: power loss, or the application crashes). Consider the following pseudo code / steps: 
+
+In the context of technical writing (e.g: documentation), would it be more correct to use "baudrate" or "baud rate"? I believe that both are acceptable informally. However: 
+
+There is no problem with doing this - the source device will be presented as a single block device, as will the RAID array. The only thing to watch out for is the duplicate that GPT stores at the end of the disk... if your new storage is larger, then this will appear too early on the device, and may prevent you from using the full capacity, depending on the tools you use. Tools like will offer to relocate it for you when you write the partition table. See below: 
+
+Using instead of Again, this works as expected - exits cleanly. I expect because quits on , while ignores it. 
+
+If you simply put 5x disks in the enclosure and try to access them concurrently, do you see similar issues? For example, try the following (adjusting as appropriate): 
+
+If you can tell us more about what the "noise" sounds like, or perhaps upload a recording of "silence", that would help. i.e: is there a strong 50Hz component? (see this delicious 8 hour epic for an example). 
+
+You could look at salting the hashed data with a timestamp, which would at least create a new hash for each report, but this increases the workload on the server to authenticate a hash (you need to try each user, perhaps with a range of timestamps). Signing is a good way to get around this - it might be good to look at JSON Web Tokens for ideas, though this is really intended for verifying the authenticity of session data etc... and the payload is still in the clear. SSL does indeed add an overhead when establishing the connection, but have you actually quantified it? Are you sure that this is an issue? Also, in terms of increased complexity in an App, there isn't much. As you're reporting location once per minute, could you not look at keeping an SSL session active between reports, eliminating the overhead in establishing the connection? Remember also that SSL is not the only way to encrypt the payload. You could encrypt using some other asymmetric encryption (do not use symmetric encryption)... with asymmetric encryption anyone can encrypt data for a specific target (using the public key), but only the target can decrypt it (using the private key). Look at GPG for a popular starting point - this will also add some overhead, but it would not really be acceptable to transmit such data in the clear. 
+
+You've separated the networks, so I would expect that there is a good reason for this - e.g: security. As such, allowing PC3 to route between the networks is not a good option... this completely counters what you've setup. Instead, you could configure Apache to proxy the camera's live feed page. With this configuration you maintain a strict access control policy (only this URL may be accessed via PC3), you maintain your network segregation, and also avoid configuring specific routes. To do this, look at using the or directives in . 
+
+This is a common issue with RAID controllers. Many have their own utilities for managing and health checks - I believe that the Dell / PERC (PowerEdge RAID Controller) utility is called ... though this answer mentions another and may get you on the right track. How to monitor the hard disk status behind Dell PERC H710 Raid Controller. 
+
+You're probably hitting a buffering problem... you'll likely see lots of lines appear all at once, and then nothing again - look at may be asking for a password, but you redirected the prompt away... so nothing is happening. 
+
+Provide an alternate ... one which will do your special "scenario 2" configuration before calling to replace itself with the real . Tack a keyword onto the kernel command line, and detect it later from userspace by inspecting and behaving appropriately. 
+
+These are public IP addresses, and thus you should not be playing with them. Take a step back, think about what you're trying to achieve and then update your question with more details. In addition to these being public IPs, using addresses that are so far apart means you should probably be routing between them, not adjusting your netmask... whatever you're doing, it's probably not going to work. 
+
+Above I've mentioned that smaller systems typically store configuration in raw non-volatile storage. This is done by deciding what you want to store, collating the data, and writing it into storage. For example, we may want to store the following simple configuration: 
+
+Now, we must delete all partitions contained by the extended partition, and then the extended partition itself: 
+
+The only way to reliably stop a microphone from being operational is to physically disconnect it. A more ideal solution would be to disconnect it and remove it (take it away). If you have malware on your computer, then that software could potentially do anything - including poke your sound card directly and extract audio samples. 
+
+Update: From your extra-extra information, it turns out that you've downloaded a whole "backend" SVN repository. As discussed in the comments, try checking it out with the following command: 
+
+Don't forget to maintain the partition's type. In the example case the default () is fine, but you'll want to use to set the type back to . Now, you may need to run , giving your device (e.g: ). This will get the system to reload the partition table. Use to check that the partition sizes look correct. Finally, resize the filesystem. This can be done while it is online (mounted). If it is not mounted, then you will probably be promted to perform a full "check and fix" first: 
+
+We observe the same 10 second delay / timeout. A Solution Now let's handle the . Backgrounding and ing for are due to how a POSIX shell handles signals (see this for more). run.sh 
+
+It's worth noting that ZFS doesn't have to use ECC RAM, and that you can easily run ZFS on a single disk - it's an off-site backup, so this could well be acceptable to you. 
+
+Repeating a ping with Wireshark on PC 1, and on PC 2 reveals the following (see below for the dumps): 
+
+Not unless your device is comprimised or you otherwise provide access. The MAC address does give a hint to the manufacturer, and could potentially be used to guess at the device. The following page can tell you the manufacturer (or assigned owner) of a range of MAC addresses: $URL$ It's also important to note that your ISP will not be able to determine your PC's MAC address if it's behind a router - they will only be able to see the router's WAN-side MAC address, if one is used for your connection type. MAC addresses are used at Layer 1 and 2, meaning that once IP routing comes into play, the MAC address is not consistent throught the connection's full path.

@@ -1,0 +1,75 @@
+Performance It looks like you're ing an element and immediately performing a for it. This is incredibly wasteful. You can just use instead. I can think of two ways; one creates two objects and uses two s, while one performs a query. I wrote a quick-and-dirty jsPerf. The query runs the fastest; your original is 91% slower. 
+
+Better yet, instead of that monstrous , give it a meaningful ID or class, so you can just do . If you can guarantee that the will contain only s, then you can simplify further to . Depending on your exact situation, you may even be able to replace everything with the one liner: 
+
+I believe @EmanuelePaolini is correct in that you're likely getting TLE because of I/O. You're using Scanner, which is way too slow. Try a different input method. 
+
+Finally, I don't imagine performance is as crucial as you make it out to be; once per second is pretty lenient. 
+
+Right now, you have two separate AJAX calls: one to determine if a day has bookings, and one to determine whether a specific time slot can be booked. I would suggest one of two things: 
+
+For conciseness, you can replace the second block with the following, if you think it's still acceptably readable: 
+
+Send a request only once that returns all booking data for the specified date. Send only a validation request upon clicking Book; don't bother checking if a date has bookings. 
+
+I will explicitly answer regarding your sieve and its performance. Firstly, you should know that you cannot write an implementation of the Sieve of Eratosthenes without an array; that is core to its being. However, your method of selection can be improved. First, let us rewrite the sieve in terms of for-loops, since it is more natural to do so. I will also change your implementation from checking primeness to checking compositeness, which avoids the initialization step. 
+
+Alternatively, leave the first line as , and change the last line to use . (This coerces the array into a slice.) 
+
+You'll also have to think about whether you need to distinguish between being undefined, i.e. defaulting to true, and being falsey, like or or . 
+
+and You're right; these two functions share a lot of code. I propose a single function, which I'll call . I'll add that to the end of this section, but first, the line-by-line analysis: 
+
+Sorry, don't really have the time to do a comprehensive review (maybe later I'll edit!) but for now: Your code actually fails on some cases. The way that you're finding whether a line counts as a LOC or not is too greedy. (Alternatively, your comment regexes are too strict.) You're reading in basically the whole line as a line of code. This fails for relatively simple cases: 
+
+The following point becomes less relevant as you address the above points, mostly because I believe you should refactor the referenced code out anyway. 
+
+A better way of checking visibility would be to use the function in conjunction with the selector. Here's my revision. I took the liberty of renaming the parameters. I also used the common practice of naming jQuery variables using Hungarian notation. 
+
+Now, about that ... you're using as the epsilon value here. It's kind of a magic number, but more importantly, that's a HUGE epsilon value. Machine epsilon for a type is about . The amount of precision you need will vary, but when I did competitive programming I liked using . It might be nice to be able to specify a precision when you're performing the equality check. To that end, it might be nice to have something like: 
+
+You can also try looping through the values to , inclusive, but this is messy; it works a lot better in C than Java, since you don't need explicit boolean coercion. 
+
+You'll note that I got rid of (didn't seem to add much value to me) and that I declared as a local variable. 
+
+First, read @MatsMug's answer. Personally, I think that your final exported function is okay as (it's cute, almost), but your internal stuff should still be named , , etc. 
+
+I'll dissect your JS from top to bottom. But first, the overarching stuff: you tagged this question with OOP, but it's not taking advantage of OOP. It would be very natural to have and classes that you could build upon instead of having some giant object. 
+
+doesn't make much sense to me. For non-negative numbers, this is equivalent to , so you can just use that instead. For negative numbers, this will always return , although it seems like this would be an illegal argument to your function. @mleyfman provided a great solution. In practice, the code provided achieves something called clamping, where you restrict a value to a specified range. You can roll your own function like so: 
+
+Another way: If there's some common selector between the tabs (for example, if they all have the class ) and you're fine with instead of , you can simplify to the following: 
+
+Prime time to use the conditional operator. Consider rewriting as . (Although, I would still question why you need to return both. 
+
+Option 1 is the ideal approach, since it minimises requests. However, if for some reason you don't want a user to know when you're booked, you'll need to go with option 2. Whichever option you go with, you should provide feedback on its success (or failure) after submission, in case somebody else booked it sometime between validation and submission. 
+
+This gave me a final speed of , making for savings of 47%! I also tried filtering out duplicates beforehand, but for this case, it actually slowed it down to . (Edit: As @megawac asked, here's a jsperf. I also included one with smaller test cases; you'll notice that the relative difference in speed is much less.) Here's the final function. You may notice that I explicitly specified the base in the ; this is just in case the data file contains something like , where the would parse to . 
+
+However, I'm curious as to why that logic is in there at all; it won't ever evaluate to anything but since it won't be called from e.g. ... 
+
+I ran the script ten times on this (3580 lines, 29.6 KiB) and this (500k lines, 8.3 MiB). contains about 300 duplicated names, and about 2000 unused last names. About 70% of the last names in do not have a corresponding entry in . Your code ran in on average over ten trials. I made the following changes in arrCSVtoObj: 
+
+Here's my rendition. It's a little bit less elegant with the return... oh well. I'm using a utility function to avoid potentially ugly ternary nesting. The double bugs me but I can't think of a better way right now. 
+
+This is a bit of an inefficient way to render. Each time you modify , the DOM is going to change. Instead, it's better to add up your modifications and then only modify once. 
+
+should be one line of code, but you treat it as two, since your regex absorbs the . In fact, I'd argue that the way that you choose to count lines of code is odd; it took me a few reads to see what you were doing and find that error. The more natural way perhaps would be to strip spacing and comments, then count non-empty lines. That also has the advantage of being way faster: you're calling a lot, which is pretty expensive. Aside from that, I only have a few comments: 
+
+Another way to do this would be to change to a slice and then use . I'm not super familiar with Go, but this works for me: 
+
+Indent exclusively with tabs. This is nice when using text editors with a configurable width for tabs. It also can marginally speed up a site, but that's only if you aren't already stripping out whitespace before sending to client. It's also negligible in the era of . Indent exclusively with spaces. This guarantees that the code will look the same for everyone. Since it isn't configurable, though, if you like eight spaces and someone else likes two spaces, they can't just make it happen with a setting; they'll need to do a replace on the file. Mixed: indentation levels use tabs, but alignment is done with spaces. This is the style I personally use. 
+
+Finally, we can determine the range of primes we want. To do this, perform a binary search on to find the lower and upper bound. Then, select a random element from the list. You may wish to save this list of primes, so that it only need be computed once. In particular, observe that the sieve of Eratosthenes can be "paused" and "resumed" in computation, so that the results of previous computations may be used in future computation. I leave this as an exercise to the reader. 
+
+Ideally, you would separate these to be in the event handler, since they deal with UI logic instead, while the rest deal with model logic. This also causes you an issue later on. 
+
+You're missing a semicolon—this is a function expression and not a function statement. More importantly, however, this function doesn't make much sense as written. It returns a single element or undefined if it can't find one. That is almost exactly the behaviour of , which will return instead if it doesn't match an element. I would just straight up replace this with . I'd also like to point out an efficiency issue, even though I'm asking you to get rid of it altogether. The loop condition gets executed every iteration. This means that you're actually performing two calls to return a single element. This is bad, and it'll get even worse if you try to do something as you iterate through them. Instead, assign the result of to a variable, to avoid calling it multiple times. 
+
+This could be DRYed out a bit. You can get rid of the first instance, and put the logic in the second instance like this: 
+
+Here's an example that takes advantage of the built-in functions, and intelligently merges in conflicts. (ideone) 
+
+The following would implement the last two points. Note that save detection is naive, since as far as I'm aware, there's no way to conclusively determine if a user has saved the file to disk. (You'd also have to set in and .) 
+
+First of all, please strongly consider @Flambino's advice; it's excellent. That said, I don't imagine valid VAT patterns change often. For this reason, I propose condensing each country's pattern into a single regular expression. Since you're so intent on eliminating the loop: notice that if my VAT number is "GBGD123", then based on the prefix, it can't possibly be a (e.g.) French VAT code. I would try matching the country code first, and then match the rest based on that. Consider something like this. You'll notice though that because the various types are condensed, you lose e.g. the comments on UK VAT codes. You'll need to decide if this is worthwhile to you.

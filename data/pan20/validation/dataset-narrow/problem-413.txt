@@ -1,0 +1,81 @@
+A few code comments before I get into a simpler algorithm. Don't use . It's far more complicated than a list comprehension. These two: 
+
+And then you it. There is no reason to shuffle it twice, by the way. But then the way you "deal" from the deck is repeatedly taking the first element and deleting it. This is inefficient - erasing from the front of a list is \$O(n)\$. We don't need to erase anything at all though. Just iterate through the deck! First, let's separate the "deck creation" from the "hand dealing": 
+
+The Small Algorithms These are very straightforward and I will omit them here for brevity: , , , (variadic!), , and . 
+
+Memoization Now, you're kind of memoizing, but then not really, since the first thing you do is wipe . If should definitely start with: 
+
+outside of using that horrific new keyword you introduced, doesn't do what you think it does. It does not create a 2d array of s. The comma operator evaluates the first expression, drops the result, and then evaluates the next expression, returning it. If you compiled with warnings on, you would probably get one for this line, as it's exactly equivalent to: 
+
+You will want to make sure that you write the copy constructor to actually do a deep copy of so that this doesn't happen. Alternatively, make the class noncopyable by either. Even better, just use internally and let the compiler do all the work for you. 
+
+given that it sure looks like we're going from to by s... which intuitively should produce . You already do correctly provide two type aliases, where is an alias for ... so if somebody wants a negative range, they should have to do: 
+
+I want to just write a simple function to check if my linux box has hyperthreading enabled. I want to know if there's a simpler way to produce the dict (would be great if I could use a dict comprehension somehow) or generally a better way to check this information: 
+
+This solves all of the problems above. Now, isn't copyable. It is moveable, and that just works correctly. You're also no longer leaking anything from . This also obviates the need for a destructor, so you don't have to provide one. This leaves the camera. You don't it, so it's unclear who actually owns it. If the does not own it, then a raw pointer is of course fine. Although, you have . What do you do with the entities returned from that function? Are they stored somewhere else? If you need shared ownership, then you need to use a (or something similar, like ). If you need shared ownership, it doesn't really matter how much overhead those smart pointers add... Bug In , you will fail to erase all the destroyed entities based on their configuration. Also, you're deleting the wrong ones. Let's say we have two entities, and , the first of which needs to be destroyed: 
+
+This is deeply different. Basically you can select which engines process which entities without having to resort to specialized components or without resorting to usage of Tags or groups. Basically when you spawn an entity, you have to select in advance which engines will see that entity. You can change that at any time by updating EntityViews in its descriptor, if there are missing components a nice error message will tell you that (I think you can implement that at compile time with C++, I done something similiar in past). Basically you may have X entities in your game that have a Position component, but you don't want to process your position the same, so in example static objects should not even have Systems updating them, so they could just have a method that returns the position without allowing to change it (that method does not implement any logic it just returns data). 
+
+This gives an overview simplified of the design process. You continuosly refine things, because you can't predict everything. I Assumed objects have a position ok, but then after I defined the first piece of logic It was obvious that the bush was missing the radius for collision avoidance. It was not so hard to add it later. This kind of continuos changes are a real pain without an ECS system. And I added a Radius, without warrying if that could interefer with other engines, just because the engines are selected by the entity view, so there is not risk that adding the Radius to bushes automatically makes the bush processed by Radius-realted systems. Bushes are only processed by Systems interested in their EntityViews. If later I want bushes to be only slowing down player, I could altogheter remove the EntityView from the descriptor, and automatically I change bushes behaviour, without having to change engines, or without having to change the Bush. Honestly I think the final syntax in C++ will be quite different from C#, but I believe it is actually possible implement the same of Svelto in C++. 
+
+The ECS paradigm emerges as a tool as long as you think your logic in a modular and decoupled way. I think you should seriously take a tour into Svelto.ECS (beware, its author renamed "Systems" into "Engines", I believe to avoid confusion with c#'s namespace "System" from .NET), written in C#. To do that you have to drive away from most of ECS articles you find on the web, I'm sad to say that, because I tried to use ECS "the old way" and it simply didn't worked well, it forced use of anti-patterns and made me wasting time. Most ECS frameworks, don't scale. You start easy and when the project becomes big you enter dependency hell, but you don't realize that because the dependency is hidden by components. With Svelto you just need to start, it seems hard (well it is a change of paradigm afterall), but after you get the first 10 engines done you realize how easy and flexible it is. 
+
+This will default-initialize and , copy the input parameters into and , and then copy them again into your member variables. You can save a copy and an extra initialization by direct initializing them from references to const: 
+
+You started the player off with just the one card, but you start with two in BlackJack. Also, you want to give the computer a hand too, so that you know how to play: 
+
+You can actually do a little better in terms of code appearance. We have our array, which has all of those indices... what we want to do is iterate over the array while also having access to the indices. That's what is for: 
+
+Containers and algorithms make the code shorter and easier to follow. Win-win. Start with a function You should ideally just have: 
+
+Stick with One of the things you do is effectively convert s into and . But that's not necessary. Stick with , and then you can ignore those comparisons. I would additionally explicitly default the arguments: 
+
+then checks for the length being 3, which we know will never happen. But really, why are these different cases at all? On top of that, you're copying your objects at every point instead of taking by reference to const. I find it very hard to follow your and functions. I am not sure if they're correct. I think the best code review I could give you is... 
+
+Unnecessary function The only difference between and is that the former returns a and the latter returns a . But you can just manually do the cast anyway, which will still be shorter to type. 
+
+Otherwise, you might get unexpected reorderings. Better to be on the safe side if you're writing a class like this. Otherwise This looks perfectly fine to me. With the exception of copying, this is precisely a so it should have all the same behavior everywhere - so it should be able to be a straight-forward drop in replacement in all places. 
+
+Several things worth pointing out here I think. Match There is zero reason for to take a category or really anything else. You don't need the or enums. Given a move, you sohuld be able to determine if that move completed a row, column, or major diagonal. 
+
+Simply use EntityViews like in Svelto. This concept was introduced with that framework. And I really love it. Most ECS frameworks have this dull concept that Components are coupled with engines and every engine should loop all components of a certain type. They should not! Both for flexibility and performance issues! (there are even technical articles from AAA industries that use tricks like skipping updating Systems every X frames because they were basically looping too much). Everything in Svelto is decoupled. Most ECS frameworks have this concept: 
+
+You have to write a complete parser (a simple one, but too complex for becoming a single answer) to avoid these issues. You can know if you have done everything correctly luckily: 
+
+but let me explain why his suggestions arepure gold. ECS pattern is about decoupling all the game logic (yet seems most articles put focus on components, the point is deocupling the logic). 
+
+Once you have pieces of logic, working on Components, then you finally just need one further step to link that logic togheter, and what you need is actually a ECS framework. 
+
+Please, resist the temptation to write your own ECS system, I've been in you and it is a no-go. But if you have to do so, do it right! 
+
+When you instantiate a bush you also specify which entity views it will implement, so basically this allows it to be processed by right engines. In example if you want bushes to be avoidable by avoidance algorithm 
+
+Let's me make a premise, I'm actually a consultant, helping a small indie team of quitting dependency hell, I'm basically re-writing a small game (30k lines of code). Turning it into a full-fledged ECS game. And I'm using an already existing ECS framework, not a mine framework. Explaining it is the most difficult part. I'm actually learning new things with every-day problems I face, so I'm not speaking to you as "expert", but as person that is learning. Sometimes I ask questions to the author of the framework I use and he is very willingly to help me and find better solutions to certain problems. Believe me, I come from a C++ programming background, so I always struggled to make my custom engine, dealing with allocation etc. I even started a 3D engine once, I would never do that again. What you are trying to achieve already however: 
+
+With that, I would rename . It's not really a temporary variable, we're actually building up our next possible step. So really something like: 
+
+I had originally said your check didn't give you any performance benefit, but this one does - since building up all the string rotations and doing all the casting is expensive and in this way we're able to avoid all of that up front. Since the number of circular primes is sparse (only 55 out of ~75k primes!), anything we can do to aggressively weed our set down is good. 
+
+is more expensive than in those cases where you really just need a scoped lock (e.g. in ). Where you do need the functionality provided by , you don't have the complete functionality of it. You are missing: a. , , . Those functions may not be supported by all lockable objects (they require a stronger concept than simply ), but if your lockable supports it, your lock should do. b. Construction with . Technically, it is constructible with this type, but it will fail to compile when you try to pass that into . c. is and move-constructible, yours is not. has some handy member functions that are missing here as well: and . 
+
+building the aligned strings Since you have to go back-to-front to generate the aligned strings, you should just write them in reverse order and then reverse them. That will be much more efficient (O(N) instead of O(N2)). Just the space up front: 
+
+The other advantage of is that you don't have to have a separate index to keep track of where in your array you're inserting into - let the container do its job! 
+
+Not really a wrapper If I were to think about a no-overhead wrapper around a C-style string, I would think of a class that looks something like: 
+
+I'll leave as an exercise to the reader, but note that it needs to follow this signature and should not use any global variables: 
+
+Ah, so is a raw pointer. So I can't even sort a ? That makes the code incredibly confusing since really it's like you're sorting s, but you're using type names as if you could sort arbitrary containers. Advice Start by writing a recursive merge-sort that actually works with arbitrary iterators. Test that you can sort an , a , and even a (will obviously be less efficient, but no reason for it not to work!) Once you develop the tools to do that, then go back and write an purely iterative version. And only then, add in insertion sort as an optimization point. 
+
+Another thins is your constructors for . They do exactly the same thing, expect for the initialization of . If you want to change it you always have to do it twice. You could simply redirect the calls as in: 
+
+It's easier to write and read. The same applies for creating a random number in some interval. And while you're at it, you can also exchange the random number generator for a better one. Simplifications Your method is rather strange. If you later decide to start your population with 100 bunnies instead of 5, you would require a lot more variables to fill your list. To initialize your list with a number a default created values, simply write . This will fill the list with bunnies, which should be some variable in your class. In your method you should use a range-based-for loop instead of your loop. That will make getting the iterator beforehand obsolete: 
+
+Use when it's appropriate. E.g. in simply write No need to write something the compiler knows anyway. This way you can also change the container type without changing this part of the code. Unecessary copies In the following code, you're creating and copying too many objects: 
+
+Note that I already change the container type to . Otherwise the random access through would not work and you'd have to use again (or save the iterators instead of indices). 
+
+Game Currently your game is just a bunch of methods. It should be a class that keepts track of its population itself, not by passing a list of bunnies. Now I can easily "cheat" the game, by manipulation the bunny list from outside. By keeping track of its own population you could also do things like running multiple games simultaniously, e.g. to compare experiments based on different starting conditions. This would eliminate the static variables in your bunny class. Seperation of concerns You should seperate your logic from your output. E.g the shouldn't do any output. It's the games task to do that. Update: Use as a default Currently you are using as your container for bunnies. While that sounds reasonable, in C++ you should stick to unless you have a very good reason not to. Especially since you are randomly selecting bunnies from you list to manipulate them, a is far better than a , since that can be done immediately, while for a list you have to loop all the way to that element. Bug As mentioned in the comments, the method doesn't do what you want. Through the method you are creating a copy of your initial bunnies that a normal. You then only iterate and manipulate this copies list of bunnies, not the original. So your vampire bunnies are not successfull at all. So instead of returning a list of normal bunnies, return the indices of the normal bunnies. And then randomly select ab index out of that list and change that bunny:

@@ -1,0 +1,69 @@
+You can toggle a gpio at around 25 MHz. I expect you could get perhaps a tenth of that if you were to bit bang. Of course that really depends on what you are bit banging. For general information see $URL$ 
+
+Remember that information is printed by the Linux kernel driver. Here is the source code. I had a quick look but I didn't find it very easy to read. The string is generated from line 311. 
+
+I give that list as from that you can work out which GPIO are available. You can break it down further to identify the precise model and board revision. For full information you will have to treat the revision number as a 26 bit binary number as follows 
+
+All 3 methods are probably okay for hobby motor control. For LEDs and servo pulses you really need to be using methods 1 or 3. pi-blaster, servoblaster, my pigpio use method 3. pigpio now works on the Pi 2. 
+
+You can use the 5V pins as a power source. They can provide anything left over from the input power feed not used by the Pi itself. You will have to check to see if there is enough left over to power your device. You use a ground pin and a 5V pin. Typically the ground pin will be connected to where you would connect the -ve of a battery and the 5V pin to where you would connect the +ve of a battery. You can use any ground pin and 5V pin you choose. See $URL$ 
+
+You are printing the gpio level when your callback is called. This has no relationship with the level which triggered the callback (at least 50 microseconds earlier according to my experiments on the Pi). If you don't have a logic analyser I suggest you download piscope. It will allow you to get some idea of what is happening on your gpios. If you want to monitor the levels on multiple gpios or monitor any gpio changing state more than, say, 20 thousand times per second you are better off using my pigpio from C or Python (or any other language you care to use). 
+
+This is what the MCP3008 sees if you send 0x06, 0x00, 0x00. Note the position of the data in the returned bytes. Also note that as there are excess clocks the MCP3008 starts to return the data again but in least significant bit order. 
+
+The current documentation appears to be $URL$ As you can see there are only read and write methods to affect the state. I expect the best you can do is to launch a separate thread and implement software timed PWM. 
+
+pigpio.start() was deprecated (removed and replaced) years ago. pigpio now allows multiple Pis to be controlled from one script. You should now be using the following style. 
+
+You need to have shared.h in the same directory as main.c when you compile (or in /usr/local/include or other include directory on the search path). 
+
+Here is some code which waits for a GPIO to change state. It should do pretty much the same as you want to do. 
+
+The Pi doesn't care where you get the power from. All will be okay as long as you can supply sufficient power to the microUSB socket for the Pi's needs and the needs of any peripherals you connect to the Pi. 
+
+As far as I am aware there is no user upgradeable memory or firmware within the Pi. There are a few bits of One-Time Programmable (OTP) memory once used to record usage which invalidated the warranty. All state is held within the SD card. 
+
+The GPIO are believed to be able to tolerate higher than 3V3 provided only a little current flows. This suggests that you may be okay if the current is less than half a milliamp. The easiest way to ensure a limited current is to use a large series resistor. I use something like a 20k resistor on the echo line when I can't be bothered to use a proper voltage divider. I'd only use a single resistor if I didn't plan to leave the set-up running for very long. The party line has always been and will remain: never expose the GPIO to more than 3V3. 
+
+I can't think of any reason a USB to Ethernet dongle woudn't work. Have you considered using a wireless dongle instead? I'd expect most people would use a USB hub so that several USB devices could be connected. 
+
+Yes, that will work. You can have one serial device connected to the UART (TXD gpio 14 on pin 8, RXD gpio 15 on pin 10) and any needed additional serial devices can be connected via USB serial dongles. 
+
+From a remote machine, assuming you have a ssh server running on the Pi. ssh root@raspberrypi reboot or ssh pi@raspberrypi sudo reboot 
+
+In Pi terms these are peripherals. BCM2835 ARM Peripherals For the main SPI see from page 148. For the auxiliary SPI see from page 20. 
+
+The linked sensor appears to require special Arduino software to work as a useful device. To get it to work you would either need to use an Arduino or port some pretty specialized code to the Raspberry Pi. Unless you really need the claimed additional accuracy I would choose another sensor. Google 9DOF Raspberry Pi. 
+
+I2C is a bus, i.e. there can be many devices on the bus. As it is a bus there is a need to prevent devices interfering with each others communications. To that end the bus is designed to have one master and one or more slaves. The master initiates all communication. It chooses the slave to communicate with as part of the I2C transaction. The Raspberry Pi (with the standard Linux driver) only operates as a master. In your example the Pi must request the data (as it does) but the Arduino must be a slave and must only place data on the bus during the requested transaction. You will have to rewrite your Arduino code to act as a slave. Don't ask me how as I haven't used I2C on an Arduino. 
+
+What you are asking for is very achievable. I suggest you look at Python for the programming language and use a Pi 2 (the latest Pi). The Pi has no speakers so you will need to add something like a USB speaker. I suggest you look through issues of the MagPi magazine which should give you all the additional information you need. 
+
+The Pis with the 40 pin expansion header have a 2 amp polyfuse. The earlier Pis have a 1 amp polyfuse. So if you power the Pi via the microUSB socket those are the limits to be shared between the Pi and any attached devices. You will need to find the current requirements of each device you wish to attach and estimate the likely usage of the Pi itself (which will vary with load). 
+
+The simplest thing to do is power it from 3V3. Even if you powered from 5V it would be okay as long as the device contains no pull-up resistors for the I2C bus. Tu use the device connect it to 3V3, ground, SDA, and SCL and make the following entry in /boot/config.txt dtoverlay=i2c-rtc,ds3231 
+
+You can achieve each of those things with Python on the Raspberry Pi. The key is in the Raspberry Pi Python library support for GPIO peripherals. For help on a particular sensor search for raspberry pi Python sensor name. Most of the sensors you mention are digital (return 0 or 1) and may be directly connected to the Pi provided their voltage is 3V3 compatible (otherwise you will need a level shifter or voltage divider circuit). The hygrometer is likely to be an analogue sensor (returns a varying voltage) for which you will need to buy an additional ADC (Analogue to Digital Converter). To control outputs you may also need special equipment. The Pi GPIO only switch a little current at 3V3, not enough to drive a water pump or normal lights. For the motor you will need as additional motor driver board. For lights you might use a relay or build a transistor circuit. 
+
+I always use . Remove the dtoverlay line, it is not needed. By default the new module should be loaded. 
+
+Detail of one burst showing a time between gold and blue cursors of 2640 µs (rather than the predicted 2500 µs). 
+
+By default the UART TX gpio is used during boot to log boot messages. After boot the UART (RX/TX gpios) is used to allow login. The simplest way on Raspbian to disable boot messages and login is by using the raspi-config option. 
+
+The boot directory is formatted with the FAT file system. I guess RECOVERY is as well. That means the contents are readable and writable by Windows, Macs, Linux as they all support FAT. The other directories will be formatted as ext4 which is a Linux file system. You will probably need to find (i.e. web search) an add-on to allow this file system to be read by non-Linux systems. 
+
+You will have to find an alternative mechanism. There is no way to tell how many pulses have been transmitted by an interrupted wave chain (unless the pulses are quite slow and you have an alert set up on the pulse GPIO). If you run a wave chain with a loop count to completion it will have executed the number of pulses in the loop count. 
+
+You can not power a fan from the Pi's GPIO. The GPIO are all 3V3 and only supply a few tens of milliamps at best (you are recommended to draw no more than 16mA from an individual GPIO). You can power a fan from a 5V power rail pin on the expansion header. You might be able to power a fan from a 3V3 power rail pin on the expansion header but that will depend on your Pi model. Early Pis had very limited 3V3 power available. 
+
+The MCP3008 is quite suitable. It has 8 channels (you can measure 8 things at once) with 10 bits of resolution full-scale (between 0 and the voltage reference). If you have a stable voltage reference of 5V that will give a resolution of 4.88 millivolts. The similar MCP3208 has 12 bits of resolution which would give a resolution of 1.22 millivolts. It's probably pointless using a higher resolution chip as you would need careful design and a very stable voltage reference to make use of its abilities. You do need an external reference 5V. The Pi's 5V power supply is unregulated. Given that you need to use a 5V reference voltage you will get 5V level outputs from the ADC. You need to use a resistor divider on the output MISO line to the Pi to drop the voltage from 5V to a Pi safe 3V3. All the other information you need to actually implement the solution is widely available on the www. 
+
+All the Pi's GPIO are 3V3. I assume you mean one of the 5V pins on the expansion header (pin 2 and 4). 5V is 5V, it should make no difference. Do you have a very weak Pi power supply? Perhaps there isn't enough power to keep the expansion header pins at the 5V level. Measure the voltage. 
+
+You can't just write to an I2C bus. The SCL line is an output from the master (Pi) but the SDA line is an input and an output. The LCD should not have pull-ups to 5V on board but many do. Perhaps connect it to 5V and ground and then measure the voltage on the LCD's SDA pin. If it's 5V you definitely should use a level converter. 
+
+wiringPi's gpio readall command will output a diagram showing the correspondence between Broadcom (column BCM), wiringPi (column wPi), and pin (column Physical) numbers. When you talk about GPIO you need to specify the numbering scheme you are using if there is any doubt. You also need to check which numbering schemes are supported by the software you are using. Although in some senses the most arbitrary my suggestion is to use the Broadcom numbering scheme (not only because it's the only scheme my pigpio library supports). 
+
+I'm afraid this is not possibible. The best you can do with a paper clip is to short the "run" pad so that the Pi resets. Even when the Pi is shutdown it still consumes about 100mA from the 5V line. Some of the circuit complications you see may be to completely separate the Pi from the power source to prevent this drain.

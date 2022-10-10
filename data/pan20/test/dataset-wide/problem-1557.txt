@@ -1,0 +1,43 @@
+I also think that methods like Should take a File instance as an argument - it should be responsible for writing to the file not opening it or creating some directories. Same for readFile method. 
+
+EDIT Also do not put on your DAO classes but on Services. Service method describes unit of work which should be done whole or rollbacked. Consider this simple code 
+
+First of all name your variables properly. Name of the variable should describe what it is, but is just a random letter not a name for variable. Consider using logger instead of printing to sout. Stream closing should go to the finally block not in try. You are nesting a lot of loops and ifs. Try to separate it into methods soo you and up with 
+
+You don't check for EOF in your inner for loop meaning your code will run forever unless the file ends exactly with a . 
+
+Note that the code below is missing some error handling/checking code for simplicity and the node allocation size is hard coded for the same reason. Look up "block/bucket/arena allocators" for more details on this type of optimization. 
+
+The other answers go over a variety of good optimizations and code improvements but I wanted to look specifically at how each one impacts the performance of the loading code (Note: please take the times below with a grain of salt...do your own benchmarks if performance really matters): 
+
+Everything looks good enough. Code style is OK. You are using , so it will be quite fast and there is nothing you can do in the code to speed it up. You may or may not need to check this: 
+
+Please note, many people (me excluded) will not like in the middle of . Anyway if you do it this way, readability will be much better than with . 
+
+I agree with Loki, but hare are some more things: Destructor I do not see the destructor. What happen when you destroy / the class? Answer is huge memory leak. You definitely need to have to release the memory and prevent memory leak. If I read the code correctly you need following or something very similar to: 
+
+Your original code (with the two fixes mentioned above) takes 1500ms to load/parse 150k english words. Not necessarily bad. It results in 388k allocations of new nodes. Removing the call reduces this to 1060ms. Loading the file all at once (only 1.5MB) and parsing the string using has a very small performance increase to 1000 ms. Replacing the with manual parsing logic has no visible effect. At this point the only obvious thing left is to optimize the individual allocations with one block allocation (see code at the end). This has a huge effect on performance reducing the loading time to only 15 ms. Hopefully that is fast enough for you.... At this point there isn't anything obvious left to optimize. You could try saving and loading the completely parsed trie but the I'm not sure if you'd gain much with the larger read size involved. Profiling would be your best bet to see what, if anything, could be optimized. 
+
+constructor class member "initializers" I may be using incorrect term, but constructor better be like this: 
+
+possible error: constructors / destructor of ListNode does not add-up. there is some error somewhere. possible error in constructor probably there is an error? why you create prev and next here? I believe you need to set those point to something else, not to allocate new nodes? or possible error in default constructor and destructor you have default constructor. what is it purpose? just to have one? it does not initialize prev and next. You probably want to remove it. probably destructor wants to free the memory? I said to remove it, because it does nothing. or possible benefit of using "std::unique_ptr"? you probably want to use automatic memory management using "std::unique_ptr" (C++11 feature) 
+
+And don't mix classes from primefeaces and dao as suggested in axels comment. When creating this wrapper convert this view classes to some custom backend classes. in some object. I have class. It is much readible and convenient to use. Instead of use CollectionUtils.isEmpty I recommend you to extract nested ifs and loops to methods. Maybe when you extract them you will find some place where you can remove duplication. 
+
+When second dao fails to delete and you have transactional daos not service, the first entity is lost. And you method should not return boolean, but let bubble the exception up into the service layer and let service handle the exception. 
+
+Make for list elements. Currently the list is using . If you decide to use or , you need to change it in 100 places in the code. Make some or (C++11) so you to be able to change the type from one place. It could be inside the class: 
+
+Once again I decided to beat system function. This time I decided to use a template and to "precompile" all cases from 0 to 31 bytes. Result is 400% improvement - from about 1:15 min to 0:25 min. Finally I had rewritten with naive looking for statement and I noticed that the compiler can optimize it as well. However I did not tested with random data, so I am not sure what role the cache line and branch predictor plays in the tests. Here is the code: 
+
+Update on : I missed that your were also looking at the performance of the function. Unfortunately, if you keep the original allocation scheme there isn't very much you can do. Memory allocation/deallocation can be slow and with not always consistent (it can take longer or shorter depending on the state of the allocator). For example, in my sample test of 150k words has to check 10.5 million pointers and deallocate 388k of them taking 7 seconds to do so (would be faster if not running under VS). If you change the allocator to a single bucket as in my example then your deallocation is simply: 
+
+variable is static. This means it it accessed using lock + semaphore or probably is atomic. Why not move the inside the class? 
+
+inline methods in ListNode inline methods are present into the class definitions. Remove all "inline" keyword, it does not needed. However ListNode is so small, I would merge it in .h file like this: 
+
+This class was inspired from Microsoft's array_view. It intended to use with mmap-ed memory for easily check bounds and so on. I probably will need to throw exceptions, but this is not my usual way of working. Any comments are welcome. I left some casts like C-style casts because I see Alexandrescu is using the same and I am not alone :) I also added a method for relative as(). It uses pointer and pointer arithmetic. First here is some real usage: 
+
+Always check return codes when reading data from files. I suspect this may be the issue with your code "crashing" as even with loading 150k words your code only takes 1.5 seconds with the fix. Another issue is the mixing of with depending on if your word file contains or line terminations. Using mode with will probably result in incorrect parsing when seeking...at least it did with me using VS2010 on Windows7 causing considerable head scratching. Changing the mode to fixed the seek issue but eliminating the seek altogether is a better fix and then the file mode doesn't matter. 
+
+I was curious about the performance of a trie so did a few tests to satisfy myself. First two problems with your original code:

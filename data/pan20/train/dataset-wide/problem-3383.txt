@@ -1,0 +1,65 @@
+You should take a look at git hooks. You can have a git hook on the server that is executed when code is pushed to it. My guess is that any output you do in these hooks is relayed to the client per default (not 100% sure though). 
+
+In the comments we came up with a solution to the issue. The security group applied on the instance did not allow traffic from the IP @user2424586 was on. Solution: Allow traffic from the IP you're trying to connect. 
+
+The "Permissions" step will only show up if the user that's trying to create the new environment has permissions to list IAM roles (). Such a policy could look like this: 
+
+The only difference that I can see between the two functions is that they belong to different classes. The function resides in and resides in . They do the same thing. 
+
+Unfortunately there isn't a way to get all the service limits in a simple manner at the moment. However, some of the services support this in their respective CLIs/SDKs which there is an open source project available that are trying to consolidate this into one CLI tool. The awslimitchecker. Maybe that could make life easier for you? :) 
+
+Actually, I don't think there is a compiled list of services that allow paths in ARNs for a service's resources. And I'm not really sure why you would need this, however, by going through example ARNs for all services you could probably figure it out all by yourself! :) 
+
+I think using the CLI is your best bet. Tag up your Elastic Beanstalk environments with appropriate tags which you can use to identify your EC2 instances. For example, an and tag. Then you could do the following CLI call to get the private IP addresses of those instances which you then can use for sending individual purge requests to. 
+
+Setup a completely new load balancer Configure it as your old one but with the new availability zone added Ask Amazon to pre-warm it for you Make the DNS switch when it's as "hot" as possible 
+
+No, after reading the documentation (cli, cfn) I'm pretty sure there isn't any support for specifying spot instance duration in a launch configuration at this time. 
+
+On the server side, set the log level to . On the client side, connect with the option (which gives you on the client side as well). 
+
+Amazon's RDS service provides you with the possibility to create cross-region read replicas. Using CloudWatch you can closely monitor the Replica Lag and e.g. setup alarms when it gets to high. I would suggest that you setup a RDS instance in one region and a read replica in another to see what kind of lag you could expect and whether or not it is acceptable. 
+
+You seem to be wanting to restrict access to certain files and/or folders on your machine running in EC2. This is something that you need to do on OS level and not in AWS IAM. Do a web search on or similar and you'll find loads of guides on how to achieve what you want. 
+
+If you want to take your deploy process a step further, I would recommend looking in to the immutable server concept or tools such as Docker 
+
+There are a lot of ways to automate deployments with minimum downtime. Depending on your current setup, different methods can be applied. A good start could be to make your actual release step to be the change of a symlink. Let's say you start off with your located in , then you have a symlink named pointing to the folder. You configure your web server to use the folder as document root. When you're about to release , you upload it to and then change your symlink to point against . Using this method you will get minimal (if any) downtime and users won't end up in a state where different versions are served at the same time. To avoid doing this manually, there are tools available which does this for you. Here are a few examples: 
+
+When it comes to pre-warming your load balancer, AWS does not come with any built-in feature for that. They suggest that you do your own "load test" script that increase traffic incrementally OR to contact them and they will have it pre-warmed for you. When you add another availability zone that your load balancer should include, I believe that the whole load balancer is replaced with a new one behind the scenes (at least that's what happens when you change the AvailabilityZones property through CloudFormation). That means that the newly created load balancer is not warmed up and will need a couple of minutes to scale up. My suggestion is that you: 
+
+Change to your environment id. I just wrote this on my phone, so please excuse any typos. Not sure either if you can include conditions like this in the EB structure. 
+
+In the documentation for Modifying a DB Instance to Use a Different Storage Type there is the following note: 
+
+I've gotten this myself a couple of times even though I never did any custom changes to the menu.lst file. I don't know why this happen, but I chose to compare the file and saw that it was mostly comments and references to newer versions of the kernel that had changed. There is an open issue about this in the apt bug tracker. You should be fine with overwriting the old one with the new one (option 1), as long as you didn't do any manual changes to it. I would recommend you to create a backup AMI of the instance before updating, just to be on the safe side. 
+
+Well you've pretty much listed all the available options, as I see it you'll have to go with one of your first two options if you want to be able to take advantage of the great features that AWS offer (such as elastic load balancing and auto scaling). The NAT thing you mention would probably be some sort of reverse proxy (?), but you encounter the same issue there. You want the proxy layer to scale automatically too, but you won't be able to achieve it since you need static IPs (...and you're back to square one). I've been tackling these issues myself, and I've always ended up setting up a hosted zone in Route53 and changing the name servers on registrar level to point against it. 
+
+You would of course need to replace the values of the region, EnvironmentName and ServiceName so it fits your setup. 
+
+And as you say, you can't restore a snapshot into another storage type. I think your best option is your number 3. Export your database, and then import it on your new RDS instance. Leaving RDS for a self hosted variant in EC2 seems a bit drastic since changing storage type isn't really something you do every day, my guess is that this is your first and last time that you do it. The features that comes out of the box with RDS are simply too overwhelming for changing to a self hosted solution, in my opinion at least. 
+
+When an ELB returns a 504 Gateway Timeout it indicates that the load balancer closed a connection because a request did not complete within the idle timeout period (according to the docs). So, the ELB did not receive a response within the idle timeout limit resulting in the connection being killed and a 504 response being returned to the client. With the knowledge that the backend request never finished in mind, it actually makes sense that the is and that the is . The ELB can't answer something it doesn't know! 
+
+To use the role you set up, you either provide the CLI option or make sure to set the environment variable with the profile name. You could of course also call the command explicitly, then you would need to parse out the appropriate values and put them in to the following environment variables: , and . 
+
+Spin up an exact copy of your environment in a separate VPC Create your load test scripts, starting with a lower amount of requests and increasing to a level which you have during peak hours. Run your load test script against your cloned environment with the old configs during e.g. 1 hour Do your config changes in the cloned environment (or for that sake, take down the clone and spin up a new one with the changes) Run the same load test script against the new config changes for the same amount of time 
+
+Start by allocating an EIP that you want to always be connected to the instance in your ASG, this is done using the AWS CLI or through the AWS console (EC2 > Elastic IPs). When that is done, you should add a script to your AMI that associate the new instance with your allocated EIP. Use the aws ec2 associate-address command available in the AWS CLI tools. This script should be run on boot or whenever your application is ready. 
+
+Remember that the user also needs permission to pass the role to the instances created in the environment (). It's also a good idea to restrict which roles the user should be allowed to pass. 
+
+The behavior you are describing is probably because you are connecting from different networks and/or your network does not have a static public IP. Basically, your IP has changed and you therefor need to edit the security group with your new IP. I would suggest some reading about AWS EC2 security groups and dynamic vs. static IPs. $URL$ $URL$ 
+
+Since you're running your environment on AWS, I'm hoping that you're environment is setup using CloudFormation templates or any of the services built upon it (e.g. Elastic Beanstalk). With that assumption, I'm gonna propose the following: 
+
+Do you have your RDS instance in a VPC? Are you sure that your RDS instance has the "Publicly Accessible" setting set to "Yes"? If you want to be able to access your RDS instance from outside your VPC, you need to switch that option to "Yes". 
+
+Instead of calling the command explicitly, you can configure a profile that assumes a specific role which is then cached in the CLI. This is well documented, but you basically just set it up as an ordinary profile in your file, like this: 
+
+If you enforce MFA when assuming a role (which I strongly recommend that you do), it would look something like this: 
+
+Unfortunately you can't lock this down on a resource level at the moment. There are a bunch of EC2 actions that doesn't support resource level permissions and is one of them. 
+
+The answer to your main question would be, yes, you can do that. I would advise against it though. As suggested in the comments, you should put your environments in separate VPCs. Doing so, you can be sure that your environments won't interfere with eachother. This should also be simple since you would just spin up an exact copy of your current environment but just in a new VPC. However, I would like to take it even further. My advise would be to setup your staging and production environment in separate VPCs on one AWS account, and create a new account for your development environment. This will make you more comfortable with going crazy on your dev environment (which you should) and you can be sure that nothing important is affected. It's also a benefit from a security perspective, why should all developers have AWS credentials to the production environment? A lot of bad stuff will happen, the question is just when? The consolidated billing makes the financial stuff a breeze as well! :)

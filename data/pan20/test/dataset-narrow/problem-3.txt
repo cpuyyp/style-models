@@ -1,0 +1,71 @@
+Instead of using custom scripts which it seems that you are using, I would consider using open-source tools, similar to what Tensibai has suggested in his comments. I would further split your two Tasks a bit more differently, such that Step 1 would be to just "Set up the VM", and Step 2 would be to "Provision the VM with required programs and configuration". My 2-cents would be to use tools such as Packer and Ansible. You would use (for example), the VirtualBox Packer builder, to stand up your VM, which would handle points 1-4 of your Step 1, and then use the Ansible-local provisioner, or something to this effect, to run a playbook, which would handle the rest of Step 1, and all of Step 2. 
+
+Is this an optimal way of using Packer and Ansible together? or is there a better way of parallelising these builds? 
+
+There doesn't seem to be a "proper" way of unregistering a virtual machine sadly. I went around this by stopping the virtual machine using in Fusion, deleting the source folder of the VM, and restarting Fusion so that the application registers that the VM is not there anymore. 
+
+The above suggestion would make your life a lot easier, and would be able to abstract different OS's as well as you'd just write a different Packer template and Ansible task. With installing different Python versions / Tools, you'll just need to update the Ansible role / have several different roles with the specific tools. There are of course, other tools such as Vagrant, Puppet, and Chef, which can handle what you'd like to achieve, so it's up to you find your preferred tool. 
+
+As @bradim said using your CI/CD tool to initiate the deployment instead of hand based commands is usually good step forward, as is adding tests in your pipeline that actually test your deployment scripts on your staging (or a freshly created) environment, where you can pick up bugs earlier. I would also add that instead of calling your ansible scripts directly, you can also add tools like Ansible Tower into your flow, which will let you track the changes that have been run more easily, and can give you an additional step of security into your flow. 
+
+The main problem with this solution that it essentially requires the whole GoCD server source code checked out, in a working state to work properly. Also as it's an internal API it is subject to changes between GoCD versions, making GoCD upgrades harder. 
+
+If you have a new customer, the only place you have to change is the deployment configuration file. If you are using ansible most likely you have to change your inventory and your vars file. Let's say you have get a new customer, who would like the app to run under Spanish locale, and has access to the beta features. This customer's configuration would maybe look like this: 
+
+We have a GoCD installation where we like to keep the pipeline configuration XML files () in a separate git repository, and install it (preferably via a pipeline and automatically) to the GoCD server whenever it is changed. However we couldn't find an easy way to validate the XML config file before sending it off to GoCD, and obviously we do't want to install invalid configs, as that would break our pipelines. Are there any tools, or utilities that help us with validating the config file? 
+
+There currently isn't a solution for building on a specific runner in GitLab, but there is an issue open for Sticky Runners, which hopefully will be out in the next 3-6 months according to the Milestones! 
+
+But where is this inventory? Or is there a better way of unregistering a machine via the command line? 
+
+I've always had issues with using to provision Windows machines with Packer due to the connections breaking, example issue. A workaround which you can do is to use the on your host machine which calls the Ansible playbook with the new host (although you would need to give it the IP address of your Windows Docker machine). I've added the example which I did to get a test working. This uploads to the Windows virtual machine, which gets its IP address, and is then downloaded back to the . The ansible playbook is then called against that. 
+
+Which isn't very efficient and can take a while. Solution I'm thinking of parallelising this somehow, by potentially having Packer standup all three VMs, but not provision it - only get the IP address of the VMs, which then (with some manipulation), put the IP addresses into an Ansible inventory file, and the ansible playbook is then run against that. Something like: 
+
+Don't store Vault passwords in or in any local file Don't store Azure secrets in Don't store anything secure in . 
+
+My problem resolves down to an issue with group policy, and is likely to be solved with the same answer as this question: $URL$ i.e. the required permissions for to work on Windows, seem to be: 
+
+There is another permission called 'Allow Logon as a Batch Job". If the domain-user has this permission, the user can run scripts as though they were scheduled tasks. You can run your scripts using Ansible and change the logon type to as shown below: 
+
+I think we need to view this in the larger context of Flow and Systems Thinking which is one of the core values of DevOps. 
+
+In such a scenario, the focus needs to shift from "technology-specific silos" to "cross functional teams". And each DevOps practitioner needs to achieve a T-Shaped Skillset with core as well as shared responsibilities. So, to answer your question: 
+
+We use Ansible to provision and manage Azure infrastructure. At the moment we run Ansible "manually" i.e. we manually execute playbooks for various automated tasks. No CI infrastructure. Probably not relevant but we manage our inventory using dynamic script . We are encouraged to be as secure as possible i.e. 
+
+The work around I've done so far to build a project on a specific runner is to use the GitLab Runner API, in a rather hacky way, along the lines of: 
+
+Issue I have an Ansible role which covers Windows, macOS and Ubuntu OS. I also have a Packer template file for each OS (due to small nuances and changes in the template file to handle provisioning) which handles standing up and provisioning the VM with Ansible onto VSphere. So to build all three VMs, it goes something like: 
+
+Currently I am using the HashiCorp stack (Packer, Terraform) and Ansible, to generate Immutable Infrastructure and Infrastructure as Code. This builds a Virtual Machine from a base image, provisions it and applies it to some VSphere servers. One of the issues I'm having is knowing when a VM is down or unresponsive. What would be a good way of monitoring VMs? I've looked a bit at Consul and Prometheus and am thinking that that is the way forward? 
+
+Stage 2.1: Do the next official stage of the job (ie run tests in my scenario) using the artifacts and . 
+
+This has been answered over on SO using a work around seeing as it doesn't seem possible according to the documents. Basically, this can be done in 3 stages. Stage 1: Build and store all artifacts. 
+
+and potentially others as well While you could use a source control system to store all of them, it's usually massively inefficient, as source control systems are usually designed to handle text based files, and not binary files. You might be able to use them as a simple storage mechanism, if most of your releases are text based, and you don't have to store a lot of binary data. Artifact repositories however are designed to store all kinds of files, including binary ones. This includes anything from zipped up source codes, to build results, to things like docker containers as well. Also, they usually not only store these artifacts but also help manage them using various additional functions, for example: 
+
+We have an application that writes three types of logs into three separate files: access logs, generic application logs and system logs. The format (and purpose) of these logs are very different. And we have separate logforwarders that send them separately to our centralised logging system. Based on the treat logs as event streams principle, we are thinking about moving from using files to stdout. While we know some of the benefit of this approach, this would also mean that we'd get a merged stream of the differently formatted logs, which we would need to split again either before we can send them to our central system (Kibana / Splunk / etc.), or inside there. We're wondering whether there are any tools or recommendations on how we should approach this situation. 
+
+The last bit requires me to run Ansible tasks using and (as per the Ansible Documentation on the topic). Problem Unfortunately, even a trivial example like the below fails: 
+
+I think it depends. If your being able to manage the service leads to increased flow of work through the pipeline to the customer then yes. If however, it leads to you becoming a bottleneck or constraint to flow (perhaps due to you becoming overloaded with additional responsibilities), then no. If you are able to share this responsibility with others than manage the service (and have a Systems and Flow mindset), and collaborate with them so that none of you get too overloaded with work to become a constraint to flow, then yes. References: 
+
+I checked the Group Policy "Access this computer from the Network". It is set to which is the default setting. My account is part of the group, so this doesn't look like the cause. The Question What other possible causes are there? Or in other words, what other privileges (or modifications to the ansible task) are needed to make Ansible with the method work on domain-connected Windows machines? 
+
+asks the user for Vault password Uses that to decrypt a Vaulted Shell script Evaluates the script, which loads Azure environment variables into the environment; Runs the playbook on the environment that has been thus set. 
+
+You have your application codebase, that can cater for all of your customers You build the docker container for your application (one for the frontend, one for the backend, possibly a few more supporting ones) You have a deployment script that uses a configuration file to determine where to deploy and what. You run this deployment script. It will go over all of your customers, and simply deploy the latest version of your app with the appropriate config. 
+
+Let's assume you have the following scenario: You have many customers, but most use the exact same app, except for some configuration changes. You would like each of your customer to get the latest of the app ASAP. If this is your scenario then try make everything that needs to be differentiated between the apps a configuration change. You build one (or one set of) docker containers that can handle any of your customer based on the configuration it was given. Then on deployment time you simply supply the proper configurations for this container for each of your customer. The benefit of this approach is that you don't really incur massive overheads when a new customer comes. You generate their configuration, create the new servers, add some entries into an inventory file, and the next time you deploy, it gets there as well. The more well your CD pipeline is set up the more you can automate any of this process. So how would the flow generally look like: 
+
+You can store that in a variable, say and then pass it into your command. You would also need to pass in the path on your machine where your keypairs are located e.g. . For example: 
+
+In such a scenario, I am having trouble coming up with a coherent strategy to ensure that my playbooks can access Azure secrets, while following the guidelines above. Question How can I avoid storing Ansible Vault and Azure credentials on files, while still ensuring my playbooks can access them? What I've tried So far I have come up with a wrapper script that 
+
+Here's one way I have achieved this in the past. This creates disposable Jenkins, that can come up with the same plugins and tools every time. Note: my setup assumes 
+
+Specifically, DevOps Values require an understanding that each individual is part of a larger system and work toward increasing the flow of value through that system to the customer. DevOps also focuses on helping the organization set a shared vision and work incrementally and collaboratively on achieving that vision. 
+
+For a given instance, you would first use to get the information JSON for your instance. The information also contains the keypair name used to create that instance. E.g. for an instance (Note: I use the awesome tool to do JSON parsing but you can use any other solution)

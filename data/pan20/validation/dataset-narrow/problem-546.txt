@@ -1,0 +1,61 @@
+If this is Python2.7, prefer to throughout. Lastly, takes a key argument, so we can use that here too: 
+
+Either way, no space between function name and parentheses, no code on same line as opening brace. It's incredibly hard to read. And no run on statements like: 
+
+And then start separating our concerns. We will write a function that for ONE value of finds the length of a chain: 
+
+The idea that should be a 2x2x2 is a little too magical. If people want a 2x2x2 grid, they can write 2 three times. If they want a 2x2x2x....2 grid, they can write a metafunction themselves. But that's just a minor quibble compared to... HOLY SIZE, BATMAN! 
+
+And then start each of your methods with a call to , and only add and check the edges against . Hope that helps! 
+
+Bounds Checking You introduce a macro for whether or not to do bounds checking. However, convention from the standard library suggests that we just provide functions that DO range checking and functions that don't. should throw , and should never throw: 
+
+The thing wrong isn't so much the code as the algorithm. Your approach to finding the next first digit is inefficient. What is the right way to approach this problem? This is actually one of the few Euler problems that I've been able to do on paper. Let's start with just establishing the constraints. We know what digits have to go before other digits and thankfully there aren't any repeats. We can turn the input text into a graph, where a directed edge indicates that a digit has to precede another digit. Behold, the power of pictures: 
+
+And switching to smart pointers takes care of the . While we're in this function, the moving from to could be done using 's member function, which will be more efficient than repeated 's: 
+
+Your code is fine and readable from a C/Java perspective. I don't think it's particularly Ruby-ic to use statements. Just put at the end on its own. Why your case is slow You have this extra here: 
+
+Better Algorithm But ultimately, this isn't a great algorithm for finding all the primes. The most common would be the Sieve of Eratosthenes. We make an array up front for our candidates: 
+
+I would even move the advancement into the loop statement itself, to make it clear which part is the "body": 
+
+You should not need to specify the template arguments here as they should be deducible from and . InvocationHelper Why are you invoking the function with a copy of all of the items? You're already copying them once (into the ). Why copy them again? Comment Style It's great that you're writing lots of comments, but this is a truly excessive amount of comments. There is an enormous amount of grey text here, and it actually didn't help me understand anything hardly at all. Do you need to write a 5-line comment on what the copy constructor does? It's a copy constructor. Do you need an 8-line comment on move assignment? It's move assignment. 
+
+It's shorter and easier to reason about, with the added benefit that it's also a little bit faster (31.8s). 
+
+If all your metafunction classes meet that model, they become easier to use. What I don't understand about your code is that you have multiple nested s. Why? This line: 
+
+There's no advantage here compared to , but it's shorter and more explicit. We're making a , and this puts that front and center. You could, if you want, throw in a that so that the error message will be clearer to your users. The constructor could be cleaned up. Basically, you start by parsing into a , a , and a . We could factor that out into a separate type and a function: 
+
+There is never any reason to write code like that. Why even pass a prompt to the function if you're going to write a different string anyway? I don't see a reason for the prompt. main You should write a function that looks like: 
+
+But it's a . Indexing is inefficient. These functions should probably not be part of the interface at all. If somebody wants to do something like this, they can do it external to your class, which brings me to... Access The typical way to write containers in C++ is to provide iterators into them. For , an iterator is basically a very light wrapper around . You'll need to add and member functions, and you should add an that takes an iterator to insert behind. Erase I notice you're missing . That's a useful function! Also and . Potentially . Miscellaneous In , you have: 
+
+Don't Repeat Yourself Consider , , . They all have the exact same structure: they befriend , hold onto some , which is exposable, and are ly constructible. When you see that kind of repetition in class definitions, that calls for a class template: 
+
+Also you could consider propagation. If the is , do you really want to allow calling non- member functions? I don't know. If you decide you don't, you should provde both a and non- overload and forward to a helper: 
+
+Refactor when you need to, otherwise you're just overengineering everything. Should the be an argument? What if we need at least 2 to match the func instead of 1? There's so many arbitrary other features we could add - so let's worry about those only when they need to. 
+
+C++, not C First things first, I note that is a free function. But that's not how we would do something like this in C++. We would prefer to have a type in which we'd write: 
+
+Copy/Move Assignment The best way to write copy assignment is copy-and-swap, and the best way to write move assignment is swap. Self-assignment is a pessimization, since that's going to be a rare occurrence anyway. Plus, with swap, we can make everything : 
+
+Which brings me to the main compare. We have two null-terminated strings. Both are null-terminated. So what happens when the first one is shorter than the other? Well, if it's a strict prefix, we'll eventually get to the and that char will compare smaller. That's all we need to know: 
+
+This is quite poor. You're polluting the world with these names. Macros fundamentally do not play well with others. There's also no indication that these are closely related. Strongly prefer an enumeration: 
+
+What if it's not found? You should have an error case, if , you should return . Otherwise, you have infinite recursion. Full solution: 
+
+A different approach Another non-recursive way to do this would be through an inheritance tree. We basically take and turn it into a type that inherits from , , and : 
+
+Now, your enumerated steps for recursion seem to overcomplicate the algorithm. We want to go top-down! Given your example, when we start with: 
+
+The short answer here is: don't do this. It does not make easier to use. You're actually just limiting what you can do with it. You're not even exposing the entire interface... But if you insist on doing such a thing, your wrapper is close. You're not handling spurious wakeup in - that can return true even without being signaled. You should just take advantage of the fact that the various overloads also take a : 
+
+Convention Metaprogramming is hard. It's hard to write, it's hard to debug. That's why it's very important to have conventions. One convention is that the result of a metafunction is named . Not . Stick to convention. Also, stick to types. Types are first-class citizens in the template metaprogramming world. Values and template templates suck. They need specific handling code all over the place and they're much more trouble than they're worth. Lastly, we have the concept of metafunction class. In the Boost.MPL world, this was something like: 
+
+The Banker Loop While for the player, we loop based on the player choices, for the dealerbanker we loop based on a concrete condition: while he's not in range [18, 21]. We don't need an additional variable for this: 
+
+Here's a few pointers: Do not typedef cv-qualified types. It will confuse everybody who reads your code. Seeing is really confusing, seeing is completely understandable. So get rid of the and . If you want to typedef , you need to provide a reasonable name for that type... while concise conveys precisely zero information. So either do not typedef it, which is fine, or call it or . should not have a default constructor. Why would 0/0 be the default? You either need to provide or change the internal representation to keep things to lowerst terms, cause right now . Functions with multiple words in the name should either look like or . Running words together having everything be lowercase makes it hard to read. Also, not sure why either of those functions exist, or how it makes sense that a function named returns a ??? Also this function is almost certainly wrong given its length, look up Euler's algorithm for gcd and use it. Rather than defining two separate member functions (one of them is wrong, it should take a btw), you should create an external friend function and make s implicitly convert to :

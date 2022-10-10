@@ -1,0 +1,45 @@
+Cope with unexpected function order usage. True that out of order function usage concerning init() and free() are problematic, but what about with nothing in the queue? Code exhibits UB. Better to test and return or somehow stop/warn/handle. Good ideas like below that are useful in debug could wrap in a macro. IMO, when the burden is light, just leave in debug and production code. 
+
+It is not clear is always in the range [0...63] when is executed. I'd expect cleaner code in that shows this. 
+
+Without clear code understanding, I have a bit concern about . Should , disastrous result would occur. Uncertain: Comments on # lines is not portable. I'll have to research this. 
+
+Code uses undeclared variables and types like rendering this code incompletely reviewed. I'd expect some documentation in the .h file describing the return values and parameters of the function. Recall the users of these functions may not have access to the .c file (nor should they need access to understand the high level usage of the routines.) 
+
+and not used. Consider deleting. Why does code use for size information such as and others instead of ? It the goal to work on 32-bit platforms or smaller? is the best type for size and array math being neither too wide nor too narrow. Mis-match format various places such as used, expected. 
+
+Calling code is not limited to never calling after it has been called. A defensive routine would allow repeated calls. 
+
+What does program do? "Simple file renamer" clearly states a file is to be renamed and it is is evident the program takes only 1 argument. Yet I would expect a comment to state the purpose of code and what the file name is changed to. When using using typedef'd , take time to minimize work should the type change. 
+
+Naming Good naming conventions. Information hiding This is my primary review point. The definition of is not needed in . 
+
+Crap happens lacks a way to indicate something bad happened like out-of-memory or error is reading data. Consider returning something to indicate failure or not. In general, the entire function assumes "no problems". To me, this is not robust. Error checking pays for itself as good code is expanded to ever more applications - and things happen. 
+
+Add date and your ID (name) to the file as a comment. Format: The below format is hard to maintain with automatic formatting tools (at least mine). Maybe it does well with yours. Formatting is a pain and should not be maintained manually. Assuming you did not use such a tool, try one. 
+
+Minor side issue: Rather than use "rounding" with integer truncation caused by integer division, or using floating point math just to do an integer round, consider a simple solution. Round to nearest with math can simple occur by adding half the denominator, then dividing. 
+
+To avoid the wasted memory A and member are not both needed for a circular queue. One is enough. This may be advanced for a someone who "never done something like this before". Although conceptually the and works wells, code can get by with only and have point to the "head" node. With an empty queue, . With an item queue, the last node points to the first, even if it is itself. The end of the list is determined by rather than compare. This approach reduces the memory need by one pointer/queue. In realizing this code, I have found it to be the same speed or a bit slower. This approach is most useful in reducing memory when there are large count of queues, perhaps many empty ones, in a program run. 
+
+Since OP's code makes heavy uses of macros, insuring the needed headers files do not have sequence inclusion dependencies is a good thing. 
+
+@Austin Hastings good review leaves only some corner issues to consider. I advocate avoiding manual formatting - recommend to use automatic formatting. Life is too short for spending time formatting code. 
+
+Code would have benefited with , , , functions, rather than trying coding it all up in . allocation and deallocation of memory correct? Allocations lack error checking. This is the big issue as it also impacts proper de-allocation code. leak memory should the allocation fail. could overflow math, yet work well with math. See re-ordering below. Robust-ness Use instead of for indexing. As "code snippet of a larger program", the array sizes may be very large. The best type for array indexing is , an unsigned type. 
+
+For completeness I'd expect the min/max type of . are some other common candidates for consideration. For the rare platform where , Instead of listing "bytes", perhaps use "bits" and . On such rare machines note that fixed width types like , etc. are individually optional. @JS1. Certain typo 
+
+Consider that code may want another compare. Example: With typical floating point, Not-a-number and -0.0 may occur. How will your code sort that, if is not to coding goals? Perhaps a helper function. 
+
+Create file independence. OP's code makes the file dependent on the size of and and this code's endianness. Integer size and endian-ness varies amongst platforms. Instead choose a wide fixed type and convert to a fixed endian, then write. Reading will need to reverse the process. 
+
+Why try to synchronize the type? Instead reference the type. Pedantic, avoid UB of signed overflow, use unsigned math with 1u. 
+
+Then there is the missing . With , lack of a return in the end will inject a . Should you do this or not is a coding style. One side says, no. Minimal code. The other side says - yes. Be explicit, it is poor practice to omit. The larger point here is that some "do/don't do" axioms are driven by your group's coding style. Following a consistent style is more important than being "right". If your group lacks a coding style, create one. This applies to all sorts of indentation, brackets or not, or issues. Pedantic code would avoid integer overflow from pathological long lines. Example: 
+
+To be certain the output is truly outputted and not buffered, make certain the output is flushed before attempting input. 
+
+Though posted as 1 file, better to post as a , , files to clearly identify that which is public and private. I have doubts works when the last element is deleted. I think that is because of the overall design. IMO, when a list contains no data, it should consume minimal space. IOW, a pointer is an empty list. When a list type is used heavily, there are often many empty lists. So an empty list of a pointer to a node pointing to itself seems wasteful. Functions that do not modify the list should use . 
+
+Just integer addition and compare are needed I would incrementally calculate and , increment the smaller of the two. Of course, when they are equal - voila!

@@ -1,0 +1,91 @@
+Updated.. The localization is different between the SQL Engine and the window Server as @srutzky points out: 
+
+Is an operating system error. but not an error from the SQL Server. You are probably starving the computer on memory or having some network issues, If on Windows Server 2003 a quick reboot of the secondary server will fix this temporary and then I would look into memory settings on the server 
+
+Try running SSMS on the server with 'Run As Admin' to check if you added builtin\administrators during install. If you cant find any user with enough rights then you have to add a login to the server and give it sysadmin rights. Start the server in single user mode by starting cmd.exe on the server with administrative rights and running and then then in the same window run and type the following. 
+
+Well, you cant. So your only option is to backup msdb, model and distribution rebuild the system databases from setup and then restore the backups. If that is not an option, i.e. the sql server does not start you can rebuild the system databases, then install all patches until your server is on the same build level as before, turn off the sql server service and copy the database files for the other system databases over the current ones, remembering to take a copy of them first. 
+
+Take a log backup Put the database into simple recovery Upgrade When the database is back in full recovery mode make a differential backup and then start the log backups again. 
+
+Start by patching the operating system. Install the latest windows service pack and all updates on the secondary node rebooting as necessary. When the secondary is fully patched then failover the SQL Server to the secondary and if everthing works then start updateing the primary node until both are fully patched. For the SQL Server you need to install a service pack and failover between both hosts before you install a cumulative update, and you do it the same way. Install service pack on secondary/failover, update primary/failover. Install CU on secondary/failover, install CU on primary and celebrate. So the whole thing will take you at least 6 failovers of the sql service, but the good thing about doing the rolling updates is that you can patch the inactive servers during the day and the failover time is really short so you can schedule that early in the morning or late at night by which you prefer. I would also look into updating the server's firmware and drivers while you're at it, check with the server admins (or the documentation), some server like the drivers to be updated before you update the firmware. 
+
+You can create a 3 node cluster. But in SQL Server terminology active/active clustering means that you can run separate instances on any of the cluster nodes which then can fail back to any of the other nodes as clustering is for redundancy or high availability and nothing is shared between the database services. You can use Always On the create read only replicas of the data which can be used to take some read only load of the server. All of this is explained in details in the High availability whitepaper Now if you want or need to create a distributed load balanced setup you can try to implement peer to Peer transactional replication replication, you can create multiple distributed databases, using in memory objects in SQL Server to handle the transactional load and offload the data to other objects/databases. But the only transactional RDBMS that can, out of the box, run a single database in shared everything mode on multiple hosts is Oracle RAC (or maybe ScaleDB) and that comes with it's own set of problems. 
+
+You can create a client alias on the application server. You will have to run CLICONFG.EXE on the client, click add on the alias tab, click TCP/IP add the server alias B and set the connection paramters to be FC\SQLSRV after this all connections to server B from that client/application server will be forwarded to FC\SQLSRV If your application is 32bit you will also have to do the same for the 32bit registry and run %systemroot%\syswow64\cliconfg.exe 
+
+You will have to call /pages/folder.aspx with an ItemPath parameter as absolute path /Test which url encoded will look like this. 
+
+First of all grab Ola Hallengren's scripts to do the backups ($URL$ and drop the maintainance plans. Ola's scripts have much better retention settings and will allow you to set a mark in hours how long to store the backups and know how to take the backups of the secondaries. And for your questions: 
+
+Which will help but will scan on the ProductID - which makes sense, you can also create that index like this 
+
+DBNETLIB is an old library, create a client alias by running sqlcliconfg and create an alias for the old servername pointing to the new servername and correct port 
+
+The files are stored in a blob in the sharepoint database and as TDE encrypts all the pages in the database all the files will be encrypted there within. It's important to notice that while the database is mounted on the server the database server will serve the files unencrypted to the Sharepoint application server and it's clients. The Sharepoint binary cache will store them unencrypted as well as all the clients. You are only encrypting the data at rest on the SQL Server when using TDE. You can add to the security by using encrypted connections to the database server and HTTPS to connect to the Sharepoint application but after the files leave the database storage they will be unencrypted. 
+
+Install the Oracle Instant client - both the 32 and 64 bit versions find orasql12.dll and register it with and for the 32 bit version. and add the oracle bin directory the the path environment variable Make sure that you can see the oracle driver in ODBC both 32bit and 64bit and under data providers in the management studio. Check allow "Allow Inprocess" in the driver properties or run 
+
+Yes there is a need for it, but you can help without creating the index at least in SQL Server You are joining on invoice..cust_code which is not indexed so that the Database engine will have to do a hash lookup on the table finding all invoices with the correct customer code and then filtering on the invoice id. By creating and enforcing a foreign key the join will be faster, as the optimizer can safely assume that invoice_id '123' exists for this single customer, but having the suggested index can help the optimizer to find the optimal query plan, a singleton lookup to both the tables, faster. 
+
+This is an operating system error, reported to the SQL Server service. The SQL Server service account, which creates the files, needs to have at least change permissions on the d:\data folder and it needs to exist. 
+
+You will need exactly the same disk space for your mirrored (secondary) database as for the primary database. They are the same and the secondary database will have the same growth rate as your primary database and should be provisioned the same. SP_SPACEUSED will show you how much space your primary database is now using (you should make it larger and not rely on autogrowth), and you can grab growth information from the default trace to give you some limited information about how often the database has grown, you can then infer the growth rate from the autogrowth parameters. 
+
+Recent expensive queries in the Activity Monitor in SSMS should be your first stop. For more information grab SP_Whoisactive and find Glenn Berry's diagnostic queries which will help you a lot. The exact query depends on the version of SQLServer but this should be a start. 
+
+Set up a small script in SQL Server agent or Windows task scheduler that copies a backup file to a secondary folder where you keep it longer than the others or do a mirrored backup to a secondary folder every six months. A small powershell script or xcopy command that runs every six months and copies the last backup file will do just fine will make a log backup to the windows equivalent of /dev/null, no disk writes or space wasted. Nogood to restore from though. 
+
+You have to remember that the leaf nodes of a Nonclustered Index consists of Index pages which contain Clustering Key or RID to locate Data Row. In your where clause you state Since there is a Non clustered index on VeryRandomText (create index will create non clustered index unless you explicitly tell it to create a clustered) the cheapest way to find the data is to scan the index to find the rowid and then fetch the data for the row. If you would create a clustered index 
+
+The servers might be running SQLServer Express and/or LocalDB SCCM has a SQL Server backend with a runtime license, Domain Controllers might have a localdb instance and so forth, check in the services app on the servers for those or run the following on the command prompt 
+
+The SQL Server 2014 Upgrade Techincal Guide states that you need the following as the minimal version for an in-place upgrade 
+
+This is explained here, it boils down to that you have to have a full backup of the databases as well as a backup of the read-only filegroups: 
+
+If your databases are in full recovery mode you will need to backup the transaction logs, when that is done you can shrink the log files and setup a regular log backup to minimize growth and keep good backups. I would reccomend that you read this: $URL$ but first things first. The first step is to find the largest log files which you can shrink without backups - So you have to find databases which are in simple recovery mode: 
+
+and the run and If you are running a named instance the servicename is different - Check services.msc to see the name and you have to run SQLCMD whith to connect 
+
+Use a loop to delete and make frequent transaction log backups while doing so. That way people can use the table and you will keep the transaction log at a responsible size 
+
+Changing CPU affinity was never a common practice but did have it's uses on WindowsNT and later on Windows Server 2000/3, The main issue was that processor load could be misaligned on multiprocessor systems and this allowed for freeing up resources. This could also be helpful on systems that where not dedicated to running SQL Server. So yes this could be beneficial in some edge cases. Old Small Business Servers come to mind. On later versions of Windows the OS is more likely to distribute load between processor so for performance reasons this will not help but can be beneficial on servers running multiple instances if you want to limit those to specific CPU or NUMA node 
+
+In this case, if you cant serialize this in the application code you can use try/catch or an applock 
+
+If this is not possible you can override the time when the database is in simple recovery mode by making differential backups 
+
+Yes this is possible, but is not a good idea. You can theoretically run a web application anywhere and punch firewall holes so that the web application can access a database on prem. This opens up a whole lot of issues as the database will have to be on a secure network segment and can wreck havoc on security policies. You can make this more secure by using SSL for the database connection and use strict access lists on the firewalls, use Site2Site VPN and so forth but you are accessing the database over wide area network which can affect other users. But in any case you will have to re-route all traffic from this customer to a different server, which will make the application more complex so it's probably easier to install the application on-prem for this customer. 
+
+You want to use a minimally logged inserts. If your temp/scratch database is on the same instance you can simply do. 
+
+Now if you only have access to the unc path but not the linked server then the @backupfile becomes like this:. 
+
+Axapta 2.5 was not supported on SQL Server 2005 or later versions so you are out of your depth there. To support later version of the database engine you will need to update the axapta application itself. 2.5 predates SQL Server 2005 by years: $URL$ Any problems you have with incorrect statements are most probably due to the axapta server getting confused over the database version, you could try to change compatability level to 8.0 but I would recommend that you contact an Axapta certified partner and migrate to newer version of the application 
+
+If you are complying with all the RPO and RTO requierments by having database mirroring in place, with daily full backups then there are no data consistency issues with making backups to NUL. So the answer to your question is No. But (there is always a but) you are not having a secondary restore path if a full backup is corrupted and both the servers go down and your restore options are always the point in time when the daily backup is made. By making normal log backups and storing them for 48 hours you can restore past a single corrupted full backup which is not possible to do with differential backups. 
+
+I have to say yes. By blocking dev/test you are making sure that application changes are not accidentally updating production data. In many cases sensitive data on dev/test is scrubbed after restore and by blocking you are making certain that no one with access to test can access sensitive data in production. If you are using SQL Server with MSDN licensens you have to segment the Development servers from the production servers anyways. ($URL$ 
+
+This is how DNS works with multiple servers the client will ask the servers in a round-robin fashion. if an entry is removed from one of the DNS servers the client will get as an answer from that server and will not query the other. Here you can get an overview but it boils down to this 
+
+Just leave it at 10GB, it will grow on you. If you absolutely need to shrink the datafile for the configuration database then don't go to the smallest possible option but leave some headroom. 
+
+and then truncate the log as above to get out of trouble but remember which databases were in full recovery model. Now read the article linked above and start making good backups. 
+
+Yes, you might have an exclusive rowlock or page lock on different pages or rows. In this case you have a key lock on two different parts of the index. See lock granuality $URL$ 
+
+Which will optimize the query for a larger set, you can also add after the insert statement into the dbo.TestData table to run the insert statements 50 times and thereby adding more data and then you can skip the option part. You will then get the following index suggestion from the optimizer: 
+
+The following change to the code - setting the option gets around the error. The unchanged code will not crash SQL Server 2012 on Windows Server 2012R2 with the same language settings but does so on SQL Server 2014. 
+
+You are correct, except that you can do partial backups and piecemeal restores with the database in simple recovery mode, even though you loose certain flexibility that way. To do an online piecemeal restore, that is to bring the database online without the read-only filegroups you need the enterprise edition of SQL Server. Remember that the development edition has all the enterprise features. 
+
+Just add it as you would normally do on the primary node. Make sure that all the nodes have the same disk configuration and enough disk space. 
+
+OS error 23 is "Data error (cyclic redundancy check)." you can check those by running executing on the command prompt , this basically means that you have a serious error on your disk. As the database is running what you need to to is to 
+
+As you have found out the SQL Server Service runs the backup but not the user giving the backup command. Changing the service user should be done using the SQL Server configuration manager which in the background sets correct permissions for the service account, all of which are documented on MSDN, giving the user running the service Administrative rights on the computer will make it possible to run the service but is not a good security practice. You have to be sure to run the correct version of the Configuration manager so try running MMC.exe and adding the correct snapin for your version of SQLServer so check that first and if it failes reregister the snapin by running in a command prompt the following command 
+
+Do a partial restore of the primary and filegroup A from a partial backup. At this point the primary filegroup and filegroup A are online. Files in filegroups B and C are recovery pending, and the filegroups are offline. Online recovery of filegroup C. Filegroup C is consistent because the partial backup that was restored above was taken after filegroup C became read-only Restore of filegroup B. Files in filegroup B must be restored. The database administrator restores the backup of filegroup B taken after filegroup B became read-only and before the partial backup.

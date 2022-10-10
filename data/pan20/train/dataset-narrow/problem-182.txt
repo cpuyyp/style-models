@@ -1,0 +1,39 @@
+Then use in your bridge configuration. L3 Interface / Routing Interface To add a L3 interface to the mix, first define an Integrated Routing and Bridging Interface (IRB) with your IP: 
+
+When a packet is received (from the external side) the NAT device will check the Source IP, Source Port and Destination Port of the packet and compare it to the , and fields in its connection table. When it finds a match it will forward the packet to on . UDP hole punching depends on the fact that Internal and External Source Ports are the same. This is normally the case unless you have a second internal host that uses the same Source port to connect to the same external Destination/D-Port combination. When we assume that Internal and External S-Port are the same then both clients A,B can communicate their source port to the rendezvous server which will then relay the information back to the other client respectively. 
+
+The easy part: Use Wireshark for the sniffing. The hard part: In a switched network you need support from the switch to get all the traffic. It is called "port mirroring", "span port", "monitor port" depending on the vendor. Without control over the switch you will not be able to capture all traffic. 
+
+If you have more than one VLAN on a port (a "trunk port"), you need some way to tell which packet belongs to which VLAN on the other end. To do this you are "tagging" a packet with a VLAN tag (or VLAN header if you like). In reality a VLAN tag is inserted in the Ethernet frame like this: 
+
+After that you can see the counters in the output. Note that they have interface-specific extensions: 
+
+Sadly portchannels on Cisco are a pain when adding new interfaces. Sometimes the only way to "recover" a Port-Channel is to completeley deconfigure and reconfigure it. Steps to do so: Reset all channel interface members to their default config 
+
+The LER will be unable to distinguish this packet from any other packet as it will arrive unlabelled (as you said this is only true if the label stack has only a depth of ONE (the transport label)). You could somehow mark packets (CoS) that are transported trough MPLS. This might differentiate them from packets that are not transported via MPLS but would require additional configuration and highly depends on the used gear. 
+
+Most of the time it is called Captive Portal. Many WiFi access points or centralized WiFi controller setups support this feature (it may be called differently though). For ethernet switches there are vendors that support this kind of authentication for example Juniper supports Captive Portal Authentication together with 802.1X and MAC RADIUS authentication on their EX switches. 
+
+Packet classification occurs when the packet enters the router. You're trying to apply it on the forwarding table. That's not supported. The Juniper documentation shows the packet flow in the router: Packet flow in MX Routers So try to apply the policy on the input interface like so: 
+
+When the link goes down the cable was removed, damaged or the other side shut (disabled) the port. The severities are exactly that, Ciscos estimate on how severe a condition is. It may not be an "error" in your case but when a port suddenly goes down (especially without apparent reason) this could be something severe in many situations. If you don't think that this is an error in your setup (for example when the interface connects to a host that is turned off/rebooted regularly) you can always disable logging of this message with the following command: 
+
+I want to connect two EX switches by console cable and want to use this connection to open a console session from one EX to the other. I found no "offical" way to do this but maybe someone else has succeeded? 
+
+I'm trying to find the most elegant way to implement a RTBH filter for routes received from a customer. The filter should: 
+
+If they only need "Internet" or some other kind of L3 connectivity from you, go for access port. Only configure a trunk if your customer has multiple VLANs that are used to interact with your infrastructure (or other customers located in your network). If the customer wants to connect his own switches/sites over your network and wants to use VLANs, try to do Q-in-Q (VLAN/dot1q tunneling) if your equipment supports it. That said, if you only need to provide L3 connectivity and you're connecting your customer directly to a router, configure the port as a "routed" port ( on Cisco) so you don't have to do mac learning and have no interaction with the customers STP, etc. 
+
+I'm trying to connect from a Cisco 886VA to a Juniper EX2200 via SSH. The connection fails with the following messages on the Cisco: 
+
+The solution is somewhere else in the configuration tree and quite hard to find in my opinion. You can disable bpdu-block on a specific port even while is enabled: 
+
+MLD is off on the routers and I'm not sure what purpose this packet serves. Any ideas would be welcome. 
+
+2^12 are 4096 possible combinations, and in conclusion 4096 possible /24s. If you want the amount of hosts (/32) in a /23, use 2^(32-23) = 512 and substract 2 addresses for network address and broadcast. You end up with 510 hosts. 
+
+I/G Bit: If this bit is 0, it shall indicate that the address field contains an individual address. If this bit is 1, it shall indicate that the address field contains a group address that identifies none, one or more, or all of the stations connected to the LAN. In the Source Address field, the first bit is reserved and set to 0. L/G Bit: The second bit shall be used to distinguish between locally or globally administered addresses. For globally administered (or U, universal) addresses, the bit is set to 0. If an address is to be assigned locally, this bit shall be set to 1. Note that for the broadcast address, this bit is also a 1. When you convert the first byte of your address into binary, you get . Here the LSB is last, so the last bit in the first octet/byte is the I/G bit, which is 1. This makes your MAC address a group MAC address which your router rejects. If you use , you get where the last bit is 0, making this an individual (unicast) MAC-Address. To make your MAC-Adress unicast and also make clear that you've locally assigned it (and to prevent MAC collision) you should use an address where the I/G bit is turned off and the L/G bit is turned on. This means one of the following addresses: 
+
+When you don't use add/remove you're telling the port to only configure the new VLAN. This is a common error. If your platform supports it you can use the Cisco Embedded Event Manager to forbid this harmful syntax: 
+
+Sadly the EX4200 (or any EX) is not able to do this. You would need a separate logical unit for the VLAN which has its own VLAN counters. This works for example on Junipers MX routers but not on EX. What you can do however is count the packets and bytes with a firewall filter. I have an working example here, for VLANS 14, 571, 572. You can of course use any VLAN IDs. Here is the filter:

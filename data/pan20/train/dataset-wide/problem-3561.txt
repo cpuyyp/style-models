@@ -1,0 +1,87 @@
+It appears you have a Centos 6 machine but have configured the Epel repository for Centos 7. That is not going to work. Remove it and install the Centos 6 Epel Repository at: 
+
+As you can see it is a "mostly free format human readable date", it will pick up the timezone from anywhere it sees fit. It is very easy to test it. For example: 
+
+Your sendmail.mc looks ok. Apart from stopping and starting sendmail again (which I would guess you have already done). I would look at the actual configuration file which would be called sendmail.cf. Make sure you see the lines: 
+
+The above will exit the script in case of 60 second timeout or if received a denied response in case of bad password. Otherwise if it receives a "sent" text it continues. 
+
+If you do not even see the outgoing packet, then there is an internal problem with the name resolution config on your server. 
+
+You need to remove first level of URL and pass requests to respective backend by using instead of , like so: 
+
+Unfortunately, it doesn't seem like any version of Varnish supports access for from within . If it would, then something like this would suffice: 
+
+I think you're looking for instead. It will be more effective, and will invalidate whatever URL you request in PURGE request. In , add: 
+
+First command adds repository information, can give "nothing to do" in case it's already present (that's OK). The second command installs the actual package from the repository. 
+
+You might want to check full explanation which includes additional optimization to query slow backend requests. 
+
+Most likely you have /etc/nginx/conf.d/default.conf which is present on rpm based installations. It has default host which listens on port 80. Best practice is to trim that file so that further upgrades will not replace it. 
+
+It is possible. You will use bans for that: (example of a ban lurker friendly ban) Since you're able to control your application's code the best way is to setup purge handler in Varnish, then make your application issue request to that (via curl). In fact, your purge handler might use bans as above, or it might use . Bans are normally used to invalidate cache for multiple objects at once, whereas purge invalidates single page. 
+
+As you can see a tcpdump capture on port 69 will not show you the full dialog. Also if you have NAT, once the server attemps to send a file from a source port other than 69, most NAT implementations will fail to forward the packet (only a full cone or restricted cone NAT will work, but Port Restricted or Symmetric NAT will not). 
+
+The only way one can guess at it is to check its reverse DNS entry. For example if the server detects a connection from 
+
+Get rid of it. Thats is not an openvpn parameter. UPDATE Yes, I see you needed to add the client parameter as well. I am in the habit of setting up OpenVPN between networks with static keys and IP addresses. I never need the client parameter in those cases. 
+
+You can also add just '%' and it would work for any host, its like a wildcard. If you can't even get into the database to make the above changes, then you should change your hostname to localhost from mydomain.com. Your allowed connections to the database should at the very least be the localhost ip 127.0.0.1 UPDATE: 
+
+This will show latest in-memory Varnish log entries for “Backend fetch failed” (HTTP 503 error). You can also check more commands for troubleshooting the 503 status in Varnish 
+
+You can put pretty much anything that does HTTPs termination for the purpose. Even Apache. Bust mostly people use nginx for SSL termination (or pound, or hitch) because it's more lightweight. Just because you have less software, i.e. Apache (SSL) -> Varnish -> Apache. It doesn't mean that the request flow would be any faster. It still has to go through 3 layers and travel as HTTP packet. So there's no speed up from using less software. Using Apache as SSL terminator does not make serving static content faster pointless. You can configure it in a way that Apache SSL layer will serve static files directly whereas proxy forward to Varnish for dynamic content. But overall, nginx is just better for serving static files. 
+
+The ads will not be cached, because Google ads are Javascript based. (the actual ads are pulled by Javascript code into your page dynamically, irrespective of Varnish cache). 
+
+The first word in the DNS entry clearly says its a DSL connection. That would be an example of an easy one. Another example: 
+
+Make sure you uninstall anything you added from the Centos 7 Epel repository as well. That should do it. 
+
+if $TZ is unset and /etc/localtime is UTC then why are you using timezone T (Tango) in the date command? On my system I have a localtime of EDT. 
+
+the important thing to note here is that it is lightning fast! That is because huge number of ip networks can be represented by a single hash instead of hundreds or thousands of lines of iptables rules. For blocking countries see this example: 
+
+You could either have a firewall rule blocking access or Your /copos directory does not have full permissions. You should be able to figure it out by doing a: 
+
+here you create another scheduler for the virtual interface and a class with a rule defining a rate of parameter $2, which is ingress, in kilobits: 
+
+You should be using if you want to make sure that the custom header goes into the response that clients (browsers) get: 
+
+Varnish built-in VCL will not cache URLs which send . Thus it's always being not cached, and -ed later on. Proper solution: configure LiteSpeed to enable public cache as opposed to private cache. 
+
+It doesn't work for you because uses "client" mode by default. Enable it using switch. Subsequently, this will work: 
+
+Varnish is a transparent cache. It will work for multiple websites in a single instance without any issue. If your many websites are using the same platform, i.e. Wordpress, you are just fine with single VCL file configuration. If your many websites are using different CMS, and need to have different handling / cache logic per-site, you have to make use of include files as outlined in this article. 
+
+Do not mix installed packages via ones. The proper fix involves removing pip packages and install everything from . I have outlined it here. You do not need newer pyOpenSSL on CentOS 7 to run certbot! 
+
+The reason your are getting the mydomain.com error is because the operating system is resolving the DNS host name lookup 127.0.0.1 to mydomain.com. That is not a mysql issue but a networking issue. 
+
+You should edit your expect script to allow for timeout and expected result after rsync. For example: 
+
+I think you can see the point. If you are not familiar with military timezones here is the list: $URL$ You can also try to use zdump to see if your zone file is not really what you are expecting: 
+
+Then anything you type on either end should be reflected/visible on the screen. If its not then your port is being blocked along the way. 
+
+The client would therefore receive the 404 in the SIP reply plus it will be told to connect to sip:not-in-service-recording@atlanta.com for a recorded message. 
+
+The first thing to check is to see if the DNS request is actually leaving for the right destination. Open 2 terminal sessions. On one type: 
+
+Essentially this means that all URLs under will be delivered from root () of backend and all URLs under will be delivered from root () of backend. 
+
+The 503 HTTP status typically indicates a problem with the server setup. It's not a block or ban status. Most likely the problem is due to timeouts being hit by Varnish while communicating to Apache. You may troubleshoot this via command line using: 
+
+You don't really have to use private IP of your instances. You can use your Linode servers public IP addresses in Varnish backend definition. It will work fine. 
+
+First of all, you typically should never specify a DNS hostname in Varnish backend definition. It is resolved only during startup and never updated. Specify IP of remove Nginx server instead. Second, what you're asking is already the default behaviour of Varnish. It is a transparent caching HTTP proxy, and as such - it will pass through whatever header is sent via HTTP by clients. 
+
+The first thing I would do before proceeding further would be to test port 25 end to end with a tool like netcat. The tool comes standard with most linux distros. For example on CentOS I would stop postfix to release port 25. Then I would start netcat like this: 
+
+Make note that in my example the secondary IP is not controlled by NetworkManager, hence the NM_CONTROLLED="no". You don't need to tie it up with a another MAC address, it should work fine without the HWADDR line. 
+
+So what you need to do is add mydomain.com as a permited host in the users table, mysql database. For example: 
+
+Full info of components of Linux Traffic Control can be found here. UPDATE: by the way, in a regular linux box you can see the status of the traffic shaping queues by using tc -s. For example you could try to issue the following commands in your phone and they should work too:

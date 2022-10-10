@@ -1,0 +1,55 @@
+If the sender doesn't have permission we send a message and return quickly. We don't have to worry about permission for the rest of the method! Let's do the rest too. It looks something like this: 
+
+Notice how all it is doing is passing the call on the the other methods when it is appropriate. onNfbmCommand Let's look at the onNfbmCommand Method. This part is difficult because it contains a very large nested if statement. This makes it hard to think about, so let's see what we can simplify. It seems both branches are actually almost the same, except for the specific message they are sending. In other words, it doesn't matter whether the sender is a player or not. We can use that to our advantage! First lets create a method that sends a message to the sender with a color if it's a Player and without a color if it's not: 
+
+This comment doesn't add much and can be removed (after all the code says the same thing). Perhaps it is worth mentioning why you are saving the configuration when the plugin gets enabled. loadConfig 
+
+The most important thing we've done is create a seperate method that will check whether a block is minable. By using a seperate method, we can focus the onBlockBreak method on 'what to do' instead of deciding 'when to do it'. The rest of the method now looks like this: 
+
+I think that a recursion is quite elegant here (to know about the performance, you would need to do some benchmarks). Regarding your code, I would suggest some minor changes to make it more readable: 
+
+As Austin Hastings mentioned, all can be cast to . What I would recommend you is to create a method on this type to check if the value is valid. You may adapt the behavior of not to panic (return nil / return a pointer and boolean / return a pointer and an error...) 
+
+This code code should work (I can't test it), but the way the "address" is managed could be more elegant (for example to manage in case of multiple listeners). Here is a proposition, where each listener is in charge of forwarding the frames to a particular address, via a given connection. The main loop is in charge of maintaining a slice of all those listeners and forward every frame to all of them (without blocking). With this code, we see clearly, that only 2 connections are used (monitor and session), which might not be the best idea (I don't know how they behave when concurrent goroutines write data at the same time). To fix this, you should simply adapt the main loop. 
+
+Well this is a fairly unusual question. You try to implement an algorithm that is supposed to be as fast as somehow possible, but your question is whether this is "clean code". Have you ever looked into something that needs to be as fast as possible (e.g. a driver for a GPU)? There's absolutely nothing clean about that. Those are optimized by hand until the last bit is set where it might have the 1 in a billion chance to run one cycle faster. Now I'm not saying that clean code can't be fast. But this is usually not the main concern of a software engineer (I'd like to emphasize usually, because I'll be beaten to death by many developers right now.). Clean code often lives from big refactorings, creating multiple classes and hundreds of functions which make exactly clear what is supposed to happen (and when). If you do this to an algorithm like yours, it might harm its performance (e.g. because the compiler doesn't manage to inline function calls etc). On the other hand we're looking at java code ...(and once again I'm hiding under the table because all java developers are shouting at me). But now lets take a look at your code: 
+
+Readability Instead of , I would recommend you to use a context.WithTimeout (here is a nice video introduction: $URL$ Multicore You currently have one loop trying to find the best scores, without any goroutines (which is one of the main features of go)! If you have a CPU with multiple cores, you may benefit from multiple workers: 
+
+And since this method returns on timeout, it needs to be launched every time an new address listens: 
+
+"callback pattern" shouldn't be frowned upon (they are used in "first-class functions" for instance: $URL$ $URL$ However regarding your code, I don't think that it looks like idiomatic go code. 
+
+So the kwargs does not seem to allow you to set a new . Hence it seems that the only way to set a new is to remove and recreate the attribute. From this case, it seems hard to further simplify your code. 
+
+vnp and Peter Taylors suggestions are very good. One could go a step further and make nice methods on the type: , and for instance: 
+
+A minor refactoring might be to put the statement out of the loop. It makes a real uses of the and remove an indentation block. 
+
+Also you are mixing with raw pointers. Consider using or where necessary. Nested class I rarely ever use nested classes, but your case here seems like it's worth an exception. This inner class is only used inside the outer class and has no sense whatsoever outside of the class. So making it an inner class seems like the way to go. 
+
+This is small line of code might be critical to the performance of your algorithm. There are a thousand different ways to chose a pivot-element. Why did you choose this? Move it to it's on function . You might think about adding a comment why you chose this method. 
+
+Can't really help you with that. There are a billion little tricks, like that decrementing is sometimes quicker than incrementing, but I am really not familiar with these. 
+
+I think the main problem of your implementation is that lock() performs Busy waiting. This will cause a thread that is waiting to get the lock to repeatedly waste CPU-cycles by polling (multiple times in one time slot) whether the lock has been released. Easiest fix for that is to perform a call to after trying to acquire the lock. This will cause the thread to exit its time slot and therefore let the other threads do their work. 
+
+Looking at the random number generation, a lot of duplicated code can be easily removed. Starting at the 4th line: . The only function that is used is , so you could do and then use everywhere, instead of . Another repetition that can be avoided concern the arguments of : you can unpack the tuple using the . 
+
+I would recommend Don't repeat yourself As you can see, the two branches of your are very similar. Instead you could do a 
+
+The method could also be faster if it didn't use . For instance, it could use the last 7 bits (from 0 to 127) of (or multiply the probability by 10 and use the last 10 bits - from 0 to 1023). But there is probably a bigger optimization regarding the generation + insertion in the database. Currently the data is generated and inserted into the database sequentially. You could do it concurrently with a channel and two goroutines: 
+
+If you know that your clients have Javascript activated, I would recommend you to go for the first version. 
+
+A buffered channel is just a way to allow goroutines to be more independent when they are producing/consuming a channel. 
+
+Where does this line come from? Why 5? Ehy log(2)? Why divided by 3? Coming back to question 4. Here a comment might be appropriate. Additionally you might want to move that into its own function . 
+
+What is the responsability of the -class? A board is supposed to hold some sort of players and objects for a game. In this case: The 'X's and 'O's. Hold them, keep them, no more, no less. Your class however does the following: 
+
+Well... You can always be very dogmatic about programming principles. Your code looks rather good to me. Anyway, I'll name some examples. Single responsibility principle: 
+
+No idea what is. Neither does the next reader. Or you in 2 weeks. Rest looks good to me. Just make sure every API-Function has its JavaDoc, rest is really up to you (in my eyes). 
+
+These three lines of code are duplicate (not quite, but almost). What do they do? They swap 2 values in an array. Where should they be? In a method called . At this point we realize that by refactoring that, we loose the possibility to increment while indexing the array. That's what I mean by saying "clean code is usually not fast.". I hope this post gave you a little insight on my point of view. Obviously there are different angles this can be looked at (I mean... I insulted like three groups of developers in this post...).

@@ -1,0 +1,37 @@
+You probably don't want to put your backups in two places like that alternating. You (probably) won't be able to do a point-in-time restore if one of your file store locations is lost. You'll be stuck with the latest full backup of the remaining system. DMason's suggestion is workable, but personally I would use the scripts from $URL$ and back up to a network location. From there, you can backup up the files to tape or another disk. 
+
+Sources: $URL$ $URL$ Edit: To answer your question on how to do it, write a stored procedure in the target database. Grant access to execute the procedure, and call truncate from the procedure. 
+
+You're attempting to use "SQLExpress" as a server name. I'm guessing that's the instance name. Connect to ".\SQLExpress" instead. 
+
+Write the backups to a different drive (or array, set of spindles, controller, whatever), or to the network. To back up to the network you'll need acceptable bandwidth, and run SQL Server as a domain account. Edit: With your new information, I'm guessing you have poor-performing I/O on the server. As a stopgap measure, try to get the backups to complete during hours when the database is not busy (if possible). You can use the "Data File I/O" pane of Activity Monitor (assuming SQL 2008 and newer) to see response time for each data and log file. Anything more than 25ms isn't good. Over 50ms is terrible. If you see bad numbers, you'll have to take this to your storage guy. 
+
+The step in the first query plan that is costly and explains the difference is the sort step on the large number of rows. You are sorting the entire dataset (an operation, where n is your partition size) so you can then select the first entry. The other rows (#2 - #10,000,000) still had to be sorted even though you never looked at them. On the other hand, max is an operation because you only ever have to keep track of one value as you pass through the data 
+
+The main thing is to avoid the nested loop join that is caused by the "between" in the join condition. In your example specifically, I would start by rewriting this as 
+
+In my situation, I know that all the data is already distributed by this X expression, so that if Redshift distributes by it, there will not be any actual network activity. 
+
+Note that Redshift will only do a full outer join if considers it a merge joinable condition, which means you should set your distribution and sort key for both tables to be on visitor.ip and geo_ip.start_ip, respectively. If this is not an option, or too much of a bother, you can do this instead as a UNION ALL since you don't actually need the geo and visitor records to be on the same row: 
+
+For a high-performance SQL Server, you need separate physical resources. For safety, you need multiple instances. RAID 10 is usually recommended. For local storage on a physical server, use RAID arrays for anything but pet projects. Bigger systems will use SAN systems, larger budgets, and usually a SAN administrator who can tune thing to your workload. As a DBA, I would not use Storage Spaces for a SQL Server. That may change later as the technology matures. 
+
+Notice the db_ddladmin requirement. As DDL, the four-part naming isn't allowed. Compare it to Technet info on the FROM clause: 
+
+I've seen plenty of single-server solutions with IIS and SQL, some with 4 GB of memory. They work for low-load situations. I wouldn't want to run a busy site unless there was a lot of memory to work with. If you have enough memory for the load, the lower latency of communicating over shared memory, instead of the network stack, could be a net win. If you already have this setup, and performance is good, then why change? (Assuming you're not expecting a bigger traffic load). SQL Server will give up memory if under memory pressure from other processes. It won't lead to good performance if it has to do that, but it won't bring everything to a halt either. 
+
+How do I UPDATE Rank in the table within this SQL statement? What do I do in the ????? ORDER BY statement to make sure it orders by Score1 first then when these are equal it orders by Score2 second? 
+
+I had been doing the following in two stages in php, but now see that as cumbersome. I was collecting all the 'TestUsers' with the UserId = 25 and returning to the php code which then does a separate call the database and then alters the 'InactiveTestSlotBitwise' in the 'Tests' to show they had removed themselves from the Tests they were in. However, now I think I should be doing something else instead in one call, on the lines: 
+
+It gave the following (note I am localhost:8080 and not just localhost - could that make a difference? 
+
+What I need to do is count the number of tests a user is signed into and are not complete. It must include all Tests they have not resigned from. (This is easy). BUT it must also include all the Tests they have resigned from and another User has not taken their place. (This is the tricky bit). Another user will have been deemed to have taken the place of the User in question if they have an entry in TestUsers with the same TestNumber and the same UserSlot (note both), and they either have not resigned themselves (ResignedTimestamp='1970-01-01 00:00:01') or they have resigned but their ResignedTimestamp is later. Here is my SQL. 
+
+These would get rid of the nested loop join. You can still improve upon this for larger clusters by allowing the operation to be distributable. For example, if you can partition your IP address table by the first octet (i.e, no row in the table has a start and end of the range with different first octets), you could add a partition to your window function, which should let the sorting be processed on separate nodes in your cluster: 
+
+What I'd like is to just be able to tell Redshift to please distribute the last join based on user_id (which Redshift might categorize as a DS_DIST_BOTH, but should actually result in no network redistribution) 
+
+If I am joining between two tables, A and B, with multiple equality constraints, is there any way that I can hint to Redshift which it should use for distributing the join? For example, in: 
+
+It's pretty corner-case, but there are cases where data location matters slightly. Let's say you ask the database to do this query: SELECT COUNT(DISTINCT ip) FROM test_table GROUP BY country If the table is distributed by country, no network activity is needed (I tested this to confirm). For any other distribution style, the hash table will logically need to be re-distributed over the network (I also tested this to confirm). That said, you probably want to just choose an EVEN distribution style to maximize the scanning speed. For that matter, maybe you want to use Spectrum for this use case.

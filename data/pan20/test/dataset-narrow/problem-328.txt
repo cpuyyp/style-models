@@ -1,0 +1,39 @@
+I guess the last approach is to petition Oracle to allow setting a root password during installation (maybe via an environment variable that the RPM post-install picks up, or a magic file somewhere that contains the password that the post-install looks for. That would make life so much easier ;-) 
+
+This isn't much of a solution, but it's possible to put the data files in place on the system before installing the RPM packages. That is, on a dev system, install MySQL and set the root password as you want it. Shutdown Mysql and make a copy of the files/directories in /var/lib/mysql (maybe put them in a tar file or something). On a new system, before installing the MySQL RPM packages, take a look and see if /var/lib/mysql exists - if not, create it and untar your files into it. When the RPM installs it won't overwrite those files, and so will start up with your previously set root password. This seems like quite a cheesy option, and probably won't work when versions of the RPMs change (even dot release changes might break because they'll need an upgrade process on the archived data files). However, it's a possible way forward. Another (less than ideal) way forward is something like this: 
+
+You can see that the 12c Oracle Text version's AFTER trigger does actually compare the and values of the indexed column to see if it needs to update--not the case back in 2008. So...if I'm updating the value in my BEFORE trigger, that should be reflected in the AFTER trigger, and the comparison would kick off an update to the index. What gives? Well, here are the two SQL statements I was using: 
+
+The trigger works properly and populates the alright. But it seems as though, even though CTXCAT is supposed to be transactional, it's not smart enough to detect that I've manipulated the value in my trigger. In the tests I've done so far, only a direct manipulation of that field with an update or insert query will trigger an update to the index. Any solutions to this? I would like to more or less keep the set up I have, with the field being populated by triggers rather than in my DAO layer, but I need to force the CTXCAT index to update itself whenever that field changes, even if the trigger is changing it. Alternative methods of handling this are welcome as well, but I'd prefer a simple tweak or annotation or something to just get this working. Thanks! 
+
+The query retrieves all the rows with unique fields (by ), prioritising the version you specify, or the draft one (which has its priority bumped to the top). If you want the draft or last version, then use instead of . 
+
+This query doesn't really require , because it includes a primary key. If you have any duplicated rows, you're then performing a join incorrectly, and you should either use a subselect within the SELECT clause, or adopt a different your strategy. The undesired duplicates are likely coming from either or . The more tables you join (especially if you use any OUTER JOIN), then the more complex the possibly query plans become, and the more likely your RDBMS will be to choose one that doesn't work very well. If you keep your queries as compact and minimalist as possible, the queries will be more likely to run more efficiently. 
+
+Hm, so the CTXCAT index uses a trigger to know when it needs to update the index for a particular entry. All I need to do is tweak the trigger and recompile it so it does what I want. To get the content of the trigger: 
+
+I never make changes directly to the column. Instead, I have a Before Insert Or Update trigger, that composes that value out of and . The trigger looks like this: 
+
+(Slightly different than what I said in my question, I apologize.) The effect here is that, each time I used one of these statements, either the or would be null. So when we get to this condition: 
+
+I'm running on Oracle 9i. (Actually, I'm running on 12c, but building for 9i.) I have a table like so: 
+
+Check to see if /var/lib/mysqld exists. Remember this. Install Mysql RPMs (the post-installs automatically create /var/lib/mysql if it doesn't exist - you can't really stop this from happening) If (1) was "doesn't exist": 
+
+Ensure Mysql is stopped (the RPMs don't start it, but just be sure) Delete /var/lib/mysql/* run /usr/sbin/mysqld --initialize-insecure --datadir="/var/lib/mysql" --user=mysql (which is what the init.d script does, if /var/lib/mysql is empty, except we're using 'insecure' which means no root password is generated) Start mysql Use mysql client to log on with empty password and set the root password to whatever you want. I'm really not a fan of using Ansible or whatever to delete database data files. Even though this method has suitable checks to make sure it doesn't delete a live database, it still seems like you're creating a dangerous situation here. However, it's another possible approach. 
+
+INSERTs have lower impact in affected indexes than UPDATEs, however INSERTs affect all indexes (except for conditional indexes that do not meet the condition). Indexes are necessary if you need to retrieve data often and quickly. You must weigh the impact of one (indexes in updates/inserts) or the other (full scan searches): you can't have it both ways! An compromise is datawarehousing, which enable fast inserts/updates, infrequent full scans (copying to datawarehouse), and fast searches in not-up-to-date data. 
+
+The following schema is what I came up as a fully denormalised set of tables. There are pros (e.g. flexibility) and cons (e.g. user interface complexity) to this approach, but you may find it useful, or it may shed some insights: 
+
+I use a number of scripts that work as installation packages, and I open and run from PgAdminIII. For example, one of them would be all my materialized views, with , allocation of permissions, etc. Another would be a script for creating or altering tables: 
+
+I'm running Oracle DB 9i. I have a table with various constraints to ensure data integrity. In addition to the constraints, I have triggers on and to ensure that necessary data goes into the table, in some cases allowing the application layer to omit the information from their queries, and in some cases forcing that it be present. The actions that I need to do on my are different than my . My question is this: Can I have one common trigger that uses , or should I make separate triggers? For example: 
+
+TLDR: The CTXCAT index is supposed to be transactional, but Before Insert triggers that modify the indexed column don't seem to induce an update. 
+
+You can see that any change to the or fields updates the field with a capitalized, concatenated string. The trigger capitalizes it because Oracle 9i does not support case-insensitive indexes. To get a case-insensitive search, I uppercase the and in my query I uppercase the search value. Now, the problem: Executing this SQL command does not cause my index to update: 
+
+Ensure has an index (or key much better if applicable) on ! You run the function several times for each row, this is likely taking a significant toll. I've replaced it with string_to_array, and then fetch the individual pieces as needed. I also didn't understand what you intended to obtain for the field using reverse? The query below returns the last element for it. Your query returns many million rows. Even if PostgreSQL processes the query reasonably quickly, your client application (especially if you use PgAdminIII) will struggle allocating enough memory and receive and format the results, and probably be what takes the most time. So you may want to create a temporary table with the results, and then query against the temporary table: 
+
+Perhaps this will help. If you'll rely on the account_id from full_path often, then you'll benefit from a function and a functional index for it:

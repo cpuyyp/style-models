@@ -1,0 +1,79 @@
+The technologies that use the wallet are excluded, so the answer is no. Oracle Express Edition does not include the wallet management tools (mkstore, orapki, owm) at all. 
+
+You should run this with elevated privileges, for example in a command prompt started with "Run as Administrator". 
+
+Oracle Database ships with its own JDK, it does not use the JDK you install on Linux. So you can upgrade that without any impact. 
+
+Unique index does what you want. If you really want a constraint, you can create a unique constraint on a virtual column: 
+
+So this single redo log file has 51 extents in diskgroup number 1, disk number 0, each extent the size of 1 allocation unit (and the allocation unit I used is 1 MB, and I created a redo log with the size of 50 MB, but that is not relevant here). And that single disk, in my case, is: 
+
+Starting with 12c, there is a new feature called Oracle Sharding. Sharded Database Management For example you can define the following shardspaces in Global Data Services with : 
+
+There are several ways of enabling SQL tracing, it is just one of them. It may be useful to enable capturing bind values (as above), so you can match your report input parameter values to the query bind variables. You can find the name of the trace file as: 
+
+Just use + to find why fast refresh is not possible on your mview. Fast refresh is possible without a join condition. Create the table for storing explain results: 
+
+The Windows service should be set to start automatically, and with the above setting, the database instance will not start with it. 
+
+Not a big difference, but it can still affect the optimizer so that it choses another plan. Above is explained in detail by Jonathan Lewis in his book "Cost-Based Oracle Fundamentals". 
+
+Oracle Database Architecture If you wanted to seperate data per application, you could do that by using seperate tablespaces and schemas. Creating such a database is a complex process, and it is done with DBCA or SQL*Plus on the database server, not with a remote connection: Creating and Configuring an Oracle Database In 12c, the multitenant architechture was introduced, that is similar to the concept in SQL Server. Overview of Managing a Multitenant Environment If you have a container database, there you can easily create new pluggable databases from SQL Developer, when using a DBA connection. Managing Pluggable Databases (PDBs) using Oracle SQL Developer 
+
+package has conversion functions as well. Unfortunately there is no support for converting CLOB to CLOB and change characterset in one step, so the data is first converted to BLOB, then back to CLOB. 
+
+But this requires at least version 12c, and it is an extra cost option. For lower versions, or without the Multitenant option: Simply create 2 traditional databases on the server: and . Import one dump to , the other to . You can specify in your connection string the service (or SID) for the database you want to connect to. For example: 
+
+I have a dispatcher listening on . If I request a shared server connection, and the listener tries to forward the request to , but can not resolve that address, that will result an as well. 
+
+This can be done in a few minutes with storage snapshots/cloning. If you can't do that, just go for RMAN duplicate. Both method can be scripted and scheduled to run automatically. 
+
+The removal of other options ususally include running scripts provided by Oracle and/or dropping schemas. For example to remove APEX, you run the below in a regular (non-cdb) 12.2 database: 
+
+Notice the backticks. The value of variable should be the output of the above command, not the file name with absolute path. Just set the value of NLS_LANG, as you already did: 
+
+Simply put, they are the parsed SQL statements in the shared pool related to the table. When they are invalidated, they need to be hard parsed again the next time they run. A typical use case for this: the database generates a suboptimal execution plan because of stale statistics on a table. The database fails to recognize this mistake on subsequent executions, but you notice it and decide to gather statistics. With , this will not have any effect on the SQL with poor performance, the database will continue to use the old, suboptimal plan. That is why you should gather statistics with the option in such cases. 
+
+Users can drop objects owned by them, no extra privilege needed for that. There is such privilege as or . The privileges and allow a privileged user to and objects owned by other users. 
+
+You don't catalog backups at destination site, because you don't mount the database (controlfile), you don't even have the controlfile there. The controlfile will be restored from the backup, and that controlfile will contain the backup entries, that were transferred to the destination host to the same path as on source. 
+
+Another mistake is that expects the name of a directory database object, not a directory path on the filesystem. If you want to update a field with the contents of a file, this is how you do that: 
+
+I do not think it is possible. The table contains all possible actions in the audit trail. There is a action, but that refers to . The column in contains this information though. 
+
+There is no such thing. Unfortunately you can not create fully customized filters, you can use only the predefined ones. Even if you could, there is no reliable way of filtering built-in objects. Starting with 12c, there is a new column in the views, called , but we can not rely on that, because its is not accurate (for example, AWR objects or some built-in directories and queues are not accounted as maintained by Oracle). As it was already mentioned, do not use , that is for administrative tasks. Create your own user, and log in as that user. 
+
+The above is a very common mistake when using Oracle RAC. But is not specific to RAC, that can happen in single instance environments as well. All you need is a shared server configuration, and name resolution problems on the database server. Same story short: 
+
+A - Makes no sense. is unique, the query retrieves at most 1 row based on an equality filter, this should be a dead simple . B - I don't think so. is unique, the number of distinct values equals to the number of rows. With huge gaps in a unique column, a height balanced histogram can still provide extra information for better estimates for a full/range scan, but this is an index unique scan. C - Maybe, but very unlikely in a real scenario. The above query should return its result after a few block reads and gets (lets say, <10, index height + 1 table access). Instead, it took 453 disk reads and 797 gets. Maybe the query read the whole table instead of an index unique scan. In that case, decreasing MBRC would increase the cost of a FTS maybe up to the point, where the index scan becomes favored. Still, in a real scenario, with proper statistics, I doubt this would happen. D - Maybe, but again, unlikely in a real scenario. "Decreasing" the index may reduce the cost of it. The clustering factor and number of leaf blocks do not affect the cost of an index unique scan. This leaves us with the index height, and yes, that may decrease, which means the cost decreases as well, but this difference is so small, I find it difficult to believe the database would choose a FTS with 453 reads over an index unique scan with an index that has a much lower BLEVEL (typically between 0..3, it is rare to have indexes with higher BLEVEL). E - Makes no sense. Same as A. 
+
+You can follow the steps by selecting from the CTEs in the last line in the order I listed them (so , then , then , and so on). 
+
+SQL*Plus connections automatically connect to the TNS alias defined in the environment variable. When it is set, does not work. It is like trying this (will not work): 
+
+Using allows you to open the instance (as long as the affected datafile is not critical) without it trying to access that file. Since you can not restore and recover the datafile without backup, you can drop the tablespace (I am just guessing the name from the datafile): 
+
+Binding happens after parsing, but a statement can not be parsed without knowing the required tables and columns. 
+
+Well, see below. This is something I would definitely never write down in a real environment (I would question the original problem rather). 
+
+2) If you have 2 columns indexed seperately, it is possible, but quite rare, that the database uses both indexes for the lookup. You can try creating 1 index having both columns, but I highly doubt this would be of any help, you would need a big, wide table with exceptionally good clustering for and columns to benefit from this for 3/100 million rows. 3) DML does not run in parallel by default. You can enable parallel execution as: 
+
+There is no easy and supported built-in method for string aggregation in 10g. (Do not use , as it is not supported, and it is not available anymore in 12c.) You need to write your own string aggregation function, for example: 
+
+Notice in the above output, the service has 2 instances/handlers, with different addresses. Whenever I connect to , my requests will be forwarded to or . My client can't understand those addresses, but if I fix it: 
+
+You performed a complete recovery. Recovery uses the available archivelogs and redo logs as well. To perform an incomplete recovery until the time that's before the changes, use: 
+
+This does wonders on paper and in presentations, but in the real world, there is still room for improvement. Shortly: the problem with ACS is that it does not work immediately for new values. It uses the already existing execution plan optimal for other values, and after that, on a repeated attempt, it may choose a different plan. We may not have time to wait for the first sub-optimal attempt for the new bind value to finish, as it may take orders of magnitude longer depending on the actual statement and data quantity/distribution. $URL$ 
+
+What makes you think your session is waiting? When a statement uses the CPU, it is not waiting. There is no wait event that accounts for using the CPU for processing. People often forget this. Your session is most likely using the CPU. There is no indication in your output that your session is waiting. V$SESSION 
+
+Not in 11g. Not even in 12c, but 12c makes life a bit easier, you can delay the "rebuild" part until a more appropriate time. In 12c there is a new feature, called Asynchronous Global Index Maintenance. You can drop the partition, and that still leaves the global index usable, and marks the no longer needed index entries orphaned. Then later, you can clean up this index (, or , or the database can do it automatically for you as well (there is a pre-defined job for it called ). 
+
+The screenshot of your data and output clearly shows the problem. The concatenation operator automatically takes care of and you don't need to do anyhting. But you don't have in your tables, you have , a string, in your tables. 
+
+(, just a simple trick to spread the table over many blocks, thus making full table scan even more costly and inefficient. 1 row/block in this case.) 
+
+This is what we expect. Full table scan and HASH UNIQUE for DISTINCT, HASH GROUP BY for GROUP BY. Now add a NOT NULL constraint and an index.

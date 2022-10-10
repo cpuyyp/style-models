@@ -1,0 +1,97 @@
+An important aspect when doing optimisations is profiling. You should really start with that instead of asking random strangers on the internet. Anyhow, let me take a quick look. Filtering 
+
+The code is now shaping up nicely. Let's consider the final loop. Here you're ing until it's empty. Why not just loop over it in reverse? (The stack is going to be destructed anyway). Iteration is probably cheaper than mutation. 
+
+Interesting question. I decided to look only at and . The way I look at it is from a theoretic memory usage perspective. Due to how you have defined it, all pairs need to be in memory at the same time, which could take a bit of memory. I would suggest the following: 
+
+(Just swap the last two arguments). Now, I realise you probably can't do that, but please do consider it. It makes reasoning about the code (at least for me) a lot easier, because then you can somewhat read it as 
+
+Judging by the above two facts, I think the code you have written can be cleaned up a lot more, but you have not supplied it. If you do (in another question, please!), I'd be happy to take a look at the rest. 
+
+(That is, remove the doc string.) and can be given similar treatments. Importantly, add an extra empty line between the documentation, and the parameter description. Comments Look at the following code 
+
+To me this is cleaner, having separated out the logic from the dicts. Though merely theoretical, I think this should save on memory usage due to there not being as much key-value pairs in memory all the time. Of course, if you still want , you should be able to do something like 
+
+(Disclaimer: I'm not a Java-expert). Moving the tile You intentionally left this one as a black box, to keep it out of scope, I think, but I'd still like to comment. 
+
+Now, let's take a look at . It's supposed to construct a : a dictionary of nodes to lists (initially empty). 
+
+It seems a bit silly to use both and . I'd suggest replacing both by or . Using is a bit superfluous for ranges of length 3. 
+
+Which also saves us pre-compiling a regex. More readable, I think. Any are fine, but I think the is the easiest to look at. Using that: 
+
+That should be faster, because now the doesn't have to be executed anymore. Useless recalculation Having written the above loop now as 
+
+First of all: great work on the doctests. Your spacing could be improved, you might want to run a tool like pep8 over your code and fix the issues it reports: instead of and such. Your method is quite defensive, which is a good thing. However, do you really want to allow setting a field to when it already contains a or ? Likewise: Do you want to allow placing something on a field that already contains an or an ? Either way is fine, depending on if you want the to know about the rules of the game or not. One thing I would recommend changing is replacing the . Prefer 
+
+(In reality I'd rather yield the results instead of adding to a queue. Anyhow, I'm shelving that for now) takewhile vs slicing. In the you write takewhile. By the loop above, you already know that will be all but the last value. So, write 
+
+Better: use a testing framework like unittest, py.test or doctest. Here's how it looks like doctest: 
+
+Global variables are not that nice. But this is a simple file, so maybe we can leave it like this for now? Let's. 
+
+Glad we got rid of that loop, and replaced it with a simple sum function. Also, is a global variable, we should replace that with (which is passed in). 
+
+I'd suggest turning the problem around. A dictionary is really good for looking up the key, but not for finding a key for a specific value. First, you need to convert your dictionary to a dictionary in reverse: 
+
+But, see the asymmetry. The first and last argument get summed, and the second and third get summed. Let me rename the arguments a bit to make it clear what is going on: 
+
+Unnecessary looping Here I got a bit lost, due to the double loop in and ... For this, I first need to understand the contents of . Let's look a few lines up: 
+
+So now we moved from 9 if-blocks to just 4. But don't let that fool you. There are still 9 paths through there. (In theory it should be , but for decent enough s, you never reach both 'up' and 'down' in the same lookup, giving you paths. Finally. In the end, I got rid of the long list of conditionals by recognising the pattern: Each of the conditionals was looking up a set of valid moves, except they were hard-coded. The resulting pattern is quite understandable: 
+
+Let's think out loud what the lambda does: first, we find out the position of in . Then, we use that position to look up the value at the given position in , (which should, in all reality, just be again), and then get the second component. Better would be to write 
+
+No threading, please!! First of all, get rid of the threads all-together. That should speed things up: Python threads are (sort-of) fine when things are blocking on IO, but in this case everything is CPU-based, and that means the GIL (global interpreter lock) makes sure that only one thread is running. Also, the following code is a bit curious: 
+
+Furthermore, writing is not really idiomatic Python. Better would be . But, in this case you're trying to emulate a loop. I'd suggest writing it as follows: 
+
+Ooh, see how they now have almost the same body? All that differs is the calculation of the radius. Let's move getting the radius outside of the construction of the circle. 
+
+Adding a new operator would be a simple method of adding another line in the list above. I'll assume the explicit statements are a bit of debugging work, and ignore those. Ideally you'd remove them. Look at how you write the question. 
+
+string formatting Probably not your biggest concern, but if you ever want to make translation easy, start now by using Python string formatting. Instead of 
+
+Besides the great commentary given by WayToDoor (which Zenohm wrote up), I'd just like to remark on your commenting style. The comments are quite superfluous, stating exactly what the code is doing, and as such do not add any value. 
+
+Variable naming In general, you should follow PEP8, the Python style guide. In particular, it suggests using lowercase for variable names. That is, instead of . User input conditions 
+
+First of all, the variable names do not make a lot of sense. is , while is a list of . Better name them as such. 
+
+Memory usage What I notice most, is that this is bound to use a lot of memory. First you load all the files (at once) into memory. Then you copy over (with modifications) the data into another variable. And another. And another. ... This creates a few lists, all with the same total memory size as the entire documents you have read. Ex-pen-sive. Generators/Iterators to the rescue! In Python, iterators are really nice. They allow something like continuations and just-in-time calculation. This causes memory usage to be a lot lower, on the (perhaps) extra cost of a bit more CPU processing. But... I think in this case it will overall be a saving because you have a lot less memory usage, so probably also less cache-misses. Let's see what we can do about that. The last step 
+
+My initial question is: What is ? Is it a set? A list? A string? The following is based on being a set/list. Write 
+
+(I cheated a bit, I moved from weights to lengths, because it somewhat makes more sense when talking about start and end.) Then, instead of 
+
+Let me begin with . The variable is not used, except for being updated. It can go. The same goes for , , , , . 
+
+Ideally: move the mapping to a separate file, or some form of config file (, or even ), or the database. 
+
+Marginally better. I have a bit more overview now, and I'd really like to get rid of the /, so let me see what's necessary for that. 
+
+Looking at efficiency: you're storing in a temporary variable, and then loading it again for the while condition. We can fix that 
+
+And a similar loop for columns. This has one problem: What if the user does not enter a number but something else? 'Pizza' or 'one'. In that case, the throws an exception, and that should be handled as well. 
+
+docstrings are no comments. Comments are no docstrings. In the code you have . But you actually want to use a comment: . Know to disambiguate between those. Multi-line comments? Just start every line with . 
+
+Now, I have to wonder: why are we actually printing key at every step? I think you might have made a typo, so I'm going to assume you meant the following: (If not, skip the review from here). 
+
+Instead of reviewing your code, I looked at your tests. You do not seem to support IPv4 mapped IPv6 addresses: 
+
+Don't know if it's faster, but at least it is more readable! And I expect faster. But the main gain might be in the next section The main loop Your code was written as 
+
+I'm going to look at the code without the intermediate print statements. They expose an implementation detail, and not the end-result. 
+
+First of all, you're only referring to once, and never use any further. The quick solution would be to iterato over instead: 
+
+This looks more like a docstring to me. It would be nice to render it as such. You can do this by dropping the signs, and surrounding it in quotes. 
+
+That is, you don't need the and there. Weird order in the guess loop Now, the following is just preference. But to me, the final loop is unclear. I've written it as pseudo-code below. The final part looks like this (pseudocode) 
+
+And isn't that how you normally shuffle? (Disclaimer: none of the code as-written will compile, unless by a freak accident of nature. Again, Java is not my native language.) 
+
+The reason is that you copy over a bunch of items in , but not in the . Whitelisting vs blacklisting In you copy several items over using a . Why not explicitly define the items you want to copy over instead? Actually, why copy at all? Performance would be a proper reason, but then I'd suggest copying just the items that have proven to be necessary to copy (after profiling). 
+
+The variable does not actually get used. It's a minor nitpick, but convention has it that you should write

@@ -1,0 +1,97 @@
+As soon as you start considering polluting your model like this, I think you are moving into the area where the benefit of DRI is outweighed by the difficulties you are introducing. Consider for example that a bug in your archiving process could in theory cause your golden rule (that balances always equal the sum of transactions) to break silently with a DRI solution. Here is a summary of the advantages of the transactional approach as I see them: 
+
+It is certainly true that spreading your simultaneous I/O between different drives will increase performance - that is no myth. It is a myth is that doing it twice will improve performance again. If you SAME, then splitting your array up into two partitions and putting indexes on one and tables on another is a waste of time. 
+
+It might help to define terms up-front. The term latency is used in (at least) two ways regarding I/O. It can mean: 
+
+Note that 11g has support for sequence expressions directly in PL/SQL Otherwise, from the Oracle Docs: 
+
+Yes you are getting warnings when the fields are converted to . Whether they are a problem or not depends on what you want to do with the fields. Is this just a sample of the real code? You may need to post some more... 
+
+rather than using a statement (though both will work) Other options for persisting the values include saving them to a table or creating a context, but I think is really the 'right answer' here 
+
+I recently use a non-free tool from DBConvert to convert an access database to postgres, and found it well worth the money compared to the amount of time I wasted trying to do it reliably for free. The sell a similar tool for MySQL<->postgres, which I have not used, but may well be worth considering unless you are only interested in command line tools. In case you are wondering I am not affiliated with them in any way :-) 
+
+Generally there are no performance considerations although there are side issues that might matter to you. The limit for a should be thought of as a constraint like any other - it is there to enforce a business rule. IMO the question you should be asking is "Do I want to prevent the free-text data stored in this field being longer then n bytes/chars" - that is the only determining factor when choosing between and . Note that I am assuming you are talking about the SQL type - the situation is different with and choosing the length can be crucial for memory allocation reasons. 
+
+The result of the function is 'persisted' in the index in either case - the only difference is whether it is persisted in the table. 
+
+--edit To allow archiving without adding complexity or risk, you could choose to keep summary rows in a separate summary table, generated continuously (borrowing from @Andrew and @Garik) For example, if the summaries are monthly: 
+
+dbfiddle here Notice that the row with =5 is not in the result set — the drops descendants of =4. If the minimum level is global, you need an additional step to strip all results not at the minimum level globally: 
+
+I'd logically do (2) first with a join ("Restaurant has the same location as customer"), and then eliminate the results with a restaurant that sells a pizza that the customer doesn't like: 
+
+but relying on column order is a bug waiting to happen (it can change, as can the number of columns) - it also makes your SQL harder to read There is no good 'shortcut' - you should explicitly list columns for both the table you are inserting into and the query you are using for the source data, eg: 
+
+Of these, it is very likely that the last option is the best one - is the 'correct' type for most data that refers to a fixed point in time. (As opposed to 'noon' which is always 12:00 no matter which time zone you are in.) 
+
+Since 9.2, it's been possible to use the attribute to guard against maliciously-chosen functions and operators accessing data 'hidden' behind filters in views (full info in the postgres docs). You can see this happening in the test below, but the same effect isn't observed with the set-returning function instead of a view at the end of the test. Is this just a quirk of this individual test or are set-returning functions always a safe1 way to guard against this sort of leak? testbed: 
+
+No, that is not enough - it is true that if "the partition or volume on which the cluster was initialized runs out of space and cannot be extended, a tablespace can be created on a different partition and used until the system can be reconfigured.", but current objects will not automatically spill over into the new tablespace in the sense you mean when you refer to LVM - they need to be moved, eg with : 
+
+I'm returning the Group with the lowest GroupKey when there is a match, but that is arbitrary as you say it doesn't matter. test data: 
+
+But I think it is fair to say that PL/pgSQL is the most mature and feature complete (and, you may be sorry to hear, very similar to PL/SQL). I don't know much about MySQL stored procedures but here is a link to the docs 
+
+dbfiddle here Unfortunately, there is no easy workaround if you need all columns to be populated with : 
+
+Oracle will use statistics to get an estimate of the cardinality of step (1) before weighing up if performing that many range scans will cost more than just scanning the whole index sequentially 
+
+This is what is called a 'skip scan' in Oracle terminology. Skip scans work best when the number of possible values in step (1) is relatively small (that is small compared to the size of the index) 
+
+but I want to show the next lowest if the current row is the lowest for a given , or if it is the only one. In other words I want this result: 
+
+This is the real problem. Out of date stats cripple the CBO and are therefore "a bad thing". You likely need to change your DBA policy. 
+
+In other words, setting the RMAN retention policy to a recovery window explicitly guarantees PITR to any time within the recovery window. It isn't clear from this description whether PITR is guaranteed using the alternative redundancy configuration — does RMAN retain all archivelog backups necessary for PITR to any point since the earliest retained backup? 
+
+You don't need a procedure, you can do this in a single SQL statement (though you could wrap that statement in a procedure if necessary): 
+
+And the same is true for . I don't know of any simple way round this, and I'm not sure I agree that it is the most sensible behaviour, I think a better choice for would be to set the nullable columns to null if there are both. 
+
+What Oracle has had for a long time is an excellent implementation of MVCC - read about it in the very useful Concepts guide. I'll just add that Oracle owning InnoDB is unlikely to make much difference to how InnoDB works deep down at the level of concurrency control - although as I understand it the way they both implement MVCC achieves basically the same thing (as long as you are not mixing tables using other storage engines in your MySQL queries - though you couldn't fault InnoDB in that case) 
+
+So any performance gain will be slight. In the following tests I dropped and recreated the table and sequence between each execution: testbed: 
+
+turn off autovacuum for the table check each block to determine the degree of clustering delete and re-insert all the rows from blocks below a clustering threshold manually vacuum to free those (complete) blocks repeat steps 2-4 as regularly as necessary 
+
+If you have the space, you can CTAS using minimal undo/redo. If you have any indexes at all, doing it any other way will be very slow and generate logging like crazy. In the case where you have a single IOT without any secondary indexes, or a single table cluster, you could step through the primary/cluster key updating in chunks without having to rescan the whole table to find the fields that have not yet been updated. --edit 
+
+The code you have inherited is broken - and it always has been broken. That re-factoring you'd like to avoid needs to be done. There is no alternative to an explicit to guarantee the sort order of a result set and there never has been. Who knows if the code you inherited always returned rows in the order the original developer 'expected' or not. 
+
+Oracle should be able to use the statistics to determine the high and low values for any column if you are keeping them up to date: 
+
+No, the interval type supports reduced precision but none of the other date/time types do. Postgres allows you to roll your own with but unfortunately wont allow contraints to be added to the type which limits it's usefulness in this scenario. The best I can come up with requires you to repeat check constraints on every field where the type is used: 
+
+Similar to what Sathya has already suggested, but I like to avoid completely if possible - an unhandled exception is usually the correct outcome for exceptions you aren't specifically handling: 
+
+shows that it is not the fault of bad stats, and also demonstrates a workaround using (but note you need something like for an exactly equivalent query) (My test was on 10.2) 
+
+Having read those discussions too, I am not sure why you decided on the DRI solution over the most sensible of the other options you outline: 
+
+All three options you are considering will impact performance on the Oracle DB. If you don't want to impact performance at all, apply archivelog files from Oracle to a standby DB and query that (you could try Linked Servers first to find out if it's fast enough for you). 
+
+COUNT(expr) will count the number of rows where expr is not null, which can be used to figure out which groups have any nulls: 
+
+But note that I have arbitrarily chosen to when discarding 'duplicates' - and even more arbitrarily chosen to overlook that if two matching rows also have matching s the database will order them in an undefined and possibly unpredictable way. You will need to adjust that to meet your requirements. 
+
+In a comment you explain that your motive is to have the convenience of not displaying the contents of columns with long content, rather than not displaying the column itself: 
+
+The earliest compatibility list on the Internet Archive is for 2.1, and that is certified back to 10g only: 
+
+Does that indicate that clustering succeeded (ie all the rows are now in the order indicated by the index)? What do 'removable', and 'nonremovable' indicate? 
+
+You need to pick one of the string aggregation techniques that works with your version and supports ordering. For example, I've adapted the "ROW_NUMBER() and SYS_CONNECT_BY_PATH functions in Oracle 9i" technique from the excellent ORACLE-BASE website: 
+
+The command on a big table can take a long time, and blocks both reads and writes to the table while it runs. I don't need the data in my table to be strictly sorted in index order, I just want rows that are commonly queried together to be more likely to be in the same database blocks than scattered evenly through the table (which is the distribution they naturally have due to the nature of the way date is inserted to the table). It can make a big difference. In the example below, the only difference is that the has an additional so that the test data is pre-clustered by . Far fewer blocks need to be read when getting all the data for one particular . Is there some way of achieving this kind of clustering without the exclusive lock and logging overhead of the command? 
+
+I stumbled on some research for sqllite that may be applicable. They reported increased performance of 20-70X for some applications It goes without saying that your mileage may vary. 
+
+Finds all unique student/professor/course combinations (so we don't get results for students who take the same course twice — not sure that is possible from the question). Groups the student/professor pairings and filters out those that only match a single course. Uses the resulting student IDs to look up the student names. 
+
+In most simple cases I would expect the PIVOT to be faster (and about the same as the SUM(CASE)), but if your real requirements are more complex, you may find the MODEL clause a better fit — it covers a lot of more complex situations too. dbfiddle here 
+
+Normally when you add a unique constraint, a unique index with the same name is created - but the index and constraint are not the same thing. Have a look at to see if there is an index called and try and figure out if it is used by something else before you drop it! 
+
+The usual way to get a series in postgres is with generate_series. This function produces a series of integers or timestamps - you can use either but assuming your 'dates' are really , here's how you might go about it if you are on 8.4 or above: testbed:

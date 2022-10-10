@@ -1,0 +1,37 @@
+This device is a Comware based switch, so the front panel reset buttons are not available. To reset the password you will need to connect a console cable (38400/8/N/1), reboot the switch, then press Ctrl + B during boot up (similar to Cisco ROMMON). You will then have an option to boot the switch without a configuration, which will also have no password. See this guide for further details: $URL$ 
+
+The ITU define the standard for basic ADSL in G.922.1: $URL$ There is also a USA version defined by ANSI, T1.413 
+
+There may be duplicate IP addresses in the network. When you clear the arp cache, note down the MAC address in the ARP cache on SW2 which matches SW1's IP address, check you can SSH to SW1. When it stops working, check the ARP cache again and see if the MAC address for SW1's IP address has changed, if it has then there are duplicate IP addresses in the network. 
+
+In this example anything arriving on f0/0 is evaluated by the route-map, anything with a source address of 192.168.222.1 is forwarded to 192.168.120.1, anything with source address 192.168.222.2 is forwarded to 192.168.120.50 
+
+When switch reloads it will have a default config and should allow a flat network out of the box. You may also be able to wipe the config using the web interface. 
+
+monitor_port_id is the port connected to Wireshark/traffic analyser Procurve/ArubaOS uses IP/UDP encapsulation instead of VLAN to transport from source to destination Configure the destination switch first: 
+
+One way to achieve this is to use a tagged VLAN for the phone traffic and a different untagged VLAN for the Mac/PC traffic. The phone is either manually configured with the VLAN tag for its traffic, or it can learn it through LLDP-MED. The phone passes the untagged traffic through to the Mac/PC untouched. If 10.1.10.0/24 is the Mac/PC network and 10.1.20.0/24 is the voice network then the config sets up interface 1 for a phone and Mac: Vlan 10 name Macs ip address 10.1.10.1 255.255.255.0 Vlan 20 voice name Voice ip address 10.1.20.1 255.255.255.0 interface 1 untagged vlan 10 tagged vlan 20 The "voice" option under VLAN 20 allows the switch to signal the voice VLAN to the phone using LLDP-MED 
+
+For each MAC address in the ARP cache, check the MAC address table and look at which interface the MAC address was learned on. If the outgoing interface points to another switch then you will need to log onto that switch and do the same until you get to an interface that doesn't connect to another switch. Once you discover the final interface that MAC address was learned on, you have discovered the switch port that the IP address/device is connected to. If you look at the core switch configuration each interface will have a subnet mask associated. You can use work out how many addresses are useable in that subnet. Compare that to the compiled list of ARP entries you have recorded over a period of time and then you can know how many addresses are in use. The more you check the ARP cache, the more accurate your result will be. 
+
+The issue here is that in order for the internal routers to know which of the border routers they should route to, you would need to redistribute full Internet routing tables into OSPF which isn't going to be possible. OSPF isn't designed to handle and cannot support the 600,000+ external routes required. You would normally have the two border routers advertise a default route into OSPF and accept that 1/2 of the traffic will need to pass across the iBGP link. As a compromise, if you know there are some specific prefixes that would be better routed via one of the border routers you could redistribute BGP into OSPF using a route-map and prefix-lists so that only a small number of specific prefixes are redistributed into OSPF. 
+
+These are normal log messages for a port bouncing on a HP Procurve/Aruba switch. The normal sequence of events for a port (connected to a non-STP edge host as most IP phones are) coming on-line and then off-line is: 
+
+Change ip nat inside destination list RETAIL-WEB-GLOBAL pool RETAIL-WEB-LOCAL to: ip nat outside destination list RETAIL-WEB-GLOBAL pool RETAIL-WEB-LOCAL 
+
+The default behaviour for F5 Virtual Servers is not to NAT the client source address. You can configure SNAT Automap on the Virtual Server and this will translate the client address to the outgoing interface of the F5. 
+
+this switch is Comware based, so you would need to set up a Bridge-Aggregation Group. This is the same as a Cisco L2 port channel. Your PC will need to support link-aggregation and preferably LACP. This link provides some info on setting it up: $URL$ 
+
+The interface will now run OSPFv3, if the process does not exist, it will be automatically created. If you are in an IPv6 only environment, you need to configure a router ID: 
+
+The Topology Change Notification BPDU doesn't have a message age field. This is the format from the IEEE 802.1D-2004 standard: 
+
+To enable the web interface, you will first need to connect to the switch using a serial cable, connect to the port marked Console on the back of the switch. Use a terminal emulator (e.g. Putty if you are using Windows) and open up the COM port the serial cable is connected to. If you are using a USB-Serial cable, you may need to install a driver first to virtualise the COM port. Once you are connected to the CLI, enter the following to enable the web interface (replacing the IP address with something on your network, and the interface number with one of the free interfaces) 
+
+Investing in a console server would be the best option. You would then be able to connect to the switches using the console ports and you wouldn't need to connect the switches Ethernet ports to your network. This would allow you to test all the features without affecting your production network and without the risk of disconnecting your management sessions. Cisco routers (2901 with HWIC-16A) can act as console servers or you can pick up older 2800 versions or purpose built ones on eBay 
+
+Normally, you would use a separate fibre for transmit and receive, so two fibres for bi-directional transmission. You can purchase BiDi transceivers, which allow you to use a single fibre for both transit and receive. These transceivers use Wave Division Multiplexing and modulate the transmit and receive onto different wavelengths so that they do not interfere which each-other. An example of this would be Cisco SFP-10G-BXD-I or SFP-10G-BXU-I transceivers, which both allow for 10GBASE over a single strand of fibre. 
+
+As others have commented, IP packets with a TTL of 0 are discarded and the TTL is updated whenever the IP header is processed/rewritten, and usually decremented by 1. In practice, the TTL is decremented whenever a packet exits a router through a physical interface. To answer your question more specifically, the TTL is decremented only when it egresses the router. In your case, for packets destined for the loopback interface or interface 0/2, the packet does not exit the router, the IP header is not updated, so TTL is not decremented and pings are returned. Looking at a couple of examples using your topology:

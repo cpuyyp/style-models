@@ -1,0 +1,39 @@
+We pass an additional boolean flag that tells if a particular step was an improvement or not. Note that we don't need to check for the final condition - if everything succeeds, there will be one final step with an empty list and then we'll stop. However, I like a bit more yet another solution. Notice this: Let's say the first removal succeeds, the second fails and because of this, everything else. Then we iterate through the whole list, and then once more, before we finish. But in fact we know that we're bound to fail when we fail to remove all the other elements. In this second solution, we loop over all elements without distinguishing a full pass. Instead we "reset" the state every time we succeed and try all the failed elements again. I also like its simplicity, compared to the previous one: 
+
+My suggestion would be to create a special result value (similar to Future) that would represent an asynchronous computation: 
+
+you let lens generate so-called lenses for your data type, so for example won't be of type , but , and then the function that modifies the field inside would be 
+
+The point of the approach is that you don't manage any state globally. Instead, each component () manages its own state internally and you just express how they are connected together. To give a simple example, let me first implement the standard type classes for : 
+
+In particular, when recursively operating on lists, there are two approaches: left-fold-like and right-fold-like. 
+
+You should separate actions from pure code. In your case the principal task of is to create the new game state given input data, and for this no is necessary. The fact that the state is stored and modified in an . It's not just the matter of style and code separation. Calling multiple times in the function means that you can easily get race conditions, if there is another thread working with the game state. It would get or modify an inconsistent state. So my suggestion would be to split it into two parts - one a pure function, and another that does all the necessary : 
+
+I didn't know the trick, nice. Given the semantics, the 5-clauses don't seem to be really problematic. You need to branch on these conditions one way or another. Some ideas, neither seems to be perfect: 
+
+One possibility to solve 2. and 3. is to use conduits. This may seem as somewhat complex subject, but the idea is actually very intuitive. A conduit is something that reads input a produces output, using some particular monad. This allows to break your program into very small, reusable components, each doing a single particular task. This makes it easier to debug, test and maintain. For example, your code could be refactored as follows. (First some required imports.) 
+
+is redundant. There is no need to distinguish this case, also there is no need to call on a temporarily created value. Other than that, it looks good. Just a remark, using with probably isn't very meaningful, monoids that provide useful information (depending on the use-case) would be , or . For testing, I'd suggest you to study QuickCheck. It allows you to define properties of your operations and automatically test them for various inputs. It's important to define good properties, in particular they should be distinct from the implementation of your operations. For example, you might want to test: For any s and 
+
+Nitpicks: I'd put before so that the functions are in logical order, but that's just a matter of personal preferences. Otherwise I also quite liked the code. Update: Some further thoughts: Function is concise, but it also mixes several concepts together. Namely: 
+
+It's better to base recursion at the length 1 or 0. It's usually trivial and reduces the chance of making an error. In your case, the code doesn't work for lists of length 1, and this can be easily fixed by setting the base case to . The costly operations in your code are repeated traversals of the input list. In particular, is called every time, and as lists in Haskell are lazy linked lists, it costs you O(n). You could pass the length of the list as another argument instead. Similarly and are O(n). You could use to traverse the list just once, or even better, rotate the other way around, something like where you need to traverse the list just once (for ) and pattern matching is also somewhat safer than using partial functions such as ///..., especially if you cover all cases and use . You might also consider using which has O(1) costs for manipulating its ends and O(log n) splitting/merging sequences in the middle, but has higher constant factor. Another source of inefficiencies could be the in the branch, as needs to traverse the whole left argument. You might again try out , or constructing the result using difference lists, which eliminates this problem. You could solve several of these problems by introducing a helper function that'd return all possible splits of an input list, something like 
+
+will compare only once, and also allows the compiler to do more optimizations. This isn't a problem, just a note: Be aware that trades speed for lazyiness. If you examine the root of the tree returned by a call, the tree must be examined to check if it contains the inserted element or not. Under most circumstances you wouldn't mind that. There is no need for to take as the argument, only to apply on it. Most monadic functions take pure arguments and return a monadic one. It's often convenient to use functions from to lift pure functions/values to monadic computations. In particular , and . See also Functor, Applicative and Monad. 
+
+This component built using is very simple. It just sends its input to the output, and keeps the count along the way. Notice that this conduit doesn't need any , it works with any monad. Now it's easy to filter a stream of numbered lines with a pattern: 
+
+There are many options how to avoid having everything inside . One possibility is to use the prompt monad (see my comment). As an example, let's modify using . First, we'll create a data type that represents all possible actions can perform: 
+
+Some more remarks: I like that you included types for all functions, including helpers, that's often very convenient. And that you gave descriptive names to the types. From the types it's not that obvious how are graphs represented. If an edge is 
+
+Just one more note, please post code that compiles, especially for CR, it's much easier to work with; see $URL$ 
+
+Both these functions are polymorphic with no coupling with . The final function is then expressed just as 
+
+For grouping, sorting etc. according to some property there are two very useful combinators: , which we use here: 
+
+Similarly to Learning Rust With Entirely Too Many Linked Lists, I'm trying to learn Rust by working with linked lists. Currently I'm trying to implement a function that takes 2 elements of a singly-linked list and swaps them. Any feedback is greatly appreciated! (Rust playground link here.) 
+
+Yes, defined such that it shrings the result to the size of the shortest list isn't an involution. Your idea of viewing lists as maps is nice, but I suppose once you leave s, there are other easier options. As you observed, is also a that works on integers that are between and the size of the list. Now if we have a list of lists, it's . Now we can convert such functions into a single function by a process called un-currying. While Scala has for plain functions, it lacks it for s. But it's not difficult to define it:

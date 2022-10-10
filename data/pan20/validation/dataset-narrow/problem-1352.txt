@@ -1,0 +1,47 @@
+However, clearing the screen and redrawing everything should be fast enough nowadays. If you have already tried redrawing everything every frame and it is slow, you may want to ensure there's not something else suspicious going on. 
+
+However, this is cumbersome if you you want to assign the same array to many objects. It's easy to do this programatically, but I'd rather not hard-define the array in code - it makes moving/renaming the objects harder. If I want to pass the same array to multiple game objects, how can I do it more efficiently than dragging each individual element into the inspector? 
+
+It looks like you're incorrectly assuming that the item is removed from the ground immediately upon picking it up. However, it isn't, and the player keeps intersecting with the same item, picking it up multiple times. Before pickup, you should check if the item has already been put in an inventory slot: 
+
+Now, if you want just a couple of hard passages in your games, you can do that by hand but if you want an almost impossible to play game from start to end you may want to automatize the process: You may do that by writing a modified replay engine that will not kill the player when he hit a trap but instead delete the trap from the level 
+
+A simple web search bring this shader up $URL$ which looks like what you're looking for. I'm not an expert on WebGL, but according to this page, it looks like it uses the regular GLSL language (this is the C-Like language used by graphic cards to program shaders). This means you will probably have little to no changes to do to make it work. You may however try to start with a more basic shader to understand how it works. This blog page lists all the steps to implement a shader in WebGL. That seems a good place to start. Another good place to find wonderful shader examples is $URL$ 
+
+You can spread out the disk writes over multiple update steps, or compress the data before writing it (although, that might be slower than the alternative, depending on your CPU/disk). You may also check to make sure the format (XML, json) you're writing to isn't introducing unnecessary overhead. I haven't done serialization in a while, but from brief research outputs to a binary format which might be faster than human-readable. The exact format of the data is difficult to recommend without knowing what tile data you need. Here is a reference for Minecraft's chunk format. The GC may be trying to cleanup all your unloaded chunks. This is where Byte56's comment comes in. If you use an object pool to manage all your tile objects, then instead of leaving all those orphans for the GC to destroy, you'll reuse them in other chunks that get paged in later. 
+
+(I assume here that you're scrolling by redrawing your maps at an offset opposed to the Camera's offset). That's a lot of assumptions, but there is a lot you're not telling about the way you handle things, so I'm just guessing. Now about the way you dynamically load chunks of maps in a horizontal platform game: Your initial problem as far as I understand it is to not have all the maps in RAM, but only a subset, and load the new chunks when you need them. Here are a few consideration that may help: 
+
+Depending of the specific details of your game, you can probably optimize this further. Just a bit of warning: If your procedural process is using floating numbers AND you want the saved games to be useable on another computer than the one which saved it, it will likely not work the way you're expecting it unless you take extra precautions (see this article about the issue if you plan to do it: $URL$ 
+
+If you make a public array class member in Unity, you can individually assign objects to the array in the inspector menu. It looks like this: 
+
+Get the objects that will be moving this frame. Get their bounding boxes, before they move. Call this list of boxes . For each box in , check if is intersecting bounding boxes of objects that aren't moving. If it is, union those the boxes (including ) and replace with this new rectangle. Redraw all the portions of the background defined by the rectangles in , as well as all the entities to which those rectangles belong. 
+
+Before anything, I'd look for a heap profiler and make sure it's the GC that's causing problems. However, if you find that it is indeed the number of objects you have in memory, you've already come up with the basic solution; page your chunks out to disk once in a while and only keep nearby ones in memory. But, as you've seen, there are problems with the approach, namely slowness. My first recommendation here is the same as above; use a profiler and check what's actually taking so long. A few general tips: 
+
+It looks pretty close (it's hard to tell without the base image) but you can tweak the parameters. You may see it in action there: $URL$ Some remarks: 
+
+Of course, you may also save a few extra data just to make the player game easier (total time played when the save was performed, thumbnail image of current screen, etc...). (and you probably don't need to save the actual tileset images (unless you change them dynamically but I didn't seen any game doing this yet)). Bottom line: It will not be the most "optimized" way, but it will be the most flexible and easy to maintain way (this means less bug, and the kind of bugs players hate the most is the one that lost their progress after saving/reloading a game). EDIT: The Bonus question: 
+
+The term stands for the increase in XP needed per level - 50, in the example. We can solve the above using the formula for arithmetic sequences (sum identity): 
+
+Here's one approach to solving the problem using basic algebra. If you don't care about the steps, skip to the bottom. An easy thing to come up with is, given a level , the total experience needed to obtain that level: 
+
+The usual way to process most input is to set up your game loop to poll for events. For your specific case: set a flag on the event for the key you want to listen to. When you want to process the input, check if the flag is set and if it is, do your action and unset the flag. Example: 
+
+If the players cannot modify the world, you may be able to just save your seed, and rebuild the world later. If they can modify the world, it will be very tricky to rebuild the world (especially if their modifications depends of the RNG at the moment they take the action). If your world is highly procedural (you generate a lot of data) and modifiable you may try to save both the seed and a "delta" of the differences between the generated world and the "actual" world. One way to do that (not the most efficient but it should work) would be: 
+
+Here is a way to do that on a platformer; this is probably possible on other kind of games, but I won't develop here. 
+
+If I understand you correctly, you don't want to have to redraw the entire screen when a single object changes position. You've basically hit upon the solution; only redraw the portion of the screen that you need to. One method to do this is dirty rectangles. Roughly, the algorithm is: 
+
+However, we want the opposite formula - the player's level given their total experience. What we really want to do is solve for the level, . First, let's group the terms: 
+
+In the above code, finds the point where a line and a segment intersect, returns the sign of a scalar, and returns the magnitude of a vector. The part where you intersect the movement vector with every wall can be optimized with a broad-phase approach, but doing it for every edge is often fast enough (it was for me). The harder part with this method is figuring out how to define the edges themselves. It's kind of ungainly to have to define these edges for every level (road) you create, but it's often the easiest solution. If you already have the road data stored in some way, you could probably construct the edges from the angles and widths of the roads. This method will also work with shapes other than straight lines. You can abstract the method to support, for example, arcs, and store generic shapes in the data structure. 
+
+From your example, I assume you are making a 2D horizontal scrolling game. If I assume your game scrolls from right to left (player moves toward the right edge of the screen), and that the CameraX value is 0 at the start of the game and increase when the player moves right, then your rendering code should be: 
+
+TMX Files are basically a XML file describing your map/level; You usually read it to initialize your world and forget about it. Now, if the lib you use to manipulate/display them (or your own code if you did it by hand) is able to regenerate the TMX from your world after the player interactions modified it I'd say the way to go is to just serialize the new TMX, either in a file or in a DB's TEXT field. It can seem a little overkill, but it has a few advantages: 
+
+The above should fix the problem, but I wouldn't keep going this route. I agree with the comments & answers that the original code is structured a little strangely, in a way that is hard to articulate. It goes something like this: the items on the ground have no relationship to the number of slots you have in your inventory, so they should not be tied together. A cleaner method would be to go through the list of items the player is intersecting with - just once, not for every inventory slot. Every time you find an item the player is intersecting with, find the first empty inventory slot. Put the item in that slot.

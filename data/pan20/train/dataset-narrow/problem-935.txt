@@ -1,0 +1,91 @@
+It seems all these variables are only used in this class, in which case they should be made private. You are also mixing naming conventions. Pick one and stick to it. The regular Java convention for variables is camelCase, so I suggest using that one. onEnable 
+
+But we're still stuck with quite a big nested if-statement. To get rid of this nesting we can use something called a guard clause. Which basically means we're checking things as early as possible so we can return quickly. So in this case we can do this: 
+
+Something I didn't fix, but you definitely should, is the use of a single list as both a black- and white-list. It is much easier to create two different lists, and check each of them seperately. because now you have to keep thinking 'is this list a white-list or a black-list?'. Conclusion Methods should focus on one thing as much as possible. By seperating code into methods we reduce duplication and increase clarity. Lastly, by preferring early returns we prevent deep nested if-statements, again reducing duplication and increasing clarity. 
+
+I'm not really sure why you have both a perm_nfbm_disabled and nfbm_enabled flag. Try to use only one. Or if they don't mean the same thing, give them names that make that fact clear. 
+
+Here you are giving a warning that the configuration is wrong, but are still continuing with the invalid value. Why not set the value to its default value? 
+
+Overriding the incorrect configuration with the default value would save you from having to keep track of the temp_disabled flag. onCommand 
+
+Just printing the string returns the morse, but asString returns the normal text? This is pretty confusing and someone will have to dig into the code to see what prints which version. I don't think someone will have to use both the toString and asString methods, since they already have access to the original string/morse. So why not make the whole thing static and have two public utility methods: 
+
+There is an abstraction that will automatically have any config updates when injected, so you don't need . I believe it is scoped per request, so changes to the config will not affect in-flight requests (you may want to double check this). To deal with updating the , you can write a small, thread safe that will always return the same client for a particular base URL. This would be registered as a singleton, and could be reused for all the clients in your app. 
+
+You have implemented dependency injection correctly. is injected into . In terms of the correctness of your example however, pretty much everything else is completely wrong! Don't worry though, we all have to start somewhere, so I will offer some tips. These tips might help you with this example, but if you want to improve, you should probably do some personal training/studying. Pluralsight is a really nice place to start. They have some beginner C# courses that you can do with a free trial. Anyway, on with the code review! 
+
+There is a lot of room for improvement here, both in terms of performance and readability. You should start to worry when you see code forming an arrow shape - there is almost always a nicer way. The solution below is one way of tackling this, and also offers a large performance improvement (around 19.4s to 3.2s on my machine). 
+
+The point of an interface is to abstract away the implementation details from the client. has the method which publicises exactly what the implementation is. This is called a leaky abstraction. When writing an interface, think about what other implementations might look like. One thing that you do know about all implementations is that they are going to need a file path. An alternative interface might then look something like this 
+
+should almost always be avoided. Try to return from async methods so they can be awaited by the caller. A should be returned from and have it's method called. 
+
+Appendix: Design API design Since you plan on matching PyGame's functionality, you should take the time to think about how you want to design your API. You've taken an event-driven (callback functions) approach, which is probably the most sensible thing to do for user interfaces in general. As it stands, though, the caller can't retrieve the return value of the callback functions, which means in more complex cases, you'd have to modify a shared variable, which can get really messy, really fast. And I haven't even covered threading yet. Interrupt handling If I press Ctrl-C, I get a bunch of traceback lines, but more importantly, my terminal is still in cbreak mode. Once your codebase starts growing, it becomes tiresome to wrap every call in a -block. You could put the block in , but that would mean a forceful exit any time the user presses Ctrl-C. Unfortunately, there's no trivial solution. Backend I have my doubts about the UI backend: 
+
+No, it is not mandatory to use . Your observation is right: calling might make the thread hang indefinitely. 
+
+Don't use If you need to clear the screen, you can do something like where is the vertical height of your terminal. You could also use a carriage return. This has the added advantage of being cross-platform, as opposed to system calls. Questionable code Here's some things I thought were quite unusual: 
+
+You forgot to define . I'm not sure if this is a quirk of my terminal emulator / MacOS Sierra, or if it's present regardless of setup, but the bounds checking in doesn't do its job: I can keep moving the pointer down forever, which causes interesting screen glitches.6, 7 This isn't strictly a bug, but if a user presses anything other than △, ▽, or return, the program crashes. 
+
+Welcome to Code Review SE, nice first question! Here are some of my comments, not pertaining to performance: 
+
+There's some things I really like about your code. For one, you used , which is in many ways superior to -formatting. You also included docstrings, which help others better understand your code. The other answers already covered most major problems. I'll be answering mostly in terms of design choice. Object oriented programming (and why it doesn't apply here) Classes should be thought of as containers that capture 'state'. Methods can act on that state and properties can be used to query it. A die, however, doesn't have any sense of state. A good rule of thumb is that if a class has only two methods, one of which is the constructor, then it shouldn't be a class. I'd go further and say that you shouldn't consider creating a class if you are not confident that there is a sense of state in your program that could be grouped together. If you want to know more, there's this well known talk on when not to use classes. Python 3! Python 3 rocks, and you should definitely start using it right now. Python 2 only has so much time left, and switching to Python 3 isn't that hard. The only changes that affect this code: 
+
+The most important thing we've done is create a seperate method that will check whether a block is minable. By using a seperate method, we can focus the onBlockBreak method on 'what to do' instead of deciding 'when to do it'. The rest of the method now looks like this: 
+
+These strings are all constants and should be defined at the beginning of your class. They should look like this: 
+
+The implementation seems fine. I would change the return type of the method to be a bit more general. Callers don't care about whether the duplicates are stored in a Set or not. 
+
+Defining them early and making them static gives you less stuff to think about, which is always nice (especially when you're reading this code in six months). The next piece of code is too long and contains too much stuff so lets start breaking it up. First let's create separate methods for both of the commands you're accepting. 
+
+By breaking down the nested if-statement it becomes much easier to think about. Now we can add new stuff and fix broken stuff much faster. onGetLLCommand This one is a bit easier. 
+
+Notice how all it is doing is passing the call on the the other methods when it is appropriate. onNfbmCommand Let's look at the onNfbmCommand Method. This part is difficult because it contains a very large nested if statement. This makes it hard to think about, so let's see what we can simplify. It seems both branches are actually almost the same, except for the specific message they are sending. In other words, it doesn't matter whether the sender is a player or not. We can use that to our advantage! First lets create a method that sends a message to the sender with a color if it's a Player and without a color if it's not: 
+
+This comment doesn't add much and can be removed (after all the code says the same thing). Perhaps it is worth mentioning why you are saving the configuration when the plugin gets enabled. loadConfig 
+
+will do. Python will provide an implicit constructor to call the baseclass. Type annotations can refer to user-defined types. is pretty much useless, since all other types derive from it. Use string formatting instead of string concatenation. It is clearer to read and most likely faster. By directly casting to , without checking if the response is numerical, if a user (acidentally) enters a non-numerical string, the program breaks and prints a pretty unhelpful traceback message. You could try catching a in a / block. If you find yourself repeating the same pattern many times, maybe write a function, which repeatedly asks for input until a numerical response is given. In a function, the keyword can be left out if the -clause returns (or exits the program, for that matter). While it may seem insignificant, this can improve readability (less indentation). Don't use wildcard imports. They clutter the global namespace and can easily cause name collisions. It may work for personal projects like these, but once you start doing the same with external libraries and frameworks, all hell breaks loose. Apart from avoiding name conflicts, by explicitly listing every item you want to import, other developers can see at a glance where an object comes from. I would move the call from to . Subjectively, constructors should not be concerned with starting the game (and doing IO). 
+
+You also leave the first line of every method blank (or make it a docstring). If a function is undocumented, I wouldn't bother adding a blank line: 
+
+In , you use 7 magic numbers. Instead of adding comments to explain what these numbers represent, you can give them a name. For example, by declaring these constants at the top of the file: 
+
+Avoid global variables. They are a telltale sign of a design problem in your code. Global constants are acceptable, but non-constant global variables can cause all kinds of trouble: 
+
+I'm looking to get some feedback on the current state of the project. What do you think of the setup of classes and functions within the file? Is there a way to significantly shorten the code, without decreasing functionality? -Any other feedback- GitHub GitHub guide I have included a code sample below: 
+
+EDIT What I think Mat is getting at, is that this solution is localised to this usage, and may not be suitable in an application that frequently needs to generate parallel lines. If this is the only place in your app that you create parallel lines, then keep using it (YAGNI). If however you need to create parallel lines a lot, you could make your implementation a little more general. One way of achieving this could be through extension methods. Consider the following 
+
+The equivalent C# then becomes . Equation Depending on what you are doing, you might want to consider creating an class with a method and override . Failing that, you can at least pull the equation logic out into separate methods. 
+
+Once you have finished adding all the files to the collection, call , and from the other thread, your while loop becomes: 
+
+Generating Permutations In the Haskell snippet you referenced, is generating the a list of all the possible permutations of the numbers 1 through 9. I'm not aware of any nice way of doing this in C# other than hand rolling it. You can write a pretty short generic recursive function to do this. 
+
+Streams implement IDisposable, and should always be disposed of when used. Typically this is done with block. 
+
+Results Using the above short helper methods, you can rewrite your method to be much shorter and more readable. 
+
+Assuming that you do indeed want a mutable triangle class, then you could extract validation into a method and re-use it from your constructor and property setters like so. 
+
+Note that I have assumed you are wrapping inside a here, however you could choose to make behave similarly to your and return an if that is what your application needs. 
+
+is not a builder, it is a factory. It's job is to create instances of . This shouldn't be done in it's constructor because then you need a new factory, each time you want a new . 
+
+The following two points only apply if you want your UIs to be dynamic, and you need to create reasonably complex applications. 
+
+I've written a primitive Python script which "draws graphs" based on a list. It works, but it's a lot of lines for what I am trying to reach. The idea of the script is to function as a module that can be imported for a quick visual representation of data. Here's nextgraph.py: 
+
+"Weird" functions Your functions are very specifically crafted for just one situation. It would be better to use (as an example for ). This way, if a user wants to add only two or three (or 10000) values together, they don't have to rewrite your code. if __name__ == "__main__": It is common to make conditional, that is, putting it in an if-statement to make sure it does not execute if the code is imported. Exception handling You should make use of / statements to handle exceptions. Now, if a user enters a character that isn't a number, the program will raise a ValueError and exit. Operation not in operations You can improve by using . This makes it easier to read and maintain- 
+
+Your 'main routine' isn't encapsulated in a function, which means it's hard to to test / explore functions individually from a Python interactive session (or from a separate file). I suggest putting all this top level code into a function: 
+
+Strictly speaking, there's no need for and , so you should do away with them and make implement the context manager protocol. On the other hand, nothing strikes me as odd about the current implementation (although if you really wanna go overboard, you should create a class to avoid violating the single responsibility principle) and as long as it works for you, just keep it the way it is! 
+
+I'd appreciate any feedback regarding performance, usability, coding style, documentation, or anything else! 
+
+is a misleading name. It doesn't return user input, it returns an action (move the cursor up, move the cursor down, press a button) based on the input. I suggest . In this context, the variable name suggests it has to do with I/O buffering, which is not true. I suggest (?). . Well, sure. But what kind of menu? It's a menu where you make a selection → . tells only part of the story. It doesn't just output stuff, it also waits for user input: it is waiting for the user to press return. How about ?

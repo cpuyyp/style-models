@@ -1,0 +1,67 @@
+DDD How often have you heard from your domain expert manually managing room booking in his/her Excel all those terms like , , ? I bet that never. This stuff does not belong to the domain, does not solve any business problems, and probably should not exist. Having names like that clearly indicates the problem - those words are not in the Ubiquitous Language. Domain logic is way too corrupted with technicalities. Sure, no database related code should be allowed in domain. P.S. It depends on the task, but I could probably load all the data in memory and run here easily. Design What is the Software Design? All the things helping you to keep your project maintainable and that you cannot change latter easily. What helps keep project maintainable? Placing dependencies in a way where volatile components depend on a minimum amount of stable abstractions using Dependency Inversion where necessary. There are too many concrete tech elements in your code to follow “minimum amount of stable abstractions” criteria to keep things maintainable, so design misses its goal here. P.S. It is not a responsibility of the Controller to decide on room/combined room booking priorities – it belongs to the business logic – to the place where you actually implement the logic – repository in your case, as you do not need DDD here at all. I would have the following models in the Core project without dependencies on anything else: 
+
+So, I decided to split those 3 things and give each their own program. Eventually it may end up in one, but with explicit separation. Later on it may also need an automated maintenance program as a 4th module. The database (3NF) should at least contain the name, authors and publishing year of each book. Later versions may include the size in pages, ISBN and keywords. This program does not yet support this, but is should've been written with those features in mind. The pre-loader The pre-loader will take a directory of PDFs. The test set is 222 items large, the final dataset much larger. For now, only PDFs are supported. If I'd ever want to change that, all I'd have to do is change the following: 
+
+However, that's absolutely unreadable. Please re-consider what's really important to you. If this would be code for the company you work for and they'd review your code (and any company-code should be reviewed before being used in production), they wouldn't ask it to be shorter. They'd ask it to be clear. 
+
+Whether you do this for 2, 3 or 100 numbers is quite irrelevant, just as the actual value of the result. 
+
+I would not personally put LoggingService implementation inside factory, as it reduces testability and usually needed to play some tricks with generics type parameters only. To have a predictable behavior according to your design it might look like: 
+
+This type of functionality does not require whole document to be loaded in to the memory. It might be easily done as a set of improvements over which provide better scaling possibilities: 
+
+definitely looks having a lot of responsibilities. Have you ever consider implementing here? It is an inverted IEnumerable, "push" instead of "pull", so it works really well for event sources and they filtering/handling in a time sensitive manner. Reactive Extensions (Rx) for .NET provides you with some kind of LINQ for observable sources. There is a free downloadable book Intoduction to Rx - you will just need a part of it to grasp the idea. 
+
+And all the API with multiple overloads will come as two sets of extension methods – I really like this trick :) 
+
+There are a lot of parameters I would like to configure for my object, so having some kind of composition helpers is a big thing to simplify proper use of it. Let’s say that we have only 3 parameters for the sake of clarity (there are a way more, but amount of code in C# is overwhelming): 
+
+5 responsibilites ! That means, if you ever want to change one of these features, you'll have to change this class. That's already a god class you got there. You should split all of these into smaller, simpler classes. This will encourage reusability and reduce redundancy through your code. 
+
+The project is an API that will itself make HTTP requests to external webservices. Since this is PHP, we actually chose to use guzzlehttp. Now the library itself doesn't matter much, but I'm scared we'll be stuck with it if it ever has a major change (it already happened in the past). So I thought I'd create an interface that would be common to be able to swap the implementation if needed. Here it is (I removed the statements for clarity) : 
+
+A bit about SOLID principles after Mike Brant answer. First of all, Single Responsibility Principle. If you had to define your class, that's a : 
+
+But it also feels like my controller is only doing one thing here : "Registering a user". In the same manner, what if the RegisterController now also has a unregister() method ? Is it going to violate the SRP ? Since one could say it'll then handle registering AND unregistering, but one could also say it'll still only handle the concept of registering. Where is the line that says "the scope of this class or this method is too wide, there should be two classes/methods" ? 
+
+But it mixes multiple version translation in a single piece of code and will look ugly after introducing of more versions. What is the best way to deal with versioning generally speaking then? I would prefer a single sectioned query to deal with all versions in a unified way instead of running stored procedure with multiple queries if possible. P.S. I just think that is a must feature here... 
+
+Updated Here is a little bit of cleanup. Now you can get back reference to before blocking starts: is a non blocking call. It also works with and in the view. 
+
+What do you think about names chosen for the following library code identifiers? Would you name them differently? 
+
+It does not sound like creation for me… We are not generating code at run time here. What we deal here with is just a set of converters, which is solvable though the composite pattern. Let’s define an abstraction (you could extend it with ): 
+
+P.S. Generally speaking, it makes sense to do not hold an intermediate state of you calculations (like trimmed string values) – just an original data + define functions/properties to process them. It makes your design more flexible. P.P.S. It might be useful to have class: 
+
+Let's start with the obvious remarks about whitespace: Whitespace is important in Python. You got trailing whitespaces all over the place and you use an indentation of 2 spaces where 4 is prescribed by the official PEP8 Style Guide. When talking about sticking to best practices in Python, starting with PEP8 is a good idea. There's a lot more violations going on, a couple of them can be checked using the off-line tool and/or the on-line tool. I like how you split your functions. It's straightforward and maintainable, except the large amount of magic numbers. I have a personal dislike for numerals in function names and variables (for example: ) and constructs like the following make me think you got naming problems: 
+
+And yes, that's quite a mouthful. And longer than 80 characters. So, for small programs which only import from 1 library this way, there's no problem. Import 6 different libraries like that and you're importing a lot of stuff you don't need. What would happen if 2 or 3 libraries have a function? By writing out which ones you need, you immediately realize the problem should such a thing happen. Of-course, the obvious solution is simply importing like this: 
+
+What do you think about the following syntax for some very simple and intensively reusable validations? Does this: 
+
+I would define API a little bit different. Let’s go with couple types: SizeUnit and DataSize, so they can be used as: 
+
+Trying to figure out how to efficiently cache property calculations with dependency tracking to invalidate the cache. Here is the syntax I have at the moment (one instance supports multiple object properties): 
+
+Mixin type emitter (Well, not sure that implementation really looks readable - I hardly understand IL. But it works for method delegation :) 
+
+OK, it is going to be a long answer :) UPDATE Actually, marking for deletion is not necessary, see Little-known gems: Atomic conditional removals from ConcurrentDictionary. I would still consider the rest of the answer as an approach to structure the task. END OF UPDATE - when you about to remove from it - first to get rid of racing conditions. I defined this helper class to assist with this task: 
+
+While implementing things like repositories we often can see that reading and writing parts can be done totally independently. The same time client side will win from the single reference (who wants to inject two parameters instead of one in many places). What do you think about a little bit of IL magic? Let's say we have: 
+
+This class could be problematic to me as it's doing lots of things. It's able to handle requests and responses (and exceptions bound to these), and it also logs all of its requests. I did this class to be able to implement subclasses to change the behavior when needed, but I still wanted to be able to use this main class for most requests. Here's an example of a subclass I made : 
+
+This line binds the whole class to the implementation . It means it depends on it. Client using the class should be able to pick the implementation they wish to collaborate with . This is not business to choose which implementation should be used, its only business should be how the interface of the chosen implementation should be used. The Open Closed Principle is not even in question here, until the first point is fixed. That's because while it's available for extension (open) it's absolutely not defined by a concise interface (closed). The Liskov Substitution Principle can't really be reviewed without any inheritance. As for the Interface Segregation Principle...well, go back to first point, define proper interfaces and this will flow in easily. 
+
+How can I improve this code ? All I'm looking for is the code to be easy to use, easy to test, and easy to understand. 
+
+Note to potential future reviewers: This code appears to be suitable for Python 3 only. Let's structure your code a little and see if we can fix the timing problem. I propose the following order: 
+
+Yes, I know 1 of my lines is slightly too long according to PEP8. That's the result of the function failing the Single Responsibility Principle and lack of helper functions. If that gets fixed, the offending line will probably be fixed in the process. That's also the reason there are no docstrings yet. The function structure as-is is flawed, even though the current function names are very descriptive. I've tried putting the results in a dictionary, like this: 
+
+There's plenty more, but I think I gave you enough examples on how to improve your code. Here's your exact code, just a little prettier. Good luck implementing the rest of the points and I might write next review about actual code flow :-) 
+
+Ah, there it is. In a comment, right after the docstring where it should've been. Perhaps would be a better name, since no actual data is added yet. That appears to happen here: 
+
+A branch is when something else than the next line of code is executed. According to OWLTEST, you have 17 branches where it deems 12 the maximum acceptable. Long story short, it doesn't like your style. There are many loops and many ifs in the same function. Splitting up your function will increase the readability significantly. Another point it could complain about is the repetition.

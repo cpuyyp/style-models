@@ -1,0 +1,45 @@
+Now you no longer have any memory leaks (its not as if dimension is a huge object the standard copy constructor will work (and 99% of the time it will be elided)). Also I would declare VecDemIter in terms of VecDim so that if you change the representation you only need to change it in one place and the change automatically cascades through the code. 
+
+I would put them into a private block and give limited accesses via members in the protected block that prevents derived classes from breaking the invariant on your members. Personal preference here: 
+
+OK. For doubles passing a reference around is fine. But this is supposed to be generic. You also need to allow for move assignment. 
+
+Next it is not usual in modern C++ to see pointers. Pointers do not have any ownership symantics. So we don't know who is supposed to clean up the memory they point at (if at all). This is the largest failing of C and requires extensive use of documentation. In C++ we have a bunch of types for handling ownership semantics directly in the application code. So you should go an learn about reference and smart pointers. Creating an array and assigning values in the array at the same time. 
+
+Read everything? You have not defined a protocol at this level. So how do you know what everything is? Member Vs Local variable These two are not really part of the state of the object. 
+
+Initialization of the random number generator should be done once in the application. So best to do it just after main() has been entered. 
+
+But this means all code is using the same cursor. This makes threaded code impossible and even single threaded code hard if you are using the list in more than one place. In C++ we end to use the concept of an iterator. The iterator is an object itself that tracks the current position in the list. Can be copied so you can save a position; incremented and decremented to move along the container; de-referenced to get the element value. It is then used in conjunction with the methods of the container for insertion/deletion. But the important point; it is a separate object. 
+
+Couple of issues: The code is not exception safe. Any resource that has an open/close symantic should be handled via RAII 
+
+My problem here is that you have to specify the type as part of the name of the function . It would be much nicer if the compiler could work out the type for you, this would make modifying the code much easier in the long run. In the above code if I change the type of then I also need to change the type of . In certain situations this could cause issues when coupled with auto-conversion. I also dislike that you create a new container as a result of the sort. Why not sort in-place. A sort in-place can be used in conjunction with a copy to create a newly sorted container (but not the other way around). Also your way of doing the sort allocates a lot of small arrays dynamically. This is very expensive. It would be better if you could allocate a temporary buffer that can be re-used by the sorting code. The last thing in the design is that you use a single function to do all the work. In self documenting code it is much nicer to break your code into short self named (and thus explained) operations. Code Review Namespace using Please don't do this: 
+
+You either need to check the ptr on construction (to make sure it is never NULL) or if you allow NULL pointers then you need to check when the object is used. Specialization To avoid repeating yourself allow your code to be specialized by a second template parameter that understands how to reclaim the resources of different types. The default version just calls delete but this allows you to use specialize it for handles etc. Circular lists are easier with no NULL pointers. 
+
+Is much better and type safe. This code does not have any type safety and thus does not give me any confidence in its usage. Also the comparison is a string compare (not very efficient). Also completely different types are comparable and do not generate a compiler error. 
+
+As you can see some of the spots in the center bottom of the triangle are being hit many many times by recursion when you only want to hit each location once. Thus an iterative solution is probably better. You are using a 2D array to represent the triangle which requires two de-references (which can be inefficient (but without measuring I am not convinced this is a major issue)). Rather than do that use a 1-D array given the number of rows n you can quickly compute the number of elements in the triangle as and thus re-size the array in one statement. Element access for a child of m is and (note the calculation of row(m) does not need to be done each time you can keep track of this as you increment m). 
+
+Now your technique is not wrong. But you definitely make it harder for your self to validate the input and user interaction is not that great as they are used to typing one value return (and getting feedback on that value). I would change that so that each value is queried for separately (and use a function to get the value). 
+
+If is big and expensive to copy then this is not efficient. Since the old vector is going to be destroyed you don't care about the old values. So a better alternative is to move the objects from the old array into the new one. 
+
+You are only doing this (below) to prevent your self choosing the same pivot point each time. So you should choose a different technique to choose the pivot point. Why not the element in the middle of the list? 
+
+Also this test if the file is openable for reading (not if it exists). So you may want to use a more appropriate function. 
+
+Sure it works. But initialize variables on declaration (). And scope your variables () so there lifespan does not exceed their need. Also your control loop is all messed up (you are incrementing d not the value you are testing in the condition!!!! 
+
+The realloc() function is very often used incorrectly. It it returns NULL when it failed to re-alloc a bigger space (but then the old memory is not freed). So you must catch the result of realloc into a temporary and only swap with your buffer if non NULL. Since we don't know if the realloc will work don't update your allocated value until you know it has worked. 
+
+OK. The heart of the problem. Use of the state variable. The reason you have this test is to break out of this while loop and then avoid doing the actual work in the next loop. You already have the failed state information implicitly by the place you are in the loop while testing so all you need to do is break out of the current loop. You do not need to do an explicit test in the condition but just use a break statement. 
+
+The expression is always . There is an argument for removing this from the expression. Though I personally prefer to leave it in place (but for me that comes from writing templated functions in C++). Where the type may be changed at some point in the future. So I am OK with leaving it but others may complain. But the expression is also wrong (not multiplication happens before addition). So really this should be . If you are implying that the size of object can change at sometime in the future (by using the ) then you need to multiply this by the (len + 1) otherwise you have len objects plus a single byte. Which is not logically what you want. You want (len + 1) objects. Here you allocate memory but don;t check for success. 
+
+Also C++11 allows you to construct the stream object with a std::string so you don't need to call if you really want to use the variable name. I don't see the point of opening and closing the file to truncate it. 
+
+Can't see it! Add braces. and use more vertical space. You should use around all sub blocks. It will help avoid issues in the long run. 
+
+Overall Design The input and output use the same buffer but are not linked together. If you have not written anything into the buffer I would not expect you to be able to read from the buffer (as there is nothing to read). When you do write I would only expect you to be able to read only what has written (no more).

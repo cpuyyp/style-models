@@ -1,0 +1,43 @@
+Convention Metaprogramming is hard. It's hard to write, it's hard to debug. That's why it's very important to have conventions. One convention is that the result of a metafunction is named . Not . Stick to convention. Also, stick to types. Types are first-class citizens in the template metaprogramming world. Values and template templates suck. They need specific handling code all over the place and they're much more trouble than they're worth. Lastly, we have the concept of metafunction class. In the Boost.MPL world, this was something like: 
+
+Avoiding the globals and the internal memory structure would let you do later improvements to the internals. Right now we're popping off the top and pushing onto the back, that's not very efficient for list, but it's much better for . Maybe we change to that? Then we'd just have to change to be , but none of the callers of our code will have to know that. 
+
+Those aren't independent checks, which suggests that the second should at least be an . But since the body is the same, I'd suggest just combining them: 
+
+Avoid , especially in headers. Take your arguments by reference to const to avoid having to deal with copies. You should support erasing elements. You should look into various balancing algorithms for you tree so that if I insert 1 then 2 then 3 then 4 then 5, I don't end up with linear-time search. from is implied, you don't need to explicitly provide it. 
+
+If this is Python2.7, prefer to throughout. Lastly, takes a key argument, so we can use that here too: 
+
+Not quite right First off, you're checking every cross pair of indices against each other. But that means that will succeed, even though there is no pair of elements that sum to 6 - because you count the 3 twice. You need: "any two distinct elements". Iterating over vectors is a confusing name for a . is a poor variable name for this - since it's not incrementing anything, it's just another index, so you really should use and instead. Also you don't need - that member function does range checking. But your indices will all definitely be in range, so you could simply write: 
+
+It might be worth renaming the class to something that adds clarity to its intent. Perhaps . Lastly, I would prefer just to be able to write less code for include guards, and you are missing your for . Full solution: 
+
+Converting functions These can be simplified a bunch. First, you don't need the part. That'll happen from the assignment itself. That takes us to: 
+
+You only use this module in one place, and is a lot more cryptic than . The prolific use of globals makes it hard to figure out what depends on what. Take the first function: 
+
+Having and is easier to grok than , which looks like a point in a path, rather than an individual coordinate of a point. You could split this up even more by putting the adjacent points in their own function: 
+
+And then, I'm pretty much copying your logic for with just one real change (and renaming some variables): 
+
+That'll save some unnecessary operations. The second comment is about your member function . It's a little confusing in that it doesn't swap the arguments passed in - it swaps those indices. So prefer to name it or something along those lines just for clarity. Special cases In your , you start with the special case that . But there's nothing special about that case for the purpose of your algorithm. will just do nothing. So you don't need it. That reduces your down to: 
+
+Lots and lots of copies All of your functions are passing data by value. You're incurring lots and lots of copies completely unnecessarily. If you're not modifying your input, you should take it by reference to const. If you don't need to make a copy of something, take a reference to it. Follow Convention The C++ convention for printing an object is to override and the convention for reading an object for a stream is to override . This would let you print your person like: 
+
+And secondly, consider using a proxy object. Add an that takes your three dimensions and returns a proxy that is readable and writeable. What I mean is, support the following syntax: 
+
+then checks for the length being 3, which we know will never happen. But really, why are these different cases at all? On top of that, you're copying your objects at every point instead of taking by reference to const. I find it very hard to follow your and functions. I am not sure if they're correct. I think the best code review I could give you is... 
+
+Rather than generating the substring for the last two chars and reversing it, you could simply add the last two chars in reverse order: 
+
+Your function sort of does this, but with a really weird name. In fact, all your functions have really weird names. Splitting into a vector of digits doesn't seem particularly useful to the problem at hand either. And your negative check is definitely wrong: 
+
+Readability Your conditional checks are very very long. They run off the screen. At the very least, add some new lines: 
+
+Several things worth pointing out here I think. Match There is zero reason for to take a category or really anything else. You don't need the or enums. Given a move, you sohuld be able to determine if that move completed a row, column, or major diagonal. 
+
+In my opinion, is simply the wrong approach to this problem. Everything else follows from that. Python provides an API to directly expose C functions to Python. Boost.Python is a fantastic library to make it easy to expose C++ classes without having to deal with the messy direct Python API. makes it easy to return numpy arrays directly. Regardless of which one you choose, you should choose one and use it to create something to the effect of which will have one function that returns a list of lists. You can then just use that function directly. Rather than write to do some work doing string processing, just call with all the same args. Something like: 
+
+That way you only implement the average logic once. If a member function doesn't change the object, make it Good practice. A lot of your member functions (e.g. , , etc.) don't make any modifications to split. So they should be . Just expose the splits Rather than having , , , , just expose everything to the user: 
+
+Dereferencing a sohuld give you a , and using the member access should give you a . That's what suggests - it iterates over constant members. Instead you are (a) giving back a copy on dereference and (b) still basing all of the typedefs on , which means they're all wrong. The former is worse - that suggests that something as innocuous as will copy every element for a . should instead be a . Rather than inheriting from , consider making a class template for both iterator types and having the two main ones be aliases. should be constructible from . Not a deal-breaker, but it's convenient.

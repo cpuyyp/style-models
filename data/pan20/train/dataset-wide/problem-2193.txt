@@ -1,0 +1,95 @@
+Looks to me like a bug when producing the query plan when you have batch mode execution. Here is a repro that shows the issue both in SQL Server 2016 (13.0.4001.0) and SQL Server 2017 (14.0.3015.40). 
+
+There are two Distributed Transaction Standards Supported by the DTC. XA Transactions and OLE Transactions and recovery is implemented differently. XA Transaction Recovery Process use of GetXaSwitch to get a list of from the transaction resource manager (SQL Server is a resource manager) that it then uses to rollback or commit the prepared transactions. I assume that running as is enough to do that based on what is documented in Disabling TIP, LU and XA Transactions 
+
+According to Craig Freedman the order of execution for the concatenation operator is guaranteed. From his blog post Viewing Query Plans on MSDN Blogs: 
+
+You can take the max value of to get the distinct count of A partitioned by B. To take care of the case where A can have null values you can use to figure out if a null is present in the partition or not and then subtract 1 if it is as suggested by Martin Smith in the comment. 
+
+Well, the answer is that SQL Server query plan optimizer does something bad and that is introducing a spool operator. I don't know why but the good news is that it is not there anymore with the new cardinalty estimator in SQL Server 2014. With no indexes in place the query takes about 7 seconds no matter what cardinality estimator is used. With the index it takes 15 seconds with the old estimator (SQL Server 2012) and about 2 seconds with the new estimator (SQL Server 2014). Note: The findings above are valid with your test data. There can be a whole different story to tell if you change the size, shape or form of the XML. No way to know for sure without testing with the data you actually have in the tables. How the XML indexes work XML indexes in SQL Server are implemented as internal tables. The primary XML index creates the table with the primary key of the base table plus node id column, in total 12 columns. It will have one row per so that table can of course get really big depending on the size of the XML stored. With a primary XML index in place SQL Server can use the primary key of the internal table to locate XML nodes and values for each row in the base table. Secondary XML indexes come in three types. When you create a secondary XML index, there is a non-clustered index created on the internal table and, depending on what type of secondary index you create, it will have different columns and column orders. From CREATE XML INDEX (Transact-SQL): 
+
+In my rather limited test case I saw an improvement from more time than I care to wait down to 4 seconds*. The query plans I got for the two queries. 
+
+I have not found a simple way to just modify the statement to work with anonymous simple type definitions. Simple repro of what you have: 
+
+Is it possible to combine a "newer version" of the LDF file with an older version of the MDF file and keep changes logged in the LDF? Lets assume there has been no log-backups in the time between as I guess that would make this truly impossible. Steps: 
+
+Not seeing the data you have makes this a bit harder but I managed to reproduce what you see if you see with this: 
+
+You get one node back with the value true or false. You can change your expression to return the value if it matches by doing the logic in the same predicate something like this. 
+
+If you need parts with partgroup not connected to a markup you can use a outer join against in your main query. 
+
+CURRENT_TIMESTAMP returns the current datetime something like . returns a string with only time . The second parameter of DATEDIFF takes a datetime so your string is implicitly converted to a datetime. In lack of something better to use for a date SQL Server uses so your second parameter ends up to be and the function returns the number of minutes since the beginning of the previous century. Remove the convert in the second parameter and it should work just fine for you. 
+
+The exist() Method (xml Data Type) returns a . if at least one node is found and if no nodes are found (empty result set). To get the rows where neither or exist you just have to compare the result of with . 
+
+You can use a recursive CTE to build a list of dates and group by month. This will not give you the exact output you need but it should give you an idea of what you can do. 
+
+The result is . In your case there can probably only be one node and only one node but SQL Server does not know that so you have to build the XQuery to guarantee only one value returned. . 
+
+OPENXML (Transact-SQL) Extend the with a to specify a different XPath than what you get from the default behaviour of . 
+
+*I actually started the original query and forgot about it. Scratched my head trying to figure out why my computer was sluggish and found that the query had been running for 40 minutes. 
+
+The behaviour depends on SET XACT_ABORT and is explained in the following quote from the linked article. 
+
+A breakdown of the xPath in the nodes function: From give me all nodes where the attribute type is line and from there give me all nodes where the attribute type is item . Finally get the node and extract the text node using the value() function. 
+
+SQL Fiddle The reason for the scientific notation is because it is the way SQL Server handles xs:float when using untyped XML. From Type Casting Rules in XQuery 
+
+Selective XML Indexes does just that for you behind the scenes. It allows you to specify an XPath expression in the index and when you use that expression in a query SQL Server uses a system table to retrieve the value you are looking for. Example: 
+
+The query plan for the does a seek in the secondary XML index followed by a key lookup in the system table for the selective XML index (don't know why that is needed) and finaly it does a lookup in to make sure there actually are rows in there. The last part is necessary because there is no foreign key constraint between the system table and . 
+
+But it does however not look like you have an XML column at all since is invalid against XML columns. Then you need to either modify your table so the column is XML or you can cast to XML in your query. 
+
+What you want to do is to use nodes() Method (xml Data Type) in a cross apply to shred on nodes so you then can use value() Method (xml Data Type) to get the property values you are looking for. You are specifically looking for the nodes that have a node so you should use that in a predicate in the XQuery parameter to the function. 
+
+I guess the cost for calling the UDF is grossly underestimated. One workaround that works fine in this case is to change the query to use outer apply against the UDF. I get the good plan no matter how many rows there are in the table PRODUCT. 
+
+To fix that you need to specify the element of the node you want to update. You could also make use of the function in the where clause instead of extracting the value. 
+
+This first converts the string to XML by replacing all spaces with the empty tag . Then it shreds the XML to get one word per row using . To get the rows back to one value it uses the trick. 
+
+Move the content of (25 rows) to the remote server to avoid doing a join between tables on different servers. One way of moving the rows from to the remote server is to execute the query on the remote server using with the values as a parameter in a XML structure. Unpack the XML to a table variable and use the table variable in your main query. 
+
+This is a bug in SQL Server and here is a Connect item to vote for if you want a change. dm_sql_referenced_entities does not shows columnes when temporary tables are used in statement Current status: 
+
+Get the distinct values from and cross apply against a list of hours for one day and left outer join to get the for each hour. 
+
+However testing shows that the index is used when you rewrite the query using nodes. These queries returns the same but the second is faster because it uses the the selective XML index. 
+
+ID is not unique in this table, it is unique for each combination of and . There are some comments in the procedure that tell you what it does but overall it is calculating the running total in a loop and for each iteration it does a lookup for the running total as it was 45 days ago (or more). The current running total minus the running total as it was 45 days ago is the rolling 45 days sum we are looking for. 
+
+You should delete and make the primary key clustered instead. The index that is created to support the primary key will do the job for you when filtering on . 
+
+Not sure it looks any simpler than what you have but your version is missing out on intervals that starts before and ends after . I changed the where clause to take care of that and at the same time it will be possible for you to use an index to somewhat limit the number of rows read from the table. I also changed the way you calculate max and min for the sum of duration. Don't think it matter much for performance but to me the code looks neater. With an index on having as include columns you will get an index seek on and as a residual predicate. 
+
+With a query like that there is no difference between using or and that is because SQL Server builds almost the same plan for the two versions not using an index and exactly the same plan when index is used. That is true both for SQL Server 2012 and SQL Server 2014. For me in SQL Server 2012 the queries without the XML index take 6 seconds using the modified version of the query above. There is no difference between using the full path or the short path. With the XML index in place the full path version is the fastest and takes 5 ms and using the short path takes about 500 ms. Examining the query plans will tell you why there is a difference but the short version is that when you use a short path, SQL Server seeks in the index on the short path (a range seek using ) and returns 700000 rows before discarding the rows that do not match on the value. When using the full path, SQL Server can use the path expression directly together with the value of the node to do the seek and returns only 105 rows from scratch to work on. Using SQL Server 2014 and the new cardinalty estimator, there is no difference in these queries when using an XML index. Without using the index the queries still take the same amount of time but it is 15 seconds. Clearly not an improvement here when using new stuff. Not sure if I completely lost track of what your question is actually about since I modified the queries to be equivalent but here is what I believe it is now. 
+
+When there is an XML index created on a table, SQL Server will always use that index (the internal tables) to get the data. That decision is done before the optimizer has a say in what is fast and what is not fast. The input to the optimizer is rewritten so it is using the internal tables and after that it is up to the optimizer to do its best as with a regular query. When no index is used, there are a couple of table-valued functions that are used instead. The bottom line is that you can't tell what will be faster without testing. 
+
+It defines a single element with the attributes , and where is restricted to 80 characters. A valid XML document according to that schema would contain only one element as the root node. What you have here is a XML fragment and SQL Server can handle those just fine. Actually, the default behaviour for the XML datatype is that it will allow XML fragments. Create the schema: 
+
+Depends entirely on your use case and what the data looks like that you have. This answer is in no way an attempt to optimize your query, only a way to show you how to make use of the indexes. The result of testing on your data could show that you get the best performance by not using any indexes at all, or perhaps use the index only on some parts of the query. As a general rule it is always good to keep an index as small as possible so using instead of is a good thing if you know that you are dealing with integers. 
+
+You should use the nodes() method of the XML data type to shred your XML. If I understand you correctly you want to fetch the nodes from the root node where the attribute is and from that node you want the nodes where the attribute is 'item'. I will just assume that the XML you have provided with numeric node names is not the actual XML you are using but that the node names are valid XML names. 
+
+Create a mapping between the old value and the new value in a table value constructor and use stuff to replace the character. 
+
+You could also look at IO utilization and CPU. Perhaps most interesting when dealing with selective XML indexes is to figure out if the index is actually used by the query. To do that you can have a look at the execution plan. If you see one of the Table-valued functions responsible for parsing the XML then you know that you have not covered your XML query with a XML index. 
+
+You can do it in xQuery with a FLWOR Statement and Iteration (XQuery) using cast on each value returned. 
+
+The query costs are based on estimates even in the actual execution plans. They do not tell you how efficient the query actually was. The estimates are in turn based on statistics and those can be outdated giving you estimates and costs that are wrong. The estimates for XML queries is always wrong. There is no statistics generated for XML columns and there is certainly no statistics generated for XML parameters or variables. Have a look at this rather simple XML query. 
+
+Constructing the XML like that can be a bit tedious so you can for example create a helper view that also holds the allowed values. 
+
+If you have data in your column and it makes sense to convert the values to a float value you can rename the column, add a new column, move the data using and then drop the old column. 
+
+Right click on the procedure. Select Modify. Edit the procedure code. List item Press F5 to execute the modification of the procedure. Close the tab. Go to 1. 
+
+That requires rewrite to your main query a bit because the function now returns a table instead of scalar value.. I'm not sure I grasp exactly what your query does but this could be a rewrite you can try. 
+
+You should have a look at Property Promotion in XML Best Practices for Microsoft SQL Server 2005. Create a user defined scalar valued function that extracts the value you need and use the function as a computed column in your table. You can persist the column of you like and you can create a regular index on the column. You don't have to persist the column in order to create the index.

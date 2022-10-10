@@ -1,0 +1,71 @@
+I think this would be possible with negative trait bounds (which is not currently available in Rust). Are there any other issues I'm missing? 
+
+Even if you don't want to load your data into ActiveRecord, you can use AR to prepare your SQL statement using : 
+
+Iron's and middleware projects seem to be abandoned. I've put together implementations for them, along with a session flash provider. They seem to be working fine. They are all very small, so I'll paste them in their entirety below (each file is linked to a Github repo and each repository also contains a working example). I would appreciate any input! A couple specific questions/concerns: 
+
+The library user brings their own session store and flash object implementations. I've never really programmed with generics before, so I don't know if any of this is reasonable. For example, I'm using an associated type for the flash object (which the user defines in implementing on their session object) rather than a trait type parameter. I think this is the right choice, but I mostly made it to keep the signatures shorter... In , there is a possibly unnecessary clone. Would it be better to return an to remove the clone? That's definitely doable, but might be slightly more unwieldy if the user needs to mutate the object before setting it back. Also, would it be good to wrap the inner value in a so that it could be swapped out without write-locking the whole map? 
+
+Here are some observations noticed: For something to be OOP it needs to be somewhat reusable. As always use SOLID principles to achieve this. Because you are using styling it broke some of the rules. Consider returning outputs such as errors and such to be pure text without styling and let the return handle it. Reason: what happens if you want to log the fail message and shoot it out internally or to a log file. Your sendmail is a jack of all trade: it does the header, store the emails, AND checks for errors - this is procedural (start, middle end) - consider separating it into different functions of class (your original one and then have a separate class to do validations which you send as arguments). Consider using a constructor. You initialize the object with settings and then reuse the function. Another point to add: attributes (or variables from a class that pertains to the class) should never be never accessible to the "main" or elsewhere but to the class itself. Use accessor functions like get/set or magic functions instead. Classes are suppose to be encapsulated so that outside code cannot effected without going through a checker. I'm aware that its easier to just access it directly but you defeat the purpose of OOP in that sense. Lastly, too many if/else renders the code too tight which is why I suggested the validation class - let that be the class to check on the arguments rather than the mailer itself. 
+
+Note that this changes the behavior of your code slightly: variables (like ) are set to if the param is , rather than remaining . Depending on how you are using these variables, this behavior is probably better anyway. 
+
+I'm pretty happy with this—it lets me generate my own errors and handle external errors pretty easily. A couple questions: Is it bad form to "throw away" the type info like this for the errors I am boxing? Is there an easier way to do this? For example, I could do away with my macro and calls if I could do something like: 
+
+I have no requirements for my UUIDs except speed and uniqueness. I'm truncating the first two octets of the u64, since they don't seem necessary for the near future. Am I committing any faux pas here? I don't really know anything about the theory or practice of UUIDs. I'm a little bit worried since the value of is gibberish for my UUIDs (though I am not using version number in any way). Or are there any alternate (Rust) implementations for UUIDs with a time component? 
+
+I've been using random UUIDs—from Rust, e.g. —for my primary keys in a MySQL database. I recently happened across this, which suggests that UUIDs with an appropriately positioned time component offer some performance improvements. I created a naive UUID generator like: 
+
+Can it be better? is there a lib that does this better? I've used Laravel Validation service where you can specify alpha_dash but this is not for validation but rather I need the left over to see if there is a match to the Database Storage for a search. 
+
+From a first pass over - all you are doing are if else without any throw or inspection as to what possible errors that the PDO might be tossing out. Thats bad because on production servers - I would assume that you won't be turning on error/warning reporting but will be logging them. Also as @Alex L mentioned - you are missing a IF statement that checks if $pdo == null then throw exception. However its better with a try/catch 
+
+I could be wrong (and my answer down voted) but when it comes to routing or submission of forms consider using Behat or a behavior test framework rather than PhpUnit testing. The reason why I'm stating this is because you have sessions, and submission and cause/effect returning that you want to test. Those ARE valid things you want to test but its more user behavior test rather than what PHPUnit is built for which is functional testing. A lot of time when doing unit testing when relying on other classes your able to "mock" or substitute classes that normally function in production to be isolated which is only to initialize a class or a function that you are running a test on. What you are doing instead is testing if the routing mechanism is behaving with set inputs. 
+
+This code is attributed to geeksforgeeks. I'm looking for code-review, optimizations and best practices. 
+
+The question is attributed to GeeksForGeeks. Since the code dictates not additional data structure, I am forced to extract out TreeNode class outside, rather than keeping it as an internal data structure. Looking for code-review, best practices and optimizations. 
+
+Given a set T of characters and a string S, find the minimum window in S which will contain all the characters in T in complexity O(n). eg, S = “ADOBECODEBANC” T = “ABC” Minimum window size is 4 - “BANC”. 
+
+Implemented iterator for a binary tree and "pre" "in" and "post" order flavors. I'm looking for code review, best practices, optimizations etc. 
+
+Solution to bounded knapsack 01 problem. Once again comprehensive description is difficult in this space, refer here. Looking for code review. optimizations and best practices. 
+
+Given a singly linked list, swap kth node from beginning with kth node from end. Swapping of data is not allowed, only pointers should be changed. 
+
+Given the binary Tree and the two nodes say ‘a’ and ‘b’, determine whether the two nodes are cousins of each other or not. Two nodes are cousins of each other if they are at same level and have different parents. Looking for code review, optimizations and best practices. 
+
+Ok with all that routing question out of the way - I agree with mbanzon with basename being fine to check for internal directory structure to block people out... If you want extra security you can run a short alpha numeric check to make sure nothing funny is included. As for the white list - since this is a routing file and a static one a white list can also help speed things up as long as its minimal, one problem though with that is if you file system becomes extensive it maybe best to not have a whitelist at that point (you dont want your lookup to be too large to maintain and add. Side note: if your looking for interesting ideas symfony2 routing is pretty good (its being use at core with laravel). It is more extensive than your solution of course but still interesting to look at. 
+
+I'm currently using a make shift INSERT on DUPLICATE UPDATE function that relies on a DB raw query from eloquent. I'm looking to improve the quality of the code and the speed. Please take a look 
+
+I have a private function in PHP that takes a given URL string and just leave the Alpha or numeric and certain punctuation left. I need the stripping of string due to having it match against ElasticSearch and ElasticSearch doesn't take it too kindly for special characters when it comes to exact match. The following function so far is working fine. 
+
+This program connects all nodes of the binary tree at the same level. A node of a tree contains a left, right and a sibling pointer which would connect it to the next node at the same level. This connection is from left to to right. Example: consider a binary tree with parent as node A and left and right child as node B and C. then this program joins B.sibling to C. If the immediate sibling is null, then it is skipped. More details if needed can be found here. I'm looking for code review, best practices, optimizations etc. 
+
+There are n balls kept on a table and connected by same singe connected string (which can be cyclic or maynot). Write the code to select a ball such that after lifting the whole structure from that ball height will be minimum. (algo+code+ mathematical proof of correctness) Note, I do understand merits of unit testing in separate files. But deliberately added it to main method for personal convenience, so request you don’t consider that in your feedback. Looking for request code review, optimizations and best practices and complexity verification. 
+
+Looking for code review, optimizations and best practices. Also verifying space complexity is O(n) and not O(logn) where n is number of nodes in tree. 
+
+I will apologize for the lack of formatting and using your code segments as straight example - but as I re-read your code I see my old self a whole lot and I don't consider myself any level near some of the coders here. However one important aspect to improvement is obviously trial and error and a lot of refactoring. So you asked about OOP going from procedural php within a single require I would assume your going into one right way which is using classes - however there is a lot of pitfalls in your code. The first would be that to effectively do OOP you should use SOLID design pattern. First there are plenty of ORM out there that does your PDO wrapper. One thing starters would like to do is to wrap a low level class (the PDO object) into a higher wrapper functional object - its not wrong to do so - but its been done over. In reality what you should do is not offer the user (ie you in this case) a simpler form of accessing data that you need while using the database. The database of your APP can change...what will you then? You will need to write a wrapper class again because your class is tightly coupled with PDO. Lets take a look at the database class 
+
+A BST has two nodes swapped. Figure out which two nodes. Looking for code-review, optimizations and best practices. 
+
+Looking for code review optimizations and best practices. Complexity - both time and space is O(n*m) 
+
+Why I don't extend or reuse: I am prepping for interviews, and interviewers explicitly want you to code, in my experience. I request the reviewer to not insist on reusing, as I am aware in real life reusability is the right approach. This does not work in interviews. Why don't I use a class instead nesting method inside linked list? That is because I need the to be an internal data structure. Had I made a class, it would have no access to internal data structure and perform operations on the node's pointers. 
+
+Perform a graph clone. Verifying complexity to be O(E). Looking for code review, optimizations and best practices. 
+
+Convert a sorted linkedlist into a balanced binary search tree. Looking for code-review, optimizations, and best practices. 
+
+This question is attributed to geeksforgeeks. Looking for code review, optimizations, best practices. Please ignore reviews which include improvements to class / variable names. They are named so for personal reasons and well aware they need to be better. 
+
+I will extend mulquin's short post. Sanitizing your POST will enable you to make sure there are no SQL injection. Since you are using PDO - you should use prepare() function reather than exec(). exec doesn't escape your query. (as shown in the link provided by mulquin) Furthermore - you are not checking if the email is indeed an email or not what happens if its not a real email address (ie the format is not john@doe.com) - you will be storing gebrish at this point. So a bit of validation so that not only spammers won't just enter anything. 
+
+NOTE: function is only valid on model level and does not allow mass insert. Doing will allow to have a inserted as long as fillable is used however it will reject if there is a duplicate key 
+
+You should pass the body of the mail as an argument and it will do what you need. The body part should have been on the outside and independent of the mailing function. This way if you decide to expand this - you wont need to copy paste a third version 
+
+If you are working in PHP use a framework that has MVC such as Laravel(up and coming and popular), Symphony, Yii, Codeigniter(defunct), etc. Each of them will enable you to use some reuse mechanism. Laravel itself uses a template PHP called blade. There are several other template mechanism such as Twig that enables you to template your views to even add more granular way and cleaner. If its a single file system that you must what you are doing is fine because you are using require_once it enables you to call other files and you can modify that file and it will reflect any other files that references it.

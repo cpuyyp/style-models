@@ -1,0 +1,61 @@
+First, look at the EXPLAIN plan again. The first line says that the Query Optimizer to do the following: 
+
+You can now run each conversion script by name in alphanumeric order. As you get to the bigger databases, you should run them during off hours. Once everything is converted to InnoDB, enable binary logging on the current server. Next, mysqldump all of it as a point-in-time dump and gzip it 
+
+This will show you the default collation of the database you want to import into. You can also change the import database's collation if needed. UPDATE !!! First of all, I would look at the what the OS says the character set is. On the Linux command line just run this: 
+
+Why would this be a problem (and essentially a bug) ? Again, this goes back to not being indexed. When a column is not indexed, the Clustered Index of the table (where the PRIMARY KEY resides) is unaware of the presence of . How is this so? According to the Book 
+
+has a section on binary log events (pages 223-227). Those events have unique codes that are being interpreted as follows: 
+
+just to see if any queries are processing. Notwithstanding, MySQL could be still processing things. How ? Look at the InnoDB Architecture (Picture made by Percona CTO Vadim Tkachenko) 
+
+If you know that the MyISAM tables are not being actively queried, not only can you ignore recommendations for key_buffer_size, you could actually lower it. What can you do with the extra RAM you just reclaimed? One or more of the following options: 
+
+I learned something interesting... Baron Schwartz seems very confident that MySQL will stay strong for a while. Personally, I would not jump off the MySQL train just yet, either. Since MySQL (eh, Oracle [that just doesn't roll off the tongue, and it never will]) continues to be supported, this would give others such as Monty and Percona a chance to keep pace with MySQL's changes to MyISAM (though this might be rare). In the event ot such changes, Monty and Percona could implement corresponding changes to code for MyISAM and MariaDB. You can think of MySQL a lot like Social Security in the USA. While there are many people speaking of Social Security eventually going away, getting out of Social Security now could rob one of the future higher monthly payouts/benefits. Drizzle went that route and froze MyISAM in time and utilizes that storage engine for temp table use only. Most seasoned Drizzle users are content with that decision, but this leaves no room for higher expectations. So, until MySQL actually goes away, there is no real reason to abandon MySQL. Of course, by the time MariaDB becomes more mature and widespread, switching storage engines and DB servers is simply rendered academic and boils down to personal choice. 
+
+In your case, you can create the /tmp/ListOfTables.txt file manually. In order to inject , just create the dump file with the as the first line. Then, append the output of mysqldump to it. Keep in mind that each table is described as dbname.tablename: 
+
+I have some heartbreaking news for you that will solve your problem. If you are using MySQL 5.5/5.6, I can assume you are using innodb_file_per_table. There is some disk I/O going on when accessing the INFORMATION_SCHEMA to get information on InnoDB. What I am about to tell you I have personally eyewitnessed: I worked with a client that had a 2TB MySQL Instance with dozens of database and 10's of thousands of tables. Using MySQL 5.5, I was able to run these queries: QUERY #1 : Disk Usage by Storage Engine 
+
+You have a trade-off you need to be aware of. Granted, it is true that a log flush happens with each involved with autocommit=1. Nevertheless, are there any consequences of setting autocommit=0 ? Think about the redo logs (ib_logfile0,ib_logfile1) and the undo tablespace (inside ibdata1). Change information must be stored somewhere in case the INSERTs need to be rolled back or recovery is initiated after a crash. Either way, there will be some disk I/O to contend with. Additionally, consider innodb_log_buffer_size 
+
+While there is a tool that can bypass these limitations and allow INSERTs, UPDATEs, or DELETEs (called pt-online-schema-change), the simplest approach for a creating an index is to just bite the bullet and let mysqld lock the table. 
+
+to limit the number of binlogs to a single day. Keep in mind that setting expire_logs_days does not work if is out of sync. 
+
+this should not be a problem since you can set MONyog's interval for collecting status values. In either scenario, MONyog is a non-factor in your case. Source Code You may want to leave your code alone since you are only generating a 58 times per minute (about 1 per second). Just to be hypothetical, if each took up 2K in transmission over the DB Connection through the network at a rate of 1 per second: 86400 sec X 2K = 168.75 MB per day That's not a lot to worry about in a day. Therefore, changing your code just to lower the count would be the only gain you would make. There would be no discernable performance improvement. Epilogue I would be more concerned with status variables that count temp table creation or all the handler counts as that would be earmarks for bad queries or large temp tables do to key distribution or setting for temp tables that are too small. UPDATE 2013-09-26 19:38 EDT OK my mistake. You said 58 per second, not per minute. Let me redo my hypothetical example 86400 sec X 2K X 58 = 
+
+GRANTS Each major release of MySQL changes the MySQL schema in some respects For example, in the post I answered (MySQL service stops after trying to grant privileges to a user), I mentioned how has a different number of columns. Here is the updated list of the column counts When you run this query 
+
+works fine in terms of the query, you should have dateDim contain the UNIX_TIMESTAMP() of the datetime string. You query would look more like this: 
+
+If you see multiple entries in the , you have multiple MySQL instances running. NEXT STEP Judging from the date and time of each ibdata1 file and their respective folders, my guess is that you have MySQL Enterprise running and it has its own MySQL instance. You need to check the MySQL Enterprise Documentation on moving Enterprise Monitoring Information to anther disk location. As for , you need to locate the being used. You should be able to have MySQL Enterprise Monitor tell you. In the event MySQL Enterprise Monitor does not any mechanisms for editing the datadir or migrating the MySQL data folder, you could also get it from the entry: 
+
+Here is something very quick and dirty Get the minimum datetime for each personalid, status, ride_taken 
+
+If you have any stored procedures that use database defaults, you must drop and recreate those stored procedures. If the ALTER DATABASE command runs quickly, chances are the tables were not altered. You may have to run ALTER TABLE on all your tables as follows: 
+
+FORCE INDEX should not be made to force queries to use indexes if you are trying to fit a square peg in a round hole. In other words, traversing an index only to access table data in a specific order buys you nothing. In fact, it throws query performance under the bus because of not exercising any foreknowledge about how available your data needs to be. 
+
+If the DOS prompt appears after some error messages, then mysqld failed. If error messages come up and the DOS prompt does not appear, mysqld is up. If the settings you configured in my.ini on PC 2 is not in then mysqld cannot see the my.ini. To reiterate, mysqld expects my.ini to be in the parent directory. 
+
+CAVEAT With regard to caching, caching takes a dive quickly because of doing a full table scan. For MyISAM index pages flow in and out of the MyISAM Key Cache. For InnoDB, data and index pages flow in and out of the InnoDB Buffer Pool. 
+
+Don't worry about log file and position. They are bogus. The mysqldump has the correct log file and position at line 22. In order to see run this: 
+
+From the output in your question, does not occur three times consecutively. I have an iterative solution using user-defined variables MY PROPOSED QUERY 
+
+Using to_days to Partition The to_days function yields a 6 digit number in the 700,000's (in the MEDUIMINT range). Using DATE or DATETIME to Partition DATE takes up 3 bytes. DATETIME takes up 8 bytes. Conjecture UNIX_TIMESTAMP of today's date exceeds 1.37 billion. It takes 4 bytes to store that. Range partitioning allows for range values that high. Here is an example of that from the MySQL Documentation: 
+
+IMHO, when it comes to MySQL 5.5, you will definitely see much better performance from InnoDB than in past releases because dirty pages in the InnoDB Buffer Pool do not linger as long. Those dirty pages are flushed more robustly. You also have the luxury of creating multiple InnoDB Buffer Pools (See innodb_buffer_pool_instances and innodb_buffer_pool_size). To reduce thread locking amongst the buffer pools, make sure set innodb_thread_concurrency to 0 to let InnoDB storage engine decide best how to handle thread allocation. CAVEAT ON MIGRATION TO MySQL 5.5 Make sure you mysqldump all databases EXCEPT the mysql schema. There is a cleaner, crisper way to migrate User Grants out of the MySQL Schema. In fact, there are two options for accomplishing this: OPTION 1 : Use mk-show-grants This dumps out all the MySQL Grants as SQL statements, which is completely portable to any MySQL 5.x instance. OPTION 2 : Run these commands (My personal emulation of what mk-show-grants does) 
+
+DISCLAIMER : Not an Oracle DBA Use , the grid control program that allows you to manipulate parts of the RAC Cluster 
+
+Caching to Disk should be your biggest concern. Windows is notorious for caching writes to the operating through the operating system. What this means is that any transaction you write in logs, in tablespace files, in the system tablespace (ibdata1), would be at the mercy of Windows to get writes to disk. One particular option I am thinking of is . Since the MySQL Documentation on says 
+
+I would set the innodb_buffer_pool_size to 1536M (which is 1.5G). Then, upon mysqld restart, innodb_buffer_pool_instances would bounce up to its default of 8. Even though innodb_buffer_pool_size is dynamic, innodb_buffer_pool_instances is not. Therefore, you must set these values in and restart mysqld (it is required). 
+
+Instead of Migration to another System, try doing it in place, then mysqldump DATA_ONE and import that mysqldump into the new server. First, let's create DATA_ONE 
+
+This directive forces are VARCHARs to behave as CHARs. I did this at my previous job back in 2007 and took a 300GB table and sped up index lookups by 20%, without changing anything else. It worked as published. However, it did produce a table almost double in size, but that simply goes back to tradeoff #1. You could analyze the data being stored to see what MySQL recommends for column definition. Just run the following against any table:

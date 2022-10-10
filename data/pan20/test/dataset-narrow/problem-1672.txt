@@ -1,0 +1,47 @@
+Motion supports remote commands via http, documented at RemoteControlHttp. You can use wget, curl, or lwp-request in crontab to stop motion at a predetermined time. Assuming default options in motion.conf, this example will stop motion at 8pm each day: 
+
+Once you've installed the camera and set up the software, the raspistill program will handle the camera details for you. You can make your remote trigger something as simple as using ssh to launch raspistill: 
+
+The internal design of the Kill-A-Watt does not physically isolate the low voltage circuitry from the mains power. A direct connection from the Kill-A-Watt to the Pi would allow for the possibility of destroying the Pi or a lethal injury if there was a malfunction. No responsible tutorial publisher would want the liability associated with such a design. 
+
+I would avoid building your own components and consider using an established (and UL-listed) solution that you can manage with your Pi. You could replace your existing wall switches with (for example) Insteon switches, and use software like Openhab to manage them. The switches still have local control, and Openhab can tell what state they're in and turn them on/off or adjust dim levels. In addition to Insteon, you can look into UPB and Z-Wave controlled switches; each of these systems has their advocates. The one downside is that these switches generally require a neutral wire in addition to the hot that is switched. Depending on the age of your house and the habits of the electricians that wired it, you may or may not have that wire available. This doesn't have quite as much DIY mojo as what you are planning, but it avoids the (small) risks associated with switching high-voltage with non-conventional devices. 
+
+This command resets/clears the screen, returning to text mode and turns off the blinky cursor. handy when I don't want the distraction. 
+
+This sends setterm's output (magic codes!) to the proper terminal to wake it up as you desire. Since I do this often, and use other options too, I made a little script I call 'tty1' 
+
+The command has to be run so it outputs to tty1, and you can't do that (easily) from a remote connection. I use a small script to send setterm commands to tty1: 
+
+(entire file here to show exactly where I put it) Essentially, the setterm -blank 0 command sets the terminal blanking period to 0 seconds (off), disabling the blanking which usually occurs. rc.local is executed at the end of the boot process with root privileges so it affects all the physical consoles (the TV & HDMI outputs here) You could also change the command to include turning off the cursor (not the mouse pointer, text cursor in console): 
+
+to turn off the blinky cursor. If you're connecting via wireless and are having connectivity issues, I'd recommend disabling the wireless power saving options, which turn off the wireless dongle if nothing's happening for a bit. Annoyed me greatly. (I've posted a longer answer explicitly for this here somewhere, but I'll paraphrase here) Create a file '8192cu.conf' in /etc/modprobe.d: 
+
+This will bypass the handoff of those requests to the NAT logic on the FORWARD chain. (If you have existing rules on the INPUT chain, you may want -I to insert these new rules at the beginning rather than -A to append them at the end). Before you do this you should be sure you have physical access to the pi in case you lock out remote access. Don't save the iptables config until you're sure it works the way you want it to. You should also be aware that allowing direct access from the internet can be risky. You should be prepared to update your system regularly (perhaps even daily) to apply new security fixes; you should also make sure your web server config doesn't have any unnecessary modules loaded or allow any unintended access. My final advice would be to make a backup of the working system, and be prepared to trash the running copy if it is compromised in some way. 
+
+Or probably better, use dhcp to assign an IP by changing "" to "" on the "" line, and delete the , , and directives. 
+
+Assuming your pi is directly connected to the internet (no intervening router -- verify this by checking that "sudo ifconfig eth0" shows your 103.37.x.x address), you will need iptables rules to accept incoming connections on port 80. I don't have a config were I can test this specific scenario, but you will want something like this: 
+
+Old thread... I know. I've written a utility I call , which forwards your keyboard (and soon, mouse) to the console of another computer you're ssh'd into. This allows you to view your RPi's display (for instance) on a TV or monitor, and type as if you were logged into the physical device with a keyboard. Considering everything in my house is wireless, it's rather neat to sit on the couch with laptop and type away, seeing it happen on the big screen on the RPi. Feedback welcome, fauxcon - Github - $URL$ 
+
+Old thread, I know. I've written a utility I call , which forwards your keyboard (and soon, mouse) to the console of another computer you're ssh'd into. This allows you to view your RPi's display (for instance) on a TV or monitor, and type as if you were logged into the physical device with a keyboard. Considering everything in my house is wireless, it's rather neat to sit on the couch with laptop and type away, seeing it happen on the big screen on the RPi. Feedback welcome, fauxcon - Github - $URL$ 
+
+This will cause the user 'pi' to not require a password for ANY sudo invocation. BEWARE! This can be considered a security risk. Balance your need for this usage against the potential risks involved. (see man sudoers) 
+
+You can request that motion take a snapshot at any time via its web interface. From a command line on the Raspberry Pi running motion, use 
+
+After a apt-get update/apt-get upgrade ended with errors, my system became unusable. I was able to determine that the /boot partition was missing several files (useful ones, like kernel.img...) I copied the missing files from another pi's /boot partition, but I don't know if the versions are in sync with this one. The pi does boot, and seems to work correctly, although a couple of my startup customizations seems to have been lost. Is there a list of packages that I should reinstall to sync the files in /boot? The only files that were on /boot after it was corrupted were: 
+
+This will silently request that motion take a snapshot and discard the response. A symbolic link, lastsnap.jpg, in the motion file directory, will point to the snapshot itself. See $URL$ details on using http commands to control motion. 
+
+where user is the username to use on the target (can be omitted if same user as the client) target is the name or ip address of the target command is the command to execute An example with a user account jim on target host utilipi might be 
+
+On a linux client, this command will login to the pi, launch raspistill, and pipe the camera output (the .jpg) back to you. Using a certificate avoids scripting a password (see SSH login without password for an example of how to set up the cert). Syntax will vary, but the same thing can be done with windows ssh clients. I prefer this method for simple tasks, because it avoids the overhead of running a web server on the pi. 
+
+Next reboot, it'll turn off the power saving for the wireless. I've had rock steady connections since this. Um, if it means anything, this is for a generic edimax wireless micro-dongle, the teeny-tiny one. lsusb output: 
+
+Old thread, I know. I had a need for this exact situation, so I wrote a program for it. Using , I forward my ssh connection to the console keyboard (and soon, console mouse too!). Effectively, it connects your keyboard directly to the RPi, as if you were typing on a USB keyboard plugged into the RPi. Certainly interesting to type on my laptop, and see the output on the bigscreen, as if I were typing on the RPi itself. I have some plans for this utility, it's usefulness is growing as I play with it. I'm planning on forwarding the mouse events too, so really you could use keyboard & mouse on a remote computer (not just RPi!), great for demonstrations and show&tell type things. Disclaimer: I wrote this. Good, Bad, or just plain Ugly, it's my fault. fauxcon - fake console connection 
+
+Perusing the sample 'everything' config file found at: /usr/share/doc/wpasupplicant/examples/wpa_supplicant.conf.gz It looks like in a network block would be useful: 
+
+should unblank the screen from a login, BUT... usually you need to send the appropriate codes to /dev/tty1, not the /dev/pty/X you're using as an ssh user... thus:

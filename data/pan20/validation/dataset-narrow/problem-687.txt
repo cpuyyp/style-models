@@ -1,0 +1,87 @@
+But as-is, the never finish, because the input channel is never closed. So we need to modify the computation functions to close the channel after the for loop. 
+
+I find your variable naming quite good (but it took me time to really understand the goal or your code). Code simplification I consider that should only contain the results of the user (or better: its assessments): 
+
+edit regarding the performance I don't see simple changes which could drastically improve the speed. There are some minor changes (from looking at the source of ): 
+
+Looking at the random number generation, a lot of duplicated code can be easily removed. Starting at the 4th line: . The only function that is used is , so you could do and then use everywhere, instead of . Another repetition that can be avoided concern the arguments of : you can unpack the tuple using the . 
+
+A buffered channel is just a way to allow goroutines to be more independent when they are producing/consuming a channel. 
+
+vnp and Peter Taylors suggestions are very good. One could go a step further and make nice methods on the type: , and for instance: 
+
+Here are some suggestions to improve the fluidity of your app: Use instead of positioning According to this blog post: $URL$ translate is much more efficient regarding the CPU usage Use $URL$ This function allows you to do the computation only if required (see this SO answer on how to combine it with : $URL$ 
+
+Using the interface, you could make a function embedded in the struct to compute a default delay instead of hard-coded . For instance: 
+
+As Pimgd stated, all your request are synchronous (and wait that the previous one terminates before executing further). To make the calls asynchronous I see two possibilities: 
+
+This code code should work (I can't test it), but the way the "address" is managed could be more elegant (for example to manage in case of multiple listeners). Here is a proposition, where each listener is in charge of forwarding the frames to a particular address, via a given connection. The main loop is in charge of maintaining a slice of all those listeners and forward every frame to all of them (without blocking). With this code, we see clearly, that only 2 connections are used (monitor and session), which might not be the best idea (I don't know how they behave when concurrent goroutines write data at the same time). To fix this, you should simply adapt the main loop. 
+
+It would be possible to write as call to a functor writing again, but I don't think it would actually be shorter. I don't think is a good name. There are two many things that it could mean. I'd suggest something with as it calls the function for all 2-combinations. 
+
+I think it's OK. You could try providing both const and non-const references version if you need non-const references for dependency injection. Boost.PP would help with the boilerplate. Amputated boost is usually selected parts imported using the tool that comes with Boost. Usually that's done simply to limit the size of the working directory. So it should be possible to import more of it, test that it works with all compilers you have to support and go with it. 
+
+Plus all the problems already mentioned by chrisW are valid too and I am almost certain I still didn't find everything. 
+
+, and should have return type The reason here is that most of the time the caller does not need the erased object and if you return it, the copy has to be made and it can be pretty expensive. Filling a vector (if done properly, see 3. below) amortizes to just 2 copies per inserted element, so vector is a good choice even for quite complex objects and you don't want useless extra copies. is pointless, since you are obliged to construct the objects anyway. in is violation of the complexity contract. is required amortized , which means the reallocation has to be in geometric sequence. Usual values are or , and minimal capacity of 16 or so. Just like the already mentioned by ChrisW, calling on array containing non-POD objects (and vector is for containing non-POD objects) is an UndefinedBehaviour™. The compiler may choose to do anything it pleases from simply crashing all the way over formatting your hard drive to making daemons fly out of your nose. And modern compilers can be real bitches when punishing UndefinedBehaviour™. Effect of some optimizations applied to incorrect code is next to impossible to understand. You have to copy the elements one by one with or a loop to properly invoke constructors and you have to call destructors afterwards. Assigning to unconstructed memory in and is also UndefinedBehaviour™. Non-POD object has to be constructed by constructor and destructed by destructor. Use the placement new: 
+
+As Austin Hastings mentioned, all can be cast to . What I would recommend you is to create a method on this type to check if the value is valid. You may adapt the behavior of not to panic (return nil / return a pointer and boolean / return a pointer and an error...) 
+
+So the kwargs does not seem to allow you to set a new . Hence it seems that the only way to set a new is to remove and recreate the attribute. From this case, it seems hard to further simplify your code. 
+
+In your main, you "iterate over generators to create values for each key". You could actually create a "base" generator for this! It would be an array generator (10 elements, 0 nullPercentage) of objects (being the objects that you generate). Using @ferada's answer leads also to much less code (I also renamed to ). It uses embedding (one could further optimize, by using the as base - instead of ). There was a typo on the function : it should be and not (because returns between 0 and 99 included). Here is what I come up with: 
+
+Using the tips of the justforfunc #16 video, you could make your tests using a table ( = testing table) and then iterate on it ( = test case). Your test could then look like this: 
+
+I didn't find much to say about your coding style. Maybe is not a perfect name: would be easier to read in my opinion (putting the at the end is more consistent with you other variable names) 
+
+Readability Instead of , I would recommend you to use a context.WithTimeout (here is a nice video introduction: $URL$ Multicore You currently have one loop trying to find the best scores, without any goroutines (which is one of the main features of go)! If you have a CPU with multiple cores, you may benefit from multiple workers: 
+
+I think having a at the very end is also nice to quickly check the type of result returned by the function. 
+
+Since you know in advance, you can hard-code it's square root. You can then perform a binary search between 1 and this pre-computed maximum. It will remove the questionable "exponential search". You will then also achieve a \$\mathcal{O}(\log \sqrt{Long.MAX\_VALUE})\$ complexity, which is actually \$\mathcal{O}(1)\$ as observed by @Simon Forsberg. This means that the execution duration can be bounded by a constant time (this does not necessary means that this algorithm is the fastest). 
+
+We can't increment the because decrementing any other number would result in a number that is less than the original. We can increment the , because we can then decrement the . From this, we learn that the right-most digit should not be incremented. 
+
+I'm going to expound on this answer later (when I'm on my Python 3 machine). To begin with, there's a lot of repeated logic, especially in the , , ... methods. You can avoid this with a class method to generate these instance methods. 
+
+With this approach, the same result is achieved, but with much less code. Combining this all into a single function yields: 
+
+I don't see why you want/need three functions to download the different quality videos. There is a bunch of repeated logic both in the functions and in the main loop. Then, I would move all of the specific code into the section because that's the purpose of that section. 
+
+Notice that this isn't contained within a because there isn't really a need for one; a method does the job better. Also, I made some (bad) changes to make the algorithm less readable. This new regular expression counts the number of 's that occur successively starting from the second-to-last digit backwards and replaces the old loop, the at the end absorbs the original . Now, if we really want to make things unreadable... 
+
+One immediate, fairly significant improvement that I see would be to calculate and outside of the loop in . This provided a 30%-50% reduction in time in my tests depending on the computer and Python version. 
+
+Here, the "inc" and "dec" operations were abstracted into a dictionary of . This is slightly more complicated than it needs to be (one could simply invert in the "dec" case and add the result to the register), but allows for other operations to be easily added. The end usage would look like: 
+
+The biggest improvement you could make is to generalize the two-gram, three-gram, and four-gram functions, into a single n-gram function. This can be done with using lists instead of manually assigning , , and so on. 
+
+To be honest, I didn't read through your code much because I don't have the attention span and it seems the biggest issue is the approach rather than the solution. Nothing about your code looks terrible or un-Pythonic, so I'm going to go through a different approach instead. The first thing that I noticed about the next number is that all but two of the digits of the original number remain unchanged. When going from to , the was incremented to a and the was decremented to a . When going from to , the was incremented to a and the first was decremented to an . This pattern suggests that we may be able to increment one digit, decrement another, and arrive at a solution. The first challenge is to find the digit to increment. Increment 
+
+C++ does not have any type called . The size type should always be method is another violation of the complexity contract. Vector is supposed to be O(1). It should simply swap the pointers. That's far from what would do in C++03 (in C++11 it could do the right thing if you defined the move constructors, but you didn't). Furthermore should be overloaded for vector to call the method. Yes, you are allowed and sometimes required to overload functions/specialize classes in for types you define and this is one such case. You correctly use in , but you fail to do the same in . The special condition for in is superfluous. It is not allowed to pass non-deferrable iterator (end or invalid) to . Your returns useless element (but see 1. anyway). You return the value of the final pop_back, which returns the last element. If you deleted any other element than the last, it's not the one that was just deleted. Completely useless. You shouldn't be returning anything anyway. Const correctness failures. A method should only ever return pointers and references to . Standard collections have and and all methods that return iterators (, , etc.) have non-const overload returning and const overload returning . If you use plain pointers (which is legal, the iterator concept is designed so that pointers are iterators), you should define to (const applies to the part before it, so this is the correct syntax; even in C). and return dangling pointers (provided you fix the memory leak in destructor). Another instance of UndefinedBehaviour™. The returns a new instance. By value, which is inefficient, but legal. However the return value is temporary and it will only have to have / called on it and than it will be destroyed at the next semicolon. When you fix the memory leak and actually free the memory in destructor, the returned pointers will point to unallocated memory. and don't return valid iterators to invocant. The reverse iterators have to point to the container, not to a copy. Since you can't use plain pointers for reverse operators, it's rather a lot of work to define them. Boost has a generic implementation You are missing most of the required typedefs. There should be , , , , , , , , (should be ) and (should be ). And , which is next point. You should be using allocator instead of and . Allocator abstracts the memory allocation, wraps the funny placement new and explicit destructor call syntaxes and makes the allocation and construction separate actions as appropriate for likes of vector. The default allocator, uses global operators and for allocation, but users may want to provide special allocators. Also the allocator will properly throw as will and (except on non-conforming platforms like Microsoft Windows) if you use them directly, but when using , you have to check for NULL and throw on allocation failure yourself. 
+
+To address the recursion depth error, you could either change , or you could rewrite your initial solution to use as an argument to avoid the global variable. 
+
+I echo both of the previous reviewer's sentiments, but I'd also like to add that regex is overkill for the parsing here - will work just fine. Implementing this and some of the other suggestions might produce code like: 
+
+In addition to the recommendations suggested by @Austin, you could inherit from to create an object to register and recall your functions. For example: 
+
+This allows for a arbitrary number of objects to be created. However, this runs into some problems when we want to use the context manager since it is not natural to have an arbitrary number of required contexts. This can be achieved using a recursive function. Here, we will supply a sequence of callables that are to be opened with the statement, and a callback function and arguments to be executed once all of the contexts are opened. 
+
+We can't increment any of the 's since isn't a digit. Thus, we must increment the . From this, we learn that 's can't be incremented. 
+
+This does not seem to be the intention of the code. Assuming you want to check all lines in either and you may want to use the following code: 
+
+Finally, we want to create a decorator which will do the following things: (a) create all of the objects, (b) generate and enter the required contexts, and (c) execute the supplied function. 
+
+Per Graipher's answer, I extended the chance of victory to accept an arbitrary number of regions and number of wins required. 
+
+Decrement The next challenge is to find the digit to decrement. This turns out to be simple: decrement the first non-zero number on the right... 
+
+Iterating backwards was smart, but, yes, there is a much simpler way to do this using a list comprehension – this is how one typically filters a list in Python. 
+
+Here's a version without , I'm not super happy about either. Neither version seems particularly elegant. 
+
+First, note that this is all untested, but the ideas should hold up. I tried to abstract a lot of the logic by distilling the object creation to a dictionary containing the data, but it turned into a bit of a mess. To start with, consider the following structure for your object data:

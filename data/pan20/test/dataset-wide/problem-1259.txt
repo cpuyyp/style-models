@@ -1,0 +1,47 @@
+Anyway, it makes sense to think about delegating it to IoC container... I don't think that it is a responsibility of this class to verify if connection string is the same. This interface delivers different perception. 
+
+Now let's implement protected thread safe façade, which unifies order of locking (like A -> B -> C) to get rid of dead locks: 
+
+We are probably supposed to charge per line… Here is what I use to mitigate the problem. The immutable type is as easy as it could be: 
+
+has no effect on existing delegates. It actually constructs a new one. Delegates are immutable and cannot be changed after construction. You can remove this line. I would not implement IDisposable or any cleanup code here at all. Just release reference on event dispatcher (it makes sense to do it anyway after calling . 
+
+What do you think about the following syntax for some very simple and intensively reusable validations? Does this: 
+
+Original approach works too slow and syntactically inefficient – it is also quicker to recalculate everything than track dependencies. Now I defined a template to create class with overrides, so if attribute named marks property or class like here: 
+
+Collection mapping is even more verbose, as we need to instantiate/find necessary DTO for collection items and perform the same logic as above on their individual properties. library allows to define this mapping declaratively and execute necessary requests to external data sources concurrently. Given the following example JSON loaded into the JObject : 
+
+OK, now it is SOLID :) Let's do not mix infrastructure and application code. Unfortunatly a lot of stuff is missing in .NET, so infrastructure first. AsyncStream: 
+
+It looks good but there are a lot stuff like this in the class. One could argue, but I would rewrite it in a dedicated file as: 
+
+DDD How often have you heard from your domain expert manually managing room booking in his/her Excel all those terms like , , ? I bet that never. This stuff does not belong to the domain, does not solve any business problems, and probably should not exist. Having names like that clearly indicates the problem - those words are not in the Ubiquitous Language. Domain logic is way too corrupted with technicalities. Sure, no database related code should be allowed in domain. P.S. It depends on the task, but I could probably load all the data in memory and run here easily. Design What is the Software Design? All the things helping you to keep your project maintainable and that you cannot change latter easily. What helps keep project maintainable? Placing dependencies in a way where volatile components depend on a minimum amount of stable abstractions using Dependency Inversion where necessary. There are too many concrete tech elements in your code to follow “minimum amount of stable abstractions” criteria to keep things maintainable, so design misses its goal here. P.S. It is not a responsibility of the Controller to decide on room/combined room booking priorities – it belongs to the business logic – to the place where you actually implement the logic – repository in your case, as you do not need DDD here at all. I would have the following models in the Core project without dependencies on anything else: 
+
+Does this immutable configuration work? Do I have a right API now? Library code – abstraction to be consumed (with a lot of helpers): 
+
+How do you list your referenced solution assemblies for IoC registration? I was really tired of typing something strange as . What do you think about the following approach? Use case: 
+
+I would not return IStopwatch from Start/Stop/etc. This IStopwatch is not an immutable Value Object, like String for example: it would be easier to set expectations by having just this: 
+
+It is really dangerous to fork background threads in ASP.NET. Task Scheduler immediately gets crazy, which degrades performance significantly. There is a way though: . 
+
+I would go with mutable state only when it is required for performance optimization. Immutability almost always makes code a way cleaner and maintainable. We should not depend on implementation – let’s prefer abstraction where possible. I mean we should work with , not to define a service. 
+
+P.S. Generally speaking, it makes sense to do not hold an intermediate state of you calculations (like trimmed string values) – just an original data + define functions/properties to process them. It makes your design more flexible. P.P.S. It might be useful to have class: 
+
+Nothing prevents method from being called multiple times. method code is broken allows task cancellation before starting. is OK. violates SRP. It does job management, error handling, and document OCR. Also, running with option could be a way simpler – they worked out well for me in such kind of situation under a heavy load. Scheduler looks smart enough and basically has the same blocking queue inside. 
+
+What do you use for refactoring away from exceptions while programming functional in C#? I defined this class to hold function outcome: 
+
+mean for you a none-safe cast to none-empty required text? How does it play with C# syntax/semantics? So these two should throw: 
+
+My IoC container was setup to construct and invoke a transient instances of all implementations of on a T event raising. 
+
+I would recommend to create composite to broadcast your changes between multiple implementations if needed. 
+
+Please note that the solution is type-safe (no reflection), thread-safe (immutable) and testable (DynamicActivator is an abstraction). The only field is an immutable empty composite activator singleton, which should be OK. 
+
+You could empower . Here is a good article. Approach described will allow your model to do not mix concerns - they use memento design pattern. UPDATE: I do not feel right by copy-pasting that article, so I would still recommend to have a look at it. Quick test though might look like the following: 1) Download and reference project in your WPF application. 2) Create model: 
+
+definitely looks having a lot of responsibilities. Have you ever consider implementing here? It is an inverted IEnumerable, "push" instead of "pull", so it works really well for event sources and they filtering/handling in a time sensitive manner. Reactive Extensions (Rx) for .NET provides you with some kind of LINQ for observable sources. There is a free downloadable book Intoduction to Rx - you will just need a part of it to grasp the idea.

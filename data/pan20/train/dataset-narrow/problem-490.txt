@@ -1,0 +1,81 @@
+You need to drop and re-create the database. So you need to use some extra / different options when creating the dump file: 
+
+Now you can get all the values you usually get from with a SELECT: Credits: I borrowed almost all of this from Federico Razzoli's materialize.sql. 
+
+... then you could use the same statement as before. There would be no column to worry about, the would be unique (since it's the primary key) and the sequence could be seen from the new column (which might be useful on its own). You can alter your current table to get the new one with a statement similar to this: 
+
+Yes, this is possible, and probably makes sense. See e.g. Replicating from MySQL Master to MariaDB Slave. So with MySQL 5.5 as the master, you can use MariaDB 5.5 or later as the slave. 
+
+(Note however that all the s for existing records will then be set to the current timestamp when you run the .) 
+
+I think the answer is that "it depends". In a lot of use cases, using an auto increment PK is good practice. In InnoDB, the default storage engine in MySQL and MariaDB, the performance penalty of using the auto increment feature depends on the auto increment lock mode used. Two of the modes come at the cost of a table-level lock that is released once the statement has completed, which means only one statement can run at any one time. The third option (interleaved lock mode) doesn't lock the tables. Oracle (12c) actually has auto incrementing keys (identity columns). In previous versions you had to use sequences, which can serve the same purpose, and more. They are a bit more cumbersome to use, though, than auto incrementing keys. The suggestion that applications should be generating these ID numbers on their own without the aid of the RDBMS' sequence or auto increment features really isn't realistic in a lot of use cases. 
+
+Galera replication is not synchronous, only what they call 'virtually synchronous'. It's synchronous only up to the point where the write set is to be applied. 
+
+which works fine. However, in mysql-workbench, the emoji is not converted as you paste it in, and the query result is: 
+
+This is probably not a good idea as there is nothing to prevent over-zealous employees from creating so many records that they end up in someone else's range. (Though I suppose you could build a constraint into your application to avoid such collisions.) 
+
+I didn't know a good answer to this myself, but thought it was a good question and that it would be a good feature to have. So I asked for ideas in Codership's Google group (here). You're right that there aren't any obvious status variables for this, but two methods were suggested: 
+
+Yes, this appears to be the case - you don't need any particular in order to modify your own session variables: 
+
+Just to be sure, you can explicitly specify the port in the command by adding . (This was the solution to another question where error code 2003 was the issue.) To check that slave_user has the right grants, run this on the master: 
+
+(Edited to address comments by @RickJames, plus a bit more on NDB Cluster and general improvements.) There are several issues with your plan: 
+
+In principle, yes. Though it depends on the s for your particular database user. If you can't change the values, then try another database user or create a new user with the correct s. You should be able to click on a table to list its records (it's the right-most icon when you hover over the table in my MySQL Workbench version), then double-click on the value you want to change, change the value, then hit the 'enter' key on your keyboard, then click the 'Apply' button below the table listing. 
+
+I see in the comments to the MariaDB tutorial page you linked to that you have set plugin_dir in you my.ini file. However, I think this will only work if it's in a section of my.ini that the mysql client can/will read, such as the section (not ). Assuming us1 was created as and everything else is correctly configured: Have you tried connecting just with the mysql client? 
+
+Your application will then have update the every time an article is viewed. If the record for that particular week doesn't exist, the application will have to create it. If you want to delete old data, which may not be necessary: Instead of a cron job, you could use a MariaDB event. Set it up to only delete records older than some limit, e.g. 365 days. 
+
+I think the answer to both of your question could be MaxScale. MariaDB MaxScale is a database proxy which supports connection pooling, load balancing, automatic failover, query routing, read-write splitting and more. The query routing feature is used to achieve sharding. For a tutorial, try e.g. this one. An alternative solution could be ProxySQL, which is a competing database proxy product with some of the same features, including sharding. The advantage of ProxySQL over MaxScale is the license (GPLv3 vs BSL). 
+
+This is probably a character set problem. To verify, you'll have to find the character set of the column, or if none defined, then that of the table, or if none defined, then that of the database or or if none defined, then your MySQL default. To see the character set and collation of your columns and table, you can do e.g.: 
+
+(Note that it's bad practice to use "SELECT *" except for ad-hoc queries. So you should instead enumerate the exact columns you want to select.) 
+
+As you can see here (scroll right), it's using a socket at . EDIT: A really good way of finding the location of the socket file is: 
+
+You can use Percona Xtrabackup / innobackupex to do partial backups of MariaDB databases (as long as you haven't used compression or at-rest encryption). I've personally used this with MariaDB version 10.1. MariaDB Backup () is a fork of Percona Xtrabackup (with added support for compression and at-rest encryption), so (logically) this should therefore also support partial backups. MariaDB 10.1.23 is the version where MariaDB Backup was first introduced. Since this is an alpha release of the tool, it's not recommended for use in a production environment. See this MariaDB blog post for details. It would seem that partial backups are supported at least in later versions, as options to specify particular databases and tables to back up as well as tables and databases to exclude from backup. 
+
+This should be correct for MySQL 5.7. When upgrading to the next version, you'll have to update the setting again. Note that stored procedures run with their own s: 
+
+First of all, the relationship between tables and is the wrong way. You want many per , so therefore you should remove from the table and add to the table. This would then be a foreign key to . Similarly, the relationship between and is the wrong way - you want (potentially) many files per message. So remove chat_messages.file_id and add chat_files.chat_message_id, and make that an explicit foreign key. You should add an id column (primary key) to the table, and make be a foreign key to that. You may in the future find that you need to store more information, e.g. for the users. You can then add extra columns as the requirements become clearer (which is usually not a problem, especially with the right tools such as pt-online-schema-change), or you can anticipate these requirements now by adding more general-purpose columns that your application then has to "decode" or interpret. If you're using MySQL 5.7+ then you can even use the JSON data type and store JSON data in these columns. 
+
+I think we can safely assume the performance would be worse than using regular columns. The way to index JSON attributes is to create a virtual generated column for the particular attribute you want (company_id), then index the virtual column, and use that column to filter your query. 
+
+If you want to create a stored procedure, you have to use the syntax, see the documentation. You can't use procedural language constructs such as in normal SQL. Also, you have to use the special delimiter you've declared after the final , so the last line will be . (And after that, don't forget to set back to , or you'll struggle.) (There could be other problems as well, these are just two I spotted right away.) 
+
+There is obviously no rule, but it's probably a good idea to be consistent. It's also a question of whether these schema changes will be executed by someone perhaps less skilled in running SQL scripts, e.g. if the database and its application is a product you're distributing to others. While MariaDB supports statements like (see here) , MySQL doesn't have this. You could create a stored procedure to do this, perhaps something like this. Stored procedures are great for a number of tasks, but this sounds like more work than it's worth. I won't reject the idea completely, as it all depends on your specific use-cases. When migrating big tables you may instead want to use a tool like pt-online-schema-change in Percona Toolkit. 
+
+Presumably the problem is that your sql_mode variable now has STRICT in it, which means that inserts/updates with varchar values that are too long for the defined length of the columns now lead to errors, whereas previously the values were truncated without any errors. To go back to the old behaviour, you can edit your /etc/my.cnf file, look for the sql-mode variable, and remove the STRICT keyword from it. Then either restart mysqld or just log in and set sql_mode dynamically: 
+
+It seems the idea here is to restrict what s can be used in the table to only those in the table, while at the same time avoiding having to do a JOIN with the table to get the actual value whenever you from the item table. It's a kind of denormalization in order to optimize statements. This comes at a cost of needing more storage space since every record will have the full name, potentially as long as 255 characters. With a normalized approach you would have tables defined like this: 
+
+I can see 3 different reasons why MariaDB might reset this variable. In order of most to least likely explanation: 
+
+Galera can't do that, unfortunately, although you can configure it to handle shorter network outages. (See Galera's config tips for WAN replication.) Nodes have to be connected for Galera's global ordering to work so that it can merge writes from multiple nodes. See e.g. here Maybe what your application could do instead if a node loses network and becomes unavailable (which could be detected by the application or a DB proxy) is to automatically fail over to a different cluster node. However, that still requires network connectivity to this other node. So if your architecture needs to be tolerant against network losses between nodes, then you may have to look for a different solution. 
+
+You can obviously modify this to use the start value, step and end value of your choice. As for the second question, it's then trivial to expand the above (with inspiration from part of Ronaldo's answer): 
+
+Assuming you access the cluster through a DB proxy, then use a monitoring tool (Nagios, Zabbix, maybe PMM, maybe MONyog, ...) and log the availability of the cluster. Uptime is then the time since the last failure. the error log on each of the cluster nodes to find the timestamp of the most recent bootstrap. This coincides with the timestamp for when the status variable is equal to 1, and can be found in the error log with something like: 
+
+Computer says no. Conclusion Can MariaDB or MySQL cast as bigint? As we have seen, yes, MariaDB 10.3 can (though it's not GA yet ... but surely any day now it will be). However, it can only cast as bigint implicitly. You can't explicitly cast as bigint, just like you can't cast as varchar (but see MDEV-11283), text, float, tinyint etcetera. There are only a limited number of datatypes you can cast to. This is not well documented, but CAST appears to support only the same datatypes as listed for the CONVERT function. 
+
+For any row with in that doesn't exist in the and columns will be NULL. If it does exist, the and columns will have the values from . For any row with in that doesn't exist in , the whole row will be added to the new table . 
+
+I suppose these two methods give a different perspective of 'uptime': The first method is more from the applications' point of view, and the second method is from the cluster's point of view. They may not always give the same answer since the cluster could be "up", but not necessarily always in a state that makes it accessible. Also, there could be network issues between the application and the DB proxy, and between the DB proxy and the cluster, which would make the cluster seem "down" from the applications' point of view, but in reality it is still "up". 
+
+You're looking at the documentation for MySQL 5.7, but you're running MariaDB 10.1, and replication channels happen to be a feature that is implemented differently in MariaDB. From the MariaDB documentation on multi-source replication: 
+
+You will probably run into more conflicts than just what is listed in the question, e.g. TCP port, datadir, /etc/my.cnf, as well as maybe pid and socket. I think these configuration issues can be overcome by using different settings (MariaDB-specific sections in the .cnf files). I'm not sure whether installing MariaDB from packages alongside a standard installation of MySQL (from packages) is feasible. has an option and which allows you to set a non-standard install path for rpms marked as relocatable. Not all rpms are reloatable. However, see Installing MariaDB alongside MySQL (mariadb.com) which talks about installing MariaDB 5.5 from source code alongside an existing installation of MySQL. See also Running Multiple MySQL Instances on One Machine (mysql.com) which talks about installing multiple MySQL instances on the same server. This may or may not be useful. Perhaps the solution that would require the less effort would be to install MariaDB in a Docker container. See e.g. MariaDB and Docker use cases, Part 1: 
+
+I'm not sure there is a standard solution, but in the choice between a multiple databases and prefixed tables, I would think multiple databases would make the most sense for the following reasons: 
+
+Assuming is a primary key or unique key shared by the two tables, then you can do this to create a new table with the data you specified: 
+
+A few options: Allocate different ID ranges for each user, use composite primary keys, use UUIDs or use some of the mechanism that enables the auto_increment feature to be used in master-master replication: 
+
+I would expect a connection to show as coming from localhost if a remote user was querying a table that has the federated, federatedX, connect or spider storage engines (or possible other similar storage engines), and the table was configured to connect as the root user to the local MariaDB instance rather than a remote one. You can find the storage engine used for a particular table with:

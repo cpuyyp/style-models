@@ -1,0 +1,71 @@
+This has a major impact on the performance of your original code, but as you will see we can do better. Problematic Optimization Flattening the 2D array to 1D sounds like a good idea until you factor in the cost of post-processing. When the array is processed as 1D the border pixels change values and, in fact, exhibit border-wrap effects. We often fix problems like this by wrapping the matrix inside a false border - i.e. we add a \$1\times1\$ border all around the matrix. Unfortunately this would not work here. Instead, you can fix this by applying the filter and then going back and zeroing out border pixels each iteration. More Optimizations 
+
+As mentioned in the comments this code is not long winded at all. It is very clean in general. Too clean in fact as you will see below. 
+
+Bugs in nonContiguous If your input string contains spaces then your function produces arbitrary output regardless of whether you are correct or not. 
+
+You'll notice that if increases by , these column differences remain the same. The only thing that changes is that we obtain one additional column difference in . Hence you do not need to perform the function multiple times. Simply perform it once on the entire \$m \times n\$ matrix to yield a \$m \times (n-1)\$ matrix of column differences and take submatrices of this difference matrix. So the original code you posted: 
+
+If you need your function to be non-destructive of the original matrix, at your function end, to undo this, you could loop on: 
+
+Here is your code cleaned up for style as I've mentioned above. Also, look at some of the changes in vertical and horizontal whitespace: 
+
+A single simple in-place 2D matrix is much faster than what you have coded (20x faster in fact). Thus, it's all about performance. And, the algorithm matters. IMO, it's appropriate to talk about alternatives because yours is not in the ballpark range as to what is possible/required in performance. It doesn't meet the "most efficient" criterion. In an actual interview situation, this would probably be flagged by the interviewer. Note that, if you were [much] closer, say within 10%, this wouldn't be an issue [and I wouldn't have posted]. I'm not sure that you can meet the objective without a full refactoring of your code. Your solution puts an additional strain on the processor's cache and seems to have more complexity than would be needed. It also seems to use more memory than is required as well. And, a number of the STL primitives you are using, by their nature, appear to access the heap a lot (i.e.) they're slow. I'd say that simply clearing out cells as you traverse would be better than adding the complexity you have [or see below]. Also, for your algorithm, do you have benchmarks on and analysis of how much performance is taken up by each of the STL components you're using. That would probably be required when discussing the time/space tradeoffs. As it is, they are a bit of a black box. Is there a better alternative to for your matrix? I think it adds an extra [internal] pointer dereference [that the optimizer might be able to elide] for each cell access. And, for example, I see a better alternative to using a separate to keep track of visited nodes. When a node has been visited [used], simply OR it with 2. Eliminate your altogether. Then, you can replace: 
+
+The code runs much slower with these bug fixes. Quick Optimization The algorithm cannot be performed in-place so you are using to store the output of applying your filter to . But then you want the output to be placed back in so you perform a deep copy. However a swap of the pointers would suffice so you could use this instead: 
+
+To accomplish the dynamic range we need to have a strict ordering. Here I will always assume \$b \geq a\$ 
+
+I hope we can agree that B is the simpler approach. In this case the Jokers are simply gaps between characters chosen from the input string. The problem with integrating this logic with your approach is the order in which the recursion is performed. You know when you skip a character (currently when you are adding a ) but you need to know that another character is added after the skip for you to declare the string as non-contiguous. The method is shown below: 
+
+The principle of the dynamic range here is that if we have some palindrome \$a_1 \cdot b_1\$ already and we are trying to find another palindrome \$a_2 \cdot b_2\$ such that \$ a_2 \cdot b_2 \gt a_1 \cdot b_1\$ where \$b_2 < b_1\$ then that implies \$a_2 > a_1\$. You can add a break condition as Dennis does however you will find it doesn't have much affect on this algorithm unless the palindromes are sparse. 
+
+If is your slowdown, you're not going to be able to get a huge improvement, but you can get some by parallelizing all the calls to it. Replace your loops with this version: 
+
+You're right that all the casting is a sign that there's better way. Rather than using the value of an as the index to an array, you should use a structure that's designed to store two values in the first place. There's a couple of alternatives here. My first instinct is to use a . That most explicitly matches the concept of what you're trying to do (each has a value ), but it's not actually the best option. You're not going to be looking up the value based on the key, the order of the keys may change which could lead to hard-to-reproduce bugs, and it's less memory-efficient. Instead, I'd use a , , or (in C# 7) . They're all effectively the same thing in this case, and best convey the concept "here is a pair of related values" without implying the A->B relationship of the Dictionary. (Note that you can also use arrays instead of , like I do below). To make handle this, you would need to make it generic, so that you can pass any arbitrary type in and get that same type out. Here's what the code would look like using C# 7's ValueTuples: 
+
+Problem Background Essentially this problem is asking you to remove all palindromes of even length from the string as they are first encountered. So becomes and NOT even though both and are even-length palindromes. Naming Unfortunately, I cannot think of a succinct name for what operation this function actually does. You could go with but that is a bit much. I would just stick with and document the function with some commented examples. Method The good news is that you do have the right solution by using a stack. The bad news is that you are using some unnecessary intermediary data types for processing. Note that you do not need to put the data into an actual stack. Instead you can just use the output string as the stack. By eliminating these intermediary data types and processing steps, the code is much more readable. Here is a char array solution: 
+
+Ignoring integer wraparound the second condition suffices. The only way \$x \cdot y \cdot z = 2\$ for \$x,y,z \in \mathbb{N} \$ is if one and only one of \$\{x, y, z\}\$ is equal to \$2\$ and the rest are equal to \$1\$. If \$\mid\> a-b \mid = 1\$ and \$\mid\> b-c \mid = 1\$ then either \$c = a\$ or \$c = a\pm 2\$. If \$c = a \pm 2\$ then \$b\$ must be between \$a\$ and \$c\$ since it is equidistant from them both (this is 1D). 
+
+Everyone has had good ideas, but since you're asking about OOP, I'd suggest refactoring it altogether. 
+
+Both methods can be made , because they don't depend on anything specific to whatever class they're in. Rather than redefining the odds each time that is called, you can create a and populate it once. This also lets you do that right next to where your enum is defined, so that when you add a new enum value, the odds are right there. If you have other properties associated with an , you may want to consider a class to consolidate them all, rather than let each place they're used keep track. 
+
+Everything in your code should either require the interface or the interface. If the former, it can accept any of the four classes. If the latter, it requires the plus four bit. Since a plus four can always be downgraded to a pure zipcode, this set of inheritance will let you pass a +4 wherever you are looking for a . Also, by always requiring the interface, rather than the concrete type, you can trivially implement the null object pattern you asked about. 
+
+By doing it this way, you separate the formula (which is basically just Ingredient/Percentage pairs) from each application of it. You can use the same object to calculate the weights for 10000g of dough or 50000g of dough - simply call with a different value. Notice how many fewer properties you need on each class, and the question of "late setting" of some of them is entirely irrelevant. Effectively, weight is not an intrinsic property of an ingredient, because it varies based on the total weight, so shouldn't be a property of . 
+
+Anyway, here's a full program that does comparison benchmarking. Ignore most of it, and compare the and functions against your function. They are largely agnostic. The primary intent here is to back up the 20x performance benchmark above, rather than just stating that without proof. It will also allow, if you so choose, to provide a baseline reference for any recode/tweaks you may wish to do 
+
+Edit: This was my original opening section, which has been getting dinged. I'm leaving it in, for reference, but after rereading it, although it might have been tightened a bit, it does talk about the performance issues Caveat: This isn't a critique of your code style [as Zeta has already done that], but rather an alternate algorithm that can be 20x faster. A single simple 2D matrix can be much faster than using the primitives. As you were doing a interview question, demonstrating proficiency might be paramount and this might be a moot point. But, when the performance difference is an order of magnitude faster, that may make the difference. I've had a few related interviews and speed sometimes matters more. Assessing such a tradeoff may, in fact, be part of the requested/desired solution. To eliminate boundary checks, I've created an oversize matrix that has a border of zeroes on all sides. The actual data matrix is inlaid from . This is a technique used in some video/image processing. By using pointers instead of index variables, this also eliminates a number of multiplies within the loop. 
+
+Another possibility would be to store the words in a dictionary of nested dictionaries. The key would be a letter, and the value is another dictionary of every letter that can follow that. Repeat until you've reached the maximum depth. For the sample case, this would look like 
+
+As an alternative, since you already have the letters and their counts, sort the string then make the regex . 
+
+Heslacher is correct in that you should split this into two separate methods. That said, sometimes doing that isn't an option, so I want to point out an alternative to passing the "magic values" of and into your function. When you have a function argument that only takes a very limited number of values, you're usually better off replacing it with an . That enforces the limitation when you're writing code, and helps avoid typos and other subtle gotchas. 
+
+Everything that's the same gets put into . Everything which could vary is defined as an method or property, and then the subclasses implement just those things which make it different. 
+
+You'll still need to code each calculation function, but you don't need to manually attach each calculation to a specific crop or trait. You can just have a database table which tells the code "Crop + Trait = Enum value" 
+
+You are recomputing way too much in your code. Your general solution relies on iterating through powers starting at the first perfect square greater than \$\mathrm{n}\$. 
+
+Performance Scalability is always what I look for in problems like this. Yes a may not be that big these days but why limit ourselves with inferior algorithms that do not scale well? Consider you have the number $$n = 123456789012345678901234567890...$$ Let's just say this number has \$m\$ digits. You will end up performing \$2m\$ multiplications and \$m-1\$ additions. However, of those multiplications, you can only have \$10\$ unique values since there are only \$10\$ digits. You should therefore pre-compute the powers so that you do not have to recompute them over and over. 
+
+The next step is to realize that if is our \$m \times (n-1)\$ difference matrix, yields a \$1 \times (n-1)\$ matrix of column means. If we truncate columns of this matrix as we do when we take submatrix it does not affect the means of the columns that are still there. So instead of performing over and over on submatrices, we can again pull it out the loop, perform once on the entire matrix , and take submatrices of this mean matrix. So now the code could look like this: 
+
+Now you just want to be able to detect if there is a gap in each substring. This can be done quite simply if you keep track of whether you ever add a gap. Use a boolean instead of manipulating the string. 
+
+You could use instead of the in the second case, but I seem to remember reading that it's faster to do as an array than with LINQ. 
+
+You don't provide any example of how would differ from , so I can't be more specific, but here's the gist of what you should do: 
+
+I realize this isn't necessarily faster, but it will be much easier to maintain, and at least one example ought to be posted using LINQ. So here's that example, using LINQ and the Combinatorics library to do it in a single statement, and in a more object-oriented manner*: 
+
+There are other improvements that can be made here, too, depending on how much you simplified for this question, and how far you want to go. For a few examples: 
+
+The first method is an all-purpose "Add"-type method which will either add it or update it depending on whether or not it exists. The second is specifically for dictionaries where the value is a . It'll let you add an element to the , creating the key if neccesary. 
+
+Just to build on what @svick said, this is definitely not a good way to handle things. If you want to catch all exceptions, simply . If you don't want to catch everything, then only catch the specific types you want. There's also the block which you can use to do any cleanup which is necessary, regardless of whether or not you've handled the exception.

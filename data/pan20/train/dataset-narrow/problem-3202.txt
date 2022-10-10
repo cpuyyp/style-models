@@ -1,0 +1,49 @@
+piscope is a digital waveform viewer for the Raspberry Pi. It shows the state of each GPIO on the expansion header in "real-time". 
+
+the first serial USB dongle normally gets the name /dev/ttyUSB0, the next /dev/ttyUSB1 etc, The GPIO based UART (pins 8/10, GPIO 14/15, TXD/RXD) on the Pi2 is normally /dev/ttyAMA0. If you want you can use different internal hardware in which case it will be /dev/ttyS0. It's safest to use the alias /dev/serial0 which will always be the UART on up to date Raspbian systems. People normally use the fastest reliable speed supported by both ends of the serial link. 
+
+You will not get an official answer. The party line has always been that you shouldn't draw more than 16 mA from an individual GPIO or more than 50 mA from the GPIO as a whole. The maximum output of the 3V3 rail is a separate issue. It is more than 50 mA on recent Pis (I have a feeling it may be 500 mA sustained but you would need to check the specs of the converter chip being used on the Pis you are using). 
+
+For the pipe interface each command should be terminated in a new line character ("\n") and you may need to flush output to force the command through the system. Mind you I'd expect you have to do exactly the same with servoblaster. 
+
+The LEDs you show are intended to form part of an addressable LED strip. You power via 5V and ground and then send a serial signal to Din. Normally the LEDs are connected in a chain with a LED's Dout (data out) connected to the next LED's Din (data in). As they don't appear to have a clock line (just a data line) they are likely to be hard to drive from the Pi. You need to identify the LED type, only then will you know how they can be programmed. 
+
+As Ghanima points out there are many possible approaches. Here is one using MQTT and the Python mosquitto module. 
+
+software - available on all GPIO but subject to jitter and has limited frequencies (and possibly limited duty cycles, I do not remember). hardware - available on GPIO 18 (pin 12) and possibly on GPIO 12/13/19 (I have not checked the code/documentation). 
+
+The link you give is to the soil sensor which is not an Arduino. Did you mean to ask whether you could use the soil sensor with the Pi? Yes you can but to get analogue results you'd need to add an ADC (I2C or SPI based ADCs are commonly available and will work with the Pi.) If you did mean to link to an Arduino then yes you can use an Arduino with the Pi. If the Arduino is 5V based you'd have to ensure that any Pi inputs from the Arduino were level shifted. If the Arduino is 3V3 based there is no need. An Arduino has in-built analogue ports so there is no need to use an ADC with an Arduino (unless you need higher accuracy than the typically 10-bit Arduino precision. 
+
+The invocation appears to be a "clever" way (which exponents call Pythonic) of converting a list to the string needed by unpack. 
+
+You can use any range which is convenient for your application, perhaps 0-100 if percents make sense, 0-360 if it is an angle. However, whatever range (0-X) you use, behind the scenes it will automatically be scaled to (0-steps). 
+
+The RPi.GPIO Python module is bundled with Raspbian. Currently RPi.GPIO has to be run with root priviliges because it accesses /dev/mem. You need root priviliges to access /dev/mem. So you have to run RPi.GPIO with sudo or similar. Shortly RPi.GPIO may be changed to use /dev/gpiomem rather than /dev/mem. If that happens members of group gpio should be able to run RPi.GPIO without root priviliges. 
+
+The complaint is with You initialise output which you then append to repeatedly. So it grows and grows in size until the SPI driver complains it is too big when it gets to 4096 bytes. I'm a bit surprised the NRF24 library didn't complain as the maximum NRF24 payload is 32 bytes. 
+
+You can buy a couple of MCP23017 port expanders and connect them to the Pi's I2C bus (GPIO 2/3, pins 3/5). Each MCP23017 has 16 GPIO so that gives you 32 outputs to which you can connect LEDs. You can connect up to 8 MCP23017 to the I2C bus. 
+
+With the recent Raspbian releases from raspberryi.org the pi user may be added as a member of the gpio, i2c, and spi groups, to grant access to those peripherals. You don't mention the operating system you are using. Try the following then logout and log back in for it to take effect. 
+
+A make which I do on a B+ takes 3 minutes. The identical make takes one minute on a Pi 2. If your program uses threads you won't have to do anything special to use the extra cores. The main program or any of its threads which want to run will be given any available core. I don't know if there are compilation flags which will make a difference to the build or execution of a program. 
+
+Using a char type to hold bytes is fairly common in C. char is one of the basic C types and holds one byte. Here is some C code to read channel 0 of the MCP3008. The example should make clear how the functions are used. 
+
+Windows only knows about Window's partitions. Try putting the SD card in your machine and see if you can find the file. If you can't the simplest thing to do is probably to boot your PC using a live Linux CD. That will let you access all partitions on the SD card. 
+
+My pigpio Python module will run on a Windows box and allows access to the GPIO of networked Pis. The pigpio daemon needs to be running on each Pi whose GPIO you want to access. The following Python script will run on Windows and print a value when a GPIO changes level. You need to specify the Pi's address in one of two ways. 
+
+The documentation should always be looked at first. Add an entry such as the following to your crontab (). 
+
+Servos use quite a lot of power when acting against a force. You may be able to power one of the sort of servo you picture through the microUSB. The Pi may crash if it draws too much power. old video 
+
+This is not PWM, the pulse width is irrelevant. The protocol seems to require 16 bits repeatedly, 11 bits of throttle, 1 bit telemetry, and 4 bit CRC. No framing is mentioned in the linked article so presumably the bits must be accurately timed at 150kbps, 300kbps, or 600kbps. Depending on how accurate the timing needs to be you may be able to do it with pigpio waves. The linked article is too vague to allow for an implementation. You need to find out the CRC definition, the value of the telemetry bit, and the framing method. 
+
+It should be straightforward to generate a pigpio waveform by hand. To do it programmatically will require a bit more ingenuity. Your example 
+
+The IR sensors I have come across are active low, i.e. they are normally high but will pulse low and high as they receive an IR signal. This together with the fact you only get transitions between low and high when a signal is being received explains what you are seeing. 
+
+Recent Pis have two hardware PWM channels. In addition hardware timed PWM pulses may be independently generated on all the GPIO connected to the 40 pin expansion header. In practice this means there are two highly accurate PWM channels and all the other GPIOs may have Arduino style PWM (800 Hz, 0 off - 255 fully on). E.g. servoblaster and my pigpio, etc. 
+
+Both sets of wiring look okay as far as I can tell with one minor proviso. It is safer to use a voltage divider (pair of resistors) on the HC-SR04 echo line to cut the voltage from 5V to 3V3. A single resistor will give some protection if >5k or so, but a proper divide is better. I can't remember how much 5V power the 5V on-board regulator of the common L298N motor driver boards can supply. It'll probably be enough for a small 9g servo.

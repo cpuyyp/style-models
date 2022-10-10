@@ -1,0 +1,57 @@
+Repetition In the overload of that takes a vector, you have the same block twice. You can refactor that: 
+
+It's shorter and more readable. Combine the last two checks I would write a helper function that returns the first element of a single-element list: 
+
+That is not a . UpperCase names for variables are confusing to read and tend to look like class names, so stuff like: 
+
+And then, with a default template parameter, our can just be a simple pack expansion. No need for separate cases for increasing/decreasing sequences, since that would be handled by simply having a negative for signed integral types: 
+
+That is, the outer loop never matters. for sure the first time through and then we never check it again, so we can simply drop it. Iteration There's no reason to write if you're just looping over it. That unnecessarily has to bring the entire enumeration into memory to construct the full list. You only need one element at a time - so let the iterable give you one element at a time. We can also make this much more readable by naming things better: 
+
+Bits Now that you posted the code, lots to say here. First, there is a standard C++ container to use for storing bits: . Use it: 
+
+Overflow You have this enormous comment block and logic in describing overflow cases for indices. You are really not going to have a heap large enough to have potential for overflow. I wouldn't worry about it. It just makes your logic more complicated than it needs to be. Drop it. Push it. Push it real good If you have , you may as well add , and then while we're at it, also add . You could have them all forward to a common implementation: 
+
+Firstly, is a terrible variable name. It looks like . Avoid it at all costs. Secondly, this function is less useful than it could be simply because it requires a list of numbers. It'd be better if the function took a single number, then you could call it on a list separately if you want: 
+
+Prime Finder If you do your loop correctly, you don't actually need . What does that function do? It looks over all the numbers smaller than ... but we're already doing that in ! You're just doubling work for no reason. The whole body should just be something like: 
+
+† I'm not convinced that you can necessarily be sure that the goes first in the inputs. It's not stipulated in the problem and this approach does require that to be true. 
+
+Your program doesn't actually do anything, since has an empty body, but there are two major things worth pointing out here. Exceptions are thrown In C++, the way you use exceptions is to them. You have an out of range access? 
+
+whereas if that call were surrounded by a lot of other logic, it would be much harder to easily make out. Lambdas got added to the language basically to make stuff like this easier to write and easier to read. You should use them because they succeed in that goal. 
+
+And does the largest power of two less than mean in terms of bits? It's just dropping all of the bits except for the left-most one. Since we can get the bit length of a number directly, we can just do that: 
+
+Looping You want to perform an action 10 times. The loop counter never matters for your code, you just need to ask 10 questions. The way you wrote the code, you have: 
+
+Next, we can do better. All we want to do is write the int into the byte buffer in big-endian order. That's effectively an assignment. If you already are on a big-endian machine, that's as easy as: 
+
+Roughly 10x each time. Yay predictions. So what can we do to speed this up? When our times are this bad, it's either because we have a really stupid bug or we're using a bad algorithm. There isn't anything I see that will save this particular algorithm. At best, we can improve by changing the iteration to avoid multiples of 3 and 5: 
+
+Reading and writing off the end! When points to the last element (one before ), you read one-past-the-end, and then potentially write to it. This is undefined behavior. You need to make sure that you stop before then. One way to ensure this is to iterate from to , and compare the element with the one before it. Logic The typical way to write bubble sort is to have a loop that goes the full list, and set a flag if you swapped anything, and loop until you didn't. This will make it easier to understand what's going on - rather than having your loop next step set in two separate places, which is error prone. Unnecessary variables You don't need or . Simply rely on : 
+
+For the former, we have and the latter two I will leave as an exercise. Once we have these things though, we directly translate the generator comprehension into actual template code thanks to the power of unpacking variadic templates: 
+
+( is necessary because yields but I want it to yield . is necessary because if I use , would yield but I want it to yield ). And now the main event: 
+
+Types and Variables and Functions, oh my! Let's start with this. There's a lot of choices you made in your solution that makes it difficult to code and more difficult to read. Your grid representation is: 
+
+That's... it. I added a second template argument in case your users want a different clock (e.g. ). I intentionally left non- so as to make the class copyable. If you don't need this to be copyable, then I would write it as: 
+
+isn't a good name for that variable. Perhaps ? Consider something like as the return type to more clearly indicate failure. Don't write expressions comparing to booleans: 
+
+This also reduces the code duplication. You're currently recursing via in four different places. I'm recursing in just one spot - effectively for lists I'm calling . map I think in a previous review you didn't want to use , which we can easily implement like: 
+
+where each would define whatever valid operations via function pointers. We could have policies like or or . Fun project. This is sort of how does it. 
+
+What value do any of the comments there add? None. You have a comment to "return the node" next to the line The code itself is already written in a very readable way. I have no issue with the code for . If a reader can't understand what the function is doing, then it's because they don't know C++ - the comments aren't going to help anybody. Minor comments follow 
+
+You may also want to add SFINAE to make sure that this constructor is only viable if is constructible from . Note that we have to initialize the same way everywhere, so we'll need to change the other constructor too: 
+
+Single Responsibility Principle should do one thing: get the player's choice. It does three things: gets the player's choice, picks a choice for the computer, and then plays. If we just drop the other two, we'd get down to: 
+
+Excessive Comments Comments are good, and many of course comments are quite valuable. Some are completely unnecessary though. Clearly the default constructor for should construct a new empty scene, and the destructor destroys it, and so forth. When you're writing comments, ask yourself if somebody reading your code actually needs the comment. Another example: 
+
+but that's not really any better either. Both are also inefficient. We're constructing a new list based on , and then iterating over it again to count the s or s instead of counting them as we go. We can use a generator expression for that:

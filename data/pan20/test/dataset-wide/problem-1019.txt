@@ -1,0 +1,103 @@
+Your solution is pretty much the way to go. Personally I'd consider using SSIS to coordinate the tasks as well as sending emails on failure etc. 
+
+Your self-reference could introduce a hierarchy of divisions within divisions. You need code (usually a trigger) to ensure that no divisions allow this. The original schema using encoding is broken too. You have no enforceable FK Personally, I'd consider this with a check constraint to ensure than only one of DepartmentID and DivisionID per row is populated 
+
+A restore will completely wipe the target database (if it exists, otherwise created of course). Any changes to tables, code security and data will be lost in the target database, which will be 100% identical to the source database at the time the backup happened 
+
+You need the unique index (or constraint, I prefer indexes because of includes and filters) anyway to guarantee data integrity. So the question is one of 
+
+This means that database users have no matching server logins. That is, each database sys.database_principals has no match in sys.server_principals For Windows logins this is easy. This generates your missing CREATE LOGINS 
+
+You do manipulate and restrict data: GROUP BY, ORDER BY, TOP, JOIN, lock hints, etc You just don't change the database state when you do. It boils down to whether you read "manipulate" to include "change state" 
+
+This should be better because it matches the JOIN and the WHERE although iIt does rely on a matching (Company_Id, Unit_Id) index on Unit 
+
+Note that sp_change_users_login is deprecated. Now, if your SQL Logins already exist, then the names match but the sid values are different. For this you use ALTER USER use the LOGIN option. Finally, the SQL Login passwords can be recreated if you have a backup of the "old" master database. If you restore this as, say, FixLogins then you can use this 
+
+Reverse your PK order in DEXTable to (RespondentID, ExportID). Or add a separate index on RespondentID alone. Personally, I'd probably reverse the PK order. Remove ROWLOCK hint. If it continues after index and UPSERT changes suggested here, try UPDLOCK, but only after checking for parallelism Check for parallelism in the plan: try MAXDOP 1 to restrict. Try this before UPDLOCK Use the "JFDI" UPSERT pattern. That is, the INSERT will check uniqueness anyway so just INSERT, if it fails then UPDATE. 
+
+I was checking selectivity of some columns for an index. Where is this "ignore what I give you" behaviour documented? This gives 4,851,908, 4,841,060, and 1,000,052 
+
+When you want to remove access but not DROP the database Example 1: migrate one database to a new installation 
+
+I'd usually use an OUTPUT parameter because it's the lightest way. Note: If you are inserting several rows into one table and only getting the last IDENTITY there is no guarantee that the previous rows are contiguous 
+
+Both, but mostly proactive It's important to test during development against realistic volumes and quality of data. It's unbelievably common to have a query running on a developers 100 or 1000 rows then fall flat with 10 million production rows. It allows you to make notes too about "index may help here". Or "revisit me". Or "will fix with new feature xxx in next DB version". However, a few queries won't stand the test of time. Data distribution changes or it goes exponential because the optimiser decides to use a different join type. In this case, you can only react. Saying that, for SQL Server at least, the various "missing index" and "longest query" DMV queries can indicate problem areas before the phone call Edit: to clarify... Proactive doesn't mean tune every query now. It means tune what you need to (frequently run) to a reasonable response time. Mostly ignore the weekly 3am Sunday report queries. 
+
+Without these (and others) you're ineffective outside of raw SQL Server work (eg setting up logins). As soon as you want backups, one or more of the above starts to apply... 
+
+A limitation of OPENQUERY is that you can't parametrise: so you need dynamic SQL to add WHERE clauses etc. Linked servers performance can be affected by . The setting says it all 
+
+No, there is no scheduling capability in SSMS for the SSMS reports. This is by design, if the limitations stated here apply to standard reports too (SQL Server Manageability Team Blog) However, (I haven't tried this) the reports are available to use in a full SSRS install. See another page "on the same blog as above", attached zip file 
+
+Read what the bloke (Paul Randal) who wrote some of the associated SQL Server code says And logged on MS Connect And have you ran DBCC CHECKDB (KB 2015760)? 
+
+Also, do you want RANK or DENSE_RANK to deal with "joint 2nd" or "equal values" instead of ROW_NUMBER 
+
+The client library used to connect does not care at all about the compatibility level of the database. The code issued by the client may have some issues (for example, you needed 90 to use APPLY many years ago). But the mechanism used to send the code and get results does not care 
+
+The Windows setting do not affect SQL Server parsing dates. There is a server level default language that can be overridden by one set at the login level. As it stands, the "safe" format for SQL Server is yyyymmdd anyway. Try to use that From CREATE LOGIN 
+
+We're talking 100s of millions of rows and/or high volumes. You don't partition for a few million rows. 
+
+Did you rebuild indexes and statistics after setting up the database on SQL Server 2008? It's mentioned on MSDN (see "Next steps") 
+
+The "otherwise stated" is like these examples where you have some dependencies (sorry. bit old, for SQL Server 2000 and SP4). $URL$ and $URL$ 
+
+Based on your sample data, the data you're actually querying for ID = 1396779 is different No amount of trims, isnulls etc will change into or into . Ergo, data is different. Otherwise, you have some DB or Server confusion going on. A report based on the DataWarehouse can't give correct data if your query against the DataWarehouse is wrong. Note that a cross database Synonyms or View, or a table in a different schema (your query doesn't use for example) could mislead you. Or you have some client alias that means you are pointing at the wrong server from SSMS but the Report is correct. Try this to make sure that you are where you think you are 
+
+This isn't fragmentation. Fragmentation is generated of course, but deletes will simply create "islands" of remaining pages, which is less evil then GUID/clustered key INSERT fragmentation. If you're PK is an IDENTITY, then should roughly track this so you're actually deleting chunks of contiguous rows anyway. 
+
+The myth goes back to before SQL Server 6.5, which added row level locking. And hinted at here by Kalen Delaney. It was to do with "hot spots" of data page usage and the fact that a whole 2k page (SQL Server 7 and higher use 8k pages) was locked, rather then an inserted row Edit, Feb 2012 Found authoritative article by Kimberly L. Tripp "The Clustered Index Debate Continues..." 
+
+Personally, I wouldn't set it globally in the CREATE INDEX statement... Also, the MSDN page for sp_indexoptions states 
+
+Very simple answer... Why not 2 separate tables? And UNION as needed or in a view when required combined? As I see it, a "Collection Note" and a "Delivery Note" are separate entities. At some point, the definition of each will be different. Are they really the same now anyway: I'd expect some differences? Also, SQL Server 2012 support SEQUENCE natively too 
+
+Plans will be recreated at first run. Otherwise, everything database level will be there except where it interacts at the instance level, such as: 
+
+Edit: for completeness LEFT JOINs often perform worse. See $URL$ This same site notes that in MySQL, NOT EXISTS isn't optimised like other RDBMS and LEFT JOIN is better In SQL Server, I know from experience that LEFT JOIN doesn't run as well as NOT EXISTS. You also often need DISTINCT to get the same results which another processing step. 
+
+I started using NORMA (link fixed Oct 2011) which is useful to capture the relationships and constraints in plain English. See Object Role Modelling too. This will generate XSDs and SQL scripts. I hope never to see an ERD ever again... 
+
+This applies more to other trace flags (eg 610 for minimal logging) that affect the optimiser and important behaviours/optimisations You should be OK with the deadlock trace flags 1204, 1205 and 1222 
+
+If I understand you correctly, a better way is to use TABLOCK hint to force a table level lock in the query that needs it (example: delete from a heap) 
+
+What does your colleague propose as the primary key for this link table? Primary key columns can not be NULL of course: the table above has nullable. There isn't any natural row identifier (which is what a PK is) in the example above (a IDENTITY column is not a primary key), therefore it fails in any modelling process. Don't even think about creating tables without some model (ERD, ORM, IDEF1X, whatever) You'd also need CHECK constraints to ensure you don't have 3 way links. Finally, you're straying into 4th and 5th normal form territory but for the wrong reasons. I can't find any examples on the internet: that shows how stupid this is 
+
+Have you tried just writing and see what happens? Do you have a known bottleneck? If you need to prevent your app being blocked then you one way would be to queue the writes to defer the database call. However, I'd expect the queue to clear in a second or 2: so do you need an queue if this is OK? Or you can spool to a staging table and then flush later? We use this technique to deal with sustained writes of millions of new rows per minute (we actually use a staging DB with Simple recovery): but we didn't implement it until we had experience of just writing rows. Note: Every write in SQL Server will go do disk as part of the Write Ahead Logging (WAL) protocol. This applies to the t-log entry for that write. The data page with the row will go to disk at some point (based on time, use, memory pressure etc) but generally your data will be in memory anyway. This is called "Checkpointing" and doesn't evict data from memory, just flushes changes (edited 24 Nov 2011) Edit: For throughout considerations, based on ther last paragraph above, shift your LDF for this database to a dedicated set of disks for more performance. Ditto a staging database (one each for MDF/LDF). It's quite common to have a dozen or 3 different volumes (via a SAN normally) for your database server 
+
+I like Nick's answer so won't repeat his info about computed columns and constraints. I'd approach indexing differently: 
+
+You have to use a 3rd party tool such as Red Gate SQL backup pro to restore. Or restore as a different DB and copy across. Selective restore makes sense, occasionally, but selective backup usually wouldn't. You-d have to roll your own selective backup with SMO for example 
+
+Right-click, "Change Connection", "Options", and you can enter or browse a database. Yep, it's a pain until you "train" SSMS... 
+
+1. Separate tables That is, you can split off the separate languages into different tables. This allows table level collations rather than column level ones It allows allows more rows per page and more chance of in-row LOB storage PageParent 
+
+I would use a system where each payment is recorded separately Typically, you'd want to keep the "balance" consistent over time and this requires them to be recorded individually. 
+
+Yes, the client finds out the Partner name from the primary See "Client-side Redirect" section in this MSDN whitepaper. My bold 
+
+It depends on what settings you changed based on $URL$ Some require a restart (RR), other can be done via RECONFIGURE There is no trick or workaround. At all. Edit, now we know it is Authentication mode... This is automatically deals with the instance name 
+
+Pretty much yes. Generally it means the files are bollixed or missing or a disk error or some such (I've seen a bad sector cause this). My steps: 
+
+Scalar UDF have uses, but not in this case. The performance difference can be huge: I've achived x100,000+ improvements by removing idiotic uses of UDFs 
+
+Based on your edit, all writes lock exclusively. No other process can read the row(s) being written unless 
+
+The last thing you want is allowing a normal user to run DBCC SHRINKxxx This should be reserved for highly privileged users to run in a few rare circumstances. This should not be a regular or normal operation. Permissions for both DBCC SHRINKDATABASE and DBCC SHRINKFILE are 
+
+The subscript 2 is not part of the varchar character set (in any collation, not just Modern_Spanish). So make it a nvarchar constant: 
+
+This is a known problem: orphaned entries Run on the SQL Server 2000 (not included in until later versions) and fix there. It's easier to fix system table manually on SQL Server 2000: way more difficult on SQL Server 2005+ 
+
+I'm not sure why you want asynchronous, but a couple of indexed view sounds like just the ticket here. If you want a simple SUM per some group that is: define running total. If you really want asynchronous, with 160 new rows per second your running totals will always be out of date. Asynchronous would mean no triggers or indexed views 
+
+When accessing remote SQL Server (or share or another resource) there is no such account as "NT AUTHORITY\NETWORK SERVICE". This only exists on the local server. The local "NT AUTHORITY\NETWORK SERVICE" access remote resources as the machine account "DOMAIN\ServerName$" Example: 
+
+Basically, choose "Latin1_General_CI_AS" (you have a choice) and make sure you read correctly before posting 
+
+Note that sp_change_users_login is deprecated. Now, if your SQL Logins already exist, then the names match but the sid values are different. For this you use ALTER USER use the LOGIN option. Finally, the SQL Login passwords can be recreated if you have a backup of the "old" master database. If you restore this as, say, FixLogins then you can use this

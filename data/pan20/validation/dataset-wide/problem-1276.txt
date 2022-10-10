@@ -1,0 +1,59 @@
+If an Option contains a value, map unpacks it, applies the function and wraps the result in Some. If it contains None, it simply returns None. I don't think I need to explain getOrElse ;) Using fold 
+
+Oh, what happened to ? Why does that work without it? The answer is that Scala's does an implicit conversion of the array to a list. Google if you want to learn something about Scala collection internals. Over-specific types Once those three functions are rewritten to use combinators rather than pattern matching, they don't need to take or return . They could take and return . This gives you more freedom abut what you pass in (could be , could be some other -based collection). No performance penalty (the appropriate filter/map/flatmap of the actual type will be called) and much more flexibility. OK, at the end you would have to convert the sequence back into a list (or whatever you want the final form to be), but this allows you delay that decision till it is important. This is that extra bonus I mentioned before. And I'm about to explain why using - or possibly could give a big performance boost. Multiple traversals and intermediate collections returns an iterator (a lazy, one-pass collection which only processes each element on demand). But you immediately convert it to a list, reading the whole (potentially large) file into memory. Then each transformation in turn creates an entirely new collection. So you actually create 4 collections in a row, traversing the entire contents of the file 3 times (possibly 4 if there are no empty or comment-only lines). But I'm pretty sure you only care about the final one. Even if you always want to process the entire file, that's expensive (the bigger the file, the worse it gets). And what if you only want to process the first lines or process the file in chunks, not wasting memory on processed and not-yet-processed chunks? There's a pretty simple solution which will give you all those options (but which doesn't force you to overcomplicate things just because you might want those options later). 
+
+This will end up falling off the end of the function, and so returning . The rest of your script will continue, but eventually fail horribly. This probably isn't what you want. 
+
+To get the same effect as returning the digits, but it might make more sense to print the equation, eg: 
+
+But this is the major data structure in your class. It contains all the information that this class is designed to parse. So, I think all of this should be done in , with this structure - and only this structure - captured as an attribute. The only other attribute you store is the filename that gets passed to . I think it would make more sense as an argument to your method - the only method that uses it - because the filename to write it to is a decision that goes with "I want to write this data to disk" more than "I want to scrape some data from a website". So, you're left with a class with one attribute, and two methods - one of which is , and the other is fairly trivial. In fact, becomes even more trivial with a list of namedtuples, since you wouldn't need to it. Similarly if you use a pandas DataFrame, it has it's own CSV routines that you can use. That means there is no need for a class. Instead, use what your has grown to as a standalone function - call it . Have it return the list or DataFrame. Then drop the function entirely and just put that in the main line of your program. 
+
+This would be better done with a , with the letters as keys and the corresponding digits as values. The whole chain of would then disappear and be replaced by a single, simple lookup. Chains of are almost always a bad sign in any language. In Java, sometimes is more appropriate, sometimes polymorphism (that is, letting the appropriate class/object decide what is right). In this case, choosing the right data structure greatly simplifies the code. 
+
+Do not break down non-matching sequences but preserve them Do discard an initial (as in your code) Wrap failing iterables in and passing iterables in 
+
+As gallais has mentioned, the cost of your calculations increases as x increases. I'm always struck by how few people, when faced with fizzBuzz or similar challenges (like finding the first numbers which are divisible by 3 and/or 5), realise there is no need to work backwards from x to the original primes. It's much more efficient to work forwards. After all, you know the starting primes, 3 and 5. One might consider, for example, generating a map where the keys are the numbers 1 to 100 (or x to y) and the value is . Then iterate over the multiples of 3 between x and y, replacing the value with and so on. Then iterate over the keys of the map in order, applying the value (a function) to the key. There are smarter (and more efficient) ways to work forwards, but it illustrates the principle. Here's a relatively naive forwards-iterating implementation of I just thought up. 
+
+Right now, you have two separate AJAX calls: one to determine if a day has bookings, and one to determine whether a specific time slot can be booked. I would suggest one of two things: 
+
+I just want to highlight your - chain. You should stick to one style. I understand that you want to put in a comment, but this should not cause you to uncuddle the . You can put the comment on the line after the instead. Also, this function needs to be documented. I've read it over twice and I can't understand why an item has to be to count as an item. It doesn't help that you didn't actually use the form ever. Anyway, I'd rewrite it a bit still: 
+
+I agree with @ckuhn203 in that the first looks cleaner. I'm not too familiar with C# and its style, but in C I would definitely prefer using a loop: 
+
+This is a bit of an inefficient way to render. Each time you modify , the DOM is going to change. Instead, it's better to add up your modifications and then only modify once. 
+
+Sqlite objects can be access by column name - rename your variable to , and you can do, eg, `repost['permalink'], instead of having to create variables to keep track of what each one is. A more Pythonic way to manage your counter down the bottom is like this: 
+
+That was almost certainly coming up because of your previous exception handling. You were printing the error and then ignoring it and continuing on, which made return by falling off the end. So now, you can change this guard to so it gives you a better idea of what's going on. You should probably also rename , since it's not really a url anymore (it's a , so for lack of a better name, let's call it ). This is the right place to handle that error. But instead of calling here, consider using the module . Above this: 
+
+If you are assuming clients won't do things like that, that is OK (although it may make your class less useful), but you should document that. In fact, some docstrings in general wouldn't go astray. 
+
+Your code will tolerate or as input lines, converting them both to . That is because it asks for the first two elements This can be avoided with pattern matching and a partial function. So the second, transformation could be rewritten with 
+
+The name of the CreateDefaultParameters becomes entirely honest. (Although SetDefaultParameters may be a better name). The code in that method becomes clearer Separation of higher level abstraction from lower. Clarity and simplicity at the higher level. Adds flexibility extensibility. 
+
+This does fix the issue of both and returning the same result. It also allows us to be sure whether an iterable contains passing or failing elements but only if we keep careful track of whether we're looking at even or odd indices in the list. That makes it difficult to fold or recur over the list or to perform other higher order functions (filtering, mapping etc.) which take into account whether iterables contain passing or failing elements. More Functional: List[Either[Iterable[T], Iterable[T]]] If, instead, we 
+
+This means that if you can work out how to generate the indices of potential locally-interesting values, you can structure your program like this: 
+
+In your second loop, you use four lines to swap two list elements. This can be more idiomatically done in one line using tuple assignment: 
+
+So now we need to tell Python what "local" means. Unfortunately, I can't come up with any definition that matches all of your test cases. But hopefully, if I show you a couple of things you can do that don't quite match your code, you can glean enough to fill in the blanks. The first thing I thought of was a strict rolling window - "every three adjacent items" (except dealing with the two edge cases): 
+
+Do the microsecond ones really need to be functions at all? They seem like they'd be used only rarely (probably at the end points, reading and writing to a database), and since they're one trivial calculation, a small comment at the call site would be sufficient. Some of these really seem like they belong as instance methods on the object. In fact, a lot of them are in newer stdlib, and the entire point of your code is to also support versions of Python from before that was the case. So, it might be a good idea to simply offer a compatible interface. There's a few ways to do that. First, the stdlib module is implemented in Python, so you could include a newer version of it wholesale and have your module do this: 
+
+I was writing an answer but @jsanc623 beat me to the punch with the , so I'll just add the missing bit. Your solution won't work if your file is served from e.g. . Instead of doing it this way, you can find the current filename more reliably like so: 
+
+This could be DRYed out a bit. You can get rid of the first instance, and put the logic in the second instance like this: 
+
+Personally I don't think having one extra line per early return is much clutter. It doesn't seem like it'd take long to understand either. That said, if you really wanted to, you could reduce it to one line. You'll still have to assign a variable though. 
+
+First of all, please strongly consider @Flambino's advice; it's excellent. That said, I don't imagine valid VAT patterns change often. For this reason, I propose condensing each country's pattern into a single regular expression. Since you're so intent on eliminating the loop: notice that if my VAT number is "GBGD123", then based on the prefix, it can't possibly be a (e.g.) French VAT code. I would try matching the country code first, and then match the rest based on that. Consider something like this. You'll notice though that because the various types are condensed, you lose e.g. the comments on UK VAT codes. You'll need to decide if this is worthwhile to you. 
+
+will give you the same answer as your loop. You can almost read it as a sentence: "to get count, add up which numbers in have this interesting property". 
+
+makes a new list containing all but the last element, which the recursive call will promptly clone (in its entirety). So that's two copies for each element after the second. It would be better if we could tell the recursive call to only treat up to a certain point in the list, and everything after that. To do this, we put the bulk of the code into a helper function: 
+
+Note that is not included in the range, and you may need to choose it with that in mind. You initialise a variable called at the top of your loop, but it's only used in one of the branches of the statement. For the same reason as above, it should go near where it's used: 
+
+I've also line wrapped the second print, since it was very long. Finally, you can omit the numbers inside the braces in the format strings, like this:

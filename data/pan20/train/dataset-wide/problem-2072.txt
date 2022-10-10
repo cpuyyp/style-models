@@ -1,0 +1,43 @@
+If you don't have filesystem snapshots you will need a local copy of the whole cluster (rsync will be good to maintain this). Only disadvantage is disk space used, and more time needed. 
+
+Please note that triggers always cause some extra load, and also initial sync will be equivalent of dumping all replicated tables. Hope this helps, I'd propose to come back with more detailed questions if you have problems. Good luck! 
+
+After bringing the slave database cluster into standalone read-write mode (either by internal logic inside or by restarting it without ) it cannot be easily reverted to be a slave. If you can, use file system level snapshots. This would be the easiest approach as you can revert the cluster to a known state without copying whole data directory. More or less that would be the logic for testing slave: 
+
+So it looks like pgbouncer cannot spawn enough parallel server sessions? I'm not sure how that can happen while it looks that no basic resources are saturated. (CPU, mem, # of connections) I also tried with 5000 connections (using 10 parallel pgbenches) - same effect. Only about 50 cl_active. When I run pgbench connecting directly to postgres (port 5432) - it spawns hundreds of sessions without problem. I'd be grateful for any hints. Can this be pgbouncer, postgres or kernel parameters issue? 
+
+Problem description I need to rotate (with DROP and CREATE) a table which is heavily used by other clients. At present, I have a program which replaces (DROP + CREATE) this table. Sometimes, just after the table is replaced, I get "ERROR: could not open relation with OID xyz" from concurrent clients accessing the table. One could say this behaviour breaks transaction isolation... Does it? I understand this is caused by system catalogs being cached by postgres backend (which is normally a good thing). Am I right on it? Is there any way to force a backend to "forget" table OIDs (DISCARD does not help)? I know it will help if I switch to "DELETE and INSERT" pattern instead of "DROP and CREATE" pattern. But this is some legacy program and we do not want to change it unless absolutely needed. I will be grateful for any suggestions how to get rid of this problem. The goal is to rotate the table transparently for other clients. The test case Here is the minimal test case that I reduced the problem to: A. This is the client (multiple clients will run this SELECT in parallel). We will use pgbench for stressing the database. 
+
+In any modern RDBMS (including Oracle, Microsoft SQL Server and PostgreSQL - I'm sure about these) this will have no effect on performance. As someone noted, this will impact only query planning phase. Hence difference will be visible only when you run thousands of iterations of a simplistic query which does not return any data, like this one: 
+
+(...and so on - every client fails) Comments and ideas What's interesting - even if the clients work in "new connection for each transaction" mode (add "-C" option to pgbench), same error occurs. Not always, and not for every client, but it does. I asked this question some time ago on mailing list: $URL$ - this SO post is just a copy. For more audience: Same thing applies to rotating a partition. So it might be interesting for all people who use partitioning. This is all on PostgreSQL 9.0, Linux. Solution (thanks to Chris Travers) 
+
+So your second guess is correct: you need to go for complete rebuild of standby. This arises from PostgreSQL internals, WAL format and timelines. Every time fail-over is done, it creates a new timeline. You can not safely use WAL files from new server (the one that was promoted) to replay on old server after it's revived. From version 9.1 on, you have a tool for fast cloning of postgreSQL instances: pg_basebackup. You can also use filesystem snapshots (eg. LVM2 + XFS). If you have a snapshot of primary postgres cluster from before the crash, and a series of WAL files from that time on, you can revive primary cluster from that snapshot and replay its WAL files. This is covered in the docs. PS. Thanks for a good question - this is not so clear right out of the docs. 
+
+The question will be solved after you define primary keys correctly. Please remember that FK must point to other table's primary key (or unique key). It is legal (at least in SQL) to use multi-field FKs. 
+
+You should read PostgreSQL documentation on Controlling the planner with explicit JOINs and Query Planning Configuration. 
+
+There are many open ends in your question, but partitioning by customer could to be the way to go - especially if: 
+
+Note: Mapping from relational to graph could take only selected entities from relational model, and single table rows can explode into multiple vertexes and multiple edges. 
+
+The hook you need is . All the scripts defined in PgPool's configuration - , , , etc - are executed by the pgpool master process. You can check which one is master using utility. It means that if you want to execute commands on PostgreSQL node you need to setup password-less auth from pgpool into postgres nodes and use ssh inside the script. To give an example, in my I have this: 
+
+I don't know BDR (maybe it's a good solution), but do you REALLY need both servers in R/W mode? If not, I strongly recommend using built-in streaming replication (with streaming or log shipping). 
+
+To test if the index can help at all, you could repeat the query with sequential scan preference set to zero: 
+
+Built-in PostgreSQL features are enough to get a WAL-based, read-only standby (a.k.a. secondary, a.k.a. slave) server. However, they are not enough to get multi-master operation. This R/O slave can be promoted at any time to standalone, R/W server by using . 
+
+See docs. Use only session parameters, your application must know which statements will be silenced. Technically, you could make the setting permanent (in postgresql.conf) but it's not a good idea. In some cases this will be a footgun. 
+
+The answer depends on what is really going on the wire (that is, in client session). First, what is a deadlock? It is a cycle in lock dependency graph. Whatever it means, to make a deadlock occur, you need to have some locks first. Locks normally do not live outside of transactions/queries. A connection itself cannot cause any deadlocks if it does not put locks on database objects. (Shared object access is main purpose of locks) If the connection opens a transaction, does some queries (effectively locking some database objects), and then still executes or sleeps in middle of the transaction (without commit/rollback), it COULD cause a deadlock - when sibling transactions access same resources. If it is just an idle connection - there's no risk of deadlock. 
+
+The boolean is not needed here. Existing row means true, missing row means false. Possibly, if this is a very large scale app, and if you can simplify the model, then you can save some resources: 
+
+It's not documented in the official docs (as of now - Feb 2018), but PgPool's memory footprint is quite heavy. In my recent testing PgPool II version 3.6 needs as much as 140 MB RAM per child process. (the number of child processes is defined in ). This is private process memory - not shared. This means approximately 8GB for each 50 clients. Compared to PostgreSQL, this is 5-10 times more (PostgreSQL can easily handle 250 sessions on 8 GB RAM). Plus, PostgreSQL uses shared buffer cache which is much more cost effective. 
+
+You are right, PostgreSQL's built-in replication (aka Hot Standby) replicates whole cluster - so it's not suitable in your case. You will need some trigger-based solution. For example, 
+
+Issues that Simon puts in his comment are really important. So you will have to enforce a very strict policy regarding GRANTs in your database. In PostgreSQL, it is possible to achieve (as well in many other RDBMS). The key to achieving multi-tenant solution would be intelligent usage of schemas, roles, setting. See $URL$ Actually what I propose will in a way emulate what Oracle does. If you need help on details please ask.

@@ -1,0 +1,65 @@
+However, without and you simply cannot make a property safely async. It is not supported in C#, only methods, lambda expressions or anonymous methods can use . Properties should perform fast and non-blocking operations. If you want to perform a long running activity, don't make it a property (or just call a synchronous method in the setter). 
+
+and will encapsulate your into an . You could easily encounter a deadlock situation. You shouldn't block on async code normally. 
+
+(Disclaimer: code uses C#7.0 out variables) Now your are secured against the exception. If you inspect the code for possible deadlock situations, you might observe that it is possible, that gets executed before . It is good to know, that the wait returns when all events are set and it does not matter, whether or not that happened before or after wait was called. Great, no deadlocks here! 
+
+Pass by value C# works a bit differently as plain C when passing objects to a function. In C, object types are passed by value by default. That means, a shallow copy will be performed on your objects. If you pass a pointer or a reference, you will be able to access and edit the values of the original object. In C#, object types are also passed by value by default. However, if you pass a class as parameter, you will be able to edit values within that particular object (basically the same scenario, when you pass a pointer in C) since the object reference gets passed. If you want your object to be immutable, you will need to implement the ICloneable interface w/ constructor copying in order to clone it. GC In C, if you allocate a chunk of memory, no one will alert you later to delete it and you will leak memory. You will need to get rid of it at some point. However, C# has Garbage Collector at its disposal. I will not go into details, there are countless excellent articles about GC. Fundamentally, GC tracks the valid references of your objects and if there are not any left, GC will free the allocated memory space. But, there is no guarantee that eg. your local variables will be immediately freed after exiting the scope (in C, local variables will be freed upon exiting the scope). When GC comes across, it will delete the unused objects and until then they exist as nothing has ever happened. You can force GC to get rid of your object by calling the Dispose() method or using the using statement that destroys the object after exiting its scope. Your code 
+
+If you are going to run into a number of optional values, another alternative is to extract the logic into a separate method. In this case, an extension method may be easiest to work with: 
+
+constructor chaining The three constructors repeat assigning the children dictionary. A better way to do this is with constructor chaining. Move the dictionary assignment to a single constructor and call it from the other constructors: 
+
+Next, for readability, I would instead use . If you check the .NET source, calls internally with an Ordinal check, so it is effectively the same thing, but it declares your intent far better: 
+
+Use If you go with this option, you could use @Heslacher's equality comparer as the parameter for the call. 
+
+single-expression statements I do not know if there is an official stance on formatting, but I find placing the and the expression it contains side-by-side is difficult to read in most cases. It is also generally non-standard, and invites buggy code like the following: 
+
+You would still use the visitor pattern he proposed, but this alternative IDeviceScript implementation would allow you to populate your list of available device scripts via some configuration source (a flat file, database, app.config, etc.). 
+
+After all, what is the point of going through the trouble of having 4 different coin types if this difference is not meaningful? (Think about how you will use this class: would you set up prices for items in a shop in platinum, gold, silver, copper coins? Or would you set a base 'worth'?) 
+
+We would already need a change in protocol, because there are a number of messages that we may want to send to the client: 
+
+Consider using instead. Or, as you are working with Calendar instances, you may find JodaTime useful in your efforts. 
+
+[1] Oh, how sweetly I loathe you, , for your 1-based indexing. [2] Fixed record length + multi-byte encoding + JNI. It was glorious. [3] Personally, I lean towards "fail early, fail hard," (i.e. throw) but this depends on your intended audience. 
+
+That's really all we need to store. (Do version your data format, even if you plan on only ever supporting one.) Worth it? If we're going to be user-friendly and fail-safe and all these beautiful things, this is a lot of effort, and possibly even overkill. This feels like a basic enough issue that there must be some projects with some support for it (I'm looking sideways at Spring and Apache, here). If you're just going for a fixed list of things that you want available, manually maintaining a list in code is pretty much your simplest, if sometimes tedious, solution. It's not shiny or pretty but it's quick and it may meet your needs. 
+
+Building queries with is dangerous, as it leaves you open to SQL Injection attacks. This particular case is using a value from the app settings, so perhaps it's not likely in this case, but it's a good idea to get into the habit of using parameterized queries anyways. For MySql, you inject @-delimeted names: var cmdString = string.Format("SELECT em_surname, em_name, em_netname, em_init, em_dept, em_title FROM employs WHERE em_pplid = @userID"); Then, you add it to your command with the following: 
+
+Honestly, it looks like you want to use a domain object to model your providers and perform the pay calculations. Rather than using a bunch of text fields and drop-down controls, you can then data bind your domain object to a . Domain Object You want an object which has properties for all your display values. Since data binding is involved, you need to ensure the object implements the interface, like so: 
+
+(It was thrown together quick just for quick turn-around sake.) I then provided 3 ways of loading. One loads the data much like you did above: 
+
+I'm cool with either, as long as it's applied somewhat consistently. If you don't use calculate and calc in different contexts and implying different meanings, either one's fine. 
+
+is usually a red flag in code, especially when used to emulate a blocking call. If you choose a different approach, such as using CompletionService, you can use to wait for an answer. Seeing as a return type in a multi-threaded context also worries me. Who closes the that generated it? Consider offering a callback mechanism that can operate on the result instead: 
+
+Yes, if only because you're working with Strings/objects where you don't really need to. But it depends on how far you want to take it. On the surface, there are a number of inefficiencies that you can eliminate: 
+
+When you start extracting data and code like this, your main method will shrink, and you will find it much easier to scale to more creatures, more items, and even more complicated dungeons to crawl through. 
+
+General Remarks The code checks incoming parameters, and throws an IllegalArgumentException when they are out of bounds (except ; see later). This is a good thing. It would be even better if you could include the faulty indices in the error message so that I don't have to pop out the debugger. ;-) The class seems to work with 1-based indices rather than 0-based, the latter being more common in Java[1]. As you commented about this within your code (but not in your public documentation), you've felt there's a mismatch; it may be better to use 0-based indices for consistency with the rest of the JDK. You're going through hoops to work with arrays in the public interface while using streams and collections behind the scenes. Consider returning lists instead of arrays, or maybe even streams if you're so inclined. Constructors Character encodings are important, too important to force the default encoding on your users, for any definition of 'default encoding'. Many of the classes and methods deprecated in were so because they assumed about encodings, which I've seen lead to subtle but no less spectacular breakage.[2] Allow/force your users to specify the encoding. If they make it be this fangled default encoding, then on their heads be it. (A simular argument could be made for .) For your class, it doesn't matter how it gets its stream of strings, as long as it gets it. Make this clear in your constructor: 
+
+The key to your solution could be the method. It is going to lock the for reading and return the element (if it exists). 
+
+According to MSDN, all public and protected members of are thread-safe and may be used concurrently from multiple threads. However, concurrency only applies to the individual actions performed on the instance of the . The situation will not get messy, if a thread is performing a write operation and an another thread is performing a read operation at the same time. But, there is no protection within the class against the situation, when an information of the past is provided, that has since changed and because of that, an invalid operation is performed. I do not see the reason of calling , since an another thread could remove that particular element between the and the value accessor operations and will be thrown. 
+
+You have just literally lost the async part of your method. By calling the property of your object, you will block your calling thread since it is going to wait for the async thread to return with the result of the operation. The property is just like the method. You should use instead of or , since: 
+
+What you have is a very good start. I would suggest refining your exception type where possible. In your case, I would suggest using IllegalArgumentException. Using a specific subtype helps with diagnosing/debugging. Additionally, since IllegalArgumentException is a type of RuntimeException, you can then remove the from your method signature. 
+
+Here's a quick rundown of the ways to synchronize, how to choose, and when to use them: synchronized is the basic, easiest, least surprising way. It guarantees that any threads entering the block will see all changes threads made before leaving the block. Use it as your first recourse, when you have blocks of code that can not tolerate interference from other threads, such as when doing coordinated or non-atomic reads and writes. JVMs tend to be pretty smart with synchronized, causing little overhead under light contention. Locks are more specialist tools, allowing finer control than synchronized does. Use locks when you need features that synchronized doesn't provide (like shared/exclusive locking), when your critical sections are not neatly confined to code blocks, or when you have heavy contention. volatile marks a field as uncacheable, meaning all threads must access main memory to read or write. When a field is volatile, all reads from and writes to (and through) it count as memory barriers, just like an enter-and-leave of a synchronized block does. However, volatile is non-blocking, and threads can interfere with each other. Use volatile when reads and writes are uncoordinated and independent. 
+
+I would then extract the body of your loop on into its own method, taking in arguments for the entities, username, year, and type: 
+
+You could simply make GameState a Flags enum, which is merely a more compact version of the decision table palacsint proposed. 
+
+One aside to mention: you should split your UI and business logic code. For the sake of tossing it into a working example quickly (I'm doing this over lunch), I removed all the UI code and replaced any print-outs with calls. I also did a little refactoring to split method calls. Additionally, I renamed to so I could run it side-by-side with the original. Finally, I made some of the non-static method static, but only to speed up running the project. Pay no mind to these changes. 
+
+Actually, most of the leg work is done for us in the framework. Enum.GetValues returns the list sorted ascending already, via the underlying implementation of Type.GetEnumData. With that in mind, you can use LINQ for the rest, retrieving all but the last value: 
+
+However, my suspicion is that the biggest gain you will get is implementing your own tag reader library rather than using TagLib, assuming you are correct that it reads the entire file. I/O is one of the most expensive things you can do on a computer. ID3v1 and ID3V2 tags should generally appear in the first X bytes of the file, so you only have to read until the end of the tag, rather than the entire file. As with any performance issue, though, you need to run this through a profiler. The results may very well point you in a completely different direction. For example, it may reveal that TagLib isn't actually reading the entire file. At the very least, it provides baselines to use in determining if you are making meaningful gains.

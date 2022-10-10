@@ -1,0 +1,131 @@
+I recently decided to code some in Python after coding in Java using lombok for quite some time. However, I got bit real hard when I forgot to implement , since Lombok normally does it for you. I decided to try to implement something similar to Lombok's , which I called . Then, I added a similar way to generate a method. How well did I follow python style? I developed this using TDD, so I would like to know how my tests are as well. genmethods.py 
+
+It would result in a compiler error, since the class does not have a copy constructor, because we used . Instead, the code would have to be used like so: 
+
+Although does require C++17. If you don't want to require C++17, this Stack Overflow question discusses how to get the behavior of in C++11. In particular, you can use : 
+
+Use . Not only does it avoid potential problems with memory leaks, it also is more efficient because it can declare the reference count in the same block of memory as the allocated object: 
+
+Point 1: Luckily for us, has something that allows us to iterate in reverse: . returns an iterator. So we can write this: 
+
+Both and are s, which means that your is redundant. You probably want to make them es, as it seems you want to hide the member variable. 
+
+only has abstract methods. If it is not going to give any common implementation, I would recommend making it an instead of an , as that would allow implementations to extend a different class as well. Additionally, I would change to , similar to the identically named method in the class. What if you want to have a CAS system that computes using , but you want to reuse your code? 
+
+Also, it's strange to close already, since we are going to be using it later. Also, this constructor can be implemented in terms of the other: 
+
+makes it so a function (or a class) can access the private and protected members of a class. Since you declared it as a , everything is by default public, so friend is completely unneeded. Also note that a function declared as a inside a class is effectively declared in the enclosing namespace, so the two versions above are actually equivalent. 
+
+This is a nice first project. Since you are a beginner in C++, I'm not going to worry about the and a couple other details. Naming Your functions follow an inconsistent naming style and are not spelled correctly: 
+
+You have a compile error since has 2 identical methods; I assume this is a copy-paste error and the second should have instead of as its parameter. 
+
+This function isn't actually converting base 16 to base 10. It seems like it is, but that's not really what it's doing. doesn't store its data in base 10 format, so this function would be better named , or something along those lines. 
+
+Alternatively, you could use at the top of the file, although it is theoretically less portable. Leaking namespaces 
+
+No. Don't do this. I get that it's a pain to type out or , but code isn't just for writing. Adding these functions really just make it so that it takes longer to read the code; don't alias these system function calls. Good IDEs would make writing as easy as (something like) (or whatever the auto-complete key is; I'm assuming it's tab), and is often just or . Use those IDE shortcuts instead of these functions you defined. 
+
+Firstly, I recommend you format your code. In Eclipse, the shortcut is CTRL + SHIFT + F, in IntelliJ, it is CTRL + ALT + L. This is because of the following: 
+
+To me, the main problem with this design is that it is so easy to use wrong. Any class caching a static copy of the singleton will make the unit tests fail. The unit tests have to go blindly in and assume that there are no offending constructs anywhere. It might be a better idea to just have a which resets all the data stored in the singleton that the unit tests can call in the tear-down method. 
+
+We can separate these into their own components. This is only really worth it if you can foresee adding types to be a common feature, but especially if the "another function" you forward to should be selectable by the user (say, if you packaged these functions as member functions of an object): 
+
+You could also use to be explicit. Similarly, when you do , you require that is a RandomAccessIterator. Replacing it with still requires that is a BidirectionalIterator. Unless you think that is a reasonable requirement (for some versions of bubblesort, it would allow it to be more efficient), don't do this. Rewrite the for loop as so (or any variant where you keep track of the two): 
+
+Along those lines, you don't need a comment if the function is named well. For example, these two functions' comments: 
+
+There are frequently things I miss when using C; one of them is a nice error-handling (exception-like) system. After trying Rust, I realized I could implement something similar in C itself. So here's my attempt at writing a type in C. The idea of the type is similar to that of an type: if the value was able to be computed, then we return that. Otherwise, if there was an error, we return some error. In my case, my errors are string messages. I plan on using this for a class where we are required to use C, not C++ or other systems languages. We will be using gcc, so gcc specific behaviour is perfectly okay. panic.h 
+
+and are only used to initialize your s. They don't need to be member variables. The names and are not the best. First, what does "rpt" mean? Repeat? Report? Ramco-Gershenson Properties Trust (that's what comes up from a Google search of "rpt")? Second, it's hard to use in an English sentence: 
+
+The name is a bit redundant, seeing as it's a member function of a class called . You could use , or even . Other than that, by taking as a parameter, you make this sort function not very general. The way the parameters are usually taken for a sort function (in C++) is as an iterator range: 
+
+As I mentioned in the other answer, this solution for testing singletons is easy to use wrong. Any cached instance of the singleton makes your unit tests wrong. However, there is another way to make your singletons unit testing friendly: have the singleton implement an interface. A real world example of this is Eclipse's Ecore. Ecore is a Java modeling framework which generates code for you. Each package it generates is equipped with a - effectively a singleton that you use with . However, is actually an interface; the singleton is implemented in . What this means is that you can inject the singleton into your classes, allowing you to mock for unit tests as well. As a rough example: my-singleton.h 
+
+Only include what you need I strongly recommend that the header file only includes what it needs, and not what the cpp file needs as well. This can improve compilation time for anyone who uses your Logger.h. I commented out the header files you don't use in your Logger.h: 
+
+You could even define the function inline. To put it simply, "stringly typed" values should be avoided. 
+
+It's nice to see that you make the random engine . It is, however, not the best to initialize it with the time. You should probably initialize it with a , which uses or the equivalent. You may also want to use . It might look like this: 
+
+Again, avoid this C-ism. Don't use to indicate no arguments. Just write . Also, you don't need to from main; it's done automatically. 
+
+prevents using this function for types such as simple C arrays, or even vectors if the vector uses a pointer as its iterator. Prefer . I find that that's a mouthful, so I tend to use : 
+
+Moreover, you usually shouldn't use arrays; s are way more convenient in general. And you also assume that the array that is passed in has a length at least . At the very least, you should assert this: 
+
+Add the two digits, plus the carry if there is one. Write the ones digit below in the result. Write the tends digit above in the carry 
+
+It seems that you are copying the idea of , where returns an error code if something went wrong, but there's no way for something to go wrong in these functions barring an exception, so just make these functions void: 
+
+I actually recommend you take this as a parameter in the constructor (this is known as Dependency Injection). In doing so, should you want to debug by setting the Random to a seed, you could just call instead of having to modify this file (your main function may not always be in this file, and it is cleaner anyway). Furthermore, should you want to switch implementations away from the default, say to a Mersenne Twister, you'd simply pass in a and the implementation of wouldn't have to change. 
+
+In C++17, if you were using this to initialize a big enough vector, you could make use of execution policies to parallelize this like so: 
+
+However, if this is going to be called hundreds of thousands of times, the method might be faster, though you should encapsulate those into their own functions. You'd need to profile to be sure which is faster, but I believe it would be this because uses regular expressions: 
+
+This algorithm is wasteful. The algorithm for addition that we learn in primary school is usually something more like: 
+
+I have no idea what this is by the name. What's the for anyway? What is this the period of? Or is this referring to the punctuation mark? 
+
+This might double-delete if takes the by value. If you feel the need to use the raw pointers, you need to get the memory safety right. I strongly recommend you don't do this yourself, and use the standard library to take care of it. You either want or , depending on whether or not you want to pass the engine by value. I recommend until you find that you need . You could then implement the class like so: 
+
+Good job on making the function static. However, Java's naming convention is camelCase: . I could have misread it as and gotten confused. 
+
+This is in the header file. That means that anyone who includes Logger.h now has a namespace which is . This is bad, as if I am a user of your library, I would not expect it to define a namespace. To fix this, move that line of code to your Logger.cpp, and use in place of within your header file. Namespaces Your should be in a namespace of some sort. When defining small utilities such as this, I'm usually lazy and simply place it in a namespace. Invert the try in your close function 
+
+This is a big red flag for me. You are using to represent your numbers; use a class instead. Defining a class is quick and easy: 
+
+I know that, at this point, this removes the ability to use member functions at all, but we can use to remedy that: 
+
+On the other hand, the names of your functions seem to suggest that they should return the result of the operation, in which case you might do this: 
+
+If you want your code to be extremely extensible, there is another way. Notice how the new function I suggested still does multiple things: 
+
+You can expect your reader to know this. We all know that hexadecimal is 0-9 then a-f, so just leave this comment out. 
+
+I'm not sure what means. I'm guessing this is the result of the conversion. So I'd remove the comment and instead name this variable (yes, I'm lazy on variable names). 
+
+Why restrict the sort-by function to being by member variables? You could easily let it work for any callable object: 
+
+In and , you return when the request cannot be met. However, this is a little bit unclear. I'd recommend instead using and as your return types so you can just do this: 
+
+Naming This is a small nitpick that you may or may not agree with, but it's often better for acronyms to not be all uppercase, to ease the use with tools. For example, . There are tools which would think this was an "A I Player" rather than an "AI Player". Consequently, it often works out better if it was , as it makes parsing class names as PascalCase feasible. Memory safety 
+
+The code is pretty good, and quite readable. Here are some of the things I noticed: Header guards Your Logger.h needs header guards: 
+
+Also, it's a lot more general to take a than it is to take a string filename. With a , the user of your utility could use , for instance, and it makes testing easier. That would mean that you'd have to change and to be s, but having references as data members can have a couple problems, so you might want to use a or a . 
+
+If you keep your code simple, it will be hard to miss arithmetic or logical negation. Additionally, your and macros are rendered obsolete by and declared in the header. Rather than using , it's , and is more robust than your or macros because they are macros. TLDR: Don't use macros. 
+
+Also, your function is doing multiple things: printing/reporting, and parsing/forwarding to . This is not a good thing. I'd recommend removing those and handling them where it's more appropriate: 
+
+Also, it's better to "code to the interface", meaning that rather than using , use ; most of the time, the rest of the code stays the same, but in the future, if you decide a different , such as , then all you have to do is change to : 
+
+On that matter, the rest of the functions and even the struct are probably better off as local to the translation unit (i.e. wrapped in an anonymous namespace): 
+
+I mentioned it on the previous question, but it's important enough to mention again: avoid . See Why is “using namespace std” considered bad practice? 
+
+You seem to be planning to add elements to (hopefully a in) the after the comment. This is a bad idea. Always do the sizing and positioning of your after you add every element you want to it. That way, the will know the size of all its subcomponents to allow for proper sizing and positioning: 
+
+Although, since we always have , you should really make that a outside of the loop. But wait. If you instead iterated over the digits in reverse, you'd start with a , and all you'd have to do is , which would automatically take care of the powers for you. That would be the better way to do it; it's notably more efficient too. 
+
+I find this much more readable. By simply reading vertically, I can determine that the code does this: 
+
+But don't do this. This is simply re-inventing the operator. System dependency Your code uses all over the place. is not cross platform, and it is better to make the code as cross-platform as possible. You really don't need to use everywhere; people using a console don't expect their console to clear old messages. Furthermore, isn't necessary; the console waits whenever your program needs to obtain input. Switch In your main function, you have this: 
+
+Notice how this function is less of a mathematical function, and more of a "perform this task". The task you are having it perform is to "display the result of multiplication, then clear the screen afterwards". That's most definitely multiple things. It would be better to make the function this: 
+
+It's really nice to see that you are only ing what you need. You could sort the includes alphabetically, but that really doesn't matter. 
+
+Don't use to say that a function takes no arguments. It's a C-ism, and should be avoided in C++. Just write . 
+
+You might notice that this removes the need for the comments. The name of the function makes it clear that means that empty strings aren't considered plural. Do note that you should use as a more descriptive function for what you are doing. 
+
+What's with the blank line between and ? You are using 2 spaces to indent. Use 4 spaces. Shouldn't this be in the function?: 
+
+You normally shouldn't use this. It includes every standard library header. If you compile without precompiled headers, this would make your compilation time much greater. The recommended practice is to just what you need, and if you want to use a precompiled header as well, that's just fine. 
+
+Reads dictionary.csv into a list of strings (via ). Split each string in the dictionary on , into a . Collect the s into a , where

@@ -1,0 +1,89 @@
+On such a dataset, I can already see the benefits of the idea described above. Correspond code looks like : 
+
+As per my comments, I've not sure SE.CodeReview is the right place to get the help you are looking for. However, as I didn't read your question properly at first, I had a look at your code and changed a few things (please note that it's not exactly the same behavior as it used to be): 
+
+Using the right function/method In , you process the first card of the deck then remove it from the deck. You could do this in a single step using . You'd write something like: 
+
+Class attribute Having defined at class level does not add anything except confusion. Counter I think that this: 
+
+More performance This is pretty good but we haven't really changed the complexity of the algorithm. It used to be and it still is. Only the constant factor has changed (basically, we still perform a huge number of operation considering all bacteria for all inputs, we just handle them in a more efficient way). What could be interesting (and is probably what is expected by the people who wrote the problems) would be to prepare the dataset in such a way that for a given input, you don't have to reconsider all bacteria again and again. The point would be to be able to create some kind of summary of your dataset in such a way that you can easily determine the information you need. Basically, it boils down to determine how many items in a list are smaller or bigger than a value you'll be provided later. Indeed, the solution of the problem is the sum of the number of such that and the number of such that . An interesting idea could be to create a sorted array of the values and a sorted array of the values (don't forget that in order to have this trick to work, you first have to re-arrange in such a way that ). Once this is done, the number of items smaller (or bigger) than a value can be determined with a binary search algorithm. Unless I am mistaken, the complexity for such a strategy would be : because sorting is and binary search is . This should be much faster. I'll let you consider this :-) 
+
+it will remove the duplicated logic and make your life easier if you want to change something in that part of the logic. 
+
+Also, the whole logic converting strings to dates (or to triples ) could be extracted in a function on its own. You might also decide that you want to reuse already existing tools for this such as Better user experience When I input 2 dates which is usually quite painful, I'd rather have my program to fail if the first date is incorrect rather than having to input the second date to know it. 
+
+Style (and related tools) A few things are wrong concerning the style (mostly matter of whitespace). Python has a coding guideline called PEP 8. You can use pep8 (or its online version) to check it automatically and autopep8 to try to fix this automatically. You'll find various other convenient tools to check your code such as pylint, pyflakes or pychecker. Making things more concise You can use to have all digits. Also, you are using more variables that you actually need. Finally, you don't need to precise in your string slicing and all your permutations will have 10 characters so you don't have to try to take the fist 10 : Your code becomes : 
+
+The last fact is probably the one that can be useful to you. Test and Code organisation In any case, if you want to optimise your code, I suggest you write some test cases (with huge values so that you can see where the bottleneck actually is). In order to write these tests, you might find it more convenient to write small functions with a single responsability. You might realise while doing so that you don't really need to store the inputs in an array only to go through the array afterward. You could probably write something like : 
+
+Before trying to go for better perf, I think you should try to make this correct. Because maintaining a consistent state whilst calling recursive method can be quite hard, I guess you should try to make things as simple as possible. I'll try to update this answer if I think of anything interesting but it is quite unlikely. 
+
+A matter of priorities Make it work, make it right, make it fast : at the moment, your code does not work in that sense that it does not give the solution to the project euler problem. Nevertheless, I'll try to give you hints to rewrite your code in such a way that it returns the same results as it does currently but in a better way. In order to do so, I've written a few assertions to be more confident when I perform changes. 
+
+Final details I am used to Python 3 but if you are using Python 2, generates an actual list. When this is not required (and in your case, this is not required), you should be using . 
+
+Another thing that could be easily improved is the fact that the same thing is (implicitely) defined twice, violating the good old Don't repeat yourself. Indeed, you define the set of vowels in and in . Probably one of them could be enough. You might think that it's not such a big deal because no one will want to change the definition of vowel but Y should it be so easy. 
+
+More functions It would probably worth extracting the code computing the number of palindromic substrings in a function on its own. It makes the code easier to understand and easier to test (I'll come back to testing later). Then, your code looks like: 
+
+prime_factorization Here again, you could probably rename the parameter for something shorter. I am not sure what the conventional way to do is but once you get a factor with the other functions, it may be worth checking how many times it divides. Potential issues Finally, I have the feeling that the algorithm does not provide an real prime factorisation because the factors returned by are not always prime factors, they are just "random" factors. If it may help you, here is the function I've used many times for Project Euler factorisations: 
+
+Thus, because can be re-expressed in terms of other variables, we can get rid of it. After substitution and removal of asserts, your code becomes : 
+
+appears to be 21 times faster than the solution provided in my other answer and 141 times faster than yours. 
+
+Also, something I have forgotten but might be useful to you is to use defaultdict if all you want is to count elements. 
+
+Finally, we don't even need the indices as we can build as we go. Also, we don't need in that part of the function. Things get even more concise : 
+
+Instead of sorting values, taking the corresponding indices and using them to have the values of a different array in the order of your choice, you could generate tuples containing all the relevant information (name, weight, value) and sort them with a function of your choice. This reduces : 
+
+Style The name is pretty bad. One would expect it to create a card and return it. Making things easier to change At the moment, if you ever want to use 4 or 5 cards instead of 3, you have to update code in multiple places : , (3 times) and add tests like . This is just too easy to get wrong. Even assuming you can only use , you have various ways to achieve what you are doing in a less repetitive way. First idea would be to tell that once you've generated the position for Q with , you know you have 'A' cards before it and after. This becomes : 
+
+Wait, once this is done, there is no need for the list at all ? If we transform the last in an , we are good to go. This removes the need for adding elements to : 
+
+Code organisation and other things well done You've extracted the algorithm in a function on its own. Also, you've written you code behind the "if name == main" guard. Congratulations on this, these are two good things beginners usually don't do properly. This makes your code clearer, easier to maintain and easier to test. Also, I'd like to take this chance to congratulate you for using as a name for a throw-away value which is quite a nice habit. Finally, you did notice that there was not point in looping over the whole string once you've reached the middle. Getting rid of useless things 
+
+Once you have the data preprocess, you won't need to worry about parsing tweets or whatever. A simple bug What if a user was to mention hisself ? You'd get stuck in the loop. Conclusion You'll find various solutions to your problem in the litterature so I'll let you have a look at this : it might be a good idea to consider solutions to the shortest path problem by considering a graph : you are in a case of Directed graphs with nonnegative weights. There might be some even more relevant algorithm because you care about the existence of a chain but not so much about it length but I don't have a particular algorithm in mind. 
+
+Avoid to re-assign the same variable again and again as it makes it harder to hard to understand what the variable is supposed to represent. 
+
+Small function It may be a good idea to write a wrapper around so that you do not need to rewrite so many times. It may also be nice to have it add the and automatically. You'd get something like: 
+
+Disclaimer: Current version of the code seems to be very weirdly indented. Some comments might be wrong because of some misinterpretation of your code. Style Python has a style guide called PEP 8. It is usually a good idea to try to stick to it unless you have good reasons not to. In any case, it is definitly worth the read. You'll find various tools to check compliancy. In your case, the main issues would be : naming ( is recommended for function names), spacing (whitespace around operators), indentation (4 spaces) Design Your function returns either a list of food or is there is no food. This seems to be more complicated than it should be: it could return a list of food (empty is there is no food). It makes your function easier to use, easier to explain and more concise: you can simply remove the condition. From the Zen of Python: 
+
+After a quick test, your code seems to be working fine. Before going into interesting comments, let's go through quick details. Python has a style guide called PEP8. The document is definitly worth a read. Except if you have good reason not to, you should probably comply to this guideline. You'll find various tools to check you code like or to fix it . Here, gives : 
+
+thus making your code twice as short (or three times if you take this chance to remove the empty lines in between). I am not sure the different rotors deserve their own subclasses. They will just be different instances from a same class. Also, I am not sure there is a concept of rotor size in the classic Enigma machine, just a set of rotors of identical sizes than can be put in various positions. You set the rotors using a lot of boiler-plate code to associate characters to indices (via an array). You could just as easily use a string : 
+
+The class I quite like the Operator class and the way you use it to map characters to function objects. However, the various lambda functions you are defining are not need as you could use functions from the module. Also, you could define a class to handle the special case of constants to avoid defining dummy functions. You'd get something like: 
+
+Don't repeat yourself There is a piece of code you have in different places. It might be worth extracting it in a function on its own: 
+
+Multiply once You multiply by 2 each value you add to . You could do it only once at the very end. Sum builtin You could use the builtin to perform the sums efficiently. You'd get something like: 
+
+Separation of concerns (again) Your does 2 things : getting content and displaying it. It is a bad idea and you felt it and you needed to document it as you were calling the function. It is probably clearer to just get the content and then display it from somewhere else. Then the function name would obviously need to be changed. Updated code 
+
+The very right data structure In order to use to implement efficient algorithm, you'll need to preprocess your data into something relevant. Mapping user names to the set of users they mention is likely to be required. Here's a piece of code to do so : 
+
+Improving the code quality Then, a few things you could do to improve your code quality: - remove useless comment - put brackets around any block containing more than 1 line of code even if this is not required - define variables in the smallest possible scope - factorise out expressions written and computed multiple times. You'd get something like: 
+
+Different algorithm Instead of considering all pairs of strings which leads to a behavior (where is the number of strings), you could operate differently and use a dictionnary to group words based on some kind of signature with would be the same for anagrams and different for non-anagrams. In your case, you could use the "sorted" version of a word as a signature : only 2 anagrams will be indentical once sorted. Once you've determined how to compute this, you can easily define a dictionnary mapping sorted words to the anagrams they correspond to. This is a typical situation where the method is useful. You can write something like: 
+
+Different algorithms - int_to_string Here again you went for a complicated approach. The easy approach is to generate the string . When you are given a number, it is easy to know what the last digit it, you just perform a operation and that's it. Then you divide by base and you continue. Using divmod, this can be concisely written : 
+
+I think the main issue here is that you are trying to reuse snippets from Google without trying to understand what is doing what. Magic numbers This might be purely personal but I find much easier to understand than . Do not repeat yourself What is the point of having if later on you rewrite ? You could write it : making obvious to everyone that the same format is used. Useless conversion between strings and dates You are converting dates to string and string to date in a convoluted and probably not required way. Usess conversion to int You are using but is defined as which is an integer anyway. Also, I am not sure you would need the conversion of as an int. Taking into account the different comments, my resulting not-tested code looks like : 
+
+and have easy access to the different elements (and an exception if the list has the wrong number of elements). In your case, assuming and have the wrong length, you could simply write: 
+
+Then, this looks like a scenario where we could use /. The obvious way to convert the code above is : 
+
+Comparison to True You don't need to write, , you can simply write . Use to get value from dict with default value Instead of checking if a value is in a dict and then get the value, you could do both in one go. 
+
+Your code appears to be faster but also goes much deeper in the function calls. If you exceed the system limits, you could update . However, it could be a good idea to try to fix your code. You could write a solution that doesn't perform any recursive calls: instead of trying to solve your problems by solving smaller and smaller problems and saving the solution as you go, you could simply update all the problems from the smallest to the biggest you need. For instance, you could write: 
+
+Good reviews have been given and I have nothing to add. Edit : additional details for what it is worth : 
+
+Algorithm Let's work on the following example to see what you've done and what you could do. Assuming I've understood everything, you basically bruteforce by trying to go down then right if you cannot go down then up if you cannot go right and left if you cannot go up. What you could do is a slightly smarter algorithm which would actually tell you not only how to go to an exit but also the best way to do so. On can find a few examples on Wikipedia. The Sample Algorithm is pretty close to what are are trying to achieve. I cannot tell whether it would be more efficient than yours but it would have a few advantages such as : 
+
+Do not perform useless operations In , you parse a file to get a value that will be overriden by environment variables. Maybe it'd be easier to perform the environ check first and parse the file only if nothing was found. I'd write somethiing like:

@@ -1,0 +1,69 @@
+I'm self taught in python 3, and I frequently keep track of how long my scripts have been running using the time library. 
+
+My input file is a CSV of varying size, up to around 10GB. The file has several fields, however I'm only interested in the third column, a date-time field. The date-times are in UTC timezone, and they are not ordered. Example of values in column: 
+
+I wrote a function which takes a float variable and prints the time in a more readable way. I convert the seconds to integer to get rid of the 12 decimal places, and I can pass a boolean value which changes the wording of the print to indicate that the script is still running or has finished. 
+
+I have a process where I take several .lst flatfiles, apply filters and reformat the data, then append the results to a single file. I loop through every file in a subdirectory, applying the reformatting, then I append it to a file called Myoutput. I also strip out some rows of the dataframe and write this to a different .lst called Myoutput2. My code: 
+
+This process has worked so far but I now have to change it so that the two output files are ordered by a datetime field in the files. All the datetime values in the field are on the same day. The input files are not chunked by datetime, so it wouldn't be enough to just change the order I load the files. I appended this code to the end: 
+
+General advise Never write the whole big program at once. Write a litte bit at a time, compile it, test it, if there is anything wrong with it, fix it. Develop the program a tiny bit at a time. 
+
+There exists no reason why you need to use pointer-to-pointer here. It is slow and needlessly complex - a complexity that caused a memory leak bug. Simply do . Alternatively use a variable length array (VLA). If you for reasons unknown must use dynamic memory allocation, then do so on a proper 2D array and not some fragmented look-up table. See Correctly allocating multi-dimensional arrays for examples of how to do this - it is likely that your book or teacher is teaching you bad habits here. 
+
+Program design The main issues with your program is the overall design. I would recommend to study object-oriented programming on beginner level before even picking up C++, or any other programming language. 
+
+And now you'll say "this is not exception handling!". Who cares. If you look at the generated machine code, this will generate exactly the same code as a C++ exception handling program. It will contain the same direct branches. The only difference is that the above program might contain less overhead and therefore execute quicker, with less memory usage. 
+
+Now you can define a look-up table of functions corresponding to the logic table above. Do this by declaring an array of function pointers: 
+
+When programming in general, C in particular, the most important quality is quite often program performance. As in execution speed and memory use. It is therefore very important to actually know what makes an efficient program and what makes an inefficient program. Inefficient == bad. Some examples of inefficient programming: 
+
+If you can only change a bool once, and the entire purpose of a loop is to set the bool, then you should just exit the loop after the bool gets changed. There's no point in looping more than you need to, and you also don't have to worry about the bool getting switched back. So you can write your example like this: 
+
+An alternative solution is to create a function to get take an item and get that item's sorting order and then use that in an . This method takes a collection of the tests for the front and a collection of the tests for the back and returns such a function. 
+
+You can get rid of a lot of repetition in by storing things in arrays and accessing them by the . You can set up your arrays like so: 
+
+The braces should all be indented by four more spaces, and should not be indented more than the above brace. isn't a very descriptive name. I'd go with something like . Most of your loops can be replaced with LINQ, which is more concise, safer, and easier to read, in my opinion. For example: 
+
+You only need one class, and then you can create four instances of it. Your "Spawn" methods can be extracted into a single method, with parameters to handle the differences. For example, because not the same for each obstacle, you can have that be a parameter or a variable in the class. 
+
+A method would be useful and more efficient here. You can implement your own or find it in a library. I believe all the Project Euler problems have a solution that is a lot faster and more memory efficient than brute force. So you can try to figure that out for this problem next. For the later Project Euler problems, brute force is not an option. 
+
+As others have pointed, out never try to re-invent the C language. It makes the code less readable and more error-prone, for no obvious benefits. Function-like macros in general are incredibly error-prone and dangerous (and a pain to debug), they should be avoided. If you for some reason need to use function-like macros, you need to make them safe, properly encapsulate them with braces and parenthesis. In addition, doing strcmp after strcmp in sequence like this, is very slow and inefficient, growing more inefficient with each "case" you add. This is unacceptable if program speed and random access are important. So as for code review, I'd strongly recommend to forget this whole program as quickly as possible, nothing good will come out of it. The proper way to write an algorithm that stores unknown, initially unsorted and completely random input strings, is to use a hash table. 
+
+Here is feedback on C programming and style only. I haven't looked at algorithms or performance: Style 
+
+I'll only address C programming issues in this answer, not the algorithm itself. Program design and programming practice 
+
+I'm sorry for my bluntness, but this code is absolutely horrible and unsafe. To worry about global variables while using a mess of function-like macros, together with /, is kind of like worrying about the paint of your car while smoke is raising from the engine and the breaks are dead. Apart from that, trying to re-invent the C language is always a bad idea. Mainly because it confuses other C programmers. You can implement exception handling in much safer and more readable ways: 
+
+Basically I use the csv module to read each entry line by line. I convert the string into a datetime, and set it's timezone to UTC. I then convert the datetime to the new Timezone. The reason I do that at this step rather than later is because some timezones are offset from UTC by 30 minutes, which would mess up my hourly grouping. I then convert it back into a string, stripping away the minute, second and microsecond information, and add a count to my dictionary. Once I have looped through every row I convert my dictionary into two lists ordered by the Date key, zip them together, and write to a new csv. I feel like I've probably converted between too many datatypes. How can I improve this code so it follows best practices, and runs optimally? 
+
+However this can be unhelpful if the script has been running for some time, an example output being: 
+
+The output files tend to be around 1.5GB, so this doubles the runtime of my script, and it feels inefficient re-loading the data into memory. Is there any way to speed this up, perhaps have the loop appending the results based on their datetime field instead of on the end of the file? 
+
+My desired output is a CSV which counts the number of date-times by hour, which have been converted to a specified user timezone. example output file: 
+
+Since I'm self taught I have no real idea about best practice. I feel like there must be a more concise way of doing this, what mistakes am I making? 
+
+Your insertion requirements are mighty strange, but I guess you have some reason for them, so I won't comment further on that. 
+
+Instead of this, I initially had a call to , which will supposedly be nicely optimized for the specific hardware. The problem with that though, is that both parameters of strcpy() are pointers and my requirement is that I should be able to call "in place". In the special case where the user passes a string with no initial characters matching , I would end up with something equal to which invokes undefined behavior, as it violates the contract with . In order to dodge that bug, I rolled out my own . The above issue is my main concern which I would like some feedback on. 
+
+With this optimization we have managed to reduce the number of instructions and the number of branches both. But as you can tell, the code now turned quite obscure. Explanation: The fundament of this code is that one lap in the loop corresponds to one character in the input string. The bool variable keeps track of whether the code is currently looking for spaces or non-spaces. We are only interested in the places in the string where we go from looking for spaces to looking for data, or vice versa. When that happens, we should start looking for data if we were looking for spaces, and the other way around. Also, in the case where we go from spaces to data, we should increase the word counter. The boolean logic truth table is: 
+
+Alternatively, you could have functions as parameters for selecting the properties, like using a lambda expression in . Edit: as for the first method itself: In the following line of code: 
+
+If you wish to keep the speed of your original solution and increase readability, there are many improvements you can make: 
+
+Why does have three parameters but only use one of them? should be declared inside the loop because it's not used outside of it. You can assign it on the same line that it's declared. 
+
+The only thing that changes for each statement is the index is incremented, so we can replace all of the statements with a loop: 
+
+The first thing you can do is assign all the properties for a thing in one line using an object initializer. The following: 
+
+Because rectangles with the same X position weren't matched before, won't contain , so if it has a length of 1, that 1 element will be a different rectangle, but only the original rectangle will get added as a group. In the inner loop, the body of the last only adds the initial rectangle, but doesn't do anything about the previously added s, so it's possible for the loop to add a bunch of but only add the initial rectangle. If you get a list of the rectangles ordered by their X position right away and loop through that instead of the original list, you can take some shortcuts in the body of the loop. Edit 2: You should add more descriptive names. I don't know what , , the nl in , etc. stand for. Short names are okay for lambda expressions and loop variables, but even then you should stick to , , , , or a letter that relates to the object. I think it would make more sense to use for a rectangle than .

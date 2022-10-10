@@ -1,0 +1,97 @@
+This would even allow you to provide a member function for modifying the chunk size on the fly, in case maybe your code could detect that its particular workload demanded a bigger chunk size. 
+
+Of course then you'd have to use instead of . But you could make up for it by using instead of . Actually, hang on — 
+
+Getting back to , I see this function that you're calling all over the place. It doubles the length of the underlying array, which is way overkill. What you should be doing is computing the correct length for the array and then allocating exactly that much: that is, not 
+
+You're suffering from an excess of mimesis here. You've done an impressive job of translating your fantasy setting from English prose into a C++ object model... but sadly that's not worth anything, because the computer will never appreciate it, and the player will never see it. Let's start over, as if we were designing an adventure game program, instead of transcribing a worldbuilding session. We probably have a player (just one player, so we can just use a singleton named to hold his data), and the player has a current location, right? 
+
+Please, please, please, do not make and mean different types! Not only is this gratuitously confusing to the reader, it is also a huge pitfall for the writer, because if the writer accidentally leaves off the noise word in a single place, they get a bug. And finally, it means that this code won't port cleanly to C++, because in C++, and must be the same type, by definition. And yes, this code is almost entirely C++, albeit non-idiomatic. You'd just have to wrap your uses of in a macro: 
+
+...Now it does occur to me that we could use a mutex lock instead, like this, and then we could get rid of the count-to-two and make non-atomic. But I currently think I prefer the lockfree version as easier to reason about.(!) 
+
+Contrariwise, this is a very surprising overload of ! This operation would normally be spelled something like . 
+
+When I try to insert a value of an unsupported type into a , I get a horrible spew of template error messages: 
+
+Lastly, notice that you're relying on the notion of a "producer thread" and a "consumer thread" being able to run concurrently with each other. If your program is running in a context so resource-constrained that it can only get hold of a single thread, then your code will deadlock. IMHO that's extremely unlikely, and even if it did happen I would hope that 's constructor would throw an exception instead of blithely continuing on its way. But I don't know. 
+
+If the string in is , this copies 5 characters into : namely, . You never copy the terminating byte! So you've allocated 6 bytes, but initialized only 5 of them; you don't have a null-terminated string, and is going to blow up when you get to it. is NEVER EVER EVER appropriate. Treat it the same way you would treat : it is not in the vocabulary of an educated programmer. (And the same goes for .) Show me any code that uses , and I will show you bug-riddled code. The function you want here is the standard function for copying strings; it's spelled . (If you don't care about 100% ISO-compliance and don't care about any memory allocator but , save yourself another minor hassle by using . But do not use ; it is never appropriate.) 
+
+As for other ways to do the ladder of possibilities: In this case, because you're doing expression SFINAE, I don't think you can get any better. If you were willing to name your constraints, via 
+
+Looks like fairly clean code, but I see plenty of places it could be improved. Letting my eyes skim over it and stop on the weird bits... 
+
+It's weird that you write function calls as instead of . It's also weird that you write instead of . 
+
+Also, at least for the free (non-inline-member-function) functions, I'd strongly advise putting a newline before the opening brace of the function. Almost every C++ codebase out there uses some variation on 
+
+Not only will the compiler be happy with this, but it'll generate more efficient code (in unoptimized builds), and it's several lines shorter as well, which means you can fit more code on your screen, which means you can keep more of your program in view at one time. (I also picked you some clearer function names while I was at it.) 
+
+but that's a lot of extra verbiage that obscures the actual workings of the code; personally I would leave it off, and concentrate on reducing the number of individual things I need to print in that single line. 
+
+I mistrust your function because it takes a size but fails to ask the caller what alignment they want. If I want space to store an , I can call , but if the pointer I get back is 1-byte-aligned, that doesn't help me. As a general rule, allocation functions should always take both size and alignment parameters. 
+
+The repeated subexpression is a red flag: both because you're creating a string over and over (which does heap allocation, which is slow) and because you're using a C-style cast (type-casts are always red flags in both C and C++) and because you're casting away . /me checks the function signature again — No, you're not casting away . But you should be! A parsing function shouldn't be allowed to mutate the message buffer. Make that signature . Or even better: . 
+
+The easy answer is: Don't throw anything. Just declare that calling on an empty is a bug and you're not allowed to do that. (In other words, use "undefined behavior" to your advantage.) 
+
+This line invokes undefined behavior, because you aren't allowed to call on an incomplete type (and certainly not on ). Both GCC and Clang warn on this line: 
+
+Putting on a declaration that's not a definition is usually (always?) pointless. Put on the definition to solve ODR issues (which in your case you have not got), or maybe sprinkle it around to encourage the compiler to optimize more (which is getting to be more and more voodoo these days, so probably don't do that — and besides, how's the compiler going to inline the definition of a function that is defined in a completely different .cc file?), but in any case, put it on the definition, not on the declaration. I would even consider removing the declaration of (and so on) from the .h file altogether, and replacing them with lambdas somewhere in the .cc file: 
+
+The extra braces here are a pessimization; they inhibit move-elision (a.k.a. Named Return Value Optimization). Remove them... oh wait, I see, is a , not a ! Why are you constructing a separate and then copying it into the ? That seems pointless! At the very least, this should be 
+
+Also, what does your code currently do with , and what do you think it should do with it? Now comments on your code itself: 
+
+(notice the one extra set of parentheses in there). Furthermore, I would offer the caller the option to lazily compute the value on first reference and then cache that value for all future references: 
+
+. This is minor but would help quite a bit in "breaking up" the code visually. If you want to get the vertical real-estate back, then cuddle your braces: 
+
+Please don't use the word to describe a . Use , or , or something, but please not . The only time you should use the word in a C++ program is when you're referring to an actual . (Which should basically never happen.) The function has a couple of parts that I would characterize as... problematic. It's got a , which looks like it wants to be a function parameter; and then it's got this , which I'm not sure what that is. Turn those into function parameters, and/or get rid of them. It seems like the non-problematic parts of this function could be replaced with just a couple lines of C++ code involving and (or a plain old for-loop with a inside it, if you prefer). You definitely shouldn't need to be repeatedly ing from the middle of the vector; that's one of the slowest things you can do, and it's 100% unnecessary, if you start by ing the vector so that all the items you're eventually going to erase wind up at the end of the vector. 
+
+The destructor of takes care of calling on the owned pointer (which will call the proper derived-class destructor as long as you've made the base-class destructor ). 
+
+Notice that I placed parentheses around the macro arguments and when I used them inside the macro itself. 
+
+Functionality suggestion: Consider providing a way for a writer to atomically demote itself to a reader, without releasing the lock (i.e., without allowing some other writer B to sneak in and change the value that A just wrote). This should be possible, I think; and it's definitely not possible for anyone but you, the author of the mutex, to provide this functionality. I think it's as simple as this: 
+
+Your question would be improved if you posted (a link to) the original Gilded Rose code, or the problem statement, or whatever it was that you started with. Without knowing the problem statement — i.e., the constraints that you're stuck with and can't change — it's hard to know exactly which terrible parts of your code are fixable and which parts are irreducibly terrible due to the original constraints. Since the Gilded Rose problem is phrased in pretty explicitly object-oriented terms (various hard-coded types of items, each with its own idiosyncratic "update quality" algorithm), and especially since you're working in Java (the most classical-OOP of languages), it would make sense to solve it using classical OOP polymorphism. 
+
+— yet somehow when it comes to the simplest possible operation, , you have all these weird helper functions and no way to just add two numbers? I'm looking for 
+
+and likewise every other time you load an atomic variable without a memory order. As I said, normally I advise not to use memory orders other than at all; but since you are using them, maybe it would be a good idea to mark every single load and store, consistently? I also suspect that that particular load could be maybe, but seriously don't quote me on that. I have no idea. 
+
+Your code is of the type that has no obvious bugs, so I just started at the beginning and tried to understand the algorithm. 
+
+Use source control, such as or ; then your test for "editing accidents" can just be "is the source code up to date". If you're worried about editing accidents in the past, take a look at the history of the source file. 
+
+You should be aware that is the wrong format-specifier for . You meant either , or else . Without the explicit cast, will promote to on most computer systems (undoubtedly including yours). (Which means that would also be pretty much correct.) Also, you should be using rather than for all these quantities in the first place. All those casts scattered throughout your code will at best not-hurt your program's performance; at worst they will inhibit compiler optimizations and slow things down. Remember, compilers tend to be really good at optimizing idiomatic, simple code, and not so good at optimizing weird, subtle code. Write your code as simply as possible, and the compiler will take care of the rest. 
+
+Now notice that you don't use or anywhere in the code — instead, you pass around the caller's original and as parameters. And with the refactoring above, you don't use . So what you're left with here is a that is effectively the same thing as an . So, get rid of the useless class! 
+
+Okay, here's the bug (I think; please let me know if I missed something). Suppose thread T1 is trying to resize the storage, and thread T2 is coming in as a new reader trying to pop. T1: enters T1: increments from 0 to 1 T1: calls , which returns without doing anything T1: enters with T1: sets T1: locks T1: tests , which is false because T1: therefore doesn't execute any iterations of the loop T1: a bunch of unsynchronized stuff culminating in Meanwhile, T2: enters T2: enters T2: increments from 1 to 2 T2: enters T2: tests , which is T2: decrements from 2 to 1 T2: acquires and releases it T2: increments from 1 to 2 T2: returns from T2: a bunch of unsynchronized stuff culminating in Let's interleave those so it's clear what's going on: T1: enters T1: increments from 0 to 1 T1: calls , which returns without doing anything T1: enters with T1: sets T2: enters T2: enters T2: increments from 1 to 2 T2: enters T2: tests , which is T2: decrements from 2 to 1 T2: acquires and releases it T1: locks T1: tests , which is false because T1: therefore doesn't execute any iterations of the loop T1: a bunch of unsynchronized stuff culminating in T2: increments from 1 to 2 T2: returns from T2: a bunch of unsynchronized stuff culminating in 
+
+First of all, let me just say that is a really bad name for a generic function. I would have called it... ! In fact, I'm going to do that in this answer, because it'll make the code a lot easier to read. Well, I'll call it , because we'll be including , and I don't want any confusion over whether we're accidentally referring to the standard library's 2-argument . 
+
+I'm pretty sure that by the time you get down to the , the compiler will already have complained about the initialization of ; so the isn't really doing anything here. 
+
+Having hidden the implementation details and from the reader, we are now free — if we so desire — to replace them with things that are 
+
+Lastly, even if everything else about this design were good, it's unsettling how easy it would be for someone to write a class that just dropped messages on the floor. 
+
+If you want to motivate the use of technology X (for any X), your first job is to think of the best technology that is not X, and then come up with ways that X is even better than that. With the code you posted, it seems like you deliberately came up with the worst possible technology; so saying "look, X is better than this thing!" isn't impressive or interesting, it's just a tautology. 
+
+Yes, it's correct, but it's not idiomatic. There are two reasons I can think of to use instead of directly: 
+
+and then inspecting and trying to figure out which was getting instantiated. In the cases where overloading and/or templates rendered the question meaningless, I would try to at least give a nice error message, if not actually produce a tag type so that . 
+
+This Python is mostly over my head — and Ashwini just gave a more complete answer — but I do notice this infelicity: 
+
+There's no reason for the named method to exist. Use constructors and assignment operators for their designed purpose. 
+
+The JavaScript-looking is C++17 syntax, but don't worry, we're about to get rid of it in our next refactor. Applying "no raw and " allows us to simplify much further: 
+
+This explicitly initializes only the first element to ; the remaining 255 elements are value-initialized, which in layman's terms means zero-initialized, which means yes they're initialized to as well in this case; but your comment is misleading, in that 
+
+Notice that the is destroyed at the , and so the mutex is not locked for a little while, until the next time you loop around and hit the line. If another thread destroys the during this period, it'll notify but you won't be listening and so you'll miss the notification... and that was your one chance to hear it, so now you'll never stop and your program is frozen. Solution: If you're waiting for a notification that you absolutely must hear, then absolutely do not stop listening. Don't drop that lock!

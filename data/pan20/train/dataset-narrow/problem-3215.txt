@@ -1,0 +1,65 @@
+This a generic network question, that applies to any device inside a private LAN with desired public external access. You have a few options, depending if this is for private or commercial grade use. 
+
+Being your purpose provide internet access to your LAN devices, will assume double 'NAT' will not be a big issue. With this configuration you will provide wireless access to non WiFi devices that will benefit from internet access. 
+
+After booting the new configuration, edit the fstab, remove the old /mmcblk0p2 note: This is a file will be on the 'new' /root device Replace /dev/mmcblk0p% (% is the linux partition) 
+
+On the original schematic, the author use the term 'JPx' usually meaning Jumper, however, JP1 and JP2 serve the same purpose; JP3 is just a test point, maybe to skip the fuse. Your design looks ok and should work. The only issue here is the old power supply. Old power supply run steady only when the load is also steady. Voltage regulation is not good when the load is low and often, no voltage at all with small load. PC's have 12vdc and 5vdc, again, cheap design call for both loaded and working; so I think that the problem is on the Power supply. Maybe if you add a dummy load on +12vdc, will accomplish better voltage regulation. You are providing over 40 amps and you need merely 4 Amps to run your Pi . 
+
+You can repeat this schematic, assigning a GPIO port for each lane. The HAL sensor will require a magnet on the car, however, on my testing the magnetic field from the engine was enough to trigger the circuit, as a bonus, you will have a visual feedback. The OH090U have an internal circuitry to avoid false and multiple switching when the magnetic field is moving. The sensor run on 5V and with a couple of common resistors we feed the GPIO with a voltage within the margin rate. The cost is less than US $5 per track. Hard to beat. 
+
+You may need to enable SSH, however, you are receiving a prompt, so most likely is already active, just in case: 
+
+For a similar application, I'm using a very trivial approach that works pretty well: . On the server I have a simple page, , retrieved by the client; it's here where you add the server side code. 
+
+There is no default route, with gateway '*' only local ARP resolved access is allowed. Everything else, fail: 
+
+You can use this simple method to ask each rpi to identify itself with your server; you can also use this as a two way communication. Your problem is not over just having the public IP or a valid dns entry. On each location you will need to do a port forward to reach the remote LAN rpi; not easy if you have limited or no control over the remote site. I think that will be easy and secure for each rpi push and request the updated information from your server at specific times using cron or a similar method. 
+
+Default route is not reassigned when the primary interface goes down. DNS servers are not replaced when switching potentially to another network. (not shown here) 
+
+Yes it is. Not one answer fits all; depend on your need and expectations. RPI3 changed a little bit the playfield. On my case the Wi-Fi router I needed was to cover a couple of rooms. For example your outdoor BBQ area or the blind spot that your master router is not covering. Perhaps on performance is not the best but, if you are looking for simplicity, this is a great option. If you need better coverage a dongle with a large antenna works fine. I have a 'Zero' working as VPN server, sure is not bullet proof, but you get a lot for your bucks. I forwarded ports 1723 and 47 from my vendor router to the 'zero'. Works great when out of the country when you need a local IP address. Another great use is RPi as a Wi-Fi to Ethernet converter: I'm streaming to a Wi-Fi less TV and works perfectly. 
+
+If you have control over your DNS server, you can add host names dynamically and associate them with a particular device. So for example: 
+
+Delete /dev/mmcblk0p2 with 'd' and then enter '2', recreate the partition again. the 'secret' is to use the identical 'start' sector. Create the Linux extended partition with 'n', select extended, enter the first sector (in my sample 1679360) and let to select the last sector ('default'), then enter 't' to enter partition 'type' of 'partition' 2, should be type '85' (Linux extended). Now, create the logical partitions that reside inside the extended partition just created. Use 'n' for new, enter 'l' for 'logical' and 'fdisk' will assign the next available slot, the first sector must be the same one than before, on my sample, 1687552, the last sector, use the original number, on my sample 122880, enter partition 't' type as 'c' (ms-dos). Repeat the process for your other partitions but, on the last one (p6), let 'fdisk' select your 'last sector'. Verify your entries with 'p' and make sure that only the last sector on the last partition changed and nothing else including partition type or 'id'. Now commit your changes with 'w' to write the new partition table. Reboot and let Linux know your new disk size with: 
+
+Yes, you can run a browser on your RPI and show the dynamic content on your display. There are a few commercial packages and some signage open source. The TV will have enough USB power to feed the Raspberry. Here is a list of open source and commercial signage for the Raspberry family. 
+
+If this is not working, you can debug it running in debug mode, be a fast reader or use / on your console to pause it: 
+
+The micro-USB on a regular RPI have no data lines, it's power only. Besides that, what you read is a reference to the RPI . The USB hardware implementation is not like a 'regular' Rpi, Indeed all but the , present a 'usb hub' and not the master/slave USB port; the 'center' micro-usb is complete: data and power, while the other is power only. On the software side, Linux Gadgets allows to offer serial, ethernet and other cool functionalities through the 'plain' micro-USB port. 
+
+Your best option is to mount the SD card on a running Linux and from there manually edit the zero files. The state is not persistent between reboots, the interface should be up on your next boot, unless, was defined otherwise on file. Your eth0 interface should be as follows for automatic dhcp configuration. 
+
+If I understand your question: A) You want to connect your RPi to MacBook. B) You have a running RPi-3, I assume, originally connected to a friend Wi-Fi. C) You don't have your home's Wi-Fi password, however I assume the MacBook is Wi-Fi connected. C) No physical access to the Access Point and no access to switch to provide eth0 access. So, you want to connect to your Wi-Fi without using the WPS auto configure button. Your options are limited. Your best solution is to find the Wi-Fi password. In a Windows box connected to the subject Wi-Fi , open a command prompt and then: 
+
+where is your windows computer name (dns or netbios) and is your windows shared directory. Depending on the access you give to your windows share are the credentials required: if you give your share 'Everyone' read (and write) access nothing else is required, otherwise you must add credentials at mount time: 
+
+Indeed, if you can live with just the SD MS-DOS partition (/boot) where the kernel reside, you can have /root and everything else on an external device. USB memory card or a physical hard drive are fine as secondary drive. The good thing is that unless you 'dd' to the wrong location, this is a non-destructive procedure: one edit and you go back to the original, To setup this configuration is pretty easy. You configure your installation as usual and the move/copy the EXT4 partition to the external drive. Using '' partition your selected secondary drive, create a partition the same or larger size than your current mmcblk0p2 (or mmcblk0p5). Save the new configuration. Find the partition name, in this sample, '/dev/sda5' however, this partition will depend on your configuration. Copy the running partition (note: is not a good advisable to copy a running partition, some files are in 'unstable' or open state, however, work fine): 
+
+Remove isc-dhcp if available and install a couple of packages to provide DHCP and DNS to your private network: 
+
+I don't have this issue with Putty connection to Raspbian from MS-Windows, however, you may have this issue on other platforms. Indeed on UBUNTU this was a common case. On Putty, Change Setting, click on 'Connection' and modify the 'KeepAlive' options. Open the configuration panel and click on Connection and enable 'TCP_KEEPALIVE' sending 'Null packets' every 30 seconds Now that you are there click on 'Window' -> 'Translation' and select Latin-1, works nice with Raspbian character graphics. Go back to 'Session', click on a name and 'save' the configuration. 
+
+Just to update this answer, the issue is there are many version of Raspberry Pi and (as of today) two Raspbian (Debian) version available. Wheezy IPV6 is not active by default. You can activate with sudo modprobe ipv6 and ipv6 will show up on your next . To make the change permanent must modify the list of modules on and append (this is the module name). To support ipv6, your file will look like: 
+
+Connect the to the WAN. Create a wpa_supplicant with the proper credentials. You can have multiple WIFI credentials on file if you are roaming. 
+
+Will show you the association between IP and MAC addresses. Unless someone else reuse the same IP with a new MAC, the ARP protocol will keep it alive for some time. You can also clear that table, O/S dependent, with commands like: Windows: 
+
+DHCP Modify default configuration to make it authoritative and add the LAN network (10.10.10.*), edit the file , add the following content: 
+
+To work with on some routers and networks can be pretty tricky and hard to diagnose. Using the following method I have a 100% success rate. First to confirm your network is available and visible try (just the SSID is enough): 
+
+For each one there are very simple or complex solutions depending on the security level you want to have. I will present one possible simple scenario. Software Update: Create your personal GIT repository using SSH transport. You don't need a full GIT server to do this, any Linux host, maybe with external disk, can hold it. Depending on your security needs, you can use SSL certificates to avoid password exchanges. Per your schedule, a cron job can kill your apps, do a and restart them. Remote run: A cron entries on your remote host, every few minutes, can keep your application alive. You may want to check if it's still running with a simple query. Remote log: You can use , a practical way to collect all your logs in one point, or use to copy/update your remote logs in one centralized host; using a unique name for each log file. 
+
+IPTABLES Now create the following script to setup and start the network on every reboot. The script will dynamically create a few 'IPTABLES' rules. Name it : 
+
+but doing so, Zoneminder fail to start. How does app-get determine the Candidate, I this case, not the last version? (*) GPG keys will be required 
+
+Setting static IP involves also to modify /etc/resolv.conf there, you must have your default dns server. Use just 8.8.8.8 and 8.8.4.4 or one from your ISP vendor. 
+
+I'm have a RP3 setup as a bridge to provide internet access to a TV, Directv receiver and the Audio system, also work as a Bluetooth audio receiver. I will like to receive IR from the (multiple) remotes and blast/echo the IR into a closed cabinet where the equipment is hidden and, at the same time upon a Bluetooth connection, send IR commands to set the audio system into 'Aux' mode. I have LIRC working fine as IR receiver, also, I can teach keys from different remotes, however, I'm missing the 'repeater' portion, from the software and hardware perspective. I think I can get a working IR diode from discarded remote but then what? 
+
+The reason for your problem is due, most likely, the way your network interface is connected. Usually the default 'dns server' is your own router; in this case, the router will take care to resolve public and local names. Local names are captured by your router during the DHCP IP address assignment (or similar protocol). Routers, acting as DHCP Servers, add a private suffix to local host names like: 'host.home', 'host.vendor' etc, often too, your dhcp server provides this information back to you. If you manually edited to use a public or any external DNS, like google's 8.8.8.8 or 8.8.4.4, you will have no information about local machines, unless you use other protocols to find them like '', the obsolete '', '' etc. Ping operation "" is a security issue, maybe using sudo will work. If you can edit your question and add Raspbian version and release (wheezy, Jessie) (), also , , and will help further more.

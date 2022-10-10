@@ -1,0 +1,39 @@
+Backup production Restore backup in staging Drop the unwanted tables Backup staging Restore backup in integration 
+
+The following two queries give index usage stats per table which should be a good indicator of which tables are causing the most IO operations. 
+
+Do you actually need to persist the prev and next columns in the data? Why not use Window functions on retrieval of data to get what you need from your base table? I've made a bit of a guess on what your schema looks like in it's most basic form but this should help you. If not post CREATE statements for all tables involved and I'll edit the answer. 
+
+Linked servers aren't usually a good idea from a security perspective. See distribution statistics section here I think SSIS would provide a better way of doing this. 
+
+I'm not sure how this will perform and there may be a much easier way to achieve this that I've overlooked, but this should do what you need if you're only interested in enforcing uniqueness. 
+
+The wait type indicates that SQL Server has finished doing the work it has been asked to do and is waiting for the consuming application to confirm that it has received all of the data. This is normally due to the application consuming the data in an inefficient manner. The classic is if the application is processing the data row by row. Another possibility is that the server, that the application is running on, is under performing and causing the application to slow. With that said it is possible the network is contributing to the problem. A ping from the application server to the SQL Server will show the time it takes to get information across the pipe. If this is near to your wait time then it may indicate your pipe is not fast enough. 
+
+If you expand the SQL Server Agent in SSMS and double click the Job Activity Monitor you should see what you need. 
+
+The port can be configured in SSRS Configuration Manager. This will have been installed on the machine when you installed SSRS. Check this and this BOL articles for all the details. 
+
+So my tmepdb files on SSDs are the slowest drives I have. Anything I should be looking at from a configuration/infrastructure point of view? I am currently studying the applications usage of tempdb and any memory spills but I'm not seeing anything terrible. 
+
+I couldn't include in my test query below but hopefully I have provided enough code for you to understand the syntax you require. 
+
+Maybe he wants to load the table with data and then create the index after. That way index fragmentation and statistics would be in good shape. With that said a good choice of clustering key would keep fragmentation low during the data load. Kimberly Tripp has written a few posts on topic of choosing appropriate clustering keys. 
+
+All you need is two tables. 1 for Products and 1 for Attributes. You would then have a one to many relationship from the Products table to the Attributes table. This means that each product can have as many attributes as it needs. Table structure would look something like this. 
+
+As the data in a table changes the statistics objects that represent the distribution of data become outdated. This is a problem because it's the statistics objects that the optimiser uses to make it's estimates when building execution plans. If these estimates are inaccurate your performance will suffer. SQL Server does automatically update statistics objects when the amount of data in the table that has been changed hits certain thresholds, but if you have data that is changing frequently or tables with millions of rows you will better off performing regular index maintenance. This can be done with maintenance plans or scripts. Ola Hallengren's suite of scripts is very good for this and something that I use in all of my environments. There is also the Minionware suite that I have not used personally but I hear good things. 
+
+In 2014 you get the new cardinality estimator which could see your queries get better plans and therefore execute more efficiently. A good reason to upgrade from 2008R2 is that it is on extended support meaning it is unlikely to receive anymore updates and only SQL Server 2012 SP2 + versions are able to operate with TLS 1.2 see here 
+
+I'm not an expert when it comes to collations but the following does provide the sorting your require. It may cause other characters to be sorted unexpectedly so please test. 
+
+Your problem may be that the backup set was created but the backup did not complete. I use the query below to check my backups 
+
+PAGEIOLATCH_XX waits are logged by SQL Server when it is waiting for data to be read from the disk. Index maintenance is a notoriously intensive operation and because of this it should be performed at your quietest times to avoid any impact on production. You mention you have queries that are causing the same waits. If this is at the same time as the index maintenance then that is not that odd but if it's happening at other times it could be down to memory pressure (not enough room in RAM to store pages so they need to be read from the disk again), large scans or it could even indicate there is a potential problem with your disks. More investigation is needed to rule each of these out. 
+
+Yes. The first query has left an open transaction. SQL Server doesn't check if the current user has permissions at compile time. It will find out at run time. If you were writing a stored procedure you wouldn't want to check permissions at compile time as a different user may execute the procedure. Wrapping the UPDATEs, in both queries, in a TRY CATCH would avoid leaving an open transaction. 
+
+I would set it offline. I say this because mode is generally used to allow an administrator to perform some kind on maintenance on a database without users attempting to access and possibly interfering with the maintenance. It doesn't really matter either way for a restore as your users will experience the same thing which is they wont be able to connect. One possible annoyance with the approach would be if a user stole the single session before you and blocked you from performing your restore. 
+
+I would wait until the end of the day and then turn off auto shrink and never turn it back on. If you are low on disk space you will need to look into to getting some more and then turning auto shrink off. The reason for this is it creates a lot of fragmentation. See this to see how bad this can be.

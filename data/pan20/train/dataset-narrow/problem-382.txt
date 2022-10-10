@@ -1,0 +1,31 @@
+All the reading I have done approaches the example to resolve the issue of an invoice appearing like a fact and a dimension, where the facts of the invoice are essentially propogated to the child table, causing some redundancy but conforming to standard practises. In the production billing system itself there are 15 tables that contain items that appear on an invoice, a summary table that contains invoice level charges and a summary of the charges in the other 15 tables by category, and the invoice table itself. I don't feel that my scenario matches this though, because the invoice has a number of different things that also need to be reported on (Invoicing address, marketing material on invoice, payment method, invoice format, email, online or paper billing, balance brought forward, payments since the last invoice etc). While this is acceptable redundancy if I had one or two tables it seems like a lot for 15 fact tables. In addition to being a lot of redundancy when there are multiple tables, I would also still need to link and to get records for the same invoice, and I don't beleive a degenerate dimension is a good way to link the two. Basically this all points towards being a dimension, especially as there are no measurements on an invoice level, however it still feels like it should be a fact as there will only ever be new records on each import. Which leads to my questions: 
+
+Am I correct in thinking that an Invoice in this scenario should be considered a fact? If so is it acceptable to have further facts referencing this fact, or is there a better way to approach this? I can't believe I am the only person who has encountered a situation where the examples don't really seem to fit. Is there a recognised way of dealing with this? 
+
+am I wrong in assuming that the two queries are functionally identical? If I'm not wrong, is there any sensible, defensible explanation for the discrepancy? 
+
+Setup: PostgreSQL 9.3.5 I have two tables with a common identifier () that is unique in one table () and not unique in the second table (). There are no NULL in either table [UPDATE: not true, there were NULL in ], and datatype is INTEGER in both tables. The following queries - which I assert are functionally identical - return different results: Query 1: 
+
+That last one, if 'Y', is a gigantic PITA given that is not the 'usual' way that most folks get 'A not in B', because often the clause is a subset of the set of variables in the primary - e.g., 
+
+That's as expected, but frankly I can't trust that result given that Query 1 returns zero rows when it should return 1478. Three part question: 
+
+And yes, the clause could be written as , but the discrepancy in results is a BIG problem given that the query using took a third of a second and the query structure is canonical by the definition in TFD (it is a 'condition that evaluates to a boolean'). Bear in mind - this is not an efficiency issue in the sense that one formulation takes longer than another, valid formulation. This is the fact that two formulations that are set-theoretically identical, produce very different result sets. UPDATE: the Query Plans produced by EXPLAIN ANALYZE are as follows - Query 1. 
+
+I'm doing what I would consider a pretty straightforward query on two tables that aren't huge (~626k records in one; ~47k records in the other). Both tables have GIST indices on their spatial columns ( and in the query below): these are the columns being used for the conditional part of the query. The spatial columns are WKB MultiPolygons: they have been checked using ST_IsValid(), and are all lovely and clean. The offending query looks like this: 
+
+You need to define the same indexed view on the staging table before you can switch, since the indexed view has it's own partition. To explain the reason for this, first imagine the following simple schema: 
+
+For further information, my warehouse schema currently looks likes this (where I have conceded to Invoice being a fact like dimension): 
+
+ADDENDUM As pointed out in a comment, you don't need the three subselects, you can just use the columns in the table aliased : 
+
+will not be true for these rows (because evaluates to ). This effectively makes your an I have never been a big fan of especially when appears in the same query. I would rearrange the query to make all the outer joins left outer joins for continuity purposes: 
+
+Each of these go onto a single invoice, in addition to this there are transactions at an invoice level too, so I now need a further fact table: 
+
+I am building a warehouse for a billing system that bills a number of services/utilities on the same invoice, as such I am having real trouble conforming to a recognised design method for the warehouse. I think I still very much have an OLTP hat on. As an example a single invoice could be produced containing charges for electricity, gas and mobile phones. All three components of the bill, themselves have two components, fixed charges, and usage based charges. Even simplified to just a mobile phone it still means to store the level of detail required for the business I need 2 fact tables: 
+
+This does not solve the problem though since you still have the possibility of being and turning the LEFT OUTER JOIN into an INNER JOIN. You can get around this by moving the predicates to the JOIN conditiion: 
+
+You can see all that has happened is that the partitions have just switched between the corresponding tables/views. If you do not have the indexed view on the second table you would only get the following partitions:

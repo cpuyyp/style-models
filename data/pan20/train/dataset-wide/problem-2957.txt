@@ -1,0 +1,85 @@
+Is argv[0] not the name of the application and argv[1] is the first user supplied argument. Must admit I don't understand your implementation. So a decent description in comments about how that implements a sieve would definitely not be out of place. 
+
+Overall Wow. Correct implementation. Your the first person to post what I would call a proper implementation. Good Job. Code Review Prefer NOT to use 
+
+It is hard to tell if numbers was dynamically allocated! You actually have to go and look that up in the function . So if you change you also need to go through your code and find every place that calls to make sure they also use it correctly. Also its not exception safe. If an exception propagates through your code then you leak memory. The function is special. If you don't specify a return then the compiler generates a for you. If your code can do nothing else apart from exit successfully then leave the out to indicate that there are no failure states. If there are error exit states then is an indication that the reader of the code should look for exit failures attempts. Here: 
+
+But usually when you have an input stream reader you also have an output stream writer that mirrors the reader. So when you persist to a stream the class can also read the value in. In ATM: Interesting. You have a action and action applied for every transaction. Does this mean that a transaction can perform both operations? 
+
+Naming conventions One of the most important things in C++ is . So we like to distinguish (a compile time concept) from objects (a run-time concept). So in C++ it is generally accepted (not universal) that (user defined) type names have a leading uppercase letter while objects have a leading lower case letter. While we are on conventions. Putting the to indicate pointer next to the member name is a C convention. In C++ it is more traditional to put the next to the type. This is because it is part of the type information of the member. The type of the member is . 
+
+Now I can change the key bindings without making the code look weird. If I change the left right to 'o' 'p' the code still contains comparisons to and . Also note the all uppercase identifiers are by convention reserved from macros. Please don't abuse that it can lead to some complicated issues. Please use the more modern randum number library. 
+
+The buffer is an Array. The array already initialized all those members. You don't need to re-initialize them 
+
+If you don't explicitly put a return in the code then the compiler will add one for you (that returns 0). It is sort of traditional for programs that can not fail (ie they never return anything but zero) to have no return value in main(). The other side to that coin is that if you see a at the end of main, it is an indication that main() can fail and exit with a non zero value (ie you have another return point in main() that indicates failure). So if your code never fails (a in this case) just leave out the . 
+
+Well you have lots of code in your loop that only happens once. You could manually hoist this out of the loop and decrease the size of the loop once. 
+
+Memory management is your big problem in this code. You pass around pointers. You should never do this especially across interface boundaries (its OK inside a class if you are careful. But across an interface boundary they provide no concept of ownership semantics. Pass references or smart pointers as appropriate). Small side note: 
+
+But that seems a bit verbose. So you could have written a helper function that does type deduction for you. 
+
+Comments on code In C++ code you do not want to be messing with C-Strings. All that memory management makes the code hard to maintain and is difficult to get correct. prefer to use std::string which does all the hard work and lets you concentrate on the algorithm. 
+
+Sure. But why not have a graph class. Then you can have more than one graph. Also you search algorithm uses another glboal. 
+
+Personally if the preconditions to the function are not met then I like to return quickly and this not add to the nesting: 
+
+You will need a static char array (or equivalent (like a switch)) somewhere as there is no built in way to convert enum values (which are integers) to a string. 
+
+is a bad option as it does not really provide any kind of protections. It is to easy for a developer a couple of years from now deciding that he wants to have access and just inherit from your class to get the access he wants. Thus violating constraints that you probably failed to document. So prefer never to use protected. Stick with either fully or fully . Adding reference variable may potentially double the size of your class if the compiler is having a bad day and does not optimize them out. Also this adds restictions on the copy-ability of your class (the default copy constructor is not going to do the expected thing). 
+
+Don't write useless comments (like Default constructor). Use default value for the default constructor. Don't use leading in identifier names (the rules are complex you don't know them all and you will eventually get it wrong. Best to avoid. 
+
+If you ignore space and capatolization the above is an palindrome. You could have used to read a line of text from the user. Use ternary operator (judicially) 
+
+Note: normally you should not inherit from standard containers. This is a case where it is OK as there are no plans to re-use the type and it is not being deleted via a pointer to the base class. This should be placed in *.cpp file not a header. 
+
+I see a set of input and a set of outputs. I also see that the outputs depend on a change in the state of the inputs. As a result I would expect my the functions to mirror this table (maybe this is a bit low level?). Thus I would have expected an interface like this: 
+
+If there is no usage I can not contrive of a situation where this would happen. As the must be constructed before the because you add add during the construction. Also I would argue that should be everything automatic not static. 
+
+I like to put containers together, streams stuff together, C stuff together; others like to order them alphabetically. But with this many includes some sort of logic is probably a good idea. You don't need to use this old library. 
+
+Well its hard to tell if there is a problem as you have not provided the definition of the base class or one of the derived types. But from your description it sounds like you have not marked the method as virtual. Unlike (where every method is virtual by default) in C++ we don't want to pay the cost of a virtual function call unless you need to, so functions are not virtual by default and need to be explicitly marked and their overridden version marked . The rest of your points are based on your original incorrect assumption. 
+
+No confusion here. Storage of pointers. I have no problem with you storing a vector of pointers or a vector of smart pointer. Either makes sense. As long as you define the Copy Constructor/ Assignment Operator and Destrtuctor if you use pointer (like you have). You could argue that keeping an array of smart pointers will save you some work in coding (tiny (probably insignificant cost1 of managing the data). Alternatively you can use a container specifically designed to hold pointers. 
+
+Looks like the functions / ... are practically identical. So this should be just one function. The state could then be incorporated into a class (and the function becomes a method). Then you can represents your roter's by an array of roter objects. 
+
+Your class contain RAW pointers (ie not smart pointers). These are owned by the class. Thus you should use RAII to manage them. In this example you just leak memory. But if you had add destructors to clean up the memory then you would not have been following the rule of 3 which would have caused problems if you had made any copies. So you need to add the following methods to your class: 
+
+Threading Sure you can use the C language threading model. But C++ has its own threading model you should probably look into. 
+
+The operator has a higher precedence than so your modulus is being applied to the last element only before the addition. 
+
+It may seem like an expensive copy operation. But in reality NRVO will make this an in-place operation so no copy will take place (just make sure you turn on optimizations). Alternatively pass it as a parameter: 
+
+Since most C++ platforms do use IEEE 754 this is much more easily done using a . But we do have to make sure it is portable. Your code basically takes a floating point number and breaks it apart into its representational parts than builds an IEEE 754 format object that it pretends is an int. So we can still use that on systems that don't natively support IEEE 754. 
+
+Swap There is already a standard swap function. You should use it (like any standard algorithm when you can). It will simplify your code and express intent much more clearly. 
+
+Also you should mark the move operator as non throwing (by using noexcept). This will allow the standard containers to use your list in the most optimal way possible and still provide the strong exception guarantee. 
+
+This is not doing what you think it is doing. I am surprised if this even works as it should always return true. 
+
+The last line in a file may not work correctly if it is not terminated by a . This is not a correct way to replace tabs. 
+
+Doing rand that way is bad. The exact value of RAND_MAX can very but is usually 32767 (or multiples thereof). This means gives you: 
+
+But why try and connect three times? Is there some reason you think things will change? If they do change what does that mean about the error that happened the first two times? This code is too low level to make decisions like this. If there is an error here you should be getting a bit of code that has much more context to make the decision to try and reconnect again. Boolean results with if 
+
+In this case is the same as . But the code is written in such a way that any changes by a maintainer can easily result in this being not true. Also I don;t actually see the need for a cast. 
+
+Protected does not really give you much. Stroustrup even indicated that he now thinks this was a mistake. To access it all I need to do is inherit from your class. If I really want I can then expose it publicly for others. Thus it really provides no protection. 
+
+Rather than an else statement to set false on invalid username/password why not just default to false and only set to true if it worked. Also do you care unless both are valid? 
+
+Explicit construction with With the introduction of we have an object that can be used for the value. But I see no constructor that covers an explicit construction with a . 
+
+Sure standard constructor. Have you though about default values? Also prefer to use the initializer list for constructor. Its not going to make a difference here. But with any type with a constructor it will. And it pays to be consistent throughout your code base. 
+
+But it also finds keys that don't match the string exactly and also values. Say I was searching for . This would also match or . You should check that the proceeding and following character are 
+
+Design Review You have decided that the managed object can potentially be (when the object being managed is . Personally I would (consider) always having a managed object. That will make the rest of your code simpler to write (I like simpler code) as there will never be a nullobject Of course the other side of the argument is that allowing a managed object allows better resource management. I have not done the mathsso I have not come to a conclusion but that may be worth doing and putting into a comment in the code. Code Review Namespace You should put all your code in its own namespace. This also helps in making your include guards unique. Prefer include guards This pragma is not supported by all compilers.

@@ -1,0 +1,93 @@
+For a 3x3 tic-tac-toe board it hardly provides any real advantage, but if you where to play on an board, with consecutive same player marks determining a winner, you could do the following... 
+
+You seem to be using the proper algorithm, but there are a few things that can be written more compactly. Using the naming in the previous link, I would go with something like: 
+
+There may be some speed to gain, and a lot of clarity to lose, by using one of the dot product functions: 
+
+Your case is not that simple, because you have to handle the repeats, but it isn't that much harder either. If you have 4's, 5's and 6's, there are different arrangements of those digits to form unique numbers. And similarly to the previous case, a 4 will show up in any given position of the times. So similarly, the following function will compute the total sum in constant time: 
+
+It is not hard to see that the sequence follows a 2-odd-1-even pattern. So you can directly get the next even entry by jumping three positions ahead. Based on these two simple formulas: 
+
+Your code has two nested loops for each array row, which means that you are having to scan every row multiple times to get your result. You can almost get what you want, but with a linear algorithm, doing the following: 
+
+I have assumed that this is not a public function, so it should never receive incorrectly shaped inputs, hence the use of to document expectations, rather than raising a proper error as you would do if validating user input. I have also made it return a boolean, and given the function a corresponding name, so that you can then write code using it that reads like which is something niec to have. In the actual implementation there are a couple of magical steps if you are not familiar with NumPy, but which wouldn't really warrant a comment in code that uses it heavily: 
+
+YMMV, but compared to your original code, I especially like the compactness of the while loops here, and the use of Pythonic, in-place, list modifying constructs. Note also that sorting is not necessary, as you have already checked that part of the array is decreasing, you only need to reverse it. EDIT Corrected the code as suggested by @gardenhead. 
+
+You may also want to look at the ABCs (Abstract Base Classes) in the module, which provide a convenient way to check for certain general attributes in an object. 
+
+For every edge in your graph, you are doing a BFS of the tree on one side of the edge to sum all of its vertex weights. It is not hard to see that you are doing a lot of work over an over again. Imagine that every vertex in your tree was connected to only 2 other vertices, so that it basically looked like a doubly linked list. If we store the list in an array, your code would be doing something akin to: 
+
+Your solution is kind of crappy time complexity wise, as adding elements without removing any takes quadratic time, as you reverse the full stack twice for every value added. The better algorithm (which I think is amortized constant time) for this problem is to have one stack for input, and another for output. simply pushes to the , while tries to pop from the , except if it is empty, in which case it first reverses the onto the : 
+
+Before streamlining the code, it almost always pays off to streamline the math. The you calculate is the dot product of two vectors, and , so we can rewrite it as 
+
+This is missing the empty lists for items not present in the original lists. You can create those by doing: 
+
+Notice how the memoization cache is stored as an attribute of the function, which is the closest thing in Python to having a static variable inside a function. 
+
+There is a school of thought that considers nested comprehensions to be confusing (e.g. the Google Python style guide doesn't allow them), but I think this case is simple enough, YMMV. 
+
+You would have to do the timings, but as I said originally, there is a good chance that using Python built-in methods, e.g. , ends up being faster than what I have outlined here, even though the approach is algorithmically less efficient. But that's a whole different story... 
+
+This simple class lets you use typical Python indexing with square brackets to access the board, and silently handles out of bounds access. You may also want to be a little terser about generating your moves. This is one of many options: 
+
+This tells format to print the keyword argument , left-aligned, on a field of total width the keyword argument . Note that if was fixed, say to 10, you would write that as: 
+
+No, it's not very efficient... There are operations you typically want to minimize if you want a performing solution, and memory allocation is one of the top ones. But your function is creating a new list every time it gets called, which is not a good thing. An efficient implementation of mergesort will do the sorting in-place (with a copy of the list before if the original has to be kept unchanged), and will reuse the merge buffer for all merging operations. 
+
+You can shave some (minimal) time by bailing out early of your factorial sum calculation, and using the operator: 
+
+And you can play with the ordering of the characters by explicitly describing the endianess of your input: 
+
+This is some 30% faster than your code, not too much, but the idea of not checking divisibility, but stepping in longer strides over a sequence, is one you want to hold to: 
+
+If my math is good, this goes over each item in at most twice, so it will have \$O(n)\$ performance. Also, I have used a recursive approach to compute the depth, but if speed is your main goal, you will probably want to turn that into an iterative approach: 
+
+Memoization is one of the poster childs of function decorators in Python, so an alternative approach would be something like: 
+
+Note that, since we are using sets, the exact order of iteration over the connected nodes is implementation dependent, so a failure form the above tests doesn't necessarily mean that something is broken in the algorithm. 
+
+If you are assuming things in your input, it is a very good idea to document those, rather than in a comment, with an statement. As an example, I would rewrite your function as: 
+
+You could make your palindrome detecting function a little bit more general, so that it can handle any , easily: 
+
+If you want to use numpy, then you can take advantage of it's many capabilities to make your code very sleek: 
+
+Note how the initialization of and spares us from having to check if we are at the first row or column, which I think makes the logic cleaner. I am also a big fan of over iterating over a range and extracting the entry via indexing, but YMMV. 
+
+Sorting algorithms are typically defined to sort their input in-place, and the canonical definition of mergesort is not different. This means that, as a general rule, you don't get to pop or append items from the lists you are merging. Also, in the merging step, rather than doing the merging into an auxiliary list, you copy into auxiliary storage data that could be overwritten, and merge directly into the original list: 
+
+On my system your test code runs the 1000 iterations over an order of magnitude faster (6 sec vs. 0.4 sec) which seems to be what you were after. There still is a for loop in there, so if you are going to run this on large arrays, it is still going to be slow, and you may want to consider using things like Cython. 
+
+How can you expand this idea to work on your possibly branched tree? Well, if instead of breadth first, you go depth first, you can recursively find out what the best diff and sum of weights down an edge is, and come up with a solution from there. This would look something like: 
+
+Making an iterative that behaves exactly as the recursive one is a little involved, but if we do things a little differently, it is simple: 
+
+I'm going to skip the making it a class part, but with being a dict-of-iterables, and the above points in mind, you could implement depth-first iteration as: 
+
+Your function, which is called by most of your other functions, has to scan the full list to validate it. That means that, especially with functions like , which already need to scan the whole list, performance is going to end up being \$O(n^2)\$. That is not a good thing! You should probably go for a lazier , that defers erroring until possible non-compliant items are actually used, e.g.: 
+
+s are not run if you use Python's optimized bytecode mode. And while nobody uses the switch, because the benefits are really meager, it still is not a good practice to you to validate user input. It is typically used to document invariants or assumptions, which roughly translates to it validating input that other parts of your code have generated, not users. Instead, you should raise an adequate exception, e.g.: 
+
+It looks like you could use . Although you may want to use it earlier in your code, when you create the list of pairs you pass to . As is, you could use the following in your code: 
+
+You algorithm is \$O(n^2)\$, as you are scanning the full list for every item of the list. A more efficient algorithm can be put together by first sorting the list: 
+
+It is probably not worth the effort, as the board is small, and 4 is itself a smallish number, but efficiency wise, you want to minimize duplicate checks. Consider this alternative approach to checking a single row for a win: 
+
+Notice especially how the magic number (which would be in your code), gets named for the code reader's benefit. Also, since you are looking for the largest possible value, it is better to iterate from large to small values, and break out of loops early: 
+
+Notice that there is a single division performed. Division and modulo operations are among the most expensive basic operations you can do on integers, so aside from the fact that this method is constant time, that time is likely going to be pretty small. To solve your original question: 
+
+A properly implemented Mergesort takes \$O(n \log n)\$ time and uses \$O(n)\$ extra memory. And while I think your code complies with those limits, the constants involved, especially when it comes to memory, are larger than needed You typically want to write your algorithm to sort in-place (and precede it with a copy if you don't want to alter the input). This spares you lots of data copying ,which now only needs to happen in the merge step, and you actually only need to copy to a separate buffer the first half of the array. This also means that, once the merging is finished, any remaining items on the right side are already in the correct location and do not need to be copied back to the output. I'm not sure if the written description is helping or just making things more confusing, so let me explain it in code: 
+
+The second example is the first one shifted one item to the right, to show that maxima not in the first position also work. And since the algorithm is linear, it handles large inputs reasonably fast: 
+
+As I said, you'll need to test it, but I wouldn't be surprised if this little change makes your code 5-10x faster. 
+
+is basically a dictionary with items as keys and counts as values, so you can build it yourself from more primitive Python types by doing something like: 
+
+Do not use the method explicitly. It is a relic of a time long gone, and you only need to know about it if subclassing objects written in CPython. Not your case. And your code can be written in an infinitely more readable form as: 
+
+EDIT Note that the (now corrected) order of the parameters is reversed with respect to the OP's . Both expressions above require a list comprehension, because what gets returned is a generator. You may want to consider whether you really need the whole list of index pairs, or if you could consume them one by one.

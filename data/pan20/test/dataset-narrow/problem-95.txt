@@ -1,0 +1,53 @@
+The most likely scenario is that Frame 11 was not received by 192.168.0.18 correctly, either due to fragmentation (as eluded to by @Benoit Faucon), or general packet loss. If the problem is consistent (e.g.: it always happens when you execute ssh-keyscan) I would see if you can get a similar capture from the remote host and compare it's point-of-view. 
+
+There is no way of knowing this for certain. A cable system in and of itself is a Layer 1 connection and does not report any information about itself (even to a traceroute). You may be able to infer connectivity from the name resolution of hops along your traceroute, but you could never prove this (there may be multiple cable systems between the two end cities) without intimate knowledge of your service provider's network. Take for example the following traceroute - it crosses 3 continents (AU, US, UK): 
+
+The best you will be able to do to guarantee no lost customers is withdraw the entire prefix containing the /32 from ISP B (the one without DDoS protection) so that all traffic is forced to you via ISP A (which will presumably scrub the traffic for you). If you simply null-route the traffic at ISP B, it will still attract the traffic from it's upstreams (and directly attached clients), but then just drop it at it's edge thanks to the null route. AS Prepending will not override any Local Preference configured within ISP B. 
+
+Logical systems are generally used in the lab as a way of doing realistic network testing on a single or smaller number of physical devices. Having said that, I have seen Logical Systems used in production in the following ways: 
+
+This is actually not possible using rib-groups - if you're receiving the routes from another PE, then the NRLI will be carried as type instead of which you need in order to be installed in (even though they are ultimately installed as in the ). To achieve the same functionality, you might need to come at it from a different angle: 
+
+Depending on topology and endpoints, user traffic does not need to traverse the root bridge (eg: two endpoints on the same or adjacent switches that is/are not the root bridge). The root bridge is however the basis for which the active link between all bridges is determined. 
+
+If you receive a full routing-table from your ISP (eg: no default route), then this may be possible. If you receive a default route and/or a subset of local prefixes, you could also write an ACL to include all prefixes associated with key Facebook infrastructure and simply drop it. Be aware that dropping this traffic will increase load times on most web pages as your clients browsers sit timing out waiting for responses from Facebook and their associated Ad-Servers which will no longer respond. 
+
+Output drops is a cumulative total. Output queue is a snapshot in time - it may be that at the exact moment you run the command, traffic was not queued, therefore it shows as zero. Depending on the interface type and queueing configuration, it may be just a single large-sized packet, or burst of packets causing the drop (so you'd have to be very quick to catch it). Duplex issues can also cause output drops (if this is an Ethernet interface) - and these will not be reflected in the output queue. 
+
+It's not clear in your question whether you are tunnelling between both clients via the server, or tunnelling from each client to the server. In either case on the client side, you can bind locally to the same IP/port on both sides e.g.: 
+
+So, it kind of does. I don't have an EX3300 in front of me to test box-specific config, but on an MX at least, you can do this: Your filter needs to have the knob enabled and it needs to have a action associated with the term you want to monitor. Eg: 
+
+This is exactly the process I would use in most circumstances. If you have CDP (Cisco Discovery Protocol) enabled on all your switches though, you can save a LOT of time by running Cisco's MAC Traceroute function. 
+
+Interface-based NAT only works from the Trust zone to the Untrust zone (as in the default zones). Traffic between other zones will always be routed. The exception to all this (as you have discovered) is when the destination zone is in the Untrust VR, in which case, all traffic will be source NATted. This is a hang-over from back in the Netscreen days, where there were no custom zones and most boxes had <=3 usable interfaces. They were automatically placed into Zones (these were actually silk-screened above the ports). Policy-based source-NAT on the other hand will be applied whenever traffic matches the policy, regardless of zone/VR. If you configure both (e.g. set the interface to NAT mode, and then configure a policy-based NAT) then the policy NAT will override the Interface NAT for that traffic. 
+
+My background is mostly from the Junos side, but I think you are correct in your assumptions - your configuration is best served by multiple VPLS instances - particularly since there are multiple statements, each with distinct pseudowire neighbors. As to the purpose of the statement on the ASR, after much trawling, I came across the following link: $URL$ 
+
+I would recommend not using AppDDoS moving forward. Juniper announced its deprecation some time ago, and this is probably the reason you can't find many solid examples of its use: $URL$ Ironically, that KB recommends using the DDos Secure Product which has also been canned. To somewhat reproduce AppDDoS behaviour, you can do the following: Create a custom-attack referencing the protocol you are specifically hunting (e.g.: SQL), and just pick a context to match a normal operation (e.g.: mssql-login). You can then apply to it, which basically means - if you see 100 of these within a minute, this is an attack. The scope variable determines: from a single to multiple destinations (DoS), from multiple sources to a single (DDoS), or just a single a single to a single destination. The whole thing looks like: 
+
+I think you are on the right track with regards to your settings - I generally stick with 10s for retry timer - if there are no secondary peers, then it doesn't really matter how fast a failure is detected. 
+
+To answer your question regarding your Architect resource having access to the production network, I would not see this as being dictated by SOX requirements. On the other hand, from a security standpoint the Principle of Least Privilege would probably apply and thus a read-only account may be more appropriate. 
+
+(no, I don't have interfaces capable of 5000 byte frames all the way between myself and AWS!) Try to isolate the issue a bit further - is it a problem between you and AWS (where codility is hosted)? - Try the same ping test on 52.71.87.150 (live host in the same AWS subnet) and see if you get the same results. Run a traceroute between yourself and both these addresses and then to another site hosted on AWS (prlog.com) - does your traffic follow the same path? Does your network connect directly to AWS already via a VPN? You may be routing all AWS addresses over this tunnel which would give a reduced MTU (but more like 1350 bytes as opposed to 1200). If this is the case, you will need to adjust tcp-mss settings on your router so that TCP traffic passing over this tunnel is clamped down below 1200 bytes. 
+
+This is a pretty common problem on a lot of stateful firewalls (SRXs and ScreenOS will do this as well). The issue is that traffic from your wireless interface/zone will be routed out the Internet Zone/Interface, but not to the NAT. On the SRX at least, you need to configure the NAT so that it is available on the wireless interface (as if it was another Internet-facing interface) and then the inbound traffic from your wireless interface will be destination NATted before the routing decision is made and then routed to the "LAN" interface. I would be very surprised if Fortinet didn't require something similar. 
+
+By default, establishing a Socket connection in your code will chose an arbitrary ephemeral source port (1024-65535), however this can be overridden: DNS for example uses UDP and both source AND destination port 53 for transmission. Regarding your other questions: 
+
+Then you'll need to set to be in mode in order to accept and send tagged frames and then add (100) to it: 
+
+Junos can't have multiple loopback interfaces in the same routing-instance, so you'll need to enable snmp in routing-instances first: 
+
+GSM data networks (GPRS, LTE etc) allocate IP addresses to end devices (Mobile Phones) just like any other network. As to whether NAT/PAT is used, this is entirely carrier dependent - based on a factor of how big their subscriber base is and how many public IPv4 addresses they have available. In Australia, the incumbent telco Telstra uses a CGN (carrier-grade NAT) to support the massive numbers of 3G/LTE subscribers currently using it's network. All devices using their default APN are allocated an address from 10.0.0.0/8, and then NATted to the Internet. Public IPs are available, but only on premium services. In markets where IPv6 is more established (eg: much of Asia), end devices are more likely to be provided with a public v6 address, requiring CGN only where the content being viewed is v4 only. 
+
+You've tagged this post Juniper, so I'm assuming those two Firewalls are SRXs of some variety, in which case - just create Zones for each interface as follows: 
+
+It sounds like you're in a bad situation there, and trying to make it worse. Heck, I'm game - the following should get you halfway there: 
+
+At first glance it could be one of three things: Firstly, what platform are you testing this on and does it support logical systems? Secondly, do you have interface physically patched to ? Finally, are you using the correct command to ping e.g.: 
+
+Olives aren't emulated hardware - they are actual Junos routing-engines (supervisors in Cisco terminology), so it isn't possible to add "WICs" as you would to a Cisco (which is being emulated along with the WICs) in GNS3. You could possibly add extra Ethernet ports using the option in the other Slot drop-downs but from memory when I built some physical Olives many moons ago I think this was limited to a max of 4 interfaces on top of the first port. 
+
+This will map on each client to the tunnel which terminates on the server. On the server side, you will simply see the public IP address of each client, which will have (possibly) unique source IPs bound to unique source ports.

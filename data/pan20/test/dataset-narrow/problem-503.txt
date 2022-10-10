@@ -1,0 +1,67 @@
+I would modify the rest of the code as follows; please comment if you want me to explain any of it in more detail and I'll try to get to it. Comments dictionary: 
+
+In this case, all you are doing with this namespaced global object is calling the init function. So instead of creating a global (generally considered bad taste in most languages) you can simply initialize the object: 
+
+This resulting code looks to me like it has too many indents. I also notice that it fails on passing in an object that is an array or contains an array of arrays. Reordering some code we can check both of those cases at the root level: 
+
+1. The tests are poorly covering the functionality (willing to bet there are significant issues in various places) and it is sorely missing even half decent documentation. 
+
+While the use of high order functions in JavaScript is fine and normal, your code has other issues. Symptoms Your usage of the method here is to do 3 things: 
+
+Admittedly I am using a really old version of nhibernate, but I think this is still there (to replace a few lines): 
+
+Another change you could do to make this appear smoother to the UI would be to make it async. Instead of the loop (reminder this will require changes elsewhere): 
+
+While I understand how it may seem a pointless little nitpick for such simple code to have to have a from all code paths if it has one from any, pretty much every thing that a reviewer could say something about can be seen the same way. Individually the rules like the one Netbeans wants to enforce here don't do much, but when all followed together they make for much more maintainable code (especially after letting it sit there until you have forgotten about it for 16 months). Further recommendations 
+
+That is to say, when the garbage collector runs, all variables reachable from the current scope (and closure scopes) are marked; then a second loop runs and all variables not marked are freed from memory. Thus, if there is no way for the system to reach an object via scope then it is going to be collected. From a user perspective, there are a few ways to create objects that the user can not reach, but are still in scope. Some examples: 
+
+and changed accordingly (and remove ). Instead of and , out the smallest element I have no idea how big of an affect this will have (if any), but I think it would be faster to just splice out the smallest element rather than sort every time (again depends on size of your map). In the meantime there is no benefit to having at the end of the loop rather than right after the sort and caching the lookup into a local variable: 
+
+show the element hide the element (more precisely: exact opposite of state 1) enumerate the state of the visibility of the element (check if it is in state 1 or state 2) 
+
+You don't need to check for existence or remove an item from storage to change it. The logging code is unnecessary. Using and is considerable overkill for converting between a string and a number. 
+
+(this pattern of having the function surrounding your code like this is commonly referred to as an IIFE) Aside: for declaring a namespace I prefer the following form: 
+
+However, you aren't just toggling a single element's visibility here; the link text is changing at the same time. Atop that, the overall logic is that the system can only have at most one dialog open at a time. Cause I think the structure of this code fails to make that logic immediately obvious. Solution Let's abstract the implementation away a little into a method (to be written farther down) and rewrite the click event as if it already exists: 
+
+Garbage collection in JavaScript (very simplified basic design ignoring tricks/special cases) Every variable in javascript can be thought of as a reference to an underlying system object. That is, in JS you have: 
+
+The success function for the user.fetch statement is annoying. Just messing around, I am not sure this is any better as a whole (or if it even works): 
+
+(but you probably already have a method like this in your code where these things would belong) A better question: Why do you need this property anyway? It looks like it is just holding private data for the route. Why not make it private to the route then? 
+
+As this same if statement is used twice (with different values) I would prefer to pull it out into a function: 
+
++1 to this code looking fine as is (with caveats and one issue). Issue: You should always quote class as it is a reserved word for future use in javascript. Don't take this as me advocating you use it or saying it is ready for production1, but I'm using JsRender in production to ease much of the pain you are seeing/imagining here. I think the central issue here is that this type of Javascript invokes a hard dependency on the structure of the page and so we look at it with a bit of queasiness that it rightly deserves. If your visual designer comes along and decides that the shopping cart needs to be in a dropdown list where you can drag (or swipe) items out of or into now you have to go and make a whole bunch of changes all over the place. Unfortunately I don't think it is reasonable in a modern website to expect both that the html has no dependencies on the Javascript ("page works without javascript") and that the Javascript has no dependencies on the design of the html("javascript works equally well on a totally different design that happens to have a couple of the same named elements"). I personally am comfortable ignoring the former to get much closer to an ideal on the latter. That said, my working environment is such that I have very little control over the redesigns that happen all too often in the products I work on. At a minimum I would strive to make sure this code stayed together inside its own function at or near the top of your javascript (or in its own global/namespaced function in the html file itself). This code has very little to do with your logic and a lot to do with your site design. Therefore it doesn't belong sitting alongside your page logic. On minification (for this code in particular) I am less concerned. A solid minifier is going to combine your statements, rename the variables and possibly inline them and then remove whitespace. If you were concerned about this, you could inline everything yourself (and you would lose a little on the readibility), but the gzip of this even uncompressed is only about 480 bytes (closure compiler adds some stuff before it estimates) so at most you are going to gain maybe 100 bytes (closure advanced gets 140 but the result will not work; I can manually do it and get 145 off; none of these numbers will mean anything in terms of page performance for your site). FWIW, your original code was only 332 bytes zipped (smaller than my manual attempt) and compressed (manually) down to 297. 
+
+Finally, I dislike the fact you are initializing these variables as function expressions (statements) and don't end them with semicolons (either add the semis or make them function declarations). I would also rename things to be more consistent and in line with my preferred naming conventions for javascript: 
+
+You could do something more fancy using a regex replace or whatever, but I don't think it should be necessary. 
+
+At the expense of having a little more code, I would use a localStorage polyfill [2]. With that code in place you no longer need to keep the create and read cookie methods. You also don't need the code wrapping and . Your resulting code would look something like this: 
+
+I like the second option, it is easy to read if you just reformat it a little bit (also corrected your selector and fixed the shadow in IE9): 
+
+If you must have an instance method to do this check then you could write this to keep your semantics: 
+
+the partition loop was moved into a function to not repeat the same code 3 times the differences between the parallel and serial sorts were superficial so they were joined into one method getting rid of the second array and simply copying into the first one twice enabled memory savings that allowed me to enable the last length trial 
+
+This doesn't really shorten it, but I think it reads better if you get rid of the diff variable and instead calculate the diff in terms of seconds, minutes, hours and days: 
+
+Move variables to the top of their respective functions (personal preference in agreement with JSLint). Returning from a handler is equivalent to calling both and on the event object. Thus: 
+
+In compare, you could simply instead of doing 2 compares. The print can be done with one pass over the array (O(N)) instead of O(N^2): 
+
+instead of use instead of searching the entire DOM for you should constrain it to the children of instead of use you should set the container height to the maximum height of all child elements, not just the height of the current visible one 
+
+This is essentially right. I have had issues with not being able to read the entire stream (many streams I have worked with only return chunks of data for whatever reason so I've learned to not trust or related functions without checking the results) in one go so I would suggest something like this: 
+
+This is intended as a comment to the answer from @AmiramKorach; here is a reasonable way to get from the list you have to the dictionary you want (without concerning yourself about managing the dictionary details): 
+
+It would be better code to have cases 1 and 2 be the same method call, differentiated by a parameter. In this case I would use . In general it is better to say what you want, rather than how to do something you want to do. This is because the details of how to do something tend to change, while the logic remains the same. To complete this separation you now should use some function that checks the state of this item; enter in this case ; thus those 3 uses become: 
+
+(after substituting or writing the code that I didn't provide; you can probably do better than the error message I added as well) CodeIgnitor does have built in CSRF protection (scroll to bottom), but I don't know how to use it (I've never written any significant php before and have never used this project) and the documentation is lacking (as evident by the comment in the source of that page). 
+
+and so on for attaching events, setting DOM properties, making ajax requests, etc. Then in you would check if the object in has a removeReference function; if so run it then delete it and the object.

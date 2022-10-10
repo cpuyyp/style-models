@@ -1,0 +1,47 @@
+Answers to your questions 1. I find it hard to judge either "Sane" or "Decent". I think "Clean" is more important: single responsibility, clear separation of concerns, no side-effects, etc. Reading Clean Code by Robert C. Martin can be invaluable there. 2. If the set method actually set anything this would be less clean as it causes side-effects. Since it is really only another getter, there's no real problem. 3. Yes. This can become problematic. The best thing for it is simply to learn how to write unit tests (it honestly isn't all that difficult) and having tests with your code will teach you how to create code that is easy to test. 4. Yes, the array in setConfigData() is set again every time data is requested by . This is because it is being used from local scope and not from the class scope since it does not have a in front of the variable name. You don't need to make the array an object to resolve this, just load it from class scope using . 5. OK or not is mostly a point of view. Most folks will probably think it is fine. In my personal taste the conditions could be cleaner/less muddled. 6. Yes, MAJOR issues. Configuration should live outside of the class. It can be injected into an object at the point where it is being instantiated. You really don't want for me to edit the framework code when I want an application I build on top of it to alter its behaviour! 7. Personally I would not put all of that functionality into one method. I'd create separate methods for separate scenarios to keep the class signature (or interface) simple and easy to understand. In closing If you feel inclined to look at this from other angles, you should probably also take a look at other data structures that can/could be used for configuration other than an array. For instance, the ARC config component uses a tree structure. If any of my comments seem unclear or need more elaboration, don't hesitate to ask. I will update my answer as needed. Furthermore, as you stated that building a framework was mostly about the educational values, I think you will agree that something as essential as configuration has a lot of lessons in it. You seem to be learning them quite well. Keep it up! 
+
+Note the use of instead of . What was happening was that every time I checked to see if the cache had expired I was resetting the access time of the pill - and therefore not expiring the cache. 
+
+I am no expert in streams so this may not be an ideal solution but here's a moderately streamed version. Essentially, the game is a stream of objects which are evaluated, grouped by the result and counted into a Map. Most of the streaming is in the method. 
+
+Note that this is cut down from the real one but only to remove features such as auto-configuration. The use-case that fails occasionally for me runs like this. This special table can be updated by other parties so customer needs a regular full refresh of the cache. To achieve this I use a method that always checks to see if the cache has expired and if it has, rebuilds it. To detect a timeout I insert a pill into the cache under an ID that will never be accessed otherwise. To ensure no clash with other threads I also use a to forestall other threads trying to read the cache while it is being rebuilt. 
+
+Added Spot the deliberate mistake - not closing the at time. Not relevant to the issue but important. Fixed! Also - failing to close the stream and checking the entity against null. Fixed! 
+
+and everything still works. Why This solution demonstrates that if you write your code in certain ways it is naturally malleable in certain directions. In this case, by using an , a change in requirements that add new specials can be accomodated trivially. I suspect the interviewer could clearly see that your code was not malleable in any way - as demonstrated by the fact that you had to duplicate code in several places. Adage: If you've duplicated code (or any other code smell) you've probably got something wrong. Fix it before you present it to the interviewer. 
+
+Implementation 2 Suppose that you want to you use the long syntax of limitation and offset. Then the code will look like this: 
+
+Since Java 8 you could also use the new join method of String class, with which you could get rid of StringBuilder usage. With its usage, the code will look like this: 
+
+It will serve as a marker interface and just declare all of your other interfaces as follow (IGetService for example): 
+
+If you want to clean up a bit the method, then I think that you should try another, more object oriented way of writing the method (currently the method is written procedurally). Implementation 1 First lets create few interfaces, which will represent the Limit and the Offset: 
+
+P.S. I am not creating a review of the code, since you are asking for a performance suggestions and advices 
+
+I would also propose you the following implementation of NumberOfOccurences class, which would make it more functional 
+
+Now, suppose that we have some data access object called PersonDAO, which should retrieve all the persons in a given range (bounded by limit and offset), then the code would look like that (I`ve change the name of getPersons method to retrievePersons, since we actually retrieves the person entries from the database, rather than getting them from some POJO): 
+
+If you want you could also move the creation of the Pagination object into some factory method like this one: 
+
+Next we will need an implementations of this interfaces (I supposed that you are using MySQL as database, since its shorter syntax for limitation and offset is the same): 
+
+Actually that what you have implemented is a Registry not a Factory, so probably you should remove Factory from the class name and use registry. You could do the following to generalize the class (I am reusing your code): 
+
+Yes it looks tidier and neater but now look what happens when they change their mind and request an enhancement. All I have to do is add: 
+
+See that by refactoring properly you can now add more validations steps without affecting the main code, each one will only add to the quality. You have now transformed brittle code that is comparably difficult to understand and enhance into something clear and flexible. This encourages you to focus on the fact that you are trying to mix validation with parsing. If you let your worries guide you properly you will see that the validation is a separate process and your attempt to mix the validation into the parsing process is making your code smell. Validate first - then parse. Do not pre-optimise and merge them into one until you have a good measured reason to do so - and even then measure again. Added Just for the joy of it - here's what it might look like in Java 8 
+
+As advised by many, I am using a client pool - specifically the Apache PoolingHttpClientConnectionManager. For simplicity I wrap it in my own simple singleton class. Sorry about the rather OTT mechanism: 
+
+Your lazy method is not thread safe. If two threads check for the key at the same time they will both find it absent and both create a new object. Wrapping your in a will get around this. 
+
+Note also the and methods that avoid your manual creation of the lists. Note also how I calculate the carry rather than explicitly set it to or . It is calculated to be the value remaining after the digit has been extracted from the divided by . Finally, see how using s allows you to interrogate each list to see if it is exhausted and, if it is, use . This way we don't need to special case one being longer or shorter than the other. 
+
+Try to avoid the creation of new DedupeInstruction on every iteration of the loop, since the creation of big amount of object instances is time consuming operation. Instead you could add idUrl/id2Url and line in some collection and push them to the writing queue in bulk i.e. on every 50 elements push to the queue. Try to avoid also the concatenation that you've use there, the output directory is one and the same every time, just open the File with that directory. I am not sure how many URLs could contain a single JSON entry, but if they are a lot then you could also optimize foreach loop that is used for its iterations. Just break the loop when idUrl and id2Url had found. Also you could avoid the creation every time of new matchers. You should check whether idUrl/id2Url is null and only if they are to create a new matcher and execute find operation. Do you really need this system out just below the while loop? System out might also add value to the overall performance issue that you have, just delete it. In such big amount of data i doubt that it is usefull I am not really sure how Files.write method works but, does it automatically close the stream and the file after the operation has end? If not, you need also to close them 
+
+Finally we will need one more interface, which will serve us as a glue between this two interfaces (I called it Pagination, since most of the times, offset and limit is used in combination for pagination of some API): 
+
+As addition to the @Majiick comments. There is few more things that could improve the readability of the code:

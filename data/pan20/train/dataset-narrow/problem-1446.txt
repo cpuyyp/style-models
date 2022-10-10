@@ -1,0 +1,63 @@
+Mapping model to ViewModel As Kevin has suggested there are great tools out there already that do this for you. I haven't personally used any of them but I have heard good things about AutoMapper. Making use of Partials for sub view models Because we have now separated the different elements into components I would consider creating a different partial view per view model. This way even your views become re-usable and you share common view presentation around. i.e 
+
+Using correct casing for variable naming (in this case manually camelCase) It's standard practice in c# to use camelCase for variable naming within methods. So 
+
+I would first start by creating a method for the Authentication failed parts of the code. Something like 
+
+I've never seen method on so I'm assuming this is your own class? If that were the case would it not be best to have IDataContext abstract the Connection details away and return an IConnection contract. 
+
+I've used this kind of approach myself in the past and it's worked well. However lately I've been considering whether it's overkill. Considering Entity framework is already following the repository and unit of work pattern you are essentially just adding the same pattern over the same pattern and that may potentially not give you any extra benefit. I've tended to find myself using more of a service architecture while still using dependency injection etc to manage the dependencies into my various classes. I've found it's meant less layers without losing any benefits of abstraction and TDD. It will still allow you to decouple your business logic from the data access whilst not having that extra layer of complexity. I'm also not sure about enforcing all your entities to requiring an . There are plenty of situations when Id's are not required on model table definitions so to enforce such a restriction seems to me potentially limiting? Situations such as link tables, or where a table might have a composite primary key rather than just an Id field. In saying all that, nice implementation. Seems to follow conventions of the patterns you are hoping to achieve. As requested here's an example of abstracting away EF as much as I was able whilst not requiring a seperate repository layer and using a service type approach instead (don't sue me for spelling errors :)) 
+
+This is something I always get confused with as well!! I would probably think it's fine where it is but if you were considering moving it I might suggest using an interface and injecting that into the controller. That way it doesn't matter where the latest friend information is persisted and the controller remains separate from this concern. Although this might be overkill for your situation and example of this in use might be: 
+
+I assume this was a grammatical error and you don't actually call dialogs from within the viewModel itself? If so I seriously think you should reconsider your approach to using the ViewModels. ViewModelBuilder or someother approach. Aside from this I would consider having another object that was responsible for building up your viewmodels. Of course it depends on the design and requirements of the system but I would be asking. 
+
+I quite like the concept. The only thing that stands out for me initially is that I would probably leave the wrapping methods the same as their wrapped name. i.e. 
+
+I would further refactored the getting of user email into it's own method as that seems to be common across both forms. 
+
+I might also consider returning either a boolean (or some other error result) from the methods to raise awareness of whether the db action actually succeeded to help with raising failures back to the caller of the method. In the case of Insert it could be as simple as (assuming device has an Id of course) 
+
+The 3 lines for doing each of these could also be moved into a method as well so further refactoring would reduce the core code down to 4 lines. 
+
+I'm wanting to create a Reusable class to work on Enumerations so that I can decorate various Enums with different attributes and I can use this class to get a particular attribute property to display. An UnitTest example of how I would use the class is: 
+
+NOTE: After Ben correctly commented that he was doing this from the WPF not MVC approach my answer was biased to MVC so although I'll leave it here it it may not have much relevance to what he is actually looking for. 
+
+In saying that I might also consider passing in the SqlConnection to the model class. This way you take away the responsibility of the Model from knowing how to create this aspect. To do this, you might consider using an interface for your model which takes a connection. 
+
+Making use of built in functionality In .NET (and most languages I guess) you do not have to explicity compare a variable to it's boolean representation. So in .NET you could change this line 
+
+Maybe a switch? Although whether it's shorter or more efficient or even easier to read up for debate. 
+
+Summary I like your approach. You are correct in that class explosion might be a problem but I think this potentially is outweighed by the clear separation of concerns in the system. As for TDD, I don't think every class in an application needs testing. For example if you classes are DTO's there's nothing to test, so class explosion might not necessarily be a cause for concern (or a reason to not go down this route). Well just my two cents. I hope you get some answers and reviews that enable you to produce code that you are happy and proud of. After all, isn't that what we are after :) 
+
+I'm typically not a user of the statement but here is one alternative using this method. In this case it may be a simpler implementation and removes the need for any extra local variable. 
+
+If yes then having the viewModel build itself is really limiting it to the knowledge of where and what data to obtain, even if the where of that data is abstracted out view interfaces. There are existing mapping frameworks out there already that may offer assistance if you were worried about the class explosion this might cause? Hope this helps give a different perspective or some more food for thought :) 
+
+I noticed in your razor you are including your sql and db access. This might be ok if you are just quickly whipping something up, but I think you are mixing the concerns of your view by including database, querying (T-SQL) and view concepts. I would consider instead making your view strongly typed to a ViewModel (or model if ViewModel is overkill) and then only using that. All of that razor syntax would then be evaluated in your controller action. Essentially then, your view would have no need for this razor syntax at all and your question about whether it's right would be moot. So yes, there is a disadvantage and something I wouldn't recommend from a best practice and maintainability point of view. 
+
+} A great thing about writing unit tests is that it can sometimes ensure you think about your requirements before you even code and so help cover everything. In this case I was writing some unit tests for the method and it occured to me that the code might not cover the case of empty strings. I created the test and hello, it had worked. That was great. Now I also have a test! And not only that, doing a couple of other tests showed some flaws in my code which meant I identified problems with tests. Awesome! 
+
+There is the INotifyPropertyChanged event handler, but I'm not sure why you would need that in this case? Instead why not just load the details when the ID changes as that seems to be the only value that will change between LoadDetails calls. Perhaps something like: 
+
+This is more a suggested slight tweak to the excellant ideas and solution provided by Jeff. I would potentially look adjusting the ProcessedSingleName method as below 
+
+I guess one way to potentially speed it up (if the issue was with running over the enumerable twice) would be to use a foreach. However, I don't think it's as readable as your solution; 
+
+NOTE: There No razor syntax as that has already been evaluated when the server was processing the request and deciding what data to return. So your code works, yes, because what is returned to the browser end's up being html only (no Razor), not for any other reason. However..... One issue I noticed was with the html that may be generated. If there are no results from your query, then you run the risk of creating an empty table. I would probably suggest checking the result list and outputting something different if empty. For example: 
+
+This means that you could create the SMTP client on Emailer creation and then dispose it as necessary. In this case the code might look like 
+
+I've used the Generic repository solution myself in the past. At first I found it really great but after a while as the project got a bit bigger it started to feel a bit restrictive and didn't seem to offer much benefits for the amount of code written. The more I read the more it appeard Entity framework was already a Repository / UnitofWork. Why did I need another layer? Well I'm sure there are plenty of reasons why but in my projects I couldn't see it. Instead I found myself starting to use the entity-framework directly within a service layer but abstracting the EF away using interfaces. This allowed me to remove the Repository layer whilst maintaining the level of abstraction I was after between the UI layer and any business or data layer (as well as continuing to easily mock for unit tests). Using your solution an alternative approach I might consider would be something like: 
+
+I actually think I slightly disagree with the other answers in this situation. As you, others have mentioned I see three possible solutions (although there may be others) 
+
+Perhaps something like this. I put in some pre data entry validation but you might not need this dependant on where it is done in the application. The main thing I would do is remove the MessageBox from this method and do that elsewhere. That way you could at least do some unit testing of it. Perhaps even passing in a database context so that could be mocked as well: Didn't have access to Visual studio so code may have compile errors sorry. 
+
+I have some code that allows me to enumerate over months in a year. This code is used both in a Web application as well as a standalone exe. Although it doesn't have to be efficient it is used a lot so if there are any improvements that would be great (I haven't done any profiling). It also needs to be thread-safe. 
+
+On a side note. Have you considered using the XmlSerializer classes? These might be ideal in your situation? That might look something like: 
+
+Well, my first attempt is to suggest injecting a mapper into the controllers you want to do this for (assuming you are using a DI framework. If not anyone of the popular choices out there will meet your needs. AutoMapper, Unity, Autofaq etc).

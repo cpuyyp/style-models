@@ -1,0 +1,67 @@
+The "memory" graph in Task Manager is the amount of total physical memory in your machine, minus the available physical memory. The process working set counter also looks at physical memory - but shared DLLs which only use one physical memory location are counted toward the working set of each process that uses it - therefore, the working set overcounts memory. If a process pages memory out to disk, this is not included in the working set counter, and can therefore cause the working set to undercount the amount of memory used. Here is a listing of what all of the counters map to: $URL$ And here is a pretty good blog post that goes into some details: $URL$ 
+
+If you can reproduce your sessions that you think use too much memory in a dev environment, then the .Net CLR Profiler and its development web server are a good way to go about this. Here is a blog post that outlines the process of setting up the profiler and and pull InProc session data from it. If you can only pull the data from production, things get harder, but not impossible. See chapter 2 of the .Net Framework Production Debugging guide - it tells you how to pull memory data from running IIS processes that you should be able to analyze. 
+
+I believe the ASP config section is (by default) locked from editing at the site level. You will either need to make the changes server-wide, or unlock the setting first. $URL$ 
+
+and then bring the servers back up in the reverse order. When Forms Services (and possibly Excel services...I've seen conflicting documentation) are in use, they sometimes have sessions that go through multiple HTTP requests before committing a transaction to the database - this is where the quiesce farm command comes in. It allows session(s) to finish doing one of these multiple request transactions, but doesn't allow any new sessions. After all transactions are committed the Infopath (Excel?) services are offline and ready to be shut down as well. Here is a blog post that goes into a little detail about what Quiesce farm is doing: $URL$ You didn't talk about the end user experience part of this equation at all, but I will mention it for completeness. If you were to shut down a WFE in the middle of a user uploading a file or editing a list item - there wouldn't be any corruption of the WFE or database, but the end user is basically just dumped to an error page that doesn't really let them know what happened (or if there edit happened!). The way to deal with this would be to have something in front of SharePoint (a load balancer, even ARR on a separate server could do this) that would gracefully "drain" SharePoint of end user connections, and potentially redirect to a friendly error page until the site is back up. 
+
+Here is a list of all the columns you can collect with SQL Profiler in server 2000. The big ones you would probably want to watch are CPU, Duration, Error, Reads, Writes and Success. Here is a list with data for SQL 2005. To get the "Error" column, you need to go to the "Events Selection" tab when you are setting up your trace, choose "Show All Columns" and then put a checkmark in the Errors column where it exists. There is also a whole "Errors and Warnings" event category that can be used to track such things. See the linked documentation for much more detail about that. 
+
+Run the following command against your content database in SQL Server: Select tp_login, tp_systemid, tp_deleted from userinfo where len(ltrim(rtrim(tp_systemid))) <25 and tp_deleted = 0 For any users returned by the query (except for system users), give the user read permission at the root of the site collection. (System users include: Rerun the query to make sure it has no results; when there are no results, start a full crawl. 
+
+Typically the crawl account is different from your service account. The best practices documents for the crawl account say that it MUST NOT be a member of your farm administrators group, and should not be an administrator on the server. Here are links to the best practices documents from microsoft: $URL$ $URL$ And a link for the proper way to change the account name/password: $URL$ 
+
+Powershell Community Extensions has a cmdlet that can be used to set user rights. (And a to get user rights.) 
+
+Here is a pretty good forum topic over on IIS.Net that goes through a similar scenario. Basically, the best recommendation is to reinstall IIS. This is due to the fact that even after you fix/implement a workaround, you will most likely have some other problems with your installation. 
+
+You should be able to download and install SQL Server Management Studio Express and see/set the authentication mode using it. Once SSMSE is installed, you can connect to your SQL Server instance, right click the instance name and go to Properties. From there go to the Security page, and you should see a radio selection for "Windows authentication mode" or "SQL Server and Windows authentication mode". The latter is mixed mode. 
+
+I don't think it is a problem, as long as you use separate Application Pools for each site. I have seen people run into issues when they have SharePoint and other web apps running in the same pool. This also depends on how resource intensive your SharePoint site and your web apps are of course. You can even run different web apps inside your SharePoint IIS site - just put the virtual directory in a different app pool, then setup SharePoint to exclude the path as in this article: $URL$ 
+
+SharePoint integrated mode is not supported in SSRS Express Edition. See the feature list on MSDN for details. $URL$ 
+
+This is normal. Essentially, when the SharePoint search performs a crawl, it keeps track of the document, and who has permissions to the document. When permissions change, the search index isn't updated until another crawl is performed. See the "content crawling" section of this article. $URL$ 
+
+Basically - the add-content/set-content command just do a ToString() on whatever you pass to it. For many .NET objects, that is just the class name. If you do: out-string -inputobject $entries | add-content "yourfile.txt" That should properly convert to a string and output it to your text file. 
+
+This is just not possible. Windows 2008 R2 comes with IIS 7.5 and can't be changed/downgraded. 6.1 build 7600 is the version of Windows you have installed. I'm assuming you are in the IIS Manager Help -> About IIS - look further down on the screen and it gives a detailed IIS version. If you are in the IIS 6 manager, then it doesn't show an IIS version, just the Windows version. 
+
+Take a look at this MSDN forum post - it shows you how to make educated guesses as to what the ranges need to be. 
+
+As mentioned in the comments - you don't backup/restore TEMPDB. To get the script to continue after the command, you need to "background" the command. To do this, use the command in front of it. Something like: 
+
+Depending on how your web application works, you may also need to turn on the "Reverse rewrite host in response headers" setting in the Proxy configuration for your farm. 
+
+You can't just copy the files to the USB drive, you need to make it bootable as well. Plug in your USB drive on a working Windows machine that contains the files from the Windows 2008 ISO, then do the following: 
+
+It really isn't possible, even in a hacky/unsupported sort of way. See the following blog entry and related Microsoft Connect bug report: $URL$ $URL$ 
+
+Before attempting to do anything with the IIS provider, check to ensure that is true, and you should be good to go. 
+
+To elaborate on this though - when the comparison document talks about "sharepoint sites" it is talking about sites outside your current site collection. If you are hosting your intranet within one sharepoint site collection, you will be able to search it with the built in WSS search. If you want to have multiple SP site collections, then the built in search won't work. 
+
+IPSec policies can be managed through the command line. In particular, you can export and import policies in bulk using and . 
+
+As far as I know, SharePoint cannot run in 32-bit emulation mode on a 64-bit server. Here is the Microsoft documentation to back that up: $URL$ 
+
+I don't think this is possible out of the box without using a Remote Desktop Gateway as well. The RDWeb links will always go to port 3389 without RD Gateway. See comments from Rand Morimoto on this blog post for some details: $URL$ If you implement a Remote Desktop Gateway, then external RDP traffic will come in over 443 to the Gateway server, and then use whatever RDP port you have specified internally. See this blog post for some setup details: $URL$ 
+
+I would try using procmon and filtering on the userid. That should turn up anything that is sporadically running as that user. 
+
+Extend your web application into a new zone (Extranet zone) and use Forms Based authentication against the COMPANY domain to give access to those users. Implement ISA server (or another product...) as a reverse proxy in front of SharePoint to do the authentication - this should allow both domains to use Windows Authentication. 
+
+And that should do it - the files should now have the permissions set using the new local user accounts. 
+
+This is at least partially a coding question. Basically, you need to create and register your new culture using the CultureAndRegionInfoBuilder class from System.Globalization. Once registered, you can then choose your new culture within the ASP.Net application settings. (or within the web.config file for your application.) Here are some references that should get you started: $URL$ $URL$ 
+
+Based on this Microsoft forum post (from a Microsoft employee) it looks like COM+/component load balancing will not be available in Windows 2008. $URL$ 
+
+With the disclaimer that I have never used it before (and have no affiliation with it...) This product seems to fit your needs: $URL$ It generates reports off of the audit log data that are administered and viewed from within your SharePoint site. 
+
+You can't assign different SSL certificates to sites that are only differentiated by host headers. You would need to have the sites on separate IP addresses. Another option is to setup a wildcard SSL certificate (which you could then apply to all sites hosted under on the server.) There is a catch though - you still can't apply the certificate through the GUI. Instead you need to use a command line to apply the certificate. $URL$ $URL$ 
+
+If you actually mean you are just rebooting the server then yes, the device name will remain. This is because you do the attach to the instance, and during a reboot everything about the instance stays the same. (Even data on the non-persistent instance disk.) If on the other hand what you mean by "reboot" is you terminate the instance, and restart the AMI as a new instance, then technically the answer is no - but you can just re-attach the EBS drive to the instance, and use the same device name, so the effect is the same. 
+
+If you are willing to pay for the data, firms like IDC, Gartner and Forrester do research on these types of things all the time. You can even purchase subscriptions to get their latest reports/etc. CIOs eat their fancy quadrant graphs and stuff up too.

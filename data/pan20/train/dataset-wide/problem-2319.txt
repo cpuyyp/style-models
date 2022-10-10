@@ -1,0 +1,67 @@
+It seems that Oracle doesn't like ANSI-style joins in the materialized view definition when refereshing... Changing the definition to 
+
+In all cases when writing a delete statement consider that in general the where clause is usually either 
+
+I hope I'm not missing something obvious but the way I would query this so that it would scale for a very large lookup table is by observing the following: It's possible to get a competent DBMS (I know PostgreSQL can do this) to use an index to 
+
+If using Oracle -- and if you're able to run arbitrary statements against it -- then you could first sanitize the input using (at least, it's my understanding that this makes sure that the literal is properly quoted -- even allowing for quotes embedded in strings). See $URL$ for more details. 
+
+depending on your data. You'll need to check your data and keys to determine which column should go first. The last column of the index is the column for which the maximum value is being computed. By including it in the index you will avoid table access. And by including the keyword it means that Oracle can use the index to calculate the maximum value -- it will be the first entry in the index for which the first two columns match. In the ideal case, you will have many repeated values in the leading column of your index. In this case you might get some measurable improvement by using index key compression. In this case your create index statement will look something like 
+
+If you really need to do this (a la Windows Registry values) I would probably try to keep it simple and keep it to one table something like this (untested pseudo-DDL): 
+
+As with most things, it depends. First of all, if you're not 100% certain that the data will always be valid JSON, use a normal text type instead. If the data is indeed always JSON, I would use a JSON type if for no other reason that as documentation that the column contains JSON data. If there will ever be any chance of requiring indexing of data, go for the JSONB datatype. If insert performance is critical, choose JSON (or even a text type) instead. The JSON datatype stores the JSON data as-is, while the JSONB datatype removes empty nodes and whitespace and even duplicate keys (the last one is kept). This means that JSONB is storing less data, but requires minor reconstruction on retrieval. For all other cases, I would go with JSONB as the "best" generic JSON type in PostgreSQL at present, and this is also the recommendation in the documentation. See $URL$ 
+
+etc Some values are mandatory, others are optional. Check constraints are used to further specify valid values for parameters. For this to work you need to be Agile in order to be able to add and drop columns as needed. But this is how we do it. 
+
+Which solution you chose is largely a matter of personal preference. I have a strong preference for the foreign key approach, and think I can provide good reasons why. First of all, check that your requirement is strictly to capture a single "primary supplier", and not (potentially multiple) "preferred suppliers". If you can't guarantee that you'll never have more than 1, the foreign key approach will break and you're better off going with the flag approach from day 1. If, however, a part always has a single primary supplier I would use the foreign key approach. If a part must have a primary supplier, then this is the only approach where the database constraints guarantee that the data is always correct -- make the foreign key column mandatory (not null) and you will have to provide the primary supplier when adding the part. There is simply no way that the data cannot be correct. With the flag approach, the primary supplier information can be missing from parts -- unless you want to rely on your application's logic. If that's potentially a problem, the mandatory foreign key approach is the easiest way to ensure this can never happen. Think also about updates. With the flag approach, you need to clear the flag from other "part supplier" records when you change preferred suppliers. 
+
+Note that for some cases, an statement can be turned into a expression which is somewhat similar to the operator in C and Java, but more generic. Your pseudo-code: 
+
+Then session 1 will be waiting for session 2 to commit or rollback the update on the row where pk = 2 while at the same time session 2 will be waiting for session 1 to commit or rollback the update on the row where pk = 1. Deadlock. 
+
+Another approach that seems not to have been mentioned yet is to have Hazards and Tasks use the same ID space. If a Hazard has a Task, it will have the same ID. If a Task is for a Hazard it will have the same ID. You would use a sequence rather than identity columns to populate these IDs. Queries on this type of data model would use (full) outer joins to retrieve their results. This approach is very similar to @AndriyM's answer except his answer allows for the IDs being different, and a table to store this relationship. I'm not sure you want to use this approach for a two-table scenario, but it works well when the number of tables involved increases. 
+
+is Oracle's way of defining a "full text index" on a column -- as opposed to an ordinary B-tree. The good news is that Postgres also has full text indexes, and these are documented extensively at $URL$ The basic syntax for creating a similar index in Postgres is 
+
+So doesn't require . Having is applied after the aggregation phase and must be used if you want to filter aggregate results. So the reverse isn't true, and the following won't work: 
+
+Postgresql has many indexing options. It also has some powerful components built on top of these indexing options. One such feature is full text search. See $URL$ 
+
+Historically, DBMSes had trouble with . But most DBMSes today can handle it without problem. Not all DBMSes support this syntax with multiple columns (SQL Server doesn't for example), but many do (PostgreSQL, Oracle, MySQL). This should work for those (but untested): 
+
+Mathematically, disjoint = not intersects. As to which is faster, according to the documentation on spatial indexes at $URL$ , a spatial index can be used for a query containing . Strangely enough, is not listed. 
+
+Use a view -- where under "Version" you show "All" or the specific version owned -- for presenting combined information -- but be careful to "overrule" (if that's what you want) in case a customer accidentally owns both the product and particular version of the same product. 
+
+Yes, 'W' will do that -- replace the file. Use 'A' to append. I don't think you can "modify in place"; you might have to copy the file to a new one making the changes you desire, delete the original and then rename the copy. All of this begs the question why you're trying to do all of this in PL/SQL. It might be better -- certainly easier -- to do it in an external program written in eg Python and invoke that. 
+
+Store the first. When you do this you can enable index key compression. See $URL$ for the syntax and $URL$ for the concepts. In your case, you can do it like this: 
+
+My answer doesn't answer your question directly, but addresses your method of operation. You shouldn't be logging in as , just like you shouldn't be logging in as on your servers. On your servers you should be logging in as real users and be using for the odd occasion that you need superuser privileges. And preferably rather than just doing everything directly using . In PostgreSQL we can implement more fine-grained policies. Create a role structure something like: 
+
+Multi-tenancy can be achieved in several ways; opaque multi-tenancy doesn't necessarily mean a design with one schema per tenant. It can also be achieved by adding a "tenant ID" column to every single table. As an example, this is the way that SAP has done it for a very long time already. Applying this principle to your design, you would add "tenant ID" to all tables that need to be multi-tenant, while the "customers" table won't have it. Instead you need to add a "tenant_customers" table with two columns; "tenant ID" and "customer ID" to associate customers with tenants. Wikipedia calls this concept an Associative Entity. Alternatively, you can store your tenant-specific data in one schema per tenant and have the customer table and "tenant_customers" associative table stored in its own schema. Instead of "tenant ID" you could use a string storing the "tenant schema name". 
+
+Why not use a Common Table Expression aka clause? It's designed for exactly this purpose (among others). 
+
+The subqueries in your query are al counting all rows of the table. They should probably only be counting for the "shyft" from the main table; something like: 
+
+One approach would be to use optimistic locking. Before displaying the update form, you retrieve all the original values from the database. Or, at a minimum, a column that is guaranteed to change on update, such as or similar. When updating you check that all values are still the same in your clause. If the update fails to update any rows you know that the values have been changed in between and inform the user that this has happened. 
+
+My preference, in certain cases, is actually for the constraints, but I don't use them everywhere: just for the situation where it makes sense to be able to remove all of the children of a given parent in one go. I might use it for "invoices" and "invoice_lines". When you take this approach you need to be sure that only users who really need to be able to delete from the parent table have that privilege -- no users or applications logging in as table owners! 
+
+IMHO the easiest way to get an OWA application to work is by installing a standard Apache distribution and the open source mod_owa. This is easiest on modern 64bit Windows, downloading Apache 2.4 from $URL$ and mod_owa from $URL$ 
+
+I'm going to attempt to answer this question for Oracle. Historically Oracle has never supported read-only databases. It's possible to make a tablespace read-only: $URL$ Individual tables can be made read-only: $URL$ Or it's possible to make a select-only role and assign that to the user who logs in rather than the normal readwrite-role. 
+
+I don't have a specific term for the actual combination of invoking an external process from a database transaction, but I would classify this problem as tightly coupled. The root problem is that you have tightly coupled the sending of the email with the database transaction. A solution to this problem will be to loosely couple them. Technically, you could solve this in many ways, in rough order from ugly to nice: 
+
+Why not just swap the IDs instead of the value(s)? Or do the other columns have to remain as they were? Anyway, in case someone else reads this question and is looking for this, it's just: 
+
+I'd definitely choose option 2. A game of chess is between exactly two players. Option 1 allows a game with 0, 1, 2, 3 or more players, while the data model in option 2 (assuming on the two player columns) means that you will never have these data inconsistencies. Just remember to also add the check constraint . 
+
+If you don't need the data, just the count, then just replace the columns in the select clause with : 
+
+You can't embed DDL in a stored procedure like this. Either use and your DDL statement passed to it as a string, or, better, remove the stored procedure entirely an execute the DDL directly. 
+
+The other thing to remember is that you can generate your queries by querying the metadata for a list of schema and table names.

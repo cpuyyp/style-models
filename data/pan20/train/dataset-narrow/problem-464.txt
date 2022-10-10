@@ -1,0 +1,49 @@
+What you are attempting to do is vague at best... But in Oracle, is analogous to .. All of this information can easily be found in the oracle documentation (which is probably why you have down votes .. if you spent a bit of time in the oracle documentation for data types, you'd have your answers), but I will explain the difference between varchar and char here.. datatype is for fixed length strings, period. All strings within a field are the length of the field. So a of would ACTUALLY be stored as (with buffering spaces to fill up the length). The only reason your test works above is because your is the same as . datatype is for variable length strings, period. All strings within a field are the length of the string that was given. So a of would ACTUALLY be stored as (with a tiny bit of additional information saying that the data is "x" bytes long). There are very few situations where you would prefer a field over a field. What @a_horse_with_no_name is trying to suggest is that you should be able to just declare your variable as and be done with it. If, for some reason, 20 is TOO SHORT, then just declare it to be a larger size. If you don't know how large it should be, then declare it maximum size ( for PL/SQL) 
+
+It sounds like streaming replication with a hot standby is the solution you're looking for. Streaming Replication details the steps of how you go about setting it up. The hot standby option that they go over (they have it put to "on" which is what you will want) will allow you to run SELECTS against the 2nd database. Under this setup, however, your production application would only write everything to the master database ... postgres itself would then stream those changes to the 2nd database. 
+
+The key is that you need to make sure you have a link between the table you're updating (aliased as "a" in my example) and the table you're using .. which is done via the WHERE clause... 
+
+If you want to keep the uniqueness across ALL THREE COLUMNS and, at the same time, treat nulls as equal, then you have to get creative with your UNIQUE indexes by making them partial indexes.. 
+
+I do not agree with the approach you are thinking of using, but if you are dead set on using it, then I would probably structure the query like this: 
+
+If the creation of the temporary tables takes a long time, then your find_user() and your find_external_object() methods need to be tuned (as opposed to the actual insert query). One additional note .. if the or are NOT pkeys/unique of their tables, you will want to make sure that you're only getting unique values.. (If you don't, then you'll get duplicate rows when you join) In that case, make sure you do a subselect and get the distinct result (example below). 
+
+If you are concerned about data integrity (making sure that all the appropriate table are populated BEFORE someone gets a chance to read the data), then you need to make sure that all three inserts are done within the same transaction block. 
+
+For a that has ~1 billion distinct values, I'm getting a query plan with a hash aggregate estimated to have only ~3 million rows. Why is this happening? SQL Server 2012 produces a good estimate, so is this a bug in SQL Server 2014 that I should report on Connect? The query and poor estimate 
+
+Performance comparison In the following two test cases, I try two very different use cases. The first is the singleton seek mentioned in your question. As commenters point out, this is not at all the use case for columnstore. Because an entire segment has to be read for each column, we see a much greater number of reads and slower performance from a cold cache ( rowstore vs. columnstore). However, columnstore is down to with a warm cache; that's actually quite an impressive result given that there is no b-tree to seek into! In the second test, we compute an aggregate for two columns across all rows. This is more along the lines of what columnstore is designed for, and we can see that columnstore has fewer reads (due to compression and not needing to access all columns) and dramatically faster performance (primarily due to batch mode execution). From a cold cache, columnstore executes in vs for rowstore. With a warm cache, the difference is a full order of magnitude at vs . 
+
+And now on to the details: Create rowstore data set Nothing too exciting here; we create 40MM rows of pseudo-random data. 
+
+Lastly, a point of advice: You are typically going to be get the best help on this site if you post a specific query (or even better, an entire script) that describes your question more precisely and shows what you have tried so far. It was difficult for me to tell exactly what you were asking, and a script can help avoid misunderstanding. 
+
+The execution plan From the execution plan, we see that the original index proposed by Paul is sufficient to allow us to perform a single ordered scan of , using a merge join to combine the transaction history with each possible product/date combination. 
+
+What about batch mode? Based on a quick test, it seems that the batch mode hash join operator will also fully process the build side of the hash join. 
+
+Given that the data is changing very infrequently and there will therefore be very little overhead in maintaining the indexed views, an approach using indexed views could help performance. As you likely noticed when trying to create an indexed view that uses , there are a lot of restrictions on what syntactic constructs can be used in indexed views. To get around this limitation, you can use a combination of aggregation (via ) and statements. However, you'll then run into another limitation, which is that a view that uses cannot be materialized. However, it is easy to make a separate view for the aggregated inputs and outputs in this case, and that approach is worth testing on your specific workload to see if it yields a performance benefit. Below is a sample script that illustrates both approaches: 
+
+REBUILD vs. REORGANIZE vs. DROP/CREATE SQL Server offers and options, but they are available only for a full-text catalog (which may contain any number of full-text indexes) in its entirety. For legacy reasons, we have a single full-text catalog that contains all of our full-text indexes. Therefore, we have opted to drop () and then re-create () on an individual full-text index level instead. It might be more ideal to break full-text indexes into separate catalogs in a logical way and perform a instead, but the drop/create solution will work for us in the meantime. 
+
+This will not drop the actual database .. only the tables/views/etc. If, for some reason, dropping and recreating the tables is not acceptable, then you're going to have to put it more work to manually create a script that creates a dump from the source db, issues or in the target database, and then loads the data dump. There's no quick/slick way to do this, as far as I'm aware. 
+
+Not very friendly to the DB, in either case. But you only have to have your WHERE clause twice (as opposed to 4 times) 
+
+Any time you have a SQL statement that it dynamic in nature (can potentially change at runtime) that you need to run inside of a function, you need to run for it. See Section 40.5.4. Executing Dynamic Commands You need to be aware that executing SQL this way CAN be vulnerable to SQL Injection attacks. Your line above: 
+
+It seems to me that Oracle should be able to use the index to quickly identify which id/timestamp pair is just to the "left" of a specific point in time quickly via looking at the id/timestamp index on an id-by-id basis, but it's insisting on a full table scan. Any help would be appreciated to get this query running quicker. I have ran the following to make sure the statistics were up to date 
+
+can be moved to it's own table.. You probably don't need at all in the table, considering that it's always going to match the 's blood type. Likewise, you shouldn't need the in the table since it's always going to match the 's . I'm not really sure why you have a table at all ... you probably just want a table that records their name and blood type .. Then both the table and would point to the table. (although, again, that table doesn't need at all..) 
+
+You could potentially add some WHERE clause in the CTE to reduce the result set initially, but that might add unnecessary complexity. 
+
+would return a set of rows where the COUNT(type) result ended up being more than 1.. The filtering done by takes place after the DB has already grouped the entire table by TYPE and calculated all values. On the other hand 
+
+One major problem with using "*" in your queries is that if the table structure ever changes, it will affect every single query that is using that table, which will often times break code. Where as if you are specifying the column names, the chances of that happening are significantly reduced. The resulting error messages that the database will give you are also a lot easier to understand when it comes to "what broke?" 
+
+Essentially adding a 3rd parameter to your query .. one use case would use the 3rd param and set the 2nd param to FALSE, while another would set the 2nd param to TRUE.. 
+
+But that's only one possible solution. Naturally, there would be several steps required to achieve this - this is simply what the end version of the tables would look like.. The advantage is that the insert/select from WEB_GK_STATE would be pretty much unaltered (assuming you have a trigger to give the WEB_GK_STATE_ID a valid value). Your stored procedure would have to be altered (minimally), and any SQL in the code that looked at the two tables would need to be reviewed and have it's JOIN condition (if there is one) altered.. I don't think that would be much work, though. EDIT Given further information, instead of changing your existing two tables, I would add a third..

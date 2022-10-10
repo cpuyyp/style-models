@@ -1,0 +1,81 @@
+Note since we are multiplying everything by 100 that the value in is just the value 1, not the conventional 0.01. Given two patterns, and , we say they are close if 
+
+I know it's hard to name things, but try to come up with more descriptive names for your functions. As a general rule, I would avoid using the prefix for pure functions. It's just noise and doesn't help the reader understand what the function is. In Haskell we try to describe what things are and less how things are done. Some names which I think are somewhat better... 
+
+When called with an adjacency function and list of nodes will return a stream of the cliques found. To solve the problem: 
+
+Not that recursion is bad, but using streams results in a more declarative definition. append I would avoid in a Lisp or a Scheme. I'm sure it's not efficient for use on lists. , however, is always efficient, so in you should use: 
+
+If is zero for some , then is it possible that will be 0? If so, the result of the division will be a NaN. However, as I mentioned above, this code is unnecessary, so you can just remove it. 
+
+For instance, what if the values of the items are ? This suggests that you should partition the item ids - not the item values. Here is an example of what I'm getting at: 
+
+Due to laziness it may not make any difference. This is something that perhaps should be benchmarked. To form the groups the first way use the function from like this: 
+
+You can make this run efficiently by creating an index on the column. Lookup are just For instance, to select only those configs which have second id: 
+
+(Substitute the literal with the squishing character.) This alternate approach probably makes more sense if you were to define squishing on ByteString or Text. 
+
+Your base class your and should only have the methods that are in common to both. This means that should only define the following methods: 
+
+So, two characters are in the same group if they are equal or if they are not both the character to be squished. Of course, if you do this you'll have to switch the groups back together differently with something like: 
+
+It's a safer way to implement the loop as the check is always performed. The way you've written it the check will get missed if someone uses somewhere in the loop body. 
+
+Since it uses numpy it probably is also faster. It does more multiplies, but it also can take advantage of your CPU's vector pipeline. More importantly, though, due to the way the code is structured it is much easily parallelizable. It breaks up the problem into a number of independent computations which can be evaluated on multiple cores. Even if numpy doesn't do that for you right now, that capability could be added to numpy in the future and your code would automatically run faster. Additionally the package can also detect common parallelization situations and automatically run your code on multiple cores for you. So there are a lot of good reasons to structure your code the way this guy has done it. 
+
+For short lists this is fine - but note that its running time is O(n^2). If you need a better one, there is one available in the standard library: remove-duplicates in the standard library. On longer lists it uses a hash - you can view the source here: (link) divisor-count Honestly I had trouble understanding your and routines. The conventional way of computing the number of divisors of a number n is: 
+
+An advantage of this approach over splitting each line is that if there are large chunks of your program which do not have any comments they will transferred to the list in one piece instead of as separate lines. Update I would also try using a regexp replace approach - it could be even faster: 
+
+Reshaping Reshaping allows you to (for instance) reorganize a 1-dimensional array into a 2-dimenstional array. Just the dimension metadata is changed so the operation is very efficient: 
+
+The main issue I see is that it appears you are busy waiting on the directory, i.e. you are reading its contents at regular intervals to see if there are new files. Note - I have not written a single golang program, so correct me if I'm wrong, but are you trying to poll the directory every microsecond? The right approach is to use file system notifications from the operating system. For instance, check out this library: $URL$ Using file system notifications your program can remain idle until something interesting happens at which point you receive an event on a channel. This is an interesting architecture problem and I might have more to say about the rest of your program later. A few other minor things... The variable should be named - i.e. the 's' should be on the end. conveys the idea of a singular piece of information about a bunch of files, whereas is more clearly a plurality of file information. Also, "info" is a very generic term. Everything is information. It appears that is really a "directory entry". You'll see the term "dirent" commonly used in the POSIX world to describe a directory entry, e.g. this man page for the system call: $URL$ 
+
+If you have a short-cut way of stepping n times then perhaps it is worthwhile to define a custom function. However, if you are defining stepping n times in a recursive fashion, then perhaps it is no better than repeatedly applying n times. The result will be simpler and more obviously correct. 
+
+Note that is an infinite stream. for, for/list When you get comfortable using the functions, look into Racket's sequence comprehensions: , , , etc. See $URL$ for more info. 
+
+has the same shape as and the diagonals of are the anti-diagonals of . Solution Putting it all together: 
+
+array reshaping array row, column and diagonal slices to compute the product of all elements in an array flipping the array to get anti-diagonals 
+
+The only thing I have to say is that the use of and means that the output will depend on the current locale setting. This may be a bug or a feature depending on what your original intention was. Also, the use of seems rather small for today's processors. The only way that is going to fail is if it can't fit all of the output in the buffer. Since memory is cheap, you might as well make it or . This kinda of ties in with with the question of whether you expect to use this with custom locales. Alternatives: 
+
+doubleEveryOther You are correct to write as a recursive function, but ... you don't need to call on every call! Think of a way to writing but with calling at most once. length and reverse As you become more familiar with Haskell you learn that you should be wary of calling and on lists. In this case it is not a big deal because the lists involved are very short, but, in general, if you find yourself using these functions a lot it's an indication that you are using the wrong data structure. As a bonus exercise, see if you can figure out a way to implement the function without using or . 
+
+The compiler can implement as a jump table or as a binary search. Using will always perform a linear search. As for vs - there should be no difference except that requires you to import Control.Arrow whereas is provided for in the Prelude. 
+
+Create a stream of triangle numbers Filter the stream keeping only those with large divisor counts Take the first element of the stream 
+
+since you use (x,y) tuples elsewhere for points on the function. You should be careful about using here. Are you sure that with your basis polynomials you'll always get a integral result? To be safe you might have to perform the calculations with Rationals. Instead of I would probably call the function - again, just avoid the prefix . Finally, note that your and functions can be written in terms of the and functions from : 
+
+the argument never changes throughout the recursive calls the only elements of accessed are the first and last characters is a potentially expensive function since it traverses the entire list to find the last element 
+
+find a prime divisor p of n find the exponent e of the prime p in the factorization of n repeat this process with n / p^e until n = 1 
+
+The Performance Tips section at python.org has comments about doing repeated string concatenation which you may find here: $URL$ Specifically, it suggests using instead of repeatedly appending to an accumulator with . So I would try something like this, using to find all of the comments, and place the non-comment parts into a list: 
+
+How about storing your data in sqlite database? All of your operations can be implemented as relational database queries/commands. Your table will have columns: 
+
+Note here is represents the upper left corner of either the row, column or diagonal we are taking the product of. That's why both range from 0 to 16 We just run both and from 0 through 19. We examine a few extra products (some with less than 4 terms), but since we are looking for the maximum it doesn't matter. 
+
+Only keep track of the positions of the queens - not whether a square has a queen. Since only each column may have one queen (and must have one queen), a solution is a indicating the row positions of the placed queens, e.g. is a solution for a board having 3 columns (and at least 5 rows) where the queens are at (0,0), (1,2) and (2,4). 
+
+And here is a way I would transform this into a loop which avoids double checking the exit condition: 
+
+You build the list in reverse order, but it won't matter in this case. remove-duplicates You are also using here which should be avoided. The standard definition again uses : 
+
+Note that the list concatenation is O(n) where n is the size of . That is, basically gets copied, so this method of rotating a list is not efficient. In practice this probably won't matter since the list will be small, but it is something to keep in mind. A data structure which amortizes the copying might work better in this case is a difference list such as is implemented by the dlist package. Alternatively just use a where the key is a player number, and keep track of whose turn it is with an Int modulo the number of players - much like you would do in a conventional language. --- playerIsInValidState You should have a bounds check here. If (x,y) is out of bounds then will throw an exception. --- general organization Games typically have the following types and organization: 
+
+is still a quadratic algorithm because starts the stepping process from the beginning instead of using the result of . If you really are going to be using the sequence of stepped configs, just use directly like does above. Finally, a some philosophical musings... What's going on here is that the code you've written for stepping n times turns out to be less efficient than just applying the step once function n times. Turning this around, if you have a "step once" function: 
+
+Again, note how is defined as the memoized version of and calls for recursive cases. Using Array memoization Faster results can be obtained by using arrays to memoize the functions , and : 
+
+Note that is a pure function which makes it very easy to test. You can create unit tests for your code which may be run automatically by your build process. Pure functions are also a lot easier to test directly in a ghci session. Your game loop can now look like this: 
+
+The caller can always convert a to a string given a function which converts a single to a string. I think a good candidate for would be (or perhaps .) With a small change you can generalize your routine to factor rational polynomials - i.e. not just polynomials with integer coefficients. why call again? I'm not sure I understand the point of calling again after the first for loop. My understanding of the p-over-q method is this: 
+
+The main difference is that and now take an argument instead of referencing global variables. Also, do the same with ... 
+
+more There is a much faster way to compute the shift of a letter using the fact that Char is an enumeration (i.e. an instance of the Enum class) and therefore the following functions are available:

@@ -1,0 +1,105 @@
+It crashes because of the bug above. You should decide who owns the object they should destroy the brick. i.e. STOP using pointers. 
+
+You are passing the parameters by value. This means a copy is passed to the function. It is more normal to pass values by const reference to avoid the copy. 
+
+Unless they gave you special instructions. A zero and one length string is a palindrome. Use auto when you can 
+
+I doubt you could measure the difference. But if it is important then you should measure it. People will always have opinions on this; they are not relevant. The only thing that matters is data. BUT it only matters if this is important. Normally I would consider more expressive readable code more important. This code is readable and easy to update (I could even put the data into a config file that is modified seprately). 
+
+Not receiving enough bytes should be a common situation not uncommon or exceptional. I ran all my sockets on a single thread using to detect incoming messages on all sockets (alternatives are , , ). When data is available I read it off. If I have a full message then I create a Job (an item of work) and go back to listening, if there is not enough of a message I hold the data in a buffer associated with the socket so I can append to it next time. Then go back to listing for data on all sockets. You DO NOT want one thread per socket, you should be looking to handle 1000(s) of sockets per thread on the server end. IPV4 Vs IPV6 Looks like you are locking yourself into IPV4 
+
+Either you have some other requirement that is not ASCII (very possible), you want 'a'/'A' to map to some non zero number or you have a bug. But it is hard to tell with the way you have written your code as the literal values 93 and 61 have no real meaning. 
+
+Its a bad habit that will cause you problems in real code. Always pre-fix things from the standard library with (Its short for a reason). see: $URL$ Use menaingful variable names. Names like i n m have no meaning. Also when you have longer code searching the source for them will turn up a lot of false negatives thus making it harder to keep your code working. Prefer prefix ++ over the postfix version. 
+
+Major Points: I don't know what is happening inside but it looks like it is exposing its memory management outside the class. That is not a good idea. An object should know how to handle its memory in all situation (and do its own resizing as appropriate). Two don't use RAW pointers (use C++ ownership symantics). Learn the so that objects manage their own memory. Don't write C code and definately don't write C memory management code. 
+
+Why? Again I don't see the use case. Also you should probably look up the safe bool idiom. The problem with bool is that is auto converted to integer so the compiler will now be able to compile your code what it see this: 
+
+Just remove both these methods. What you want to do is return a reference to the internal object in your overload of operator[] (which you do) bit the index is an integer usually. 
+
+Is fine: The operator evaluates the left hand side first and only if this evaluation returns true will it evaluates the right hand side. So the above expression is well formed and correct. 
+
+Personally I don't like the '{' at the end of the line. But I realize that is a style thing so I don;t care if other people do it like this. 
+
+The reason for this is that you use different techniques for both cases by only using one you make sure your code is DRY and consistent. 
+
+You are passing C-Strings and arrays of C-String. That's not a good start. Who owns the pointers? Am I supposed to free the pointers after use create them? I can't tell based on this interface. About the only thing I can tell for sure is that token_count is an out parameter but I am not even sure if I should reset that to zero before starting (which means the user of the code does not know if they need to set it to zero before starting, which means the only safe thing to do is set it to zero (which means if you set it to zero inside the function you are wasting instructions))? Also passing arrays through a function is dodgy. Its not doing quite what you expect. In this case you are passing through as the parameter. Which makes validation on the other side a pain. When passing arrays don't give the function a false sense of security be exact with your type (or learn how to pass an array by reference). Also I am betting and are macros. Don't do that macros are not confined by scope. Prefer to use static const objects. Note if you use a vector all that information is stored for you. Prefer to pass C++ objects. `std::string is always good for passing strings and why not a vector for a container of objects. Unlike normal; I will not complain about this (as it is confined to a very strict scope). But you should be aware that its frowned upon. 
+
+Your code uses a head to specify an empty list. The problem is that your code basically has two versions of every function. Code to handle the empty list situation and code to handle the non empty list. There is a technique that uses a sentinel object. This is a fake ListNode object (with no data). That is always in the list (the sentinel). This simplifies the code tremendously as you no longer need to check for the empty list when removing or adding elements. 
+
+You seem to be making all your objects publicly accessible. This does not help encapsulation. You should make all your data members private by default. Then provide methods (which are verbs) that act on the object. 
+
+Also C++11 introduced as a replacement to the more error prone . Pre-Conditions Its normal to check pre-conditions and return early if these are not met. This makes the rest of the code flow more normally (I don;t need to check the end of the function for an part). 
+
+OK. In a tree the ownership may seem obvious. But I would prefer to ownership explicitly defined by the code (this will prevent mistakes later). Thus you need to use smart pointers so that you explicitly define how ownership of pointers as they are passed around. 
+
+Rule of 3/5 Violation You need to look up the rule of 5/3. Currently your list will not do what you expect when you copy it. But it will not crash at the moment because you leak all the nodes on destruction. But when you fix the leak the copying will become a problem. Improved Version 
+
+Style Please learn to indent your code consistently. This is really hard to read and make sure ti works. Algorithm I would expect both and to have a complexity of O(1). Unfortunately the pop is O(n) as you have to search to the end to remove the last item. 
+
+Notice we keep the cost in the priority list (not in the node). Otherwise you may have nodes in the list with a higher cost that need to be expunged. You get more efficiency by using an already visited list because you don't have to expand all its connections (if you already found it then you already have the shortest path to that node). Note: You can't put the test for inside the connections loop because by the time you get to them the priority loop may have found a better way to the node. For more details see: 
+
+Now because we have always used the valid move constructor to move the object held in storage (and there is no default constructor). We don't need to check the object in storage is valid on destruction (just call the destructor). 
+
+If T is large or complex then this is probably not a good idea. Pass a reference to the object. If the subject wants a copy they can explicitly make a decision to copy the object when they receive it (they have enough context to make an intelligent choice). So pass by reference instead. 
+
+So lets look at your sorting. The first thing I notice is that you return a vector. This implies you are copying the vector at some point. Usually you sort in place for optimum performance. You also pass by value. Which gets you that copy. 
+
+Your code should express intent. Neither of these express intent. They look more like optimizations. 
+
+For the players and enemies you are hard-coding them into the code. If you want to update your simulator with new players or enemies you need to update the code rebuild and redistribute the executable. If on the other hand you put this data into configuration file and load this dynamically at run time then you can easily upgrade (or sell expansions) just be sending out updated configuration files. 
+
+That is too easy to be confused with . Please put it in a namespace and the very least. I would actually create your own stream class (one that can be locked) and pass that as the output object to the constructor of your class. Thinking should sleep It take times to think. It should also take time to think. 
+
+The point of capacity. Is that it tracks the number of uninitialized members of the vector. You only construct these members as you use them (thus they can be constructed with parameters) and you don't pay for their construction if you don't need them. 
+
+That is really hard to read: It would be even better to wrap this in a structure (one day you may have 2 players at the same time). 
+
+Note: This will not work in a context. So you should also have a version where you can read a value (ie it does not allow modification). This version can be used in context. 
+
+Simplify remove Since you have a doubly linked list. You don't need the variable . You can find that from . 
+
+This separates the implementation from a specific type and allows you to modify the underlying type in the future without having to worry about users of your code changing there code. I tend to group all the iterator calls together. Not intermix them with other calls. 
+
+The other thing I would note about your code is the use of . The standard now provides and . By using these functions you make your code easier to re-use with different container types (especially if you want to use C-Arrays). Note: In the code above I use as a filtering function. Filters are easy to write as lambdas. 
+
+They are a cognitive drain and less intuitive to read (unless you are yoda). Prefer the more traditional style as it makes it easy to read fof developers. 
+
+Then you can use traits to define the , and . Or alternatively rather than wrapping the stream we could potentially wrap the container in something that knows how to print it (and generalize that). 
+
+Note: As all these expose these should be members. Your interface to the public should not expose internal types and is an internal type that affects the implementation. 
+
+Prefer to avoid this-> When you use it means you have scoping issues with your variables (which is a code smell for bad design). Use accurate variable names so that there is no confusion on where the variables belongs. Member variables over globals. Looks like your encapsulation of the and is wrong. 
+
+The directive is "#include". Not all pre-processors are going to support this. So get out of that habit. Remember that the pre-processor phase happens before the compiler is invoked (though modern compilers roll it all it to one). Even if it was legal I would advice against it as it is non standard and makes people second guess that it is going to work. Style: Having a hard time reading your code Your indentation style is making it hard to read the code. 
+
+Or don't even calculate it at all. The string is terminated when you reach the '\0' character so just look for that 
+
+The vector automatically re-sizes as required. It uses a heuristic to prevent it re-sizing too many times. If you are using a C++11 compiler then the cost of resizing will be minimized as it will be using move rather than copy to reduce the cost. This is almost always wrong: 
+
+Now the code will generate a compile time error when you use anything but a random access iterator. With a tiny bit of effort you can do this in a single declaration using the new but I leave that as an exercise. Make Intenet clear 
+
+Is your class taking ownership? If the answer is yes (you take ownership and thus control lifespan). Then you should pass the object using a smart pointer that allows transfer of ownership. 
+
+Compile Time Vs Runtime Time This test is a classic example of when to perform compile time test and plant the correct code using templates rather than a run-time test. 
+
+Don't pass by pointer. There is no ownership associated with it (and it can be NULL and thus you need to test for that). 
+
+Your member handles all this automatically. You don't need to define a constructor. Prefer not to be pass objects by value. 
+
+Part of Type and In C++ (a big difference from C) is that is considered part of the type information and thus usually placed with the type. 
+
+The result of std::getline() is a reference to a stream. When used in a boolean context it will be converted to a bool automatically (using the cast operator). This conversion will call good() so there is no point in calling it manually. If the file is good() then eof() will not fail. If you always return the same value 
+
+Also note that you can have more than one class defined in a file. Thus personally I would have put the and patterns in the same file (they are tightly coupled anyway). 
+
+That just makes things hard to read. Store as the member and change into a normal method that uses (but have a better name). I was looking through to find where was used you know how many false positives I need to check before I found the point were you called the function (put a meaningful name on the function ?). You use a random device in several places: 
+
+So it is best to do this in main(). In your application you are doing this once for each game object. This may not seem like a big thing. But of your code get's re-used by another application that does not realize you are doing this. You mess up other people's code. You should also note. This old random number generator is considered pretty bad. You should probably start looking at the new ones provided by C++11. They are much better and can be used in ways that don't interact (so you don't screw over other people's random numbers). Move Platform specific code to its own function. 
+
+The pthread library is a Library. As such it only understands the C ABI. Therefore pthread_create can only be passed functions that have a C ABI which means they need to be declared with . This means you can not portably pass a template function! 
+
+But if you fix the code as I suggeste above you don't need this function. There is a simpler way to write this: 
+
+Exposing the iterator type here locks you into that type. I would define my own iterator type locally to the CardStack (see below).

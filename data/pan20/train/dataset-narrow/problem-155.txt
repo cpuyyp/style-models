@@ -1,0 +1,75 @@
+When I'm configuring wireless interface in RouterOS or in fact most of APs in general there are basically 2 options for controlling traffic between stations connected to AP - forward all, and don't forward (AP isolation) it's kind of binary... I'd like to be able to apply some at least a bit more advanced filtering between stations connected to AP. Just like in some routers it's possible to apply some basic firewall on bridge interface level between bridge ports. So lets say I could allow stations to connect with each other only on ssh port, nothing else 
+
+I have 3 different networks and I'd like users from network A to be able to wake up pc network B (ofc with certain password) so I guess it could be good idea to allow them to use WOL capabilities built in router. 
+
+Long time ago I heard from friend that on really short distance using optical links makes no much sense because comparing to passive connection optical interfaces introduce another layer of hardware converting electrical signal to light. Considering 0.5m 10g passive DAC vs 0.5m 10g AOC - which one provides lower latency if any? 
+
+I know it might sound like really broad question but I'm asking because I somehow internally feel that my current approach is fundamentally wrong. At the moment in order to implement L4 firewall inside LAN segment I'm creating N VLANs (where N is number of devices) and then I'm bridging those VLANs on router with L4 firewall enabled on bridge (so that I can filter traffic between machines inside single LAN segment eg. to allow only ftp and VNC between workstations). However while it works for smaller networks I think it's genuinely wrong approach for big networks as it: 
+
+I heard about plenty of alternatives to ethernet like for example token ring, ARCNET, SONET, or to IP4/6 for example IPX but once I decided to look for software and hardware support I realized those are rather historic protocols and no modern, high speed hardware is available. I know that PPP over various serial stuff and DSL family protocols are still widely used by ISP. Also some fibre protocols - GPON/GEPON. So my question is - what are currently used protocols and link technologies capable of being used as interconnect between border TCP/IP networks?. Not necessarily mainstream or super popular - but just still usable with modern hardware/software support. 
+
+So what tools do we typically use when we want to control allowed traffic (on L4 level) between machines connected to single network (eg. in one VLAN or connected to one physical switch)? I know about ACLs on switches but I think they rather work for in/out from entire switch. Not individual devices connected to such switch, am I wrong here?\ 
+
+I've seen several switch products advertising port isolation feature as "way to limit ports communication without configuring VLANs" and it sounds quite... sketchy? If i understand it correctly port isolation allows you to literally specify which ports can each port talk to. And it sounds like really really error prone example of clumsy VLAN/ACL combo implementation. So what are actual correct use cases (not ones coming from lazyness and misunderstanding) where this feature is necessary? Can we look at port isolation as kind of simplified ACL? I don't quite see any real value coming from such feature if we have switch with ACL support and VLANs support. It sounds to me like incorrect network/security design. 
+
+Always have at least two different ways to get into a core box remotely. Generally this means in-band and out-of-band. The inband would simply allow your management range to SSH into the box via any available port, while the out-of-band would be a different link via console or ethernet into the management card/fxp port/ etc 
+
+Unfortunately EX switches cannot terminate double-tagged vlans. You would need a bigger box like the MX or M series with IQ/IQ2 module if sticking with Juniper. The best you could do with the EX is strip off the outer-tag and push those inner frames to another EX. 
+
+Dynamic protocols only really make sense if your sites have more than one exit point, or you have many routes per site that can't be nicely aggregated into a single static route. I would stick with OSPF, simply to be able to use other vendors. I know EIGRP has been 'released' but its going to be years until you see other vendors using it and you dont want to be locked into a single vendor 
+
+You're configuring it wrong. In order to get policing working on these switches you need to configure the following (I've taken this from a working switch of mine) 
+
+They all match on the first octect so no worries. You need to figure out where they match on the first different octect. In the example above we write them out and convert them to binary. Make a note of where they are the same in binary: 
+
+Under the parent policy you have to 'set' something in order for it to work. This could be anything so in this example I'm simply setting the dscp to 0 
+
+On frame-relay point-to-point interfaces, your OSPF priority is set to zero automatically. Also you have no DR election on a p2p links 
+
+If using Cisco at the edge, then PfR would indeed be the best option here for the reasons you specified. You can set up master controller redundancy and Cisco shows how on this link: $URL$ 
+
+The main current issue with the Brocade line is that you can only enable one at a time, per chassis. i.e. If you want to run VRRP-E, you'll never be able to run VRRP with another vendor on another port. They are not compatible in any way. VRRP-E is proprietary. 
+
+The provider should have a filter inbound to ensure these communities are only accepted from customers. If not, then that's the providers issue. Some Tier1 providers do accept these sorts of communities from anywhere though. This is based on RFC 1998: $URL$ 
+
+I configure all my core OSPF interfaces as p2p. I would do the same for integrated IS-IS. This stops the DR/DIS election process from happening which can take a fair amount of time in a re-convergence scenario. You do not HAVE to have them running as /31. It could be any mask as long as you only have two active speakers. An added advantage on the OSPF side is that you get no type2 generated for the link. From Cisco's site as well in regards to integrated IS-IS ($URL$ 
+
+No. A interface description is just a label. The only way to find out what's REALLY plugged in is to show the MAC addresses as you noted. For networking equipment, if you turned on LLDP or CDP it would make it easier to determine what networking equipment is connected to each others. But for hosts you need to use the MAC address table 
+
+we have 10G fiber running since 1 year but today i have migrate that same link to ASR1006 and i am seeing following error, what could be the wrong? 
+
+We have Cisco router with fiber transceivers and other end we have does that work to different capability. In short one side and other side fiber port does that work or i should match them? Suggestion: Inside datacenter (short distance) should we go with or 
+
+We have ASR1006 Router and we are running ACL on it to allow specific port to specific server. Question is there any ACL performance impact on individual IP vs full subnet. like following example. we have 202.100.100.0/24 subnet now i want to use first 200 IPs for web server port 80 remaining 55 (whatever) mail service port 25. Now how do i tell ACL to isolate them or subnet them? Other option i have i create individual ACL for each IP like following but question is does it impact on router performance? 
+
+Look like DNS/HTTP isn't working. I have check and NAT is correctly configured. I am suspecting it could be DNS/HTTP inspection policy? but its default i never change it anything. 
+
+Look like arp related issue showing every ~85 second my arp table getting flushed so something is not OK here... what is triggering arp-flood? Lets investigate in STP because because that could be the problem of arp, Hmm based on following output something changed at 
+
+We have above scenario where currently we have only single link with but soon we are planning to have second link on same BGP router but ISP side it will comes from . I heard its recommended to configure BGP with loopback source but i don't know how does that fit in DUAL router scenario. This is what we have currently configured in my router. 
+
+UPDATE This is very interesting, same fiber i move back to C3850 switch and it works! but if i moved back to ASR1006 it didn't work. but if i connect ASR1006 same fiber port to C3850 back to back (1 meter distance) and assign random IP to test ping and it work! SPF model is what could be the issue? 
+
+Does Cisco support Hardware ACL? Because i have read if cisco support hardware ACL then its counter doesn't increase but in my Router its increasing counter but after small delay. is that normal behavior? I have check CEF is enabled by default on Router. 
+
+We had DDoS couple days ago and following is netflow data but i am confused with numbers which i am seeing here. If you look at first column so it's in GB what does this means? I have checked network interface graph and i am seeing only spike in link. 
+
+I have this scenario where i have two 10G link from my and both link has two class C public IP which is mentioned in diagram. I want to router data between two VRF & 
+
+Nexus 3064 CPU spike and packetloss I have L3 Cisco 3064PQ switch which is running latest "nxos.7.0.3.I4.7.bin" basically I am using for routing so my ISP 2x10Gbps link terminated (with LACP) on single switch (without STP,vPC) it and currently live traffic is 10Gbps on switch but i have notice periodic packetloss and not sure where its coming from, after digging i found when my CPU spike up to 70% i have seeing packet loss. If you notice in below picture that 60% spike and at same time i have noticed 1 ping packet loss. How do i debug this issue and find out what is that pike for and why its happening periodically 
+
+There is no country group. Germany is in the RIPE region and hence RIPE assigns the next available AS to the next company that requests that sites in the RIPE region. Everything yellow in the following image sits in the RIPE region: $URL$ 
+
+The above all match in the first four bits, and so that becomes the boundary. The amount of bits also tells you the slash you're going to use. You then use the 'all zeros' address as the subnet. In the above example, they all match up to the 4th bit in the second octect. Each octect is 8 bits and so the new bit boundry becomes 8 + 4 = 12. so our end result of the above is: 10.32.0.0/12 
+
+A traceroute will show you how many layer3 hops you are getting to from A to B. However you could be going through hundreds of switches inbetween. You could also be going through 10 ISP routers running a layer 2 vpn which appears as a single hop. An MPLS network could hide its internals, or show its internals to you. You could have transparent firewalls in the path as well. Either way your Professor is correct in saying that your cannot guarantee that every single device in the path will count as a hop to you. Because of the above points I mentioned, you could be going through 50 devices but it could look like three to you. It doesn't happen all the time though. If you see 15 hops it very well could be 15 hops. This is a basic example of an MPLS set up in regards to TTL: $URL$ 
+
+A tunnel give you a route-based VPN option. This allows you to run routing protocols over your tunnels which allows for better failover capabilities. You can also set up a single tunnel, then route many different prefixes over that same single tunnel. If the other side adds a new prefix, just add another static route to the existing tunnel. I also find it easier to do network-wide NAT for overlapping VPN subnets as the tunnel interface is just another layer3 point-to-point interface Tunnels are also handy for times when you need to run two different VRFs over an interface that doesn't support many subinterfaces. A DSL link is an example. In this case you can run a tunnel over the normal link, and have that tunnel in a different VRF 
+
+That will fail. MTU is setting the L2 MTU while IP MTU is setting the L3 MTU. The CLNS MTU determines both the maximum size of LSP plus the hello size when padding. If you tried to send a 2000 byte LSP over a 1500 MTU L2 link, it will get dropped 
+
+If you have proper security policies in place, there is no need to separate these two devices out. If you have a properly spec'd firewall, then performance is not a reason to separate them out either. It's good of the vendor to tell you to split these two out as they end up selling you two firewalls instead of a single device. 
+
+I too do not have that SUP available, but can easily do this on a Brocade Netiron. Simply put two ports in a VPLS and tag them with different vlans. Like so: 
+
+There is no tunneling. This is completely normal. With IP routing you are concerned about the source and destination address which doesn't change unless something is NAT'd. If a router in the middle has an RFC1918 address that's fine as it can still forward transit traffic as again the source and destination is unchanged. Each router will simply reply to the source with their own directly connected interface address. The 10.14.0.1 above is not being routed over the internet, it's simply the device that is attached to the CPE on the WAN side. There is no magic technology being used. It's pure standard routing.

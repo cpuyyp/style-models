@@ -1,0 +1,75 @@
+A Switched Mode Power Supply (SMPS), also called switching DC/DC converter is probably the best approach to convert the 9 V system supply voltage to 5 V for powering the Pi. Joan's suggested UBECs are typically SMPS. As linear voltage regulator could at best achieve a conversion efficency of about 55% (meaning 45% turned into heat), whereas a switching mode regulator should easily achieve 80+x %. Some examples suitable for the Pi: 
+
+From picamera's documentation - the package that provides a pure Python interface to the Raspberry Pi camera module for Python 2.7 (or above) or Python 3.2 (or above): 
+
+A mis-placement of a heatsink of 1/2 mm will cause no trouble and no significant change in thermal behaviour. The only potential issue could be a damage and/or short circuiting of neighbouring components, e.g. R82 or R10. Those resistors are pretty close to the chip. Check those in detail - though from pictures of the PCB I would assume that you're pretty safe. As for the time of your thermal paste/adhesive ... that would depend on the product. 
+
+Please check /etc/hosts and /etc/hostname for the name of your system or set it to your wishes. Preset values may differ with the flavour of your OS (e.g. "raspberrypi"). Within your own subnet, that is behind your switch/router (assuming reasonable hardware and software on all parts within that network), you should be able to connect to your RPi using that hostname. Further reading: 
+
+This charger has the so called "Adaptive Fast Charging" (see here) with an output voltage of 9V or 5V. While the 9V are way out of the Pi's spec, 5V are perfectly fine (see Raspberry Pi Power Limitations for all the details). So the real question here is, how and when does the charger output 9V? Obviously anything that comes with a micro-USB should not be outputting a voltage outside of USB spec (the 5V) per default. Thus all higher voltages should only be applied after the device and the charger negotiated that. According to this post: 
+
+Raspberry Pi's definitely do not come in any kind of standard form factor. Even the development of the different types of the Pi (A, B, B+, Model 2) show slight changes in its outline and placement of connectors attributed to technical and electrical design changes. Since the development of the Pi is driven by the RaspberryPi foundation only and not by a big industrial consortium it's no wonder that they follow no stringent form factor. However the Pi's targeted audience is mostly educational and DIY home maker style not so much industrial applications. Given the documented minor issues with the Pi one could also go so far as to not recommend it for industrial uses. 
+
+Some additional resources to list the power consumption of the numerous models of the Pi and different load cases: 
+
+So it is possible to directly run it with the Pi. The sensor itself runs at about 3V and the board comes with a voltage converter to accept 3..5V inputs. If supplied with 3.3V from the Pi the serial data pins (I2C and SPI) have the appropriate voltage levels for the Pi. Adafruit has this excellent tutorial that explains how to wire and use it. Read it! (I mean it!) BMA180 Sparkfun Triple Axis Accelerometer Breakout First, I assume that this sensor module is referred to. There it reads: 
+
+In other words: yes, you can do both things at the same time. This is exactly what both ports are for. Addendum: From the schematics of the Pi Zero, and assuming that the Pi Zero W is similar in this respect, we find that the USB On-The-Go port's power line is connected to VBUS whereas the power port is connected to 5V. Unfortunately the schematics do not mention VBUS again at any other point. However connecting the power supply to the data port does indeed power the Pi. This answer supports that the Zero (again assuming the Zero W behaves the same way, which is likely) can be backpowered. The final question now is whether the shown OTG hub powers the power line on its upstream port - which I cannot tell from the picture. If it is self powered (not bus powered) it is quite likely that it will work (with any drawbacks that may arise from backpowering). Make sure that the power supply's amperage covers the Pi and the connected peripherals. 
+
+Besides checking the documentation of the module, in this case , you can easily list the valid attributes for the module using , e.g.: 
+
+with I being the current drawn by the Pi and the additional peripherals (measure this for the real thing), t the duration (8 hours), and SF a safety factor to ease your mind and accommodate for aging of the battery. So as an example: 
+
+You're looking for a KVM-switch and for the Pi an additional HDMI-to-DVI adaptor for the Pi. From Wikipedia: 
+
+You'll need to establish a so called "brigde" for the network adapters on your windows laptop - assuming you use different adapters for both tasks (say wifi at the laptop to connect to your home router and wired connection to connect to the RPi). How to do that depends on the windows you're using (specify to get more details) but could be looked up on the internet or microsoft's help center. But for any reasonable current windows this should be working out of the box. 
+
+, the virtual filesystem allows to directly read from and write to GPIO pins by to or from various files in the folder. library provides a cli command to be used by non-privileged users for direct access. utility, part of the library also offers comprehensive control of the GPIO pins from the command line (see pigpio for download of source, installation procedures and excellent application examples). 
+
+Ok, I guess there are many different approaches possible so I will call this just one suggestion (I will henceforth call it the complicated way). Since you're into SQL databases anyways why not do it like that: 
+
+Those buttons will do fine. Note that the listed ratings for the buttons are maximum or "absolute maximum" values that should not be exceeded. Operating them at the Pi and 3.3 V of its GPIO pins is well within the voltage rating. The current required to toggle an input pin is in the milliampere range or even below - so again, well within the limits of the buttons. 
+
+Out-of-the-box: Make the Pi collect its data offline and connect to the internet only once in a while to deliver the parcel en bloc? Select the upload interval according to the desired update frequency (which I hope is not "real-time"). Certain drawback would be with remote maintenance that would require to dial in at those given times only. The approach could be combined with other measures to cut down on unwanted requests. 
+
+There will be many ifs and buts here... For one thing, there are no schematics available from raspberrypi.org so we have to assume that the power circuitry is somewhat similar to other models - lets look at the B+. Using the pin header and not the micro-USB port to power the Pi will circumvent the protection circuit including the poly-fuse - you have been warned. 
+
+Mopidy is (self-proclaimed:) "an extensible music server written in Python." Since it plays music from a variety of sources and could be controlled by a multitude of clients this sounds like a cool way to give the Raspberry Pi a second use as a Music Jukebox. On Arch Linux I followed the instructions to the letter but is not running but throwing this error upon start: 
+
+should do the trick. It opens the file in appending mode for read and write access. Placing the there is not what you want. Instead simply explicitly append a '\n' each time you want a line break, e.g. . For the given example that would look like: 
+
+is the problem you need to fix. It means that you have a broken file system at hand, which could be just the file system or even a broken SD card. Try: 
+
+Changing to is of no relevance to the next call which leads to the expected result - the error that is thrown - not found. Simplest solution here: use the full path instead of . From $URL$ it is recommended to use over : 
+
+There is nothing wrong with the aformentioned solutions of and but there are also other nice tools out there that help you do that and bring additional benefit. is such a system to monitor and control a number of processes on UNIX-like operating systems. Nice benefit is that it not only starts programs at boot time but also tries to restart them if they fail and crash. Follow the excellent documentation to set it up and configure multiple conditions according to the needs of the project. 
+
+On a nit-picking side note: technically it should read not power but energy in "how much power this Pi would be using over an 8 hour period". The integral of power over time defines the work performed - which is an amount of energy. 
+
+The issue was never solved, but using the smBus python library ended up making the need for the quick2wire library irrelevant. 
+
+If the output toggles according to the switch but the LED does not light up - decrease resistor. Again, I find it strange to believe that there is no appropriate resistor integrated but you're about to find out. 
+
+Think of it that way: if you were to power the relay board not from the Pi but from a separate power supply you'd want to have a VCC and a GND pin on the board to connect it to. The other GND pin at the digital in connector would then be connected straight to the Pi. It's simply convenient not to put more than one wire into each connector slot. Both GND pins are connected on the PCB of the relay board. 
+
+Note that you may put said tarball anywhere you like. Welcome to the freedom Linux has to offer ;) If it is some software to run I'd go with (it might be necessary to gain elevated privileges to have write access there). See here to find out which directory would serve your needs best. Untar using this command (as pointed out by Goldilocks, it might be advisable to create an empty directory first and do the dirty works in there in case the tar does not politely unfold into a new directory itself): 
+
+Are you sure the Pi needs a fan? Usually they don't. Easier than fiddling with the USB ports and their voltage (to be honest, reading the title of the question made my eyes bleed a little) fix the fan. If you know that the fan operates safely at a lower voltage (some do not and simply stop or do not start to turn) just wire a series resistor to the fan. Calculate its value from the current drawn by the fan and the required voltage drop. Make sure the power rating of resistor matches the dissipation loss (could be up to a few 100 mW). 
+
+I once set up vpnc on a RPi to allow for a so called client side split tunnel doing the following. The system is with but I do not see why it should not be working on raspbian. Find a full description (that I followed to the letter) here. 
+
+Using the pigpio lib you can read full 32 bit wide banks of GPIO pins at once. It also provides a pythonized interface, see here: 
+
+Powering the Pi using the pins at the GPIO connector and connecting the LEDs at the other pins of the same connector bypasses the Pi's protective circuitry that could not handle that much current. However you need to be aware that the Pi's printed circuit board is likely not designed for that current either. Using this calculator we find that 15 A requires a trace width of 495 mils (12.5 mm) at the standard copper layer thickness of 1 oz/ft² (35 µm). Even if both +5V and GND have separate ground and power planes this is simply asking too much. You will experience a significant voltage drop and resulting thermal issues this way. Similar restrictions apply to bread boards and the wiring that is used with those. Simple solution: wire the LED strip directly to the power supply using appropriate cables with sufficient diameter. See AWG for more on the topic: the cross-sectional area of each gauge is an important factor for determining its current-carrying capacity. 
+
+See here (or at the Raspberry Pi Foundation linked above) for the basic pinout. DPI is an alternate configuration (which the original question makes not mention of) that uses ALL GPIO pins. 
+
+Yes it is possible - since GPIO pins can both sink and source a current, a load can be switched to either VCC or GND. Just consider to connect the LED (with series resistor) to a GPIO pin and to GND. Set the pin to high (1) to turn on the LED. 
+
+Any electrical short circuit as well as electrostatic discharges (ESD) leading to sudden and momentary electric currents that flow between two objects, typically induced by touching it unprotected can (partially) destroy electronic components. Highly integrated circuits such as the processor of the Pi are specifically prone to this destruction. 
+
+Thus runs your script at 02:00AM each day. Be sure to add the full path to your script to be run properly. Also note that commands run by have no way to output anything that is piped to stdout or stderr. So you might want to output to files or use redirection (that means if your script contains a statement you'll not see the result if the script is run via ). Be advised that invokes the standard editor that is set in the environment ($EDITOR) so you might end up with a default editor that might be a "little complicated" to use as a beginner. In this case use before (assuming is installed). 
+
+Kodi 18 () from AUR is only available for the 686 and x86 plattform not the Pi's ARM. Rumor has it that you need to build it yourself: 
+
+Arch Linux does not provide images anymore. Instead the .tar.gz will "simply" contain the full file system and has to be installed to the SD card after preparation of the partition table using and creation of the file systems . These steps are followed by copying the files from the .tar.gz to the root and boot file system. Documentation of the full installation procedures:

@@ -1,0 +1,63 @@
+The first thing that jumps out at me is you say you removed the link from A to C, but fa 1/14 is still in the forwarding state. That means the port is still up. The second thing I notice is that the root port is also 1/14, which means it's up and hearing BPDUs from sw A. So I would guess you didn't really remove the link from A to C, but blocked traffic in some other way. 
+
+Take out the phrase "from outside" and your definition is correct. Subnetting has nothing to do with "inside" or "outside." Networks exist both on the "inside" as well as "outside" and therefore you need a way to identify networks and how to reach them. 
+
+This may be a bit of a hack, but... I want to change the local preference (or any other attribute) on incoming prefixes based on the existence of another prefix. In other words, 
+
+Not using a loopback address can cause many problems, as you will likely discover on your own ;-p The command you quote is used to specify the source interface, if I understand your question. You can only specify one. If you don't specify the source interface, the router will use the interface closest to the destination, based on the routing table. If you don't specify an interface, then the source interface can change if there is a topology change. Your AAA server may not recognize the new address. If you do specify a physical interface and that interface goes down, TACACS stops working. If you use a loopback interface, the source address never changes, since the interface never goes down. This is considered a good practice. 
+
+You may be able to add an additional AP with a directional antenna to improve reception in the dead zone. As @RonMaupin says, you will need a site survey to determine if this is possible. Repeaters are usually a bad idea. 
+
+Increase the port cost on the uplink to the root switch to something greater than 3500 on either N4064 switch. That will cause that port to block and the LACP bundle to start forwarding. 
+
+Tunneling protocols like L2TP, GRE, IPSEC and MPLS don't fit well into the OSI model. L2TP tunnels (encapsulates) L2 frames in UDP so it can be transported over layer 3. 
+
+Packet capture programs require the NIC to be set to "promiscuous mode," where the NIC will accept any packet regardless of the MAC address. 
+
+Like access lists, route-maps have an implicit "deny all" at the end. Stanza 90 denies packets it matches, and then everything else is denied by the implicit deny. You need a "permit all" statement at the end like this: 
+
+A general answer for a general question: The modem (or other device) tries the highest speed it can. If that doesn't work, it tries it's next lowest speed, and so on, until it finds a speed that works. 
+
+Your design in the diagram is a reasonable approach. Do policy-based routing on 2911-1, and do you NAT on the border routers. An alternative, if you can use contexts, is to connect VLAN 30 directly to the ASA (either with a different interface, or use sub-interfaces and a VLAN trunk. Make the ASA the default gateway. Connect 2911-3 similarly with a separate interface. Now you can create a separate context for VLAN 30 traffic, and direct it to ISP 3. This may or may not be practical, depending on your situation. 
+
+In an Ethernet segment (a collision domain), all the stations are connected to a common media or cable. In the original Ethernet implementation, it was a physical coax cable that ran though the building -- each station was connected to this cable. So when A transmits, B and everyone else can measure the electrical signal and detect that A is transmitting. Because it is a cable, the signals propagate at near the speed of light (about 0.6c). 
+
+Your example with a single gateway is a very simple network, and in that case you don't need RRI, as you have figured out. But, many networks are more complex than your example. Here are a few reasons why using RRI would be helpful. 
+
+Let's see if I can make things clearer. First, VLANs are a layer 2 construct, and subnets are a layer 3 construct. It is true that in most cases there is a 1:1 relationship between them (i.e., one VLAN per subnet, and vice versa), but that doesn't mean they are the same thing. Switches, being a layer two device, forward packets based on MAC addresses and never look at IP addresses. So in the context of a switch, it's wrong to say that a VLAN has a particular subnet on it. The switch doesn't know or care. It is the end devices (hosts or routers) on a VLAN that define the IP subnet. If they're all configured for the 10.0.10.0/24 network , then that's what it is. If you change the IP subnet on your hosts, you have changed the subnet for that VLAN. EDIT: The term "tagging" applies to the 802.1q protocol, which is a variation of "standard" ethernet protocol. In fact most PCs, Macs, etc, can not understand the 802.1q protocol -- they simply ignore it. So when you say 
+
+The network statement defines the subnet for the DHCP pool. 192.168.10.104/26 (255.255.255.192) is not a valid network address. It's a host address. The /26 network that contains that IP address is 192.168.10.64. 
+
+I'll answer Q2 first: Suppose a PC in VLAN 100 sends a packet to a PC in VLAN 200. Let's say the packet takes the VPC link to 7K2. Since the active SVI is on 7K1, the packet is forwarded across the peer link to 7K1. 7K1 would want to forward it to the right-hand access switch, but it can't because of the loop avoidance rule. So the packet gets dropped. 
+
+In theory, the answer is yes, but based on your diagram and description, the practical answer is NO. The problem is you can control your outbound traffic, but you have little control over your inbound traffic. For a webserver, traffic loads are very asymmetrical, and the vast amount of traffic is inbound. You can control inbound traffic only to the point the your upstream AS's agree to do so. If they don't want to follow your signalling, there's not much you can do. Since you have two different ISP's they may not cooperate with each other. Furthermore, ISPs limit the length of prefixes they allow you to advertise, usually a maximum of /24. So even if you advertised a more specific route for your webserver out of ISP B, they wouldn't accept it because they limit your prefix advertisements to /24. Finally, you need to be very careful when programatically changing routing as a result of traffic loads. You can create a lot of instability in your network. Imagine link A is the preferred path, but it has high latency due to traffic loads. So you move some traffic to B. Now Link A's latency goes down because there's less traffic on the link. So your router switches traffic back to A. And the latency increases again. So it switches again....etc. 
+
+Switch B associates both MAC addresess with the port it was received on. A port can have multiple MAC addresses mapped to it. 
+
+Full duplex means that an endpoint can send and receive at the same time. A telephone is a good example of that. 
+
+It depends on the routing protocol. Old protocols like RIP v1 assume a classful mask and do not advertise a mask, but newer ones like RIP v2, OSPF, ISIS, BGP, etc do. The answer to the second part of your question: To determine the network part of the address, or to test if a given address is part of a particular network, you perform a bitwise logical AND with the subnet mask. For example, to get the network address of 172.16.24.5/24, you AND each bit of the 32 bit address and the Mask, like this: 
+
+Many (most?) ISPs use a separate address block for their PE-CE links. It allows them to manage their devices more easily, and it doesn't use up addresses from the blocks they assign to customers (like you). The address block they use is assigned to them, so there's no issue with addressing. 
+
+Take a look at VXLAN protocol. It encapsulates L2 information in a UDP packet. I'm not saying use VXLAN -- your custom protocol will be different, but its structure would be similar to what you seem to have in mind. Since your question is rather vague, that's about as detailed an answer you will get here. 
+
+Back in the good old days, this was done via a physical medium: Ethernet cable, Token Ring, or Arcnet. On a modern network (Ethernet) switch, you can create groups of ports that have these two characteristics. For example, you can configure a 24 port switch so that only ports 1,2,3, and 10 can directly address each other and listen to broadcasts from these ports. You have created 'virtual' LAN or VLAN. It's virtual in the sense that it doesn't rely on physical media, but on the configuration of the switch. You can create another group of ports (11,12,13) that also have the two characteristics -- you have created a different virtual LAN on the same switch. To answer your specific question, a VLAN interface is a logical layer 3 interface on a VLAN. It's the logical equivalent of connecting a router's interface to a VLAN. It is not the same thing as the VLAN itself. 
+
+If you don't get an error, then IPsec is available. EDIT: To enable IPSec with this IOS version, you have to buy the security license (securityk9) to enable that feature. 
+
+If you're using Cisco devices, you can configure a single DHCP server for all vlans. On the vlan interface, add the command 
+
+Serv, Your tunnel source and destination addresses are wrong. They should be 209.165.122.2 and 64.103.211.2 on RA and the opposite on RB. There are many different ways to explain this, but essentially, the route to the tunnel endpoint cannot be through the tunnel. In your case, in order to send a packet (from RA) to 192.168.1.2, RA has to encapsulate it in a GRE packet and then send it to the tunnel destination. But the route to the tunnel destination is through the tunnel itself. that is not allowed because you would be infinitely encapsulating the packet. Another explanation (metaphor): Think of a bridge being built across a river. the bridge engineers need to know where on each side of the river to put the bridge. Once they have built the bridge, you can route people to use the bridge to get to the other side. But that is separate from where the bridge has to be built. The bridge (tunnel) is built from RA's s0/0/0 interface to RB s0/0/0. Once the tunnel is up, you can then route traffic from 172.31.x.x through the tunnel. In other words, building the tunnel is separate from routing traffic through the tunnel. 
+
+A partial answer: at the data-link layer, it's called a Link Service Access Point (LSAP). To get the others, you'd have to read the OSI specification, which is 1) expensive to purchase, and 2) irrelevant. 
+
+In this example, the address in the interface column is used to identify the particular interface (your computer may have more than one). Since naming conventions often depend on hardware, it is easier to identify them by IP address. For example, your routing table shows the default gateway is 192.168.0.1, and it can be reached by using the interface that has the IP address 192.168.0.100. 
+
+One way to modify your ACL is to simply create a new one, then apply it to the interface. The advantage of this method is you can quickly revert back if you've made a mistake, and you can see what you have previously done for auditing, etc.: 
+
+The first thing to remember is that all these terms came into use via the marketing departments of network equipment manufacturers. As companies developed technologies, they invented terms, created new meanings for existing terms, or borrowed terms from other disciplines with similar characteristics. The point is there are no hard and precise definitions, and sometimes they only mean what companies want them to mean at this moment in time -- they can change as new technologies are developed. That said, here are some rough definitions: 
+
+The keywords "IN" and "OUT" are from the perspective of the router interface. So IN refers to traffic received on the router interface (Into the router), and OUT refers to traffic sent from the router (out of the router interface). 
+
+The video is a little misleading, IMO. Remember that the OSI model is an idealized abstraction, and doesn't accurately represent anything actually in use. When the video talks about creating a session with another computer, it is a logical connection. That means the session functions on one computer are understood and processed by the corresponding session functions on the other. But that is a logical connection -- the data still goes through the encapsulation/de-encapsulation of the other layers.

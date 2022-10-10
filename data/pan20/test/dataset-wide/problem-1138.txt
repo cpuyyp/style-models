@@ -1,0 +1,95 @@
+This is the problem you need to address. Don't blindly accept recommendations or guidelines without taking the time to understand the why behind them. 
+
+Came back to check on why I couldn't get this to work from Profiler and same result. I found mention of this being a problem when scripting traces for 2000 from SSMS but no mention of this situation with SSMS2005/2008 to 2005/2008 servers. Is this a bug in Profiler? 
+
+Requires programatic access. Cost of storage. More of an issue if you have to deal with platform restrictions on size e.g. 50GB on Azure. 
+
+This answer may prove helpful to the original question but is primarily to address inaccurate information in other posts. It also highlights a section of nonsense in BOL. 
+
+If the live version of this database is version 1 and our next release is version 3, the script below would be all that were needed but instead both ALTER statements will be executed. 
+
+Rather annoyingly, the SSMS default is for whereas the majority of client libraries (ADO .Net, ODBC, OLE DB) specify . Likely you had a plan "go bad" but when you attempted to replicate via SSMS, the difference in ARITHABORT resulted in a different plan being used, which was "good". Slow in the Application, Fast in SSMS? is a great reference for this. 
+
+The observed behaviour suggests that entries are made to the array in the order that IO is generated, essentially the result of GetNext() on a physical operator. The last entry in the statistics output is the first table that resulted in an IO being recorded, the first entry is the last table. I’d speculate that the order for parallel plans is not predictable (or less so) as there is no guarantee as to which parallel task will be scheduled first. 
+
++1 for @gbn's explanation of the likely cause but I'm not a fan of the suggested INSERT/UPDATE pattern, unless an update is truly the exceptional case (i.e. 99.99% of the time an insert occurs). My preferred approach has always been: 
+
+Recovering is the correct state for the database to be in at the stage you've got to. First, script the endpoints on both the mirror and principle and check that the ports are those you expect and that you can telnet to both ports from both servers. Double check that the endpoint state is 'Started'. Second, if the endpoints are as expected and you've confirmed connectivity is ok, try initiating the mirror from TSQL. The sequence (after database and log restore) should be: 
+
+Without any information on the nature of the system (see my comment on the question) or why you're upgrading, it's difficult to offer any specific and/or concise advice. As a starting point, there are plenty of excellent checklists for building a new server, Brent Ozar and Jonathan Kehayias are two good examples. From the many recommendations in those guides, there are a couple of items worth highlighting. These are those which I encounter mis-configured most often. 
+
+Increase the memory allocation to SQL Server. You said the server is dedicated but have only half the RAM allocated. 32GB server, allocate 28GB. Upgrade the server memory to [size of database] + 4GB. Post the problem queries on dba.se. Engage an expert. 
+
+You'll be hard pressed to find any modern software department that isn't operating some variant of Agile. DBA's by comparison are stuck in the dark ages, with the kind of thinking that @RobPaller's answer contains still common place. Modifying a database schema has never been as easy as modifying code, which is why there has been reluctance to embrace an agile approach to database development and maintenance. Now that we have the tools and techniques to operate in a similar manner to developers, we most definitely should. Just because it isn't easy to change schema, doesn't mean you can't and that you shouldn't. I'm not advocating a haphazard approach to database design (see comments), merely an approach which more closely mirrors that of an agile development team. If you're part of an agile project, you aren't going to have requirements for work that may (or may not) occur in the future so design for what you know is needed, not what might be. I guess that puts my vote with your option 2 and I suspect I might find myself standing in the cold on this one! 
+
+I can't recall if there is a DMV or combination of that will give you the total memory allocation but the following will show the bulk of it. 
+
+Apologies to the creator of this script for not giving credit but I've no idea where I sourced it from. It's been in the toolbox for a while. This iterates through all databases and lists the orphaned users by database, along with the drop command to remove them. There may be a neater/newer way of handling this but this appears to function correctly on 2005-2012. 
+
+Epoch is also a synonym for a date or time. Occasionally used in database models as an alternative to the ubiquitous 'timestamp' as a column name, the two are essentially interchangeable. Edit: Looking at your list with fresh eyes (and without getting the book from the cupboard it's hiding in) I expect an epoch in this instance would be a period such as a financial quarter. For example, if a the quarter ran from 1st April to 30th June, 'Day number in Epoch' for 1st May would be 32. 
+
+The recommended approach is to choose a relatively quiet time (i.e. minimal log activity) then do the following: 
+
+You're heading in the right direction but I'd use different terms. An invite is a request to attend an event of some sort, so more appropriate naming would be: Event (EventId, OwnerUserId) Invite (EventId, UserId) 
+
+My understanding is that if you aren't using Contained Databases, you will have to ensure logins are created on other instances manually. Something like this script from SQLSoldier, originally posted as Transferring Logins to a Database Mirror, should do the trick. 
+
+I've only briefly scanned though the document but my first thought was "oh, a SQLCAT publication". These guys push out some fantastic material but much of their guidance is derived from the very extreme end of pushing the boundaries. You can learn a great deal from reading about SQL Server behaviour in multi-million $$$ implementations but very little of it applies to typical installations. This particular document is the result of testing a 10k/tps, 256 core, 500 spindle system. In the real world where you aren't pushing SQL Server internals beyond their anticipated limits, these are interesting diversions, not recommendations. Your question is perhaps somewhat dangerous. A casual passer by may read your question, briefly scan the linked document and conclude that padding rows to fill a page is a good idea. 
+
+Take the transaction ID for transactions you're interested in and identify the SID that initiated the transaction with: 
+
+I expect the analysis is carried out serially, one query at a time, as doing so in parallel would be unreliable. DTA produces recommendations by creating hypothetical indexes and evaluating the impact on a query's execution plan. If analysis were carried out on multiple queries at a time, the index created for one query could influence the analysis of another. A hypothetical index is created using the undocumented command and as the name implies this creates just the statistics for the index, without building the physical structure. 
+
+Only variation I'd suggest on your check list is to replace the word BACKUP with RESTORE. Checking that backups complete is a good start, what really matters is whether or not you can restore from them. Alert on a backup failure, automate a random sampling of restores so you know your backups are good. The next step on from a daily/weekly/monthly check list is history. A check on x/y/z performance counters is meaningless without a baseline to compare today with yesterday. Without understanding the today vs yesterday, it's impossible to predict next month. 
+
+COALESCE is internally translated to a CASE expression, ISNULL is an internal engine function. COALESCE is an ANSI standard function, ISNULL is T-SQL. Performance differences can and do arise when the choice influences the execution plan but the difference in the raw function speed is miniscule. 
+
+Kimberly Tripp has some excellent material on indexing strategy that while SQL focused is applicable to other platforms. For the SQL Server folk, there are some handy tools for identifying duplicates like the example above. 
+
+One approach I've taken in the past is to incorporate log backups in to the reindex/rebuild scripts. Record the log size and free percentage before processing each table, check free percentage and size afterwards. If less than x% of space is free or if log growth has occurred, backup the log. 
+
+Not sure that more RAM is going to help here. Quick calculation suggests your query is processing somewhere in the region of 125GB of data, quite impressive for a table that contains 8GB. (2829948 + 13482115 + 1568) x 8 / 1048576 = 125GB The 270MB of physical reads will account for a portion of the slow running but nothing like as much as the in-memory overheads. You're going to get better results from re-working the query than by adding additional memory. Post DDL/query/execution plan in a fresh question and someone will certainly be able to help. 
+
+To satisfy the MAX(k1) query in this case requires a clustered index scan of each of the 70 partitions. 
+
+If you want to track usage over a period of time, consider collecting data with sp_whoisactive, as demonstrated by Kendra Little. 
+
+Edit: Following comments. Obviously (as @gbn pointed out) the 1st call, following buffer and query plan flush, is going to be slower than subsequent calls. That said, there must be something wrong with either the queries or the IO capabilities of the server for the difference to be a factor of 10. Can you add to your question the execution plans (XML), output from , along with the database IO stats. Original answer: 
+
+I've not had to track down cursor activity since SQL2000 i.e. pre-DMV days. The old way would still be viable I assume, use profiler and include execution plans in the trace. I can't remember if the plan will be included in the sp_cursorexecute call or if you need to go back through the trace and find the sp_cursorprepexec or sp_cursorprepare event associated with the handle. 
+
+Any reasoning for not using Change Tracking-Based Population and letting SQL Server take care of the updates automagically? Unless you are depending on or to change LOB columns (which are not tracked), I'd suggest accepting the slight overhead associated with change tracking, enable automatic population (which is the default) and rest easy. 
+
+Use a server-side trace, not Profiler. Both have an impact on throughput, Profiler much more so. ClearTrace is a great tool for offline analysis of the trace files. To answer question 1), you connect to the instance not the node. Question 2), you obviously need to gather data from the node the instance is currently running on. 
+
+If the current file is for example E:\MSSQL.1\MSSQL\LOG\log_200.trc, the previous files should be log_199.trc, log_198.trc etc. Get the contents of the trace with: 
+
+You can't prevent the locking of rows that are being updated or inserted, else ACID compliance would be compromised. You can reduce the locking on rows that are being read but you may need to consider the opposite and increase the isolation level. If other processes insert or update records while this update occurs, you could end up with a miscalculation. As per Isolation Levels in the Database Engine... 
+
+As has been mentioned in an answer previously, Thomas Kejser has referred to TF834 as SQL Servers only "go faster" switch. TF2301 enables optimisations which are beneficial to DW type queries. TF4199 requires reading the linked document, so do. 
+
+Short addendum to @MartinSmith's answer. There are two little known trace flags that can resolve the poor statistics with ascending dates and keys issue. Quote from Ascending Keys and Auto Quick Corrected Statistics: 
+
+2 * 10k RAID1 for OS, 6 * 15k RAID10 for everything else. Honestly, with this many disks 1 array is the safest and usually fastest bet. If you've got time to test and have a real world, repeatable, measurable workload then by all means do a test run with your tempdb on the OS drive (caveat: limit tempdb file growth to ensure you don't splat the OS). Flip side, you may see moderate improvements to your data load and maintenance with the log there instead so worth a test run or two if time permits. 
+
+While by no means a dead cert, and in equal weight can be indicative of parallel table scans. Without a baseline to compare with I'd suggest looking at the top CPU and IO consumers and looking for those which appear in both. 
+
+In one of your comments you said the initial size of the database is shown in SSMS as 101890MB. That's why the database is so large, it was created at that size. As to how/why it was created at 104GB, check the model database on that server. Good odds someone has fiddled with the defaults in model and your database has inherited those when you created it. 
+
+100k records in a single non-partitioned table is a relatively trivial number. Nothing to worry about assuming you follow normalization guidelines and index appropriately. Take a look at some example schemas to avoid schoolboy errors. Study sample databases, like the Microsoft examples for SQL Server. When you've created your schema, post a new question for feedback. 
+
+1.4TB is mentioned as the source database here but that doesn't necessarily translate to TB+ of full text indexed data. This example is quite smart, extracting content from files before shuffling them off to cheap cloud storage: 
+
+The use of FORCE ORDER isn't making estimates inaccurate, the deletion of rows did. Forcing an update of statistics on the table may improve the estimation accuracy. 
+
+Misunderstandings of nested transactions and savepoint usage arise because nested transactions are not what we would expect them to be. To all intents and purposes there is no such thing as a nested transaction. The actions of a set of nested transactions are not committed until you issue the outer most and a will undo the actions of all. Nested transactions exist to support transactions in procedures which could be called from external processes that may have started a parent transaction, from parent procedures that may have done the same, or where no prior transaction exists. They do not provide nested commit and rollback behaviour. 
+
+In my experience, there has been nothing to gain by copying files locally before carrying out the restore. If the target of the restore has sufficient IO capacity, you should be able to restore from the network share at very close to the speed of a file copy. 
+
+There is an excellent fast start article from the SQLCat team which includes a sample database and workloads, Precision Performance for Microsoft SQL Server using RML Utilities 9.0 You have the option of either Profiling activity for replay or, possibly more appropriate in your scenario, hand cranking a set of .sql scripts that you then replay via OStress and ORCA. Great tools for both load testing and investigating performance issues. 
+
+I may be wrong but it looks like this has this been overcomplicated/misunderstood or just plain muddled by the CTE in your original question. From the comments you've added to various answers it appears that: 
+
+Edit: If you can connect using MACHINENAME\SQL2008 when you are RDP'd to the server, you must be using a named instance. If this is the case, your connection string with the port specified will be "123.123.123.123\SQL2008,1433". 
+
+Next, from a database agnostic perspective, is an understanding of what a database server is built to do; provide Atomicity, Consistency, Isolation and Durability to your transactions and data. Commonly misunderstood, frequently the cause of performance problems and the primary source of data inconsistency. For your chosen platform, get into the internals of how ACID compliance is implemented. Look for topics like what the transaction log does, what write-ahead-logging is, isolation levels and storage internals. Understanding key aspects of database internals makes other aspects of DBA work, performance tuning and resource management for example, much easier to grasp.

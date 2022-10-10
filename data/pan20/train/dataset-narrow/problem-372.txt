@@ -1,0 +1,53 @@
+Four different Link Type's exist for LSA 1: - Point-to-point (Type 1) - Transit (Type 2) - Stub (Type 3) - Virtual Link (Type 4) 
+
+Using the following OUI lookup webpage nothing came up. $URL$ I did a manual lookup as well in ieee just to crosscheck information, however this is only for public addressing. $URL$ More exhaustive lookup by checking: $URL$ From the sample of addresses in the image you provided(omitting 192 range), only one points to a goverment address: Name: sirius.mcs.anl.gov Address: 140.221.8.88 158.121.104.4: Non-existent domain 216.133.140.77: Non-existent domain 66.243.43.2 DNS request timed out. timeout was 2 seconds. If you test it out the domain sirius.mcs.anl.gov is not available to public it seems, it will time out when trying to reach with your browser. If you are what some would consider a 'paranoid' engineer, this could mean a red flag. 
+
+Both routes were External type 2, advertised the route as an OSPF E1, E1 is always preferred over E2 and this solved the issue. 
+
+This is done due to the processing that RIP does with updates. For further understanding, class routing protocols as RIPv1 do not include subnet mask in the routing update. Nevertheless, the routing table includes RIPv1 routes with the net address as with the subnet mask. How would a router that runs RIPv1 determine the subnet mask that it must apply to a route added to the routing table? Here we have the rules to process RIPv1 routes: 
+
+Remember that all routers in the OSPF area need to have the same LSDB to ensure accurate routing knowledge. The update indeed has to spread. RFC2328 states it as one hop at a time "A Link State Update packet may contain several distinct LSAs, and floods each LSA one hop further from its point of origination" 
+
+In regards to route advertising you will definitely have an issue, as a route that is received with it's own AS will be dropped due to loop unless an admin does some manual configuration as for example AS overwriting. 
+
+This process indeed takes effect with the usage of DBD packets as well as Type 3, 4 and 5 packets. let's see what each one contains: 
+
+For this there is a short answer concerning 3DB's: OSPF loop avoiding Basically each node put's itself at the root of the tree and determines the lowest cost and loop free path for each destination. Concerning: 
+
+Therefore, twice the time of the forward delay (listening time + learning time) contains all these parameters. The formula is: 
+
+Highlight Bridge Identifier: 32768 / 0 / 00:17:ef:74:62:00 to check hex. In the hex values you look for your MAC and in front of that you would see the 2byte for the decimal value of 32768 (32768+0). So something like: 80 00 00 17 ef 74 62 00 
+
+Based on your router specs -Interno DG200A- the answer is No. The best you can do with that device is some CoS to assign voice, video or other traffic to queues and prioritize/mark as needed. Check starting page 40 on the User Guide. For something more detailed or granular as you have requested the option would be to put another device in front of the router that can handle this or if you have some admin control over the users PC's, then check what specs does the OS provide for your needs. 
+
+Found the manual that shows the format. The format is as follows: PRI Timestamp HostIP Address StackID Component Name Thread ID File name line number sequence number message 
+
+Anyone be able to shed a little better light on this? Here are a few more entries from some other switches: 
+
+We are soon to be splitting the bridge network from one of our locations to the datacenter and making them two separate L3 networks. 
+
+Not long after posting this we ditched the MPLS and re-configured the core network switch to be the default gateway for the 10.10.10.0 network. This did several things for us: 
+
+Working on setting up a new set of switches. When one of our offices network was setup we did not change any of the spanning tree settings and just let everything work itself out. We are now expanding and need to work on changing the spanning tree setup a bit. Below is a diagram of the network switches we are adding. What we are finding is that STP is blocking the LACP connection of the 2x 40GB cables between the switches up to the core. The question that we are having is how do we configure the ports for the LACP between the 2x Dell N4064 switches so that traffic flows between them before hitting the root bridge core switches? The port cost to get back to the root bridge is currently 2000 and the port cost across the 80G LACP between the switches is 250. Currently the red X is where the ports are disabled and we would like to have the ports disabled at the purple X. Root Bridge has a configured spanning-tree priority of 4096. The other two switches both have the same priority of 20480. 
+
+I am trying to do a bit of planning and would like some clarification. Will the overall network speed be degraded when the default gateway port speed is only 100Mbps? For instance. Our network has a MPLS router that has a port speed of 100Mbps set as the default gateway for that office. That location does also have a 1Gbps and 10Gbps fiber connection connecting other offices together. Can someone point me in the correct direction of a diagram of how packet traffic flows across/through the default gateway and the network? Does an initial packet hit the default gateway to get the route and then all following packets understand the route the first packet took after the default gateway? Updates: 9/30/2014 The picture below is an overview of the network. The SBN network in the upper right hand corner is all one VLAN. That network is all flat and nothing special. All end users and servers are on the same VLAN and subnet. That location as well as all of the other locations get their internet piped through the the Metronet device. (This Metronet is a city wide fiber ring shared among several businesses in the area. We do not manage the routers that deal with that network) All of our servers are currently in the SBN office and will soon be moving over to our new location at the MC office in the upper left corner of the diagram. The GAP location is a shared datacenter space we have that is setup in bridged mode with our SBN location. The default gateway for the SBN and GAP locations is the 100Mbps MPLS router labeled GAP MPLS. There is a 1Gbps fiber link between the SBN and GAP locations. We use the MPLS devices for phone and some specialized data. The ASA and Comcast devices are setup to connect the offices for the rest of their data needs to the SBN/GAP office. We are looking into transitioning the GAP SW25 switch to a better layer 3 switch and do some of our own routing on that device instead of the MPLS router that we do not manage. 
+
+Some implementations set the ATT bit automatically and provide you a command or knob under a configuration stanza to disable it. i.e on Juniper: ignore-attached-bit 
+
+STP is used when you have redundant paths in order to avoid an endless loop which can harm your network. Based on your topology A<->B<->C this is a straight topology tree hence the STP might not be entirely necessary. There are two types of BPDU's: Configuration and Topology Change Notification. Do not confuse both. Config Bpdu is indeed used during initial setup to determine the root bridge and the best path cost to it, additionally depending on the port role a state will be assumed, ie: forwarding, blocking. TCN will be generated if somewhere on the topology an event (i.e: switch down, link down) caused the path to be affected. 3.The switch you call root bridge will only be elected so if it has the lowest bridge id (lowest priority, else, lowest priority plus lowest bridge address) through the configuration bpdu. This will occur all the way to your last switch so that they are in synch on who is the root. 4.For a detailed explanation on TC's feel free to check this 
+
+Router LSA consists of the standard LSA header plus the following below (I will purposefully omit some which don't matter in regards the concern): 
+
+Finally let us recall that although PT is good for learning it is somewhat limited. For more advance research, testing and learning GNS3 might be a good option for you. Cheers! EDIT ADDED FROM HERE BELOW I have just got my hands with PT Version 7.0.0.0306, issue with PC is the same it only allows one network module to be installed and hence one IP. However, something I noticed on the newer version and forgot to check on the old version is that the server does indeed support the adding of two cards, hence two IP addresses. Unfortunately that does still not accomplish what you are looking for: 
+
+Factory default security policies Trust to trust permit, trust to untrust permit, untrust to trust deny 
+
+Steps taken from SRX650 Services Gateway Hardware Guide, you can also see the sampling of the above steps if in doubt. System default security Deny all transit traffic. 
+
+eth.src is the media access control address (MAC address) of the device which is a unique identifier assigned to network interfaces for communications at the data link layer of a network segment. In terms of STP Bridge system identifier (BID) is a unique identifier composed by priority and MAC address. So depending on the priority(32768 is the default value) which is in configured in increments of 4096 you will have different values showing on the BID. EDIT HERE In regards to your comment concern: 
+
+If you are a math type of person you may want to understand Dijkstra algorithm. Reading RFC2328 as mentioned by Ron is best option. If you are looking for a short down and dirty contribution I'll put it this way, yet feel free to dig links for in deep understanding. SPF does the calculation per-area basis on each router. Dijkstra algorithm evaluates 3DB's: 
+
+However R10 does not have one being advertised, hence you are missing the network x.x.x.x config. Cisco IOS IP Routing: BGP Command Reference 
+
+Strictly speaking LSA T1 has only area scope so say for example routers in A0 will all eventually receive the Router LSA, now for that information to be carried to other area like A1 you would need a T3.

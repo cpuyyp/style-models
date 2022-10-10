@@ -1,0 +1,63 @@
+Given the timestamps mentioned, is the log you need to start with. SOLUTION You should collect the binlog events from Please run the following 
+
+You could also do the reverse by getting all rows that do not have "monkey business" and then scan for any rows with monkey: 
+
+See the Pictorial Representation of InnoDB's Architecture to see the Buffer Pool and Transaction Logs Every time you read from or write to an InnoDB table, the is checked (disk I/O), the data dictionary in is checked (disk I/O), and MVCC for transaction isolation is written in ibdata1 and transaction logs if there are incoming writes to the same table (disk I/O). Even a read-heavy InnoDB environment incurs disk I/O. EPILOGUE You could easily expect some pages to be rotated out. This is especially the case when the caches are configured too small. In the case of MyISAM, since data pages are read from disk each time, index pages can rotate in and out. As for InnoDB, it's data and index pages. The result sets may have to be recreated each time. Sometime, this contribute to all caches activity. 
+
+GIVE IT A TRY !!! ALTERNATIVE You could create a table called as a MyISAM table with no indexes and do this: 
+
+I don't think GTID is your issue. You are probably using row based binary logging To verify this, run one of the following: 
+
+under the group header before you restart mysql GIVE IT A TRY !!! I dug a little further and learned why 1400 comes up for table_definition_cache According to the Documentation for table_definition_cache 
+
+With regard to SUPER and TRIGGER privileges, you need the TRIGGER privilege to create triggers on tables you have rights for. If you play binlogs, there is the possibility of seeing commands to create triggers on tables you do not have rights for. This is implied from the MySQL Documentation: 
+
+Years ago, I saw versions of MySQL available for certain operating systems. One of them had a version MySQL for IBM DB2. $URL$ $URL$ $URL$ If you install MySQL with DB2 Storage Engine, you could migrate the data you want from DB2 into MyISAM tables or InnoDB tables. Then mysqldump every MyISAM or InnoDB table to SQL Text Files. I hope this helps !!! UPDATE : I read the first link page. It says as of MySQL 5.1.54, that storage engine is gone. If you can get a hold of MySQL 5.1.35 - 5.1.53 for any IBM OS, you can proceed from there. At least, you can contact MySQL (eh, Oracle [I hate saying that, it just does not roll off the tongue]) and see if you can get those older binaries. 
+
+produces a checkpoint that allows the dump to capture all data prior to the checkpoint while receiving incoming changes. Those incoming changes do not become part of the dump. That ensures the same point-in-time for all tables. dumps all stored procedures and stored functions dumps all triggers for each table that has them All Data is MyISAM or Mix of InnoDB/MyISAM You will have to impose a global read lock, perform the mysqldump, and release the global lock 
+
+Although this may be an oversimplification to say, this allows functions to be allowed to write data into binary logs without strictly enforcing the DETERMINISTIC property. ASPECT #2 : Triggers should be able to be rolled back 
+
+The problem here is MySQL will not merge them. For the sake of continuity, you should avoid using wildcards at the database level if your want to manage the grants of a single user. In that instance, you will have to manage the grants of every single user the same way. 
+
+Then restart mysql. As for the error messages, the InnoDB System Tablespace (ibdata1) and the Redo Log Files (ib_logfile0,ib_logfile1) are being created. From the above messages, my guess is that you did this something like this 
+
+Percona has recently forked MAATKIT into a more up-to-date set of tools, known today as Percona Toolkit. These tools picked up where MAATKIT left off by expanding the realm of activity for the serious MySQL user to include things such: 
+
+I also noted how your innodb_read_io_threads and innodb_write_io_threads are maxed out. You only have 4GB of RAM or which you only have 1GB free (due to your 3GB or 3072M Buffer Pool). I would lower your threads from 64 to 8. If you have the budget, you should go upgrade your server class to or where you can have 4 CPU and 15 or 16G of RAM. You could then increase innodb_buffer_pool_size to 10G or 12G. Then, your remaining InnoDB settings would make sense. I would still lower your threads from 64 to 8. 
+
+Make sure the existing CSV file has the two characteristics for mysql to work with it Go to the folder in your datadir. Rename test.CSV to test1.CSV Copy your existing CSV file to test.CSV Login to mysql and run 
+
+IHMO Although budgets may be a driving force to design/infrastructure decisions, I would easily be in favor of separates databases per client. 
+
+What innodb_flush_method does is have the InnoDB storage engine cache any needed blocks to the double write buffer (See the chart). The error messages you have are about the sequence numbers from the logs being misaliged because of the incomplete way you made new logs. 
+
+By default, when starting up mysqld like this, mysqld.exe expects the my.ini to initially be in its parent directory. If mysql starts successfully, you should see in the processlilst of the Task Manager and the file clarinet.err should have today's date. You can shut it down using: 
+
+@DTest definitely answered this one correctly. If you want to record the table structure with the Foreign Keys in the definition, here are two ways to do it: (For this example I create the actor table in database ) TECHNIQUE #1 : using mysqldump 
+
+The first line tells the DB Session not to record the SQL that follows. Thus, when you run the DELETE on the Master, the SQL will not be written in the Master's binary logs. Consequently, the Slave will never receive the DELETE in its relay logs. This will only affect the session you use to run these two lines. All other DB Connections will replicate as usual. Once you disconnect, any new session will replicate properly. Give it a Try !!! 
+
+I take it you are using REPAIR TABLE by hand. I also take it your are doing an automatic table repair for MyISAM. (You have to remove or comment out the option of to disable automatic MyISAM table repair). You can actually repair the table without using MySQL but mysqld cannot be accessing it. How? You have to use the offline utility myisamchk Suppose you have the following 
+
+Once you get your access rights back, don't forget to run mysql_install_db. It will create the schema and place it in Please comment out your if you do not want the data in Also, run this 
+
+Why would the City have to have (name,country_id) as a unique key combo? For example, there is City named Rome in all Continents. Why would the City have to have (name,state_id) as a unique key combo? For example, there is Jersey City, NJ and Jersey City, WI. There is also Hollywood, CA and Hollywood, FL. Based on this, you could do your JOINs from these perspectives 
+
+That slave info is in RAM. If you are running MySQL 5.6, run If you are running MySQL 5.5, restart MySQL If you are running MySQL 5.0/5.1, run the following: 
+
+This would depend on which one of the repeat you want to keep. For this example, I will dedup the table based on url and title and keeping the first occurrence. First thing to do: run these queries 
+
+From MySQL 5.0 on, one place you can check is information_schema.table_constraints For example, to get the number of foreign key relationships for a given table (mydb.mytable), run this: 
+
+before the query. This will allow for a 1M string as the maximum GROUP_CONCAT. If you want every session going forwards to have this, add this to 
+
+FROM_UNIXTIME(0) is not really . It can be skewed by timezone and daylight saving time. For example, I live in the New York area, which is -5 from GMT. My system says how and why: 
+
+Before I give my answer, I'd like to say this: If you have a table with 35 columns, you should think about normalizing the table. That way, you would not have to worry about addin more columns. With regard to our original question, you would like to add 5 columns. Since you mentioned that not 5 columns would be filled, you have to decide what kind of queries you are willing to run. If you use a second table, you would have to make it have the same primary key as the original table. If you ever need columns from both the first and second tables, you either do two queries or an INNER JOIN of the tow tables. Why introduce the additional queries? Will any of the 5 new columns be indexed? If yes, you are better off adding the 5 new columns to the table. Then, any indexing of columns from the old and new set of columns would be more simplified. Therefore, I say again: Think of normalizing the table from 35 or 40 columns. If you cannot do that, just add the 5 news columns to the table. It will make for cleaner queries in the long run. 
+
+The expression is based on . That matched. When you executed it, the change evidently failed because the column didn't change because does not equal To verify that run this: 
+
+This should prompt you for the password. Enter new password and you should be in. ALTERNATIVE Instead of creating , do the following after you have shutdown MySQL 
+
+That does not look like a corruption problem. It might be a collation issue, not with the database, but with the IIS 7 or Moodle. You did not specify if MySQL was running in Linux or Windows, so here it goes: I ran queries to unveil collations and character sets For MySQL 5.5.12 running on a Windows 7 machine, I get this:

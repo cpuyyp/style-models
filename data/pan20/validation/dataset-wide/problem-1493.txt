@@ -1,0 +1,73 @@
+We don't want to search the DOM for the element every time (unless it can be added/removed) so let's pull it out: 
+
+Although you already have some excellent answers I thought I'd focus on your key question - performance. Let's take a look at your current implementation. In particular, this bit: 
+
+You'll notice that I prefer to keep simple and add the call to later. That's a personal preference thing but I find it easier to scan that way. Although that's still true, as you note in the comments, you can't do that here :) 
+
+I don't think you gain anything by splitting up the calculation of the interval. If you think it about another way, you're trying to calculate the time between searches which is clearly just the number of seconds in a month divided by the number of times the search was executed. If you can't change the html, or would rather keep your code then I have a few points. 
+
+Get exclusive access to the buffer (slow) Get a character from the buffer Decrement a shared field (in a potentially dangerous way) Release the buffer (slow) Potentially throw and catch an exception 
+
+All methods should be see capitalization conventions. Methods should contain a verb. is one example of a bad name, that's a noun! A better name might be as that's what you're really doing. Your method shuffles the array in place - you don't need to return the array. In fact, it's misleading to because it makes it appear that the input array isn't changed. I haven't done Windows Forms in years so I won't attempt to review that part. 
+
+If you are using the Enterprise Library it is often better to set up a default connection in the configuration file: 
+
+You're needlessly using CPU cycles while you're waiting. That's not good! You know exactly when you want to do something so you should scheduled something rather than do pretend work. A simple example could be: 
+
+The idea of creating a Value Object instead of using primitives is to have a highly descriptive domain. Using the second option (the extension method) misses the point. You definitely want to be using the first. e.g. 
+
+This may seem like a really minor point but try to avoid side effects wherever possible. You want your code to be really obvious to anyone reading it what the main purpose of the code is: 
+
+If you're worried about repeating about the place, you can assign a field in your constructor instead: 
+
+Why is this better? The stack trace is more meaningful because the error is thrown closer to where the problem call is and you can supply your own context specific error message. Either that, or you can return an empty array for . 
+
+can return on failure. In C you don't need to cast from to another pointer type. is also always 1. Further it seems that you've clobbered the parameter entirely, so there is no sense in having that as a parameter. Lastly, it seems like a really big file would make this allocation unlikely to succeed. 
+
+I would do this for all other places where you use . It's a good practice to keep the lock object separate from the data being protected. 
+
+Again, I make no guarantees that this will actually be faster, but it's something to try. The last time I messed around with image manipulation (working in C and with by-now-very-old PC hardware) I did notice that the per-line approach was much faster than computing the offset for a coordinate for every pixel. I also agree with @Landei that is better than . 
+
+If this seems too complicated it's because for higher-level C++ code it probably is. will take care of all of this for you. Note though that the memory layout of your object will be substantially different with these dynamic-memory approaches.[2] Next up... 
+
+In both of these models the ultimate goal is to not spend time waiting for synchronous I/O, such as a blocking read or write to the socket. This allows you to process multiple requests without needing multiple threads. 
+
+What if is not big enough to hold file size? For example if were 32-bits, and the file were greater than 2GB. The type of is which is likely to be at least 64 bits in sane platform. 
+
+It's weird that you do in the statement, but in the loop. I would do in both places. (Seems also like you could fold the into the entirely...) 
+
+The question is whether or not it's safe to call while another thread does . According to Microsoft's documentation it is safe: 
+
+This seems to work for your ASCII art test data with ... No idea how it performs with large quantities of data [though bit shifting and AND is cheap, right?], but it's a lot simpler than what you have. I got this approach from the way some FAT drivers handle FAT12 (treat it like FAT16 with 16-bit dereferences, but truncate the extra fuzz). Update: Looking at this again, my original code didn't handle some edge cases, such as ... So I switched to 32-bit quantities rather than 16. 
+
+If this is the code you're using, it probably gave you a warning which you ignored. returns . You should change the declaration of to . Also, the size of the mapping should be a multiple of the page size. I'd be sure to re-read the manual for , carefully read any compiler warnings, and make sure your code checks for errors. At any rate, if refers to shared memory, the following will not work: 
+
+If you decided to keep your current code, there are some improvements you could make in terms of styling: 
+
+As we've already reasoned, all pieces have to have a colour and unless you've got a defective set, none of the pieces can change colour midway through. Sounds like we have an invariant that we want all pieces to obey. We can lock that up with a base class: 
+
+Don't add a the parameters to the save method. It adds unnecessary complexity to the api and it makes it a leaky abstraction because it forces knowledge of the underlying data store onto consumers. Add a method to your repository (why is it called a ?) 
+
+The reason this works is that selecting a set of elements that don't exist in the DOM returns an empty jQuery array which is more than happy to be chained - it just won't do anything. I've also modified your to use the recommended function on the object. If you want you can pull out common functionality into separate functions. For example: 
+
+But it's a bit ugly because you have to do something to go from to a . I achieved that with a simple to force an implicit conversion. 
+
+I don't really understand how you want to use this so I'm just going to add a couple of comments for you to ponder. Naming It's more common to abbreviate to not when used in identifers: -> . isn't a great name for an event, events generally need a verb to make sense e.g. , , are all good names for an event. Consider something like or similar. Thread safety You aren't raising your event safely: 
+
+You say cache I say memory leak. You haven't given much thought to your eviction policy yet and that's 95% of the work in writing a decent cache. Your expired entries are only removed when someone tries to access them. Consider the case when the cache is used poorly - i.e. you end up caching a huge number of things that are only accessed once. Without a subsequent access after they are expired, they aren't removed and you have a whole bunch of wasted memory. Your cache also lacks thread safety - that's also a really, really bad thing for a general cache that you intend on using everywhere. A cache doesn't need to be thread safe if you intend on using it in a single threaded application. However, I'd argue that isn't how most caches are used. Why don't you use something like to do all the hard work? 
+
+It's a pain to do it but you'll thank yourself in the long run! Not much of a review... I'll hopefully take a closer look later in the week. 
+
+From a memory perspective I wouldn't worry. A few extra machine words in your class is unlikely to make a difference, and allocators out there tend to pad upwards anyway. From an OO perspective, you can always make a subclass to add the field. 
+
+When I see a bunch of repetitive if statements of this kind, I often think "this belongs in some kind of tabular format". Even if that table is something simple like a struct array definition. Why not something like this? (Warning, my objc is a bit rusty; my C is much fresher.) 
+
+I think the suggestion in the link you mention is to not bother with making your object files "intermediate". I tend to agree. If deletes the object files after the link step then it has to re-build them all at the next invocation of . Without this, the next time you , it can look at the dependencies of the object files (as specified by the makefile, the part after the ) and only rebuild them if the stated dependencies have a later timestamp. You might also want a target to remove the objects via , so that you can delete them when you really want to. But the typical workflow for using is to keep your object files around for extended periods and type when you want to build what you've changed. 
+
+With this you do not need to call , either. Assuming you added the parameter you should add in my interface critique (let's call the new parameter ), you could make sure you don't write more than this size with something like: 
+
+(This also assumes that the objects in the stack are s, but I believe makes the same assumption...) This bumps the ref count up so that the next line (which will cause the to release its reference to the object) does not end up deallocating the object. Update on second reading: Also, what do you do when is (i.e. too many s)? Doesn't seem like you've handled that case. 
+
+This next part looked kind of suspicious to me because its thread safety depends on the implementation of : 
+
+OK, that's a really goofy-looking example... But here you see that these blocks inside are really composable. In between each of them you can add and remove more operations that can potentially fail, and your cleanup block handles releasing resources in event of either success or failure. If you're working in C++ this would be done via RAII wrappers, i.e. in destructors of classes and possibly with or an early . But C has no such features to make that easy and correct... Moving on to other code:

@@ -1,0 +1,117 @@
+You don't need an assignment operator to . Just copy assignment and move assignment suffice. Similarly, you have two constructors taking a and an . The latter isn't really useful since you can't move out of an anyway (the elements you get back are of type ). Just have the one constructor: 
+
+None of 1275, 425, or 85 were in the table. 17 was the first number we would have found. Consider the alternative, we are instead finding the prime factorization of: 
+
+It is much better to simply have your members as members than to hide than in a dictionary. is much more direct than ! Input Validation Comparison against should be done with , not . And if you're iterating over a dictionary with , you don't need lookup: 
+
+Taking variables by . There's simply no reason for it. Take them by value. Taking by is good practice to avoid unnecessary copies of large objects, but is not a large object. In fact, it's smaller than the size of the pointer you're having to pass. Copying. Let the compiler write the copy/move constructor/assignment for you. You're just doing what it would do anyway. Save the code. Not to mention that the self-assignment check is an unnecessary branch. Self-assignment isn't unsafe here. The boolean anti-pattern. You have this code in your equality comparison: 
+
+This greatly simplifies the logic, and makes sure that we're not stuck counting votes for candidates that have already lost. 
+
+Since there's no modification going on here, each of the 3 parts are easier to reason about. Just ? A logical extension would be to change your functions to take iterator pairs, or pairs. You could provide convenience string methods to forward to the helpers, but it'd be potentially more useful to have 
+
+Your assignment operator is misleading. First, it is not the copy assignment operator (that one will be defaulted by the compiler, since the copy assignment operator is never a template). And why do you want to support assignment from arbitrary other zippers anyway? Is that ever going to be viable? Let's just default it: 
+
+Secondly, you implemented as a of s. That may be canonically correct, but is actually not a good data structure for this since s are very inefficient at iteration you do in several places. would be strictly better, due to its cache friendliness. Constructor The whole point of your constructor is to make empty lists. There is a constructor on which takes a size. Use it: 
+
+If you follow where I'm going up to now - you'll see I've made a great deal simpler. It doesn't deal with inputs. It doesn't deal with calculations. It's just a triangle. And for simple classes like that, Python has : 
+
+The way to avoid this is to use global to allocate memory without constructing any objects. Naming You have member variables named , which is actually the capacity of the vector, and , which is its size. Those names are confusing and should be changed to reflect their actual purpose. Object Destruction A owns its objects. When you or from a vector, it must release ownership - which will involve explicitly calling the destructor on your type. You do not currently do this. Resizing, part 2 Resizing should only happen on insertion. You also do it on . This is illogical. Why would removing an element lead to doubling in the array size? operator[] Where's the body? const overloads If I have a , I cannot do anything with it. That's not useful. and (which should be spelled ) can just be member functions. There also need to be overloads for , , , , and . 
+
+Also, this approach sets you down the path of being able to actually implement multiplication of units. How would you do that with your code generation approach? Your Code Specifically Minor things I wanted to mention here too. Looking at this from a user perspective: 
+
+And same comment about looping again for . Though additionally you should take by reference-to-const, to avoid a completely unnecessary copy: 
+
+If , we fall into case A. If we're not in case A, only then do we continue onto the next condition checks (because we're using and not ). As such, if we're even in the path that checks the condition which leads to , we already know that . Thus, that check is redundant and can be reduced to simply . The whole body can become: 
+
+provided you can add a reasonable hash. But even that is completely unnecessary, as you can simply have an appropriately sized: 
+
+Although this should go away completely once you implement . Also, don't use magic numbers. is confusing. is not. Does this even work? Between the algorithm choice and the not-really-closed set that you have, I'm doubtful that this code works as written. It'd be worth at least going over the wikipedia page and doing some research on search in general. 
+
+That'll just overwrite your with values that had nothing to do with it. The rest of 's logic is really confusing as well. So we have: 
+
+YMMV on whether or not you want to allow this, but just throwing this out as an option in case you do. 
+
+Where you use and , you'll have to make unqualified calls with the functions in scope in order to do the right thing. Chain of one If try to do: 
+
+Dropping Floats Floating point arithmetic is always slow. We could do a bit better by keeping everything integral: 
+
+This choice makes the class noncopyable and nonassignable. But why? There's nothing inherent about a multidimensional array that suggests it shouldn't be assignable or copyable. You make some members public. There's no reason to do that. Particularly bad is - which is redundant with . You should strive to make your class as generic as possible. To that end I suggest you simply have two members, both private: 
+
+This will additionally let you use non-class types as optional data members (since you couldn't inherit from, e.g. ). So you can now do something like: 
+
+That'll also future proof anything else you add into these loops. What if you added logging? You'd have to go back and add braces then anyway. It's a good habit to get into. Always braces. 
+
+This looks pretty good. I'd propose the following. First, you use in exactly one place. It's a pretty unnecessary function, and just this would suffice: 
+
+static error checking This requires that be default-constructible, so we should be nice to our users and assert that: 
+
+Use Dictionaries We are basically just mapping from one letter to the next. The most naturally way to do that is to actually use a map: 
+
+This all halves the amount of code we need to write. Argument Ordering Maybe flip and and default to 0. Also potentially make an exclusive bound - so becomes the same as , and supports the indices . That has a nice symmetry to it. YMMV. More functions I'd go ahead and implement all the other member functions from too. Run-on lines Write the template arguments on a separate line the thing they're declaring: 
+
+This ensures that you get the correct strings in your . Looping Since this is tagged C++11, you definitely want to use a range-for expression to do your loop. It's less code and clearer: 
+
+Still exponential, but better constants at least. Not sure how much better we're going to do than that. So let's just google some prime factorization algorithms. First one I came across was Pollard's rho. Simply copying the algorithm gives produces: 
+
+There is no reason to do it. Furthermore, how would you handle multiple properties of the same type? In the interests of actually providing code critique, I want to address your (your has similar issues): 
+
+is referenced nowhere - which is good becasue it's always and completely unnecessary. You're making your path a doubly linked list, which is very inefficient. It would be better to simply store it as: 
+
+That'll make your code easier to understand by far and drop the . But it won't handle the O(N) problem. For that, we just need to use an entirely new data structure. We need to map a word to a number, and we don't care about word ordering. Thus, . This will have O(1) lookup. And we don't even need to do all that work ourselves! 
+
+Ok, we have a typelist. Now we just need to filter it down based on a condition. To filter, we need to be able to concatenate: 
+
+Readability Your conditional checks are very very long. They run off the screen. At the very least, add some new lines: 
+
+It's still linear time, but I end up doing FAR less work than you have to, since most of the time I'm doing almost nothing. And the numbers show it: 
+
+This would let users call your functions with raw lambdas - which is what they'd expect to be able to use! 
+
+This seems like a pretty solid solution. I have mainly minor comments. Comments The purpose of comments is to explain logic to readers of your code. To that end, try to avoid comments that are trivial. Like: 
+
+This separates the concern of input handling (determining the pins) from the concern of actually emulating the gates (determining the outputs) - and is what will let us have s as input to other s: 
+
+But this still makes it very hard to actually understand what is going on. There's no really any notion of "range" in this code. You are simply hardcoding each individual month separately. Ranges Representing the range "3/16 to 6/15" is difficult. Representing the range 316 to 615 is easy. If we don't care about checking for invalid dates, we can uniquely represent the year by doing and looking at it that way. 
+
+Access. You have a lot of repeated accesses to . I'd suggest simplifying things to make them easier to use. First of all, you do not need , , and at all. If somebody wants to write: 
+
+This will let you then implement other very useful functions like and . Indexing You have these three member functions: 
+
+Drop the checks Right now, your and both check for emptiness and throw. would be better - you don't want these functions throwing. It's likely that your user will check for first anyway - and if they don't, make sure they understand that they have to. With that, our becomes trivial: 
+
+is not going to make you a lot of friends. If you want to check multiple conditions, use the logical and operator: 
+
+But is always the size of . That's just extra stuff you have to keep track of. The best thing you can say about it is that it's error prone. You can drop and rewrite to simply be: 
+
+Okay that part is easy. What do we do in the other cases? First, there's not really a special case for if you think about it. There is a special case for 0 though. Did we hit a dead end? Let's quit. 
+
+So let's use a function template. Furthermore, having both and is redundant. Let's do away with the offset: 
+
+Which you would use as () or (). But really, since we're just testing for constructibility, we should just use what's in the standard: 
+
+After all, your design is about adding data members. That's something that you probably don't want to expose to the outside world. Secondly, what happens if you want to potentially have multiple different members of the same type? That's definitely going to come up and so should be supported. In order to do that, you might want to add some kind of to differentiate them and then additionally wrap the non-empty case. That is: 
+
+General guidelines for good Python code Starting with PEP-8. It lays guidelines for naming and layout. Top-level things you should be focused on when writing Python. So things like using for naming instead of , avoiding global variables, not using single-letter names for non-trivial objects. Don't alias your imports like this: 
+
+Yes, has overhead over raw pointers. But also solves problems that raw pointers have. Namely, what happens if you do: 
+
+Additional Requirements The binary-search optimization requires that the type the container holds is ordered. You may want to fallback to the simple forward-iterator version if the type is only equality-comparable but not less-than-comparable. Initialization I would prefer: 
+
+The code itself isn't particularly useful. You can print the primes up to , but what if I wanted to sum all the primes up to ? In this model, you'd have to add a member function to and again to . That doesn't make for a very reusable system. So let's go for something reusable, and in C++11 to boot. Checking primality isn't a particularly good name for a metafunction that determines if something is prime or not. Furthermore it doesn't even have to be a metafunction, it can be a function: 
+
+Normalize I suspect the typical case here might be for valid vectors, so prefer to take the length first and compare that against zero, rather than invoking : 
+
+!!NO GLOBAL VARIABLES!! That merits being capitalized. And underlined. And lots of exclamation points. Nothing can kill your ability to write good, modular quite quite like global variables. You have several of them, and it took me several reads to understand what exactly is going on here. Let's simplify. What do we need for WAR? We need a Deck: 
+
+Plus it's less error-prone. If you stick in a at some point, the former will still work. Furthermore, unless you have a strongly compelling reason... count upward. Counting down is more complex - avoid it unless necessary. Undefined Behavior This line is UB: 
+
+BUG Your program gives the wrong answer, yielding 53 instead of 55. The reason for this is you over-eagerly exclude rotations in if anything ends in an even digit or . But and are prime, yet end in a digit that you exclude! It turns out that the exclusion check (in addition to giving you the wrong answer) doesn't actually help you anyway. Timing your function run ten times: 
+
+getattr Use only for variable attribute names. Otherwise, just reference the attribute directly. is more verbose and harder to parse than . Catching Exceptions Don't just catch every exception - catch the one you expect to see. In this case, : 
+
+It would be better to flip the namings here too, and call the function and the variable . Similarly, does too many things. Ideally, you'd want to structure your main like: 
+
+Any extra operations you add on your code make it harder to understand. The s here are just unnecessary. Now for the main part of the function. You are looking for in . There's an algorithm for that, it's called and it's a lot easier to use: 
+
+Cool problem! Your approach is \$O(n)\$ for each pair. There are several comments I could give about your code specifically, and we could make several performance improvements based on how we generate - but all of that will still fall into the \$O(n)\$ category. And, as you can tell, \$O(n)\$ here is too slow! Let's try to do better. Back to the drawing board. Break it down to first principles To start with, let's take a really simple example. Sum the number of zeros from (just arbitrary random numbers under 100). In fact, let's simplify even further and let's pretend that 25 isn't a power of 5. So our zeros are:

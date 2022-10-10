@@ -1,0 +1,73 @@
+Ideally your code should be easily understandable where you read it. The buttons says "Go to edit", then is better readable as . Also the is not a class, so general convention is not to capitalize it. But what is ? I don't see where it comes from, so I'd rather avoid it there. If it is already on your scope - it is already accessible inside your controller - no need to pass it again. Also it looks strange that the same Button leads to different things - that may be confusing to the User. I would not put different routes inside the same function. Either put clickable links to different routes directly inside your HTML, or use dedicated functions to update the location. 
+
+I would try to split into simple pure functions doing one thing each. Search for Robert Martin aka Uncle Bob advices on clean code. Is this just a helper to display an array: 
+
+Last but not least I have changed the way controller's list is linked with one of the service. That is 
+
+The next thing to look at (if you have C++1) is move semantics. These are generally at least as fast as copy but can be a lot quicker for non POD types. 
+
+Name: I would call it an "Unordered Set" You have a container that you can add items to. Duplicates are not accepted and return the index of the existing value. New values are added to the container in the order they are inserted. Because items can be inserted in any order iterating through the container returns the values in insert order (somewhat random) so the container is not sorted in any way. Issues: You keep two copies of each value. There is a copy in the map and a copy in the vector. So your container uses twice as much spaces it needs too (especially for big objects). What you have implemented looks like std::set But it has worse space requirements. Comparison to std::set 
+
+First note. Since C++11 the construction of static members has ben thread safe. So there is no need for locking. There should only be one singelton. So all copying should be disabled. 
+
+Then it is the job of the directive to pick the right model and make it available under this name. This way I can change to inside without breaking things, so the directive is more encapsulated and re-usable. 
+
+I find it semantically confusing to call your functions like . This tells me nothing about what the function does. Now, when I'm reading the line calling this functions, I have no clue what it does. On the other hand, I already see where it is called, so this name is more redundant than helpful: 
+
+UPDATE. Having another look I see better what you are trying to achieve. Still I would improve design by making the directive more re-usable. You basically want to throw any HTML inside the directive and pick the associated with event's target. The directive makes this available on the scope of your expression . Just like made available inside the . I would then mark this as something special like: 
+
+Nice work! I presume the complicated way of getting the right element measurements is to cater for many browsers, won't comment on that. 
+
+The full code is available here for reference. But this has mostly been reviewed. If you want to or have comments then please feel free to read it and comment on it. All The Code 
+
+Since I don't know what "PigLatin" is I can't tell if this is correct. A comment about what is the expected translation is really required so we can understand if this is correct behavior. This sets the first letter to . 
+
+Before you can start freeing the resources you have to make sure that no other thread is using these resources. This means you have to force a flush and make sure there are no threads in your object. 
+
+Here is a pointer and is not. My counter argument is that you should never declare more than one variable per line. This is echoed in every coding standard I have ever seen. And nobody will let you get through a code review with two variables on a line. So this is invalid straw man argument. Initialize all members in the intializer list. 
+
+If instead function's name tell me what it does, I can understand the line without even checking the function's definition! 
+
+Also it does not feel right to do DOM manipulation with jQuery-style, maybe use dynamic property instead. If having additional elements in DOM is really a concern, there are also and . Though I personally prefer exactly because this way I don't have to rebuild the DOM. To put this into perspective, I have tried using on my site 33hotels.com, which does rebuild the view every time the route is changed. That felt in considerable delay. Instead I have all my Views inside my DOM at all times and only them depending on the route. The performance difference is dramatic - it now feels instant. Finally, both templates have common fragment, which does not make code feel DRY. Upon any change you'll have to edit each of them. I would simply keep the common part outside any directive, and put the dynamic part inside whatever. Also note that the HTML tag has semantic meaning, not presentational. That is, it marks your main header. Any presentation adjustment should be done via CSS. 
+
+Expectations: The and interface imply that the / don't actually do anything until you call execute/async. But in reality the threads have already started. This is bad design (don't confuse your user). Also they don't work. The thread doing the work could have already started and finished and marked as false. Then you call and is marked true (even though it will never again be marked false because the thread has already finished). 
+
+I have a couple of issues with how you are doing this (it is very Java like not C++ like). Constructors After the constructor finishes your object should be in a valid consistent state. Having to call multiple "setters" to finish initialization is a big red flag. 
+
+Does not obey the rule of 3/5 The compiler generates several methods for you. These methods work well as long as the class does not have "Owned RAW pointers". Your class does (the head and tail). As a result when you make copies of the object you will get unexpected results. Also if you add a destructor it will probably crash on a double delete. 
+
+Warning. Keep in mind using inside HTML, that your code becomes invalid as soon as those s are not unique. This can easily happen by copy-paste and forgetting to change the . Unless you use reliable validators, and consider this a feature to help your validators, I would avoid using s whatsoever. Styling can be done merely with classes and is a recommended way. 
+
+This way your data are completely separate and decoupled from the code. You can edit, add, delete your questions without making a single change in your code. Also you don't need to number them as those can change but your code won't break. 
+
+If the only reason is to avoid a few more DOM elements, this sounds like an overkill to me. It is so much easier to use or hiding/showing depending on the class like it is done in TodoMVC: 
+
+As general note, your functions are doing too much, search Robert Martin aka Uncle Bob advices on clean code and single responsibility. Use pure functions to prepare your request objects and the more convenient wrappers ( or on the server) than . You can easily test those functions without ever touching the ajax. Assembling HTML inside JS is a big anti-pattern, especially concatenating strings. At worst, you should assemble arrays of strings and into strings at the end with single operation. 
+
+Here I would not convert to a string. I would a stream operator (then use some algorithms inside to make it cleaner). 
+
+This is how I would write it: Note: This has NOT been tested so it probably will not work first time (add some unit tests). But it should get you close to what you want. 
+
+Every one has their own side of the holy war about where the '{' should be. But one thing everybody agrees upon is that you must be consistent. In your code you align the open and close (which I think is perfect) apart from when you use else 
+
+The worst problem with C code is that people don't check the error codes from system function calls. ALWAYS check the error code. There may not be mcuh you can do (apart from log a message). BUT it is nice to know that you crashed because you ran out of memory rather than there being a bug in your code. Since you are using functions that assume the buffer is correctly terminated I would add an extra character to the buffer and stick '\0' into the location. 
+
+There is no way I see here that this directive listens to an event and no clue what the event is. A better design would be: 
+
+Now you will catch all errors. Finally, I find your too small and too big with too many dependencies. It plays a role of a "Manager" that has many responsibilities. You can't always avoid it but you want to keep Manager's jobs at high level and as simple as possible. Imagine a stupid manager that knows nothing other than how to give basic commands :) 
+
+You define as array of anonymous functions, which is a bad practice in itself. You can't reliably test these functions as your index will change any time you update your array. A better way would be something like: 
+
+Then import it from your general helper library. Also why is it so deeply nested? Any plain JSON data objects I would store separately and import into your module. The module should not depend on any specific data for better testability. Pure functions without side-effects are even easier to test, so I would put there as much code as possible. That will help you to simplify your module by importing those functions. Also I would import all globals such as as parameters, the fewer dependencies the more reusable and testable is your module. 
+
+That is not all these headers have. Do I need to keep the comments up to date over time? Headers These are headers from the "C" language. You should note this is a completely different language. 
+
+These were in style about 10 years ago. They are no longer in style (thank god) and some (like me (though not everybody)) consider them bad practice. I think it makes the code harder to read. They may have given you a slight protection against accidental assignment but the compiler already does that. Just make sure your code compiler with no warnings and you will have better code anyway. 
+
+I should hope it inserts a value it is after called insert(). More useful would be notes of any pre/post conditions etc. 
+
+This needs a comment. It took me a while to figure out that you are only doing this on recursive calls because you swap data from one set of container to the other. Using. 
+
+If the application always succeeds then no return is an indication that it will always work and thus no need to check for errors (note: in C++ main() is special and the compiler inserts if it does not exist). Since you use the same stack in both situations. Why not declare it in main() and pass it in. Then if you need to modify it you only have one place to change (not two as in the current implementation). 
+
+First of all, for a better user experience, I would avoid pagination in favour of infinite scroll. Here is a simple Angular infinite scroll implementation I presume you are aware of minification-proof technique , so won't go into that. Next, I see many fields like , , ..., mixed with , which can lead to namespace conflicts as the app grows. Hence I would gather all data-related fields into one object like . Then you can simply pass the whole object from your service instead of assigning one-by-one. The hard-coded declation is mixed with others provided by the service. Perhaps it belongs to a Config service together with other hard-coded properties. Also I presume you are aware of the difference between using vs in terms of their interactions with parent and child scopes. EDIT. Unless you know what you are doing, a recommended practice is to use . That way, in a child controller, you have both read and write access to it. If instead you use , then changing it from a child controller will add a variable on the local scope but won't change the parent scope as you likely intend, see here. EDIT. See also Misko's video on best practices, including putting the dot inside your property. suggests that you are using service just for one function. I would gather those functions into one bigger service like . You already have lots of dependencies for your controller, so lowering that number can be a good thing. Similar for . I am not sure why you define filters inside a controller, rather than with as common. Usually filters declared via update themselves, so no need for watchers.

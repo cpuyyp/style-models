@@ -1,0 +1,73 @@
+If you have MySQL 5.6 and prior, you must restart mysqld. SUGGESTION #3 (RISKY) If you do not want to drop the indexes, you could disable change buffering during the mass UPDATE, then enable it afterwards: Run the following: 
+
+This will poll your files for the latest one that received changes from the dirty pages of the InnoDB Buffer Pool. You could also check the timestamp of ibdata1 because it was to receive writes to the Insert Buffer and DoubleWrite Buffer just to see if it has activity. If nothing seems to be moving, you may have to bite the bullet and hit Ctrl-C if you are tired of waiting. Although you ran and got the correct count, that count might be based on the existing rows still lingering in the dirty pages of the InnoDB Buffer Pool (perhaps the is doing a phantom read). I would just hit Ctrl-C and check the table count. You could also check the the dirty pages after hitting Ctrl-C. 
+
+The index I am proposing (approved_time_sid_ndx) will include approved, time, and sid. The answer that you just submitted has this query : 
+
+Based on these excerpts from the MySQL Documentation, I would like to suggest the following options: OPTION 1 Change your target table from MyISAM to InnoDB. This will eliminate the need to use INSERT DELAYED altogether. With InnoDB using MVCC for ACID compliance, the InnoDB log files will better protect data in the events of a crash via MySQL calling for InnoDB to do crash recovery. You will need to tune InnoDB accordingly. OPTION 2 If you cannot switch the table to InnoDB, you must go with extended INSERTs. However, you must adjust bulk_insert_buffer_size (its default is 8M) to a much larger to compensate using extended INSERT. Either way, you need to stop using like yesterday. 
+
+CAVEAT It would be much better not to separate the stored procedures from the database so that specific stored procedures will be created in the database it was meant for. The same goes for triggers. This would be preferrable: 
+
+Additional microseconds for each additional UNIQUE index would add up in CPU time when inserting millions of rows. In this instance, you would choose the first schema for faster INSERTs. Conclusion The diskspace and insert performance issues pretty much force you to choose. Obviously, you choose which one to live with. If you use foreign key constraints that represent , then you need the second schema using the auto_increment as the reference in outside tables. 
+
+STEP 03 : Copy to the DB Server with bad tables. STEP 04 : Execute STEP 05 : Run (Optional) Give it a Try !!! 
+
+PCI and HIPAA would shriek "INSECURE" if a root user had no password, SSL or no SSL. This would be the case even more so with a Replication User. Therefore, what is the practical value? : Having a password would provide another level security. 
+
+ASPECT #3 Since you are loading a MyISAM table, there may be indexes to account for. You should do this 
+
+Believe it or not, although the products went EOL December 18, 2009, the last versions of MySQL Query Browser and MySQL Administrator are still available for download for free. Hey, I still use them today. Click here and get it while Oracle isn't looking ... QUICK !!! 
+
+You can use the INFORMATION_SCHEMA to do every elaborate things: such as : Get counts of all tables using specific storage engines: 
+
+Here is where the "Perfect Storm" comes in: By default, InnoDB storage engine reserves up to 25% of the Buffer Pool for Change Buffering. All changes to your three(3) secondary indexes has to pile up in the InnoDB Bufffer Pool's Insert Buffer. When the actual index pages land in the Buffer Pool, the merge process will subsequently be pushed to disk (Note the Insert Buffer inside ibdata1), producing more disk I/O. SUGGESTIONS SUGGESTION #1 Get rid of those indexes. Why ??? This will eliminate the change buffering needed for managing those indexes during your mass UPDATE. Run the following query: 
+
+Since both are , you could increase performance and have a smaller table by getting rid of and still maintain uniqueness because of as well as avoiding this deadlock situation. 
+
+Master must have its binary logs enabled Slave compiles relay logs When all SQL in a relay log is processed, it is deleted On a Slave, when there is more that one relay log on a DB Server, it may indicate replication is falling behind because the IO thread is collecting SQL from a Master faster that the SQL thread can process the relay logs. Using relay_log_space_limit prevents replication from piling up and potentially filling up a disk. Relay logs rotate out based on rule #3 It is possible for a DB Server to be both a Master and Slave. That's the only circumstance under which a Slave must have binary logs enabled. In that scenario, a DB Server will have both Binary Logs and Relay Logs. 
+
+Then, you are retrieving all 341 values. is just coming along for the ride. If each value is retrieved individually, such as with 
+
+Here are some things you should consider: CONSIDERATION #1 Using is not replication-safe because the 5000 rows being deleted may not be the same order or the same set of 5000 rows on a slave. See MySQL Documentation (Replication and LIMIT). Should a DELETE on a Master get interrupted, it has to rollback. In that event, it could be remotely possible that the number of times the is called may not be the same. Extra calls of the on a Slave is not critical. Too few calls could be bad. This should not happen. SUGGESTION : Make sure the row count for is identical on the Master and all Slaves. CONSIDERATION #2 Since you are running a Stored Procedure on the Master, the command will not begin its execution on a Slave until the completion of the on the Master and the command is posted in the Master's Binary Logs. With one Master and 4 Slaves (5 DB Servers), there are a certain of calls to DELETE multiplied by 5. SUGGESTION #1 : You should add to the Stored Procedure 
+
+All you need do is assign and Please keep in mind that this will generate the count for null columns using a single query and perform only one full table scan. GIVE IT A TRY !!! 
+
+After running , every time you run all the other lines, the list rotates. Note that I ran those lines 7 times with 6 rows. Here is the output: 
+
+resembles a natural join where nothing matches on the cardinal table, so the count is correct. Your second query 
+
+Give it a Try !!! CAVEAT Prior to MySQL 5.6, you can use log. In MySQL 5.6, log is deprecated. Use general-log instead. UPDATE 2011-12-09 22:18 EDT If you do not have my.ini defined, then you must define one. To keep things simple, just create my.ini in the folder where my-huge.ini, my-large.ini, my-medium.ini, and my-small.ini appear. Just open up notepad on my.ini in that folder. Then add the lines I mentioned before: 
+
+is just what you need for an initial installation. However, if you have users already established, You can run this instead: 
+
+If you import data and it seemingly disappears, you need to check the indexes on that table. You should do the following: 
+
+STOPWORDS There are 543 stopwords that you may or may not want filtered out of FULLTEXT indexes. The list of stopwords was built at compile time. You can override that list with your own list as follows: OK, now let's create our stopword list. I usually set the English articles as the only stopwords. 
+
+It puts together in the list of entryids first using the WHERE clause It performs the JOIN based on the length of subquery A 
+
+Step 07) exit mysql Step 08) net stop mysql Step 09) net start mysql (close your eyes and hit enter) Step 10) See if everything works !!! You should be able to connect from the oracle server. BUT WAIT !!! What if there is no my.ini and the application has the setting only ??? Here is something a little more daring: Step 01) Install the same version (MySQL 4.1.18) onto another PC (Server2) Using the wizard, this should place the MySQL binaries: C:\Program Files\MySQL\MySQL 4.1. This would be considered the basedir. The subfolder data\mysql would be the home of the mysql schema. Step 02) Create my.ini in basedir of Server2 Step 03) Copy user.frm, user.MYI, user.MYD from the mysql schema of Server1 into the same place in Server2 Step 04) Perform Steps 3-8 from the first plan Step 05) Make sure you have a backup copy of the mysql schema of Server1 Step 06) Copy user.frm, user.MYI, user.MYD from the mysql schema of Server2 into the same place in Server1 Step 07) net start mysql on Server1 and the application (close your eyes and hit enter) Step 08) See if everything works !!! Give it a Try !!! 
+
+If the column has the attribute, you should not specify with a value. It would produce a normal 1062 error (Duplicate Key) for other Storage Engines. SUGGESTIONS Change the to a format that can handle the AUTO_INCREMENT attribute of 
+
+and restart mysql UPDATE 2013-03-05 16:36 EST I don't know why this is still happening, but please try this: 
+
+After you populate table_A_Keys2Update with the ids whose revision number needs to be incremented, perform the following UPDATE JOIN to increment revision number of all rows whose id is in both table_A and table_A_Keys2Update : 
+
+When someone has the clearance to call a stored procedure, the grants for the user who called the stored procedure must be checked. Here is the description of : 
+
+This will display ony the schema. No INSERTs will be in the output. You can then hunt down that lines. You may also want to dump the data onyl without the schema, 
+
+This will eliminate the full scan on SUGGESTION #2 (Optional) Create a compound index on those two columns for 
+
+I just ran these in MySQL 5.6.15 on my Windows 8 Laptop. It works fine with and without aliases. It might be SQL Fiddle that has the problem in this instance with a MySQL Cartesian Product. 
+
+That should speed up writes by double (HA HA). From the comments, I see you already started it again and have been running for a while now. If the migration fails again,... Give This a Try !!! 
+
+Now, no matter what order id1 and id2 are entered, id1 will always be less than or equal to id2 This may not be contextually what you want because id1 and id2 are unique identifiers. 
+
+From the perspective of the OS and its ability to handle i-nodes (or FAT tables for Windows), which includes having a maximum number of files per folder: 
+
+When it comes to MySQL 5.5, you did the most expedient way possible. Great !!! A more politically correct way would have been to do the following: 
+
+Those queries are not bad given the indexes I just presented. The only reason why the item_id appears in all the indexes is to make those indexes covering indexes. That way, the retrieval of data is done using the index only, bypassing the table.

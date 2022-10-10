@@ -1,0 +1,91 @@
+<- You want . implements some of your stuff already. I wouldn't introduce the types and in the first place. They just introduce wrapping without extra type-level structural info. 
+
+Let's use from that comment and inline the once-used (imo if you're only giving a name to explain what something does, use comments) 
+
+Library combinators and list comprehension syntax allow much collapsing of your code, and many of your type aliases and oneliners do not deserve a name, except perhaps for those at the bottom because you export them. 
+
+Since the from only ever contains , its result should instead be . And then nobody ever sees a object, so we don't need it. 
+
+You don't seem to be using 's monad instance. 's purpose is for you to not need to pass gamestates around manually! Doing everywhere misses the point. can help with nested data structures. An example: 
+
+You can make nonpartial by using . Then it turns out that already implements that and calls it . Using it, you can eliminate another case from pull. 
+
+I refactored for a while, largely replacing recursion with combinators. I think all these type aliases are unnecessary, I probably would have removed them if I had finished this. You didnt actually use the LHS in , except to pass it into recursive calls, so I took it out. 
+
+I left the and tags themselves out of what is printed, that's easier to code up so might be the correct way. Edit: More existing combinators :D 
+
+Here's a version of your list of lists version using list comprehension and no !! and no explicit recursion: 
+
+By changing the internal definition of Boiler you can clean up that flip. By also changing the user interface you can use the Read instance deriver: 
+
+Combining with is a fool's errand. (I don't know where you get and , so I'll assume they start at 0.) 
+
+As you can see, foldr also has its argument order wrong. Now your code is , except that you had the argument order wrong at the end there. :) This implementation of is almost identical to your code, but the average reader will have heard of and the average stackoverflow voter evidently finds its code confusing out of context. 
+
+) You've commendably already brought into a form that allows it to be written in terms of library combinators: 
+
+If is put in a where clause of , it isn't globally accessible and you can call it or something because the scoping already points out it belongs to . Swapping s argument order lets you say . is a smell. Instead of passing down an umulator and growing it to the right, you can pass it out as the return value and grow it to the left. 
+
+gives a bunch of valid advice. collapses 9 lines into one thrice. and encapsulate the use cases of the functions. can replace three names simply by turning the differing functions into arguments. Since I didn't want to write a type signature there, now wants . smells, use . So does , use list comprehensions and pattern matching. ...... why not ? :( Also, use pattern matching instead of fst and snd. Let's also inline some stuff that's only used once. is unused. 
+
+Here's your simpler way of modelling the problem: Each eliminates the other program's next until neither sends. 
+
+Walking across the list of positions from the right cuts off suffixes, requiring you to keep traversing and copying the corresponding prefixes over. If you cut off prefixes instead, you only need to traverse once. 
+
+In fact, we don't need to generate the index and pass it to if all we do with it is put it into later: 
+
+Try to put configuration-like parameters to the left and data-like parameters to the right, it composes better. condenses much conversion. lets me improvise a query language so I don't need to unpack the tuple everywhere. You already wrote and then you didn't use it. 
+
+By defining r = round . sqrt . fromIntegral, newBoard fits on the screen. positions doesn't appear to be used in newboard's first case. Half the code disappears if we interpret Cell as ((Int, Int), Int). newBoard's first case can be pushed one recursion call deeper, mapping [] to [] instead of [x] to the current right hand side. [_] ++ _ ~> _ : _. positions is only used once, therefore I inline it. 
+
+captures your usage of into a simple interface, except you need a way to retrieve the , so let's tweak it. 
+
+Your example would then look like . By the way, whereever you're using the Eq instance of Tank, consider pattern matching instead. 
+
+Repeatedly sorting is asympotically slower than keeping a sorted data structure, takes quadratic time, = , and try to use library-defined recursion combinators instead of explicitly using recursion. 
+
+Edit: Second: Shuffle arguments around so eta reduction is feasible. Also inline most stuff that's only used once. 
+
+One property that comes to mind is that applying any permutation before does not change the result. But what is a permutation? I'd say it's a function that doesn't exploit properties of the element type, has a left inverse and preserves the length. (The first ensures that only input elements are used. The second ensures that no elements can be dropped. The third ensures that there is no space for duplicated elements.) 
+
+(I think doesn't deserve a name.) In case the order in which the output is given isn't important, here's a version that doesn't require quadratic time because each element is compared to every other: 
+
+If something can't happen, put your money on it and make it crash if it does anyway instead of silently carrying on. deserves its own name to lift our burden of manual tuple juggling. Adding elements to the end of a list smells. Let me reverse the list order to fix that. The with the booleans looks degenerated, there must be a better way - let me undo its introduction. The booleans can be replaced with conditional recursion. The set need not be returned in the cases that used to return True. The list entries that are to be later returned need not be passed deeper into the recursion - and then the list need not be passed down at all. Incidentally, this restores the original list order. Let's look what I got so far: 
+
+I would inline, eta-reduce and use more library functions to make the code short enough that adding another command is trivial. Perhaps give the fields names so adding another can't mess up numbering, and you need less comments because the code describes itself. Edit: I'll use non, making the map not add a value for new users until they want to change it. This way we don't need to initialize with on logging in, and we can get rid of the Just returned by the "get" action without needing to promise we already initialized. (Which we don't necessarily have, as the initial ""!) 
+
+Getting the state at the start of your block, setting it at the end and recursing once makes pretty superfluous, by the way. 
+
+The explicit recursion in can be averted by using library functions that specialize in particular recursive patterns: 
+
+(I don't understand the part of your post that talks about an .) is superfluous, right? No sentence contains anything that has children, right? It appears that to me that 
+
+makes the record syntax pain go away. unmakes , and eliminates the worry about missing parents. That said, we never actually profit from initializing nodes with themselves as parents. abstracts away the passery. pushes the worry about malformed input off into infinity. should provide , but I think my name is stupid and my implementation might be stricter than needed in the general case, so I don't want to submit that PR. I'll cease caching in to make a one-liner. 
+
+Edit: Since we've already silently been passing into the last case, we might as well get rid of , which can also be handled silently, for: 
+
+For separation of monadic and pure code (and generally for factoring out common code from across cases), here's a to replace : 
+
+Your strings are no longer than 80 characters. Do you mean your lines of code? You don't need , you can pass the do block directly to . The conceptual no-op should be replaced with , but in this case captures it more precisely. The next-player arithmetic is wrong - if a player is removed, you skip over the original p+1 which is now p to the new p+1 which was originally p+2. Make sure to set echoing to False, so people can't see what the others put in. Since is only used in one place, I'd inline it. 
+
+Your implementation is wrong. Some factors may be larger than the square root of , say in . More might follow. Edit: This is not good. Where are my heuristics leading me? Send help ._. 
+
+There doesn't seem to be a reason to filter out the s. List comprehensions neatly let us skip the empty tail, and get rid of . 
+
+If you write uniq as a right fold, you don't need to pass an accumulator through, and the list comes out in the right order: 
+
+The "intermediate array" takes no extra space due to lazy evaluation. is . Yes, swapping the parameters makes sense. Inline and once more. I wouldn't worry so much about constant factors - have you compiled it with -O2 and tested (eg with criterion)? import Data.List (minimumOn) 
+
+Library functions, particularly Maybe's Applicative/Alternative instances, can make your code more consise: 
+
+I would separate the looping queue logic from the rest. A general implementation of necessitates a state monad here. 
+
+And just for fun, this should only traverse the counts result once. (Requires that indices is sorted, though.) 
+
+Lists are not for random access. As far as I know, Vectors are the modern way to have fixed-length random-access listlikes. They will allow you to do the traversing updates you want in one pass. 
+
+Have you tried compiling with the flag, as in ? Other than that, perhaps refactoring the code to use tried and true library functions might help: 
+
+This piece of code is, incidentally, the epitome of order confusion and what wouldn't happen if there was a way to bundle API updates with automatic patchers to old code. 
+
+In general, I'd go for the second sort of approach. It scales better. I'd eliminate four names and the hack like so, at the cost of and :

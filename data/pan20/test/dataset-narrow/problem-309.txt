@@ -1,0 +1,73 @@
+DISCLAIMER : Not a user of phpMyAdmin When visually comparing the table design and the screenshot, I noticed something interesting: It seems that phpMyAdmin is not designed to graphically represent a compound constraint (a constraint with more than one column). How can you tell ??? 
+
+The command you posted does not execute from within PHPMYADMIN That is supposed to be executed in the OS Shell There are many web pages that explain running a backup of MySQL with PHP For example, if you go to How to backup your Mysql database with phpMyAdmin, you will learn how to do the backup starting from the tab as well as doing the mysqldump from the OS. 
+
+Based on your output, you are using XtraDB now. In case you need to revert back to the original InnoDB, see Using InnoDB Instead of XtraDB. It discusses flipping the plugins and restart MariaDB. As for XtraDB, you can read the Documentation. I can tell you one thing that I wish MySQL's InnoDB had: MORE INFORMATION_SCHEMA Check out the 5.5 and 5.6 INFORMATION_SCHEMA extensions for Percona and see how they compare to those in MariaDB. To see which parts of XtraDB can be tuned and monitored (which InnoDB cannot do), look at this Pictorial Representation of InnoDB (originated by Vadim Tkachenko). 
+
+If you are brave and a little fool-hearty, try this crazy idea: Since myisamchk can read, write, and analyze MyISAM tables independent of mysqld, get a hold of the source code for myisamchk, take a look around and see if you can borrow any C/C++ code, algorithms, structures, classes, or just any ideas from it. 
+
+SLAVE If your Slaves are not Masters, then Slaves do not need binary logging at all. You can put a cap on the amount of relay log space accumulated by a Slave. In order to throttle relay logs at 4G, add to /etc/my/.cnf on every Slave 
+
+Back in the day, people have been clamoring for FTS for InnoDB and feverishly looking for workarounds. Sometime around January 2005, InnoDB found a sponsor to look for a developer. I am sure one of the biggest gotchas that developers worried about was making FULLTEXT Searching (FTS) work in harmony with Transactions. This is especially needed since the tokenization for inserted strings is performed only at commit time, so a full-text search does not see the uncommitted data. Please keep in mind that although there are tutorials on FTS with InnoDB, MySQL 5.6 still has a bug or two out there for InnoDB/FTS. 
+
+Give it a Try !!! On a side note, doing this with SSH client makes no difference since everything is server-side. 
+
+For starters, I would not touch the buffer sizes just yet. The sizes youhave in the question are monstrously too big. Here is another observation: You have BLOB data. Ouch, your temp table is going to eat space rather quickly. You could do somehting like this: Create a 32GB RAM Disk called /var/tmpfs by adding this line to /etc/fstab 
+
+Step 04) Step 05) Step 06) Step 07) Step 08) Remove from /etc/my.cnf Step 09) After step 7, all data is in MyISAM After step 9 
+
+Since MySQL grants are checked in memory, then one of two things must happen SCENARIO #1 If you ran standard GRANT commands to change the password, the password change is recording on disk via automatically. (See Section 34.1.2 "The Grant Tables") SCENARIO #2 If you hacked the password in, as follows (shown in Section 35.5.1 Page 498): 
+
+STEP 03 : Locate all users in mysql you want to change EXAMPLE: Suppose the user in question is and you want to changed to Run this 
+
+This might be a bug. In essence, it sounds like the definition must be using the structure of the first member of the clause as the basis for the rest the tables in the list. Before you report the bug, try reversing the order of the clause so that all the compressed tables are first and the uncompressed one is last 
+
+As your link points out, can break a transaction In fact, according to Page 418 Paragraph 3 of MySQL 5.0 Certification Study Guide 
+
+You will see all the users that have shutdown privilege. SUPER privilege does not have the shutdown privilege. There is a separate privilege called SHUTDOWN. You can quickly revoke that privilege. For example, note the user . It has remote shutdown privileges. You can yank it with 
+
+OK Great. It has the data. To be honest, I think SQL Server can perform all of this in a single pivot query without a handmade temp table. I could have taken it to another level and concatenated all the queries into a single query, but the SQL would have been insanely long. If your actual query had 1000s of rows, a single MySQL would not have been practical. Instead of running the 3 INSERT queries by hand, you could echo the 3 INSERT queries to a text file and execute it as a script. Then, you have a table with the products and categories combinations individually written. 
+
+That's why the binlogs start with a filename of Some feel disables binlogging. The MySQL Documentation on says the permitted value is a filename. Thus, it is not boolean. Simply removing the line or commenting it out disables binlogging. Suggestion #1 You may want to start mysqld manually using 
+
+You need to get away from MySQL 5.1 ASAP MySQL 5.0 Active Support ended on December 31, 2009 - Now in Extended Support Phase Per the MySQL Support Lifecycle policy, active support for MySQL 5.0 ended on December 31, 2009. MySQL 5.0 is now in the Extended support phase. Versions have changed rapidly since Oracle stepped in 
+
+I would not worry about growth because data insertion into MDB usually appends changes to back of the file. Garbage collection and space reusage is not a strong suit for MSAccess. To make matters worse, there is filesize limit (I think it is 2GB) on MDB files. This is why some migrate to SQL Server Express where SQL Server can be configured to perform automatic Compacting and Repairing. 
+
+Look at the Cardinality column of the . That will give you a very close guess at the rowcount. However, if you run multiple times on a large table, you get a different number each time. That's because InnoDB will scan the BTREE nodes and give a roundabout number. If you want to go by the Cardinality of the PRIMARY KEY as the rowcount, you should run this 
+
+You could be suffering from what is known as data drift. QUERIES This can happen if there are queries that are unsafe for replication. One of the more common types is running or using . Using on DML can work just fine on a Master. On a Slave, the rows selected (and perhaps certain choices) may not be the same set being updated or deleted as the set on the Master. See the MySQL Documentation for a Comprehensive Description of Unsafe Statements that can affect MySQL Replication. Baron Schwartz once dealt with this and had to refactor his query to get around this The following hypothetical scenario illustrates one way to introduce data drift: BINLOGS Master 
+
+MySQL Perspective If you wish to load Documents and files into a MySQL Database, you will have to use the LOAD_FILE() function. Here is what the LOAD_FILE() Documentation says: 
+
+You will need to give root@localhost a password Since you just installed mysql, you are running with default settings, this means you have no my.cnf. You will have to create one. Run the following at a DIS Prompt 
+
+In order to do an incremental backup, you must start with two things BINARY LOGGING ENABLED / AUTO EXPIRED EVERY 14 DAYS 
+
+CAVEAT If you do , you will see that one of the privilege columns is . This evidently would permit a user who connects to mysqladmin to issue a shutdown. Users with this privilege cannot issue a shutdown from the mysql client. Users with shutdown_priv='Y' can only be done from mysqladmin. 
+
+A SELECT query inside a transaction, in itself, is not properly shielded from UPDATEs and DELETEs. What you need to use the following: 
+
+The fact that it says (the SQL Security) means that you assume the privileges of 'root'@'localhost' when you call the Stored Procedure. Nevertheless, there is a catch: you need the EXECUTE privilege. Why ? According to the MySQL Documentation on Stored Procedures: 
+
+Your table uses INT UNSIGNED (4 bytes), DATETIME (8 bytes), 2 SMALLINTs (4 bytes) per row. That's a total of 16 bytes per row. This means you can fit 1000 rows into a single InnoDB page, but there is a very small piece of fragmentation. Using the default innodb_page_size (16K or 16384), there will be 384 bytes of fragmentation with a page. It is most likely used for mapping the data within the one page. Doing mass INSERTs, DELETEs, and UPDATEs will generate many pages with empty space for whole rows that are marked as unused. This is in addition to the 384 bytes region of the data page. INDEX LAYOUT You will generate many index pages 
+
+You many want to look into using the Sphinx Search tools. It allows you to create a MySQL instance that runs on port 9036 and only stores indexing info along with keys into real MySQL databases/tables. There is a third party MySQL Storage Engine called SphinxSE. Theoretically, the keys can you store in Sphinx do not have to be for MySQL. They could be for any DBMS. Sphinx is just a good key store that is built for FULLTEXT indexing. Now, if you need to access the Sphinx DB using C/C++, then you need CodeBase. 
+
+Give it a Try !!! CAVEAT Please note that you misspelled (Missing ). It should be You cannot change in the INFORMATION_SCHEMA database because it is an in-memory read-only database. 
+
+For more information, please read the MySQL Documentation on Access Control for Stored Programs and Views To see the for the procedure or function named , run this: 
+
+You are welcome to get the source code, tweek it to check all characters in any potential Schema Object Identifier, and either allow or deny. The only thing I can suggest is never to use backquotes when creating databases and tables. 
+
+@Richard and @DTest already have good advice in their answers, but I would like add a little as well. RECOMMENDATION #1 : Check SUPER Privilege for all DB Users Make sure all users do not have SUPER privilege. Once you hit max_connections, mysqld will only allow one more connection to itself, and that user must have SUPER privilege. If all users have SUPER privilege, no DBA or sysadmin can ever login to MySQL and do admin tasks. Please do an inventory of all users and make sure that only necessary users have SUPER privilege. RECOMMENDATION #2 : Check MySQL Connections from the OS Point-of-View If you cannot connect to mysqld, try running this in Linux on the DB Server 
+
+If would be a big mess to get MySQL to execute it as a query by giving MySQL the query with each column formulated. Perhaps you can get MySQL to concatenate the column values using GROUP_CONCAT. That function was designed for aggregation (or aggravation if you are the actual developer). You can take all the num values can display it as a column-separated listed of numbers like this: 
+
+Make sure that animal_table has a compound index on category_id and summary_id. If you do not have such an index, please run this: 
+
+You could capture the mysqld's uptime or the DB Server's time at the start and end of your code. Perhaps something like this SUGGESTION #1 
+
+If you have an all-MyISAM database (every table uses the InnoDB storage engine) you can easily get away with copying data folders. You would still have to change file ownership to . If there are any InnoDB tables, you must copy the entire data folder, not just a database within the data folder. CAVEAT Please note that running simply walks across the current database telling you table names by looking at the files without checking ownership or table validity. Once you actually perform some SQL again the table that all metadata checks against the table are done. 
+
+First, you need to know what you are doing to InnoDB when you plow millions of rows into an InnoDB table. Let's take a look at the InnoDB Architecture.

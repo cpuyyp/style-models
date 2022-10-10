@@ -1,0 +1,83 @@
+since it also doesn't really make calling any harder and increases flexibility. This is a totally optional style point, but IMO, 
+
+In fact, returning different types based off of whether is out of bounds is silly and you should just return all the time. If you want a second way to access only one, make a new method. Your name is odd: surely just is better. You only call from , so I'd suggest moving it there. If not in the function, then below the function. Doing so allows you to remove and . Move the error checking in to the top. Don't give a default; it only hides bugs. Most of your methods start with . Personally, I would remove it. Spend the characters on better names (eg. what does do?). Currently, this gives: 
+
+I'm using reverse since it seems to give more outputs than the other way around, which I assume is preferred. Now we can get useful timings. The first thing to try is how fast PyPy is: $$ \begin{array}{ll} \text{runtime} & \text{time}/s \\ \hline \text{CPython} & 3.1\\ \text{PyPy} & 110 \\ \end{array} $$ Well, it seems we're done making it faster. Let's fix some other things instead. Firstly, your code is mixing IO with logic. We can fix this by ing results out to the caller. This allows us to keep IO happening as soon as we already do, but let the caller do it. In , the needed values (there are two places). In , write 
+
+We want to do a binary search to find the counts. This is just and , depending on whether you want to be inclusive: 
+
+A simple should be fine. Your should be . You might find things easier if you use a over a as you can avoid all of the calls. can also be a . I find this gives a significant speed improvement. You spend a lot of upkeep on ; there's no real harm in using , so I suggest you do so. There seems to be no good reason for this line: 
+
+I am not going to mention using strings as comments again, but you do need to fix this everywhere. Remember that this does not apply to docstrings, where you should follow PEP 257. Inside the now-first block, we have an function 
+
+First, the variable seems rather strange to me. Secondly, more importantly, you write when it would be nicer to deal in tuples to start with. Overall this whole thing can be compressed to 
+
+Personally, function annotations are best used with types or almost-types. Unlike holroy, I appreciate their use, but like him I'd move what you put in the annotation inside the docstring. I'd instead use 
+
+I removed the semicolons, added proper spacing and removed useless parentheses. I also put brackets on the so it works on Python 3, but that's optional. Further, there are a lot of trivial non-formatting touch-ups: 
+
+An experienced Python programmer would probably be very averse to those lines; deleting variables should be done very sparingly. But in this context it's actually good; you have global data and you're clearing the mess up after yourself. The reason experienced programmers don't do this very much is because they know to encapsulate logic like this instead. The end result looks something like 
+
+? This, in effect, prevents this from actually doing anything past the first tower! This should also probably sort in the other direction and delete from the end: 
+
+This removes the need for . You can then make the main loop a comprehension if you make a function, and stick it inside the call: 
+
+Namely, for every directory you do a full traversal of the whole tree: is already recursive! Or you would, if you actually passed in a full path . You don't even use the result, so remove it. Your 
+
+If you're actually targetting 3.4 only, don't write in the inheritance list. If you're potentially wanting 2.x compatibility as well, though, it's good to keep it. You have 
+
+although it sounds dubious that such a call could have significant time implications — certainly not more than a few microseconds! 
+
+because this produces even more outputs and ends up easier. is another problematic name, but it's better than . The check should become 
+
+looks a bit ugly, but I can see why you did that. What might be better is making an auxillary function to stack lines of strings first: 
+
+I would use a better name than /; probably . However, best use two integers: /. should rather then . Further, a little cleanup gives 
+
+is a very strange special case; you deal with but not or . I suggest removing the special-case and using . Now we have 
+
+because this is much faster. However, this doesn't work if you're iterating over the values at the same time. The simplest nicer solution I see would be to use a set and do 
+
+PyPy is really, really fast. The original code (after the bug is fixed) takes only 0.7-0.9 seconds, or a tenth the speed of C++. PyPy thus ends up, by my guess, about 10000 times as fast as the implementation of R that I have available (for this task). Optimizing PyPy is possible but it's hard; the optimized PyPy was only a little faster than the original PyPy code at 0.6-0.7s. This is because the JIT gives you most optimizations for free. CPython has sharp corners ( vs ) but Python 3 takes some of these problems away by default. Once you handle this, CPython is an order of magnitude faster than R on this code. CPython can be forced to go fast if you know what you are doing. When forced it became a touch faster than PyPy. CPython is ridiculously fast when Numpy is used; getting to half the speed of C++. 
+
+You should handle your files with a statement, not manual closing. Unfortunately you're using Python 2, so you'll need . doesn't really do anything, so remove and inline it. Your naming is subpar; consider 
+
+Don't use ; try or just use directly. Names like and are terrible. Don't use ; not only should you be using new-style formatting and escaping, and removing the redundant parenthesis, 
+
+You should never do on strings in a loop unless you know enough to know it doesn't apply. In this case it definitely doesn't. Here's an alternative: 
+
+Note that I would be wary of casting to enums where this might result in an "invalid" enum, but at least it is well-defined behaviour. 
+
+it's problematic in that it mixes logic (converting coordinates) and fetching input (). Rather, the coordinates should be passed in to the function. The name should also be more descriptive - after this change I would call it . The docstring (as per jonrsharpe's advice again), should be more imperative (like a command) rather than a statement ("return", not "function returning"). 
+
+Where just means and so the test just checks that is a substring of . again has some strange formatting. Just fixing that and cleaning up the docstring gives: 
+
+Maybe even throw an error with or undefined for an empty list. Maybe. Your main loop should probably loop over the whole array, not some subsection. 
+
+which will trigger an error if the enum gets extended and the point of use isn't, not just break silently. Again, the comment should be flush with the text. 
+
+is more idiomatic (and faster). You can simplify the loop by iterating backwards, since you don't need to conditionally change the iteration index: 
+
+Addition of strings in loops is always almost bad, because it may reallocate the string on every addition. Instead, one should do a join: 
+
+Your timing is also slightly worsened by the cost of a list comprehension. Removing that would be more honest: 
+
+Namely, this is a no-op. My first criticism before I look at this more in-depth is to read PEP 8 and stick to it. As the code is written, it would alienate any current Python user. 
+
+Remember that Python is 0-indexed. What about when ? So that's the first thing to fix. Going from the top, I'd do the translation so: 
+
+The first two points are not good reasons in Python. See for an example of something that just offers a large number of arguments. The caller does not have to specify them all since most are default arguments. The last option does happen, but it is more akin to typical OO abstractions. And as usual with abstractions, premature abstraction is bad. In this case (in isolation), just offer the arguments directly. 
+
+you're conflating "returns 0" with "not cached", which means you can't cache the many returned zero values. A quick fix is to use a better sentinel 
+
+A minor point is that the class name would read much better as . Your is misnamed; it should be . The equation is also rather strange; it's infinitely large at size 10, negatively sized at size 11 and you end up very negative sizes to get small fonts. It's also advisable to use formatting over concatenation. I would suggest something like: 
+
+Instead, though, don't put this information in - use and multiply out when using the results. Don't call variables . It's a poor name. You've double-indented the part where you update the neighbours. Note that 
+
+Note how we no longer need and was changed to . This requires minor changes to the code; we need to do this in the right order: 
+
+Now each number takes \$\mathcal{O}(1)\$ (approximately), which is much faster. Doing this actually quickly leads to an 
+
+We can now vectorize the inner loop, but it actually slows us down since the loop only runs 2-3 times. It's likely this can be improved upon if you're willing to change the to a dictionary of 2D-arrays of size by , but that's not really to spec. By this point, the actual analysis stage takes under 0.01 seconds on my computer. For 1000 trains, the program runs in about 0.62 seconds; your original takes about 36 (or about 58x as long). 24000 trains takes 15 seconds. It's not amazingly fast, and if needed I can make it go faster, but it's at least usable. 
+
+should be wrapped; the line is too long. It's very strange you build the result with ; normally I'd expect one to return a of some kind representing the path: a list of s perhaps? It doesn't seem very general to do it any other way. You call a lot; surely the simpler way than generating all of them again is to have the board represented as a graph which is pruned as it is traversed. Each cell in the grid would be a count of how many of its surrounding positions can be moved to, or if it itself cannot be moved to. Since you only need to store up to a small maximum for each cell, this wouldn't even need to cost more memory. Comments about what does would be advisable; as it stands it's completely opaque to someone like me.

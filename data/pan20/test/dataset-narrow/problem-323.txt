@@ -1,0 +1,129 @@
+PROBLEM #5: CPU db.m3.medium only 1 vCPU. That means InnoDB, Encryption, and the OS are all running on 1 vCPU. OUCH !!! PROBLEM 1 REVISITED According to your buffer statistics, you have 2664 MB for the InnoDB Buffer Pool 
+
+The reason your binary logs are so gigantic is simple: YOU ARE COMMITTING TOO MUCH DATA PER SINGLE TRANSACTION !!! Why is this the case ? According to the MySQL Documentation on max_binlog_size: 
+
+This will prevents users without the SUPER prvilege from performs any updates. Only users with REPLICATION SLAVE and/or SUPER privileges. If you are running MySQL on Slave Server, you should convert all the tables to MyISAM. Here is nice script to do so: 
+
+This will only work if you do not have to resize the log files. If you have to resize ib_logfle0 and ib_logfile1, rename them before startup 
+
+Since I do not know the data, I cannot predict any performance results. Give it a Try !!! UPDATE 2014-01-23 11:01 EST The reason it works because of the goal I set for the query : Retrieve one value. First look at the UNION 
+
+You will have to spend some time setting up iterative code around SUBSTRING_INDEX, but at least a parsing mechanism is possible when done as I described. 
+
+If id is a primary key, this should go fast. Yet, you do not need to say get all columns in a subquery, and then read on the name from that subquery. You could just craft the SQL as 
+
+OK it works now. There is a problem still present. The query requires reading the entire table. My test table only has 117 rows and 20 columns. What about bigger tables with millions of rows or dozens of columns? I am not going to speculate because I know that the code would be orders of magnitude worse. That's why I recommend my answer 
+
+METHOD #2 Capture innodb_buffer_pool_read_requests, innodb_buffer_pool_reads, Sleep 10 minutes, Run Query with Differences in innodb_buffer_pool_read_requests and innodb_buffer_pool_reads 
+
+You may want to consider setting the database's default character for new tables going forward using ALTER DATABASE. Here is an example using MySQL 5.5.12 for Windows: 
+
+Your last expression is feasible, but requires you to do the number of seconds difference. My additional suggestions lets MySQL do the date computation. 
+
+and restart mysql. That way, tmpdir default to the OS tmp folder, which is /tmp. That will put temp tables on disk. If you still want /dev/shm, instead of commenting out tmpdir, just increase RAM on the server. 
+
+Give it a Try !!! CAVEAT As suggested in the comment from @AaronBertrand, the cardinality of the index may be causing random results depending on different values for subjectid (47 vs 43 vs some other value). 
+
+Replicating this can really make out of sync. Stored Functions can also have this headache if it the code within it is not . This is why log_bin_trust_function_creators was invented. This alleviates mysqld of the responsibility of figuring out if data operations are synchronized in terms of replication. Yes, they fudged their way around downstream replication issues. 
+
+ASPECT #2 : Join Operation You could manipulate the style of the join operation by tweeking the optimizer According to MySQL Documentation on Block Nested-Loop and Batched Key Access Joins 
+
+the option is not supported in Windows. You can set [innodb_flush_method] to to personally make InnoDB handle its own disk caching. Even with Linux, be careful. VMs and bare metal machines with new ext4 kernals actually fake O_DIRECT. See mysqlperformanceblog post on this Definitely, you should NOT USE WINDOWS !!! 
+
+Here is another maneuver: If the tables are MyISAM, you could copy the MyISAM tables (.frm, .MYD, and .MYI files for each table) in other folders (databases in the eyes of mysqld) instead of doing mysqldumps, and perform similar operations as mentioned before. Make sure no writes to the tables take place during the copy. 
+
+In the phrase [things omitted], if you do not need anything from blogposts other than the keys, then your query should look like this: 
+
+If is 1 and TableCount1 = TableCount2, CONGRATULATIONS !!! If you want to double check the rsync, run thi command on both and 
+
+All the file handles will pile up inside instead of separate files. STILL WANT TO MOVE TABLE INTO ? While I highly discourage this, it is possible In the example I gave you, in order to move a table into after setting innodb_file_per_table to 0, just run this 
+
+This will echo the with the log file and position of the Master For the sake of this example, say the output is 
+
+If after such due diligence, there are still temp tables being formed on Disk, here is one desperate move: Mapping disk-based temp table creation to memory. Here is a quick-and-dirty way to set up a 16GB RAM Disk using tmpdir STEP01) Create RAM Disk Folder 
+
+You should only see just MyISAM. If you see other storage engines, you cannot just copy. If your root@localhost password is , here is all you need to to safely move all the tables regardless of storage engine: 
+
+The problem has a lot to do with the result set and the first bulletpoint () Since TEXT field cannot occupy an in-memory temp table, it goes straight to disk. That's just the tip of the iceberg. When you ran 
+
+If the tracking table is MyISAM, you would probably have to rely on concurrent_insert. What that does is let the tracking table add new rows without locking for hole in the middle of the MyISAM table. It would just do a quick-and-dirty appending of all incoming rows. If you set concurrent_insert to 2, you should be able to write to the tracking table and still copy data. Here is an alternate suggestion: STEP 01 : Activate concurrent_size to always append 
+
+DISCLAIMER Please try this out on Test Servers before deploying to Production GIVE IT A TRY !!! Note: I would advise that you have multiples slaves 
+
+For this answer, let's use /root/MySQLData.sql as the SQL File. Go into mysql via the client and run it like this: 
+
+Believe me, you need skip-host-cache and skip-name-resolve. Connecting to mysql without these options causes MySQL to authenticate via DNS, which is slow. 
+
+It makes a lot of sense to me. The MySQL Query Optimizer looks over the , and clauses. Look at the first query 
+
+Whichever folder has was in the installed version of MySQL If none of them has , you have to dig a little deeper INVESTIGATION #3 
+
+then go into each DB Folder of /var/lib/mysql (or datadir) and see if a table has both and . Those will both are outside ibdata1. Those with only are still in ibdata1. If you would like to extract all InnoDB tables out of ibdata1 without performing the Cleanup, simply run the following: 
+
+This brings to mind something I have done a dozen times (fortunately with small datasets less then 10GB). When restoring a mysqldump to a new server, you must make absolutely sure the InnoDB settings on the new server is identical to the InnoDB settings. For a new server that you have opted to restore a mysqldump to, run this command: 
+
+One value or the other will work. UPDATE 2012-02-24 14:35 EDT I just tried getting MySQL 5.1.34 (I skipped the install part) and I got this 
+
+the complete parsing of the SQL, preparing for execution, and the parameters already being passed in through the SQL statement are all done on the server side with one call. Please read that Percona blog for more details. 
+
+Make sure this is on in if you want to use Persistent Connections ASPECT #2 : Your Code Since mysql_pconnect is deprecated, make sure you are using one of the following 
+
+If these global status variables present a problem after running , this is usually a strong indicator that you have to improve the design of your queries and the size of certain caches. 
+
+Their Data and Time Ranges would differ greatly. Note further differences in the MySQL Documentation 
+
+Since the lowest known written temperature of usable numbers on earth is -459.67, I would go with . This would easily accommodate absolute zero (0K = -273.15 C). If you are recording temperatures for astronomical bodies (Sun's Surface is about 6,000 C - 11,000 C, Inner Core is 15,000,000 C), you will need a bigger scale like . 
+
+Since the --database option does not screen out queries that explicitly name the database with the table, you should redirect that to grep and locate and INSERTs, UPDATEs, DELETEs: 
+
+So, to answer your question, your drawback would be implementing these suggestions since it may require some code rewrite when you catch deadlocks, some autocommit tuning, and writing to one Master node (which could introduce write bottlenecks on top of the fact that Galera Clusters do not write scale well past 3 nodes). The options are probably not enabled by default because of the possibility of having a write-heavy cluster that must have the logs examined often (even if a conflict never occurs). Thus, enabling wsrep_log_conflicts and cert.log_conflicts become your tuning responsibility. 
+
+This will flush all the binlogs and relay logs. If the Slaves do not have binary logging enabled, then skip . Your steps look like this now: 
+
+This may help with some of the searching SUGGESTION #2 You have duplicate indexes. That can slow down INSERTs and bloat the MYI file. Please run 
+
+If you expect your InnoDB data to grow, you should prepare for it by having a larger InnoDB Buffer Pool. Where does the idea of having additional 10% extra space for the Buffer Pool come from ??? Please note the following diagram of the InnoDB Architecture 
+
+If the number comes back less that 65535, you can experiment with higher values up to 65535. Keep in mind two more things 
+
+MySQL 5.1 introduced plugins. MySQL 5.0 and prior do not have plugins. My guess is that you had MySQL 5.0 running, you uninstalled MySQL 5.0, and tried to install either MySQL 5.1 or 5.5 and it complained about mysql.plugin being missing. Try cleaning up the 5.0 install as follows 
+
+When you issue , a lot more happens than just cutting off DB Connectivity. The link in the comment from @ethrbunny already explains what things happens. I would like to focus on one particular aspect: The InnoDB Buffer Pool. InnoDB has to flush the InnoDB Buffer Pool's dirty pages. If you want to know how much, run this before shutdown: 
+
+OBSERVATION #1 The slave needs log-slave-updates in OBSERVATION #2 Both Master and Slave need binlog_gtid_simple_recovery in MySQL Restart is required on both Master and Slave to include new options SUGGESTION Since DB is 5GB, just mysqldump the database on the Master. No need for raw copying STEP 01 : On the Master, run this 
+
+Please perform this on a test server, look at the increased size of the new table and index. You can decide whether this table layout provides the data you want with tokens separated. Give it a Try !!! 
+
+I think you meant instead. Before you use it, you need to know the values allowed it. Here are the options from the MySQL Documentation on Forced Recovery 
+
+By default, mysqld sets this values based on the OS and how many maximum open file handles mysqld believes the OS will give to it. You can take a risk and raise that number in /etc/my.cnf and restart mysql. As mentioned in the MySQL Documentation, a warning will be posted. Talk to your sysadmin to see if your OS can have its file handle limit raised. Once you can get it raised, restart mysql and see if the open_files_limit was raised as well. 
+
+Strictly in terms of MySQL, a Database and a Schema are one and the same. From the wording of your question 
+
+Look for . It should be 'Yes'. Look for . It should be 0. If it greater than 0, keep running until is 0. 
+
+Although the histogram is text-based, it gives an accurate picture of the query's overall performance, sometimes running over 1 sec, and most of the time between 0.01 and 0.1 seconds. From here, one can proceed to do performance tuning by refactoring the query, placing query results in memcached, adding missing or covering indexes, etc. CONCLUSION IMHO If Percona ever placed the profiler tools into a Windows GUI, it would easily rival Microsoft's SQL Server Profiler. Defense Rests !!! 
+
+I would still set the innodb_buffer_pool_size much higher that 400M. The reason? InnoDB Buffer Pool will still cache the data and index pages you need for tables accessed frequently. Run this query to get the recommended innodb_buffer_pool_size in MB: SELECT CONCAT(ROUND(KBS/POWER(1024,IF(pw<0,0,IF(pw>3,0,pw)))+0.49999),SUBSTR(' KMG',IF(pw<0,0,IF(pw>3,0,pw))+1,1)) recommended_innodb_buffer_pool_size FROM (SELECT SUM(data_length+index_length) KBS FROM information_schema.tables WHERE engine='InnoDB') A,(SELECT 2 pw) B; Simply use either the result of this query or 80% of installed RAM (in your case 19660M) whichever is smaller. I would also set the innodb_log_file_size to 25% of the InnoDB Buffer Pool size. Unfortunately, the maximum value of innodb_log_file_size is 2047M. (1M short of 2G) Thus, set innodb_log_file_size to 2047M since 25% of innodb_buffer_pool_size of my recommendated setting is 4915M. Yet another recommedation is to disable ACID compliance. Use either 0 or 2 for innodb_flush_log_at_trx_commit (default is 1 which support ACID compliance) This will produce faster InnoDB writes AT THE RISK of losing up to 1 second's worth of transactions in the event of a crash. 
+
+Older versions of MySQL allow declaring the CHANGE MASTER TO parameters in my.cnf. Newer version may not. In fact, according to the MySQL Documentation concerning setting replication options in my.cnf: 
+
+Value should be in place afterwards. REASON #2 The default value for table_definition_cache is . That makes mysqld figure out a fair value for table_definition_cache, given your OS configuration. CAVEAT Make sure you place 
+
+What you are asking for is only available in MySQL 5.7. It's a new thing I have not played with yet. It is in the performance_schema database (a.k.a. Performance Schema System Variable Tables) 
+
+In this instance, I will answer your second question first. There is a way to blend the queries to behave as one and do it efficiently. Your first method is a query that behaves as follows 
+
+The logical BSON backup will be smaller (especially gzipped or bzipped) than the physical backup. Using would best be done against the hidden node. That way, there is no performance hit on the Master. DISCLAIMER I am relatively new to MongoDB (accidental/incidental MongoDBA). I hope my answer helps. 
+
+Both should work. Answer to question 2 Your query, in theory, works. However, look at what it is doing: A table scan on , an indexed lookup of the using the PRIMARY KEY of , and an in-place update of the current row in . The query is hitting two tables and two primary keys, back and forth, on a per-row basis. All steps slow each other down. Thus, you get a longer running query. CAVEAT Adding a compound index on should speed things up: 
+
+If shows up as the datadir, CONGRATULATIONS, YOU HAVE DONE IT RIGHT !!! Once you are satisfied all your apps hitting MySQL works, you can delete everything in Give it a Try !!! 
+
+The output produces a file with the 20 worst running queries based on the number of times the query was called X avg sec per query. Here is the sample output of the query profiling summary of mk-query-digest 
+
+It sounds like you lack the SUPER privilege (global permission). When you connect to MySQL, run If you see more than one line, you do not have SUPER. What does having SUPER give you ? 
+
+Since --quick is already enabled, each row is being dumped directly to stdout without buffering. You may have to just bite the bullet and disable --quick by using . What that will do is buffer a whole table into RAM (which you didn't want to do in the first place) and then spill it out to stdout. In your question, you said something interesting 
+
+After shutting down like this, then you can put in new logs. That way, there is nothing in terms of InnoDB Crash Recovery to worry about from the old logs. InnoDB Architecture

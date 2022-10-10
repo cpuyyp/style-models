@@ -1,0 +1,97 @@
+where you have a finite, yet expandable set data in a column where is isn't self describing to avoid data modification anomalies 
+
+As well as Dtest's answers, I'd have suggested that LIMIT without ORDER BY is meaningless. Well, this would be the case in SQL Server and others, but MySQL GROUP BY usually implies ORDER BY. It could be you are getting arbitrary rows for LIMIT 12 but implied sort with LIMIT 11. So, try adding ORDER BY... 
+
+RAID 5 has a high write overhead because of the parity calculations. See this and this. So what write load do you expect? Then, do you have enough RAM to fit the entire database in memory? If so, then you don't need to worry too much about reading data from disk? Basically, we can't answer this question for you because we don't have enough details... 
+
+Longer... A separate address table will normally have an FK to some parent record. Each address will maybe have a type (billing, delivery, etc) Addresses are not shared or reusable or finite: that is, each address for a source entry has little in common with other entries. 
+
+You have to use a 3rd party tool such as Red Gate SQL backup pro to restore. Or restore as a different DB and copy across. Selective restore makes sense, occasionally, but selective backup usually wouldn't. You-d have to roll your own selective backup with SMO for example 
+
+Number 1 for complete data integrity. Use the other options if you don't care about data quality. It's that simple. Most RDBMS have optimizations for storing BLOBs (eg SQL Server filestream) anyway 
+
+Sounds right to me 432.6 GB = 443,000 MB The SQL Servers are consuming less than "min memory" because that is all they need. 
+
+You can't. The SSMS tab is named after the open file, not the contents of the window/file. So if you have not saved it, it has no name to assign 
+
+Your solution is pretty much the way to go. Personally I'd consider using SSIS to coordinate the tasks as well as sending emails on failure etc. 
+
+Remove it by making the index covering That is, add an INCLUDE clause to the index so all columns needed are in the index. 
+
+In addition to other answers... If SQL Server is CPU bound then it often means poor indexing. You can identity missing indexes using dmvs, such as the scripts below. This should remove pressure from CPU. Otherwise, throw hardware at it. If you can fix CPU usage with indexes, then look at as much RAM as you can stuff in the server so it runs from memory. Then disks: RAID 10 not RAID 5 especially for transaction logs. And 64 bit? 
+
+Note the standard GROUP BY clause. This gives "true" percent because I assume that's what you mean (not false) 
+
+I assume that the local ODBC layer is bollixing you. The bit inside OPENQUERY should be a literal to SQL Server so it is external to SQL Server. So it could be be the ODBC layer: can you profile (or log) what happens on the MaxDB to see what gets through? Another option would be use a view or proc in the MaxDB to give "proper" names 
+
+It can use the index but may need an extra sort to reverse it. Ive noticed that later versions of SQL Server (2005+) seem to be cleverer and may not require a sort, but I haven't dug too deeply (Edit: as per Mark Storey-Smith's updated answer) 
+
+You'll have to work through this "SQL Server – Missing Performance Counters: A consolidated list of known issues" sorry. I'm surprised this still happens: I last saw this with SQL Server 7/2000 years ago. 
+
+Multiple values shouldn't be assigned to a scalar variable. It makes no sense You need a table variable (or temporary table). 
+
+Ignoring both physical and VM memory issues for now. Queries that take longer and longer to run can be cause by several things, but I will guess that you perhaps do you have regular index and stats maintenance. 
+
+Some T-SQL statement require the previous statements to be terminated (MERGE, WITH for a CTE) but there is no blanket requirement. It will be added later as far as I know and it is recommended. To avoid fubaring your data (which you can only do win production with permissions) 
+
+This parse node based XML. It's different to read attributes but it isn't as common I had this lying around as a demo with 3 slightly different XPath queries 
+
+Summary Let the linked server do as much as possible. It is impossible for SQL Server to optimise a query on a linked server, even another SQL Server Long The key factor is where the query runs. In this case, it is a trivial SELECT so all rows from a table will be sent down the wire. It doesn't matter. When you add JOINs and WHEREs then it can matter. You want SQL Server to allow the linked server to do as much filtering as possible to reduce the size of the data coming over the network. For example, the 2nd case here should be more efficient. 
+
+Most likely (or oddly?) a known issue after a Windows patch to do with IE zones because of your help settings. 
+
+Your master DB is generally very small. Just back it up with the rest of your databases, at least daily. Does it matter? Personally, when SHTF I'd like a master db backup that is a few hours old, even if I have 400 other identical ones going back 400 days. I don't want to think too much in the case I have to restore it... 
+
+Check out the free data models at databaseanswers.org for inspiration. Once you've attempted something yourself, we can help fine tune it. 
+
+SQL Server Management Studio that comes with SQL Server? If you need to run on non-Windows, then look at SQuireeL 
+
+A billion records a year isn't much. With partitioning (per Costtype maybe) and archiving it is manageable. The number of data items to store is still 200k * 13 * N. As columns, you'll get less rows per page and it will take more space than as rows. You may gain if "CostType1" is not a fixed length datatype, but it's marginal. "KISS" as they say 
+
+Yes. Transactions apply to DDL and span batches. I'd do something like this. Note the use of SERIALIZABLE ISOLATION to ensure full isolation and XACT_ABORT which will force a rollback on any error. 
+
+Therefore, I'd do nothing. Hints should only be added very judiciously when required. As it stands, you have no known issue to solve. If you still want to add a hint, then simply use ROWLOCK to disallow table locks. 
+
+Do nothing Superkey/subtype, that is put the common fields into empl Change to a self referencing table to build a hierarchy 
+
+When you transferred data, you probably compacted data by an implied index rebuild. Or the REPAIR_ALLOW_DATA_LOSS lived up to it's name... 
+
+This doesn't take into account roles etc: it all works on which can be seen if you look at the definition of INFORMATION_SCHEMA.TABLE_PRIVILEGES Personally, I'd just use sys.database_permissions and not bother with the information_schema rubbish. This relies solely on Meta data visibility to filter rows, so you'll see the actual permissions unfiltered by the INFORMATION_SCHEMA.TABLE_PRIVILEGES view which adds a further filter that bollixes you. For completeness, here is the view. Note the implicit "old style" JOIN :-) 
+
+Generate the restore script from the GUI, instead of using the GUI to do the restore. Then add the PASSWORD option... 
+
+is not usually "SARGable" when you use different columns That is, case you can optimise for either CardNumber or FullCardNumber searches with an index on each column but not both columns. This is a "seek". An index on both columns won't work because you it is : values for every row must be examined. This is a scan. If the condition was , SQL Server could do a residual lookup on FullCardNumber after findng CardNumber. Seek followed by a secondary seek basically. Anyway, try this to remove the scan and have 2 individual efficient seeks 
+
+It can't be a MEMORY table (selective quote below) if it exceeds "max_heap_table_size". This is max 4GB for 32 bit 
+
+A view is macro that expands. So if your view is a JOIN of 2 tables, the execution plan will show the 2 tables. The view is transparent. This doesn't apply if the view is indexed/materialised. However then you wouldn't be asking this question. So, what does the execution plan say? The DTA? Missing indexes dmv query? Most expensive dmv query? 
+
+Assuming you want the expired flag to be real time... You can use a view to access the data that has a CASE with GETDATE(). A computed column also works. Note: you can't index the view because GETDATE is non-deterministic 
+
+Your self-reference could introduce a hierarchy of divisions within divisions. You need code (usually a trigger) to ensure that no divisions allow this. The original schema using encoding is broken too. You have no enforceable FK Personally, I'd consider this with a check constraint to ensure than only one of DepartmentID and DivisionID per row is populated 
+
+And an MSDN example of querying Active Directory in "Joining Heterogeneous Data" And MSDN again "Heterogeneous Database Replication" 
+
+Execution plans do not last for the duration of a connection: they are shared across all connections. It has to be specified per query because any plan cache/reuse issues affect only that plan. What are you trying to do please, and why do you think it would help? Edit, after comment The plan must exist in cache to be used (and reused). When it's cached, it uses memory. Recompiling would use the same memory and use extra CPU etc to recompile. You said "tons of commands" and "thousands of databases": this is your problem. And probably no "dbo." etc to help plan reuse Thoughts: 
+
+Try With the index size value being so high, this points to a non-clustered index. Clustered index size is very small usually. You can check with the parameter on the DBCC 
+
+Even though MySQL requires statements to be terminated, the last one in a MySQL batch (or highlighted code) doesn't require it. So it's back to good old developer discipline and separation of environments 
+
+Safety Most important, snapshot isolations are not safe in many cases by default. Read "Snapshot isolation" (Wikipedia) for more on write-skew anomalies. The next section is "Making Snapshot Isolation Serializable" to get around this. 
+
+Sybase 3rd party tools are sparse unless you spend money it seems. The usual vendor suspects have Sybase offerings: 
+
+You used NORECOVERY which leaves the database ready to receive diff/log restores You can remove it above, or simply run this 
+
+and each of these has an value One important note: you can stop SQL Server from xp_cmdshell or using SHUTDOWN but not start it of course... 
+
+I'd consider using something other then SQL Server Agent, something that can connect to the Listener. We schedule jobs via SSIS for example so we don't have to duplicate jobs. If you do want to create the job on each server, you need to consider how you want it manage where it runs. It will fail on a non-readable listener etc 
+
+The query plans here should show a lot of scans because you have poor indexes for the operations you are doing. Target table indexing appears OK Another observation: uniqueidentifier and varchar are bad choices for clustered indexes (your PKs here): too wide, not increasing, overhead of collection comparisons at least Edit, another observation (thanks to @Marian) Your clustered index is wide generally. Every non-clustered index points to the clustered index, which means a huge NC index too You could probably achieve the same result by reordering the clustered PK. 
+
+Then the logic is "no rows in product_bundle if restricted_product_id is NOT NULL" Edit, added company_id to bundle and products with super keys to push down "unique company per product" 
+
+.. then you need the DEFAULT keyword for ordinal parameters if you have subsequent mandatory parameters 
+
+Yes, on any RDBMS, if you still have a unique index with non-nullable columns to identify individual rows. The difference between a "unique key" and a "primary key" is a PK does not allow NULLs. NULL does not compare to NULL so you can not uniquely identify a row with a nullable unique key. Especially if your RDBMS ignores NULLs for uniqueness (e.g. SQL Server allows at most one NULL in a unique index) Any of the indexes (A PK is an index) can be clustered: but every table should have clustered index (outside of staging table that are cleared after use). The clustered index can be the PK, the unique key, or another index. I'm sure MySQL allows separation of index uniqueness and clustering

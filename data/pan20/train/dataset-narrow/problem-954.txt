@@ -1,0 +1,43 @@
+I was probably overly expressive in the function I made -- it could be cleaned up by avoiding assigment to so many temporary variables but when doing line profiling this style really helps isolate the slow steps. 
+
+I had my own solution to PE #2 lying around and in case it's interesting or useful to you here it is. (It uses and is wrapped into a function.) 
+
+From then on, every operation on your data should be an operation on a NumPy array instead of on a Python list. The way I wrote it, it assumes your data are integers, and also that 0 can never occur as a real data point. You can modify the and offset of the call to accordingly to meet the requirements of your particular data. This approach will only be good if each user has a number of data points that is not too different from the number for the other users. Other wise representing your data as a full matrix will be memory inefficient. Use s. If your data are non-negative integers, for example, then will be much faster than , for example. Actually, if your data are integers, then you could probably just use to make your histograms in native Python, which could also save time. 
+
+This run, which covers about 1/5th of the effect sizes and 1/10th of the sample sizes you are interested in, takes about 5 minutes to run on my laptop. Since it uses , I think scaling up to your full system size would take about 50 times this number, or about 4 hours. The bottlenecks here are still the t-tests, but also simply calling , a sign that we got rid of the assignment-by-element bottlenecks and reduced the t-test bottlneck at least somewhat. 
+
+When you see yourself going and editing the same function again and again to extend its functionality then thats a code smell. The problem is that whenever you add a type you have to add an if condition to your converter. So the conversion could be the class responsibility. in Java 8 you can use for that and if you don't have Java 8 then is your friend 
+
+And now you are sure that suit always has a valid value and there is no need for the error msg in the method. Your in the Card class is not type-safe, it will throw an if the passed parameter is not a Card, You can instead implement 
+
+Code duplication is not a nice idea, it's a massive indication of code smell. You can create a helper class for your common code, ex: getting db connections, creating data tables, etc... 
+
+Because of the short circuit here the function will not be called if value is , which is not the case if you pass the object directly. 
+
+Note that here I am using instead of string concatenation, YOU SHOULD always use command parameters to avoid . Moreover, the proper way for closing a connection is not calling explicitly nor calling it in a , the proper way is using statement. And as mentioned in previous answers your queries can be reworked to stored procedures that accepts parameters from your application, and there is a lot of benefits from doing that. 
+
+Your function doesn't have docstrings. Docstrings are good because they give you an opportunity to tell users of your code how to use it. I had to read the whole code to determine that the binary search you were referring to was for element extraction on a (presumably sorted) list. You don't check for (or even document) that your function only works on sorted lists. For example gives which might not be what users expect. You could add an statement to guard against unsorted arrays being passed in, or at the very least mention the requirement for sortedness in the docstring. You could easily supply default arguments for and in the common use case that the search should start on the whole array. The case of is a bit tricky since the default value depends on the length of the whole array. But you could so something like: 
+
+The advantage of doing that is you don't have to remember what order parameters get passed into your initialization function when you use it. 
+
+Thanks for an interesting, well-posed question. Before we get to issues of performance, let me make some other suggestions for your code. 
+
+Then, instead of copying all of the existing data into a new array every time you go through the loop, just update the relevant positions of using NumPy slice notation. 
+
+The performance with simple queries such as yours will depend more on what is going on in the database than what is going on in your code. Here are a few things to consider if you are maintaining the DB yourself, or to bring up with the DBA if you are not: 
+
+Which brings me to the one thing I would change about your query: locking. Unless you really need per-transaction integrity when serving articles to the readers (and in most cases, for a publishing system, you probably don't) you can hint to the database that you'd like a more permissive transaction isolation level. In layman's terms, you can volunteer to let the other guy win if you both need a lock. So if you are doing a SELECT at the same time an UPDATE is occurring to the same article, you can allow a READ UNCOMMITTED transaction isolation level on your query to avoid taking unnecessary locks. The syntax for doing this varies from one DBMS to another, but usually it's some variation on the theme of SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED. Some (MS SQL, for example) also have a shortened syntax such as WITH (NOLOCK). Finally, a couple of caveats to this advice since you didn't specify your DB system. Some DB systems don't fit this mold. For example, Oracle implements non-blocking SELECTs without requiring dirty reads, so there's no equivalent to NOLOCK there because it's a built-in assumption. MySQL, on the other hand, has InnoDB and MyISAM tables, and on the latter type you are not going to be able to use READ UNCOMMITTED due to the underlying architecture of the table. However, even though you will be taking a table lock the architecture is designed to efficiently allow many concurrent reads by sharing the lock to multiple readers. To sum up, your queries look fine but explore whether a NOLOCK-type option is available. 
+
+You mentioned OOP, and thats great, and OOP is all about code reusability and extensibility,and this code is a good example of a Candy Machine Interface. And that is, users of this class might do mistakes while using it. users could call the static the method before calling instance method and this would lead to wrong routes because weights weren't computed properly. You should try your best to force right behavior. 
+
+Threads??? Once you have threads in your code, your code becomes obsolete even if it was written 2 seconds ago. are the way to go, and you can easily replace your code by a single Task that keeps running and a function that accepts Tasks 
+
+Such default values don't really make sense if the value is not valid. Imagine if you call the function like this 
+
+suit and rank fields should be declared private, no need to share things and deal with infinite number of states. 
+
+This code here is a bit dodgy, you shouldnt never trust values you getting from the , so you got to handle the exception and refuse the request if the value is not parsable to 
+
+There is no much code to review here, but I spotted that is not . You can use an AtomicInteger instead. 
+
+You using for everything and hence no type checking. You shouldn't be able to compare oranges with apples, and the solution is simply to use generics. One more thing your code doesn't is convenience, what if I want to check if this value is equal to a value that a I can get from a method or from a different object without doing eager execution, and the solution is using lambdas.

@@ -1,0 +1,111 @@
+Based on your code, I created a class for getting cached values (without dictionaries). The usage is syntactically not so elegant as your approach, but for time-consuming operations and frequently access it may improve performance. For testing performance, 2 methods (that differ in execution time) are compared with it's cached versions: MathOperation 
+
+Do not open and close the file stream of the output file each time you write one line. Instead open it once at the beginning and close it at the end (open/close a file stream is an expensive operation). 
+
+Honestly, I am not sure if a dictionary is the right data structure for realizing composed keys. At least for me it is not directly obviously how the data are grouped. I think the main issue that confuses me is, that the grouping key contains not just the values to group by, but also the column headers which is absolutely irrelevant for grouping. Additionally I have to understand the comparer. 
+
+I need to compare 2 xml strings where the formatting may be different. The approach is to use the to format both strings and compare the formatted result: 
+
+Conclusion: For most mathematical operations, it is faster to recalculate the result each time. For other time-consuming operations that are frequently accessed, it may may be faster to cache the result. However, such cases are so rare (IMHO), that there is no need for a special class. The availability of such a class misleads to use it also for operations that are faster without such kind of caching. In addition, implementing custom caching (for instance by setting a flag in the setter of the depending properties) is even faster. 
+
+General solution for "async task processing" I use the following simple solution for that kind of tasks: 
+
+So you have to initialize a list of abstract operations first. The main code can work with that abstractions and must not be modified if an operation changed or if operations were added or removed: 
+
+You see that this structure eill not work with goto's (gotos have to be avoided anyway because they result in complicated and hard to read code flows). So, lets split the code further to make it work again: 
+
+Why is it ugly to pass reference types by ref? Because other references are not updated - they point still to the original object. The following code illustrates it: 
+
+In productive code, the methods should be commented. Especially the prerequisite that has to provide the corresponding operator ;). 
+
+API The API is a little bit confusing, because adding a query clears the list of parameters that was added before. That is something non-intuitive behavior that you have to know ;) If you want to create something around the regular DB-API, I would prefer to create a query object that contains the SQL and all parameters and than execute that query object in one single operation so that the connection object doesn't has a "query state". Abstraction It is possible to abstract all that stuff so that the and the may work with any database management systems (not just MySQL). If you want to support all DBMSs, just use the abstract types ( instead of , instead of , instead of , and so on). 
+
+It should be pointed out that these tasks run in threads from the thread pool (in both cases: and ). That's OK for few tasks with a run time from 2-5 seconds, but for long running tasks it is better to use a Task object with TaskCreationOptions.LongRunning to run the task in it's own thread. Otherwise the threadpool threads will be blocked for other short running tasks. s provide a more granular control but that is not required in your case so I would prefer the simpler variant. 
+
+Ninject has a very nice extension called Ninject.Extensions.Factory. It allows you to create factories by specifying an interface. In your case, you could create a factory that creates the commands: 
+
+Static class As proposed by eurotrash I would not implement the class as static class because it has some disadvantages: 
+
+Probably there is is more elegant way to organize the code, but you get the point... Writing maintainable code means to group code that belongs to the same level of abstraction to single code units like methods or classes. The next step would be to group code that belongs together. The description for each operation is displayed in the method but the actual logic is handled in the method . Therefore, if you want to add or remove operations, you have to change 2 different locations. That is a error-prone design because it is possible that you forget one. To fix that, it make sense to create a class Operation that looks similary to: 
+
+Great Idea! I really like that way to realize "generic arithmetic operations", even if it may result in run time errors when the type does not support the corresponding operation. However, its great that it works with all types that implement the corresponding operator - even with custom types :). Performance My first thought was: That must be slow compared with the static version - but it isn't. The static version is less then double so fast than the expression version. On my Computer, 10.000.000 add operations can be executed in a few 100 milli seconds. Therefore, the overhead can be ignored for the most use cases. Code Most points are already mentioned by other answers... just yet another: Instead of having one class that provides the 'Create' method, I would prefer to have one class that provides all that methods and returning an IEnumerable: 
+
+You could also solve it without sorting by xor all expected number and afterwards xor all elements from the array - that should be a little bit faster: 
+
+Just register the interface as factory and you can use it for creating the unit of work objects. If the unit of work has additional constructor dependencies (which have to be registered in the DI container of course), Ninject injects these dependencies automatically. That solution looks a) simpler with b) less code and c) without using a service locator ;) 
+
+I suppose we are talking about DI. Based on your example, I can not see the advantages of the class. If depends on and , the right way would be to pass that objects to the constructor. In your case, you have to pass the dependencies of and to to be able to create the composite objects within that class. However, should not be responsible for creating that objects. If must be able to create the composit objects during runtime, serves as something like a "generic factory" (Btw: In that case, I would call it factory so that other developers know what it is). For that case, the provides a way to create objects without using new where the concrete creation logic can be changed for testing. The logic of the is (correct me if I am wrong): Search the first constructor from an unordered list that's signature matches to any sub set of the passed arguments. Well, lets assume we will use the that way: 
+
+You should use a long-running task for the background task. Otherwise the thread will be taken from the ThreadPool (which is used for short running tasks usually) 
+
+As smartobelix mentioned, it makes sense to distinguish between loading root elements and loading non-root elements. I would prefer to use separate methods instead of using a flag and add a "if branch" in one method. Another simplification is the usage of and instead of creating temporary lists. That makes the code slim and readable. A refactored version could look like: 
+
+I think "BadRequest" is OK for that case. Alternative options are "PageNotFound" or "redirect to index". Some other points about your code: 
+
+To your first use case: Even if you cancel the task, it is very likely that the server has been requested anyway. IMHO, a more appropriated approach is to wait for the server and run the last action again if there is one. The following CR question addresses exactly the same problem: Processing input in background while user is typing To your second use case: Just stop the timer before running the action and restart it afterwards. That's much simpler and takes less resources. 
+
+What you are trying to archive is very similar to the BlockingCollection. Note that you can look at the .net framework's source code to get an idea how to implement it professionally ;). The overall implementation seems to work and I think the blocking mechanism does what it is supposed to. However, some points to note: 
+
+Conclusion I think, at the end of the day, I would prefer a conventional DI approach to your nice query API. Instead of 
+
+Interesting try to use C#'s operators for set operations. However, I think it is not a good extension in productive code because 
+
+The table below displays the ellapsed time in milli seconds for each method depending on the number of calls. 
+
+It depends. I would say, if validation failure is a common use case (e.g. validating user input), it would be better to use an validation approach without exceptions. Otherwise, if validation failure is not expected (e.g. re-validating input from the client on the server), throwing an exception would be OK. 
+
+Logic The object is not a real singelton because the method changes the internal instance. That may lead to strange errors (imagine the case that the settings object was bound to the GUI which is generally possible with singletons). 
+
+If the list of rules should be immutable after parsing, consider to remove the setter of the property and use instead of the : 
+
+I have worked in a project where such an was used. After few years, the implementation was a big class containing the dialog calling logic for all modules. Today, I would prefer a generic service which is able to connect a view with the view model without implementing the logic for each concrete dialog. 
+
+The names of you variables /methods could be improved to be more descriptive (e.g. x <-> line, y <-> record, ...) You have some redunatant code that can be removed (the if/else) and the switch stament). In case of exceptions you is not disposed. You dont have to set the verb "GET" because it is the default. The Method URL can be static The code that checks if the URL is valid could be moved in a separate method The should be a that ignores cases. 
+
+Therefore XOR seems not to be the best solution for combining hash codes in general. Not sure if that is true in your case because the quality of the hash functions depends on the distribution of the data. However, if XOR is still to slow, you could try to simplify the hash function. Of course, that will increases the number of collisions, but probably it performs better than a method that is much slower than . You could try something like that for example: 
+
+For the case, that the value couldn't be parsed, I would throw an exception (or at least add logging). If that case occurs, you have a serious problem. Actually, I would prefer to store the underlying integer value because: 
+
+First of all, I think the code is well written and the algorithms are implemented pragmatically and simple. Performace SplitWordWithArray 
+
+The "LINQ solution" is more readable and a little bit faster than the "manual comparisation". Depending on the actual size of the test set, you can play with the hash function to further improve performance :). 
+
+I wrote a few simple extension methods that allow to traverse a hierachically data structure depth-first or breath-first using LINQ: Usage: 
+
+Nice pice of code! Did you run performance tests? It would be interesting to know if the cached version is more performant as a non-cached version depending on complexity of the dependend objects. 
+
+The characteristic numbers are not always indicating bad code... However, you could do something like that to improve the numbers: 
+
+However, there is still the problem with the dependencies that must be injected manually. Depending on the DI Framework, you can use a factory for creating the UnitOfWorks with all it's dependencies. Ninject for example has an excellent Extensions providing exactly that by creating a simple interface: 
+
+Creating multiple types for implementing different representations of the same type is probably not the best option. A simple solution is, to create one type that uses internally one of the available representations (it's rad in the code below). Further more, the type should provides methods for creating a value from any of the available representations and converting the value back to any of the representations: 
+
+If the data type is not available in your version of the .Net framework, it is open source ;): $URL$ 
+
+It's hard to find a "linq way" to accomplish that... However, you could use the method with 2 helper variables: 
+
+Considering the answer from t3chb0t and forsvarir's suggestion for the alternative implementation, I came up with the following solution: 
+
+d) Maybe a question of philosophy, but I don't like properties of type in view models. A boolean property is more appropriated to represent the logical state of something in the view model. The transformation from the logical state to it's visual state should be part of the view / XAML (using a BoolToVisibility converter). But that is probably just a matter if taste... 
+
+It would be better to create a of jobs and use it in the foreach loop. Otherwise, you have to parse field as many times as jobs are available (at worst). If number of jobs is less than 10, it is more performant to iterate the list of jobs instead of using a : 
+
+Update AdrianoRepetti mentioned in comments, that the solution above may result in rounding errors when adding two angles in degree for example. That is a valid point, so the code below stores the values as well as its unit as internal representation. That allows to avoid that kind of inaccuracy. The API remains the same (except that the precision changed from float to double): 
+
+Any feedback is welcome. However, I am specially intrested in alternative more performant solutions (without the overhead of boxing/unboxing and reflection). [Edit] I also tried binary serialization as "state storing strategy", but it is much slower (~100-200%) and it has the downside that the entity classes have to be marked as serializable. 
+
+It is only possible to validate the query, not the result. Of course, it is possible to overwrite the query's method, and extend the API, but that is far away from being a simple usage. 
+
+In addition to AlanT's great review: The property is actually not a property of the graph, because it stores the state of the search. That state should be decoupled from the class. Consider to implement the "searches" as separate classes: 
+
+That avoids to set the last propery twice. b) If that is actually your productive code, I would recomment to use a MVVM framework that provides a more comfortable way to raise property changed events. At least implement your own base class that implements . c) In XAML, you don't need the CommandParameter binding for the , therfore I would remove it. 
+
+First of all, IMHO the code is well written and has some meaningful comments. Visitor Pattern Actually, I am not sure if the has something to do with the visitor pattern. In my eyes, the visitor pattern can be used to add logic to a data structure by implementing visitors. A visitor visits each element of the data structure and decide what to do depending of the element's type. The can be used to add logic to an object for processing other items in a special manner. Therfore I wouldn't use the term "visitor pattern" here. OverflowingBucket 
+
+Your implementation does not work. It is not enough to generate a key based on the hash codes of column and the row. The key must be an identifier that is unique for each combination of column and row. That is not the case for hash codes because different combinations of column and row may result in the same hash codes. 
+
+Conclusion I would really suggest NOT to use that class! There are excellent frameworks that adress the problems you are tring to solve (e.g. NInject factory extensions for creating factories, Moq for mocking objecs to enable testability ...). 
+
+Move the code from the finally block to the call of . There is no need to attach it via in the finally block. 
+
+You could calculate all values that are calculated multiple times once. I am not sure if that has any significant effect to the performance... Probably the most time consuming call is , however it is worth a try. That requires that the Iterations and Period, passed to the constructor, become readonly. But that is advisable anyway. It is also good practice to check if the values of the arguments, passed to a (public) constructor are valid for that class. That would change the code to something like:

@@ -1,0 +1,93 @@
+Replace your IP in your application with , Let the application continue to run for a while, making sure the DBVIP is being used by the application. Here is something aggressive: 
+
+GIVE IT A TRY !!! CAVEAT : If all the tables are MyISAM, this will happen very fast. If all tables are InnoDB, each table will be counted. This may be brutal and unrelenting for very large InnoDB tables. 
+
+This will keep the InnoDB Buffer Pool lean and mean. The step of flushing the InnoDB table that is being dumped will be quick because a few dirty pages as possible (perhaps 0) will need to be flushed before the mysqldump operates on it. The only drawback is if you mysqldump from a highly trafficked DB, there may be a smaller increase in write I/O because of flushing out dirty page more frequently. You can determine if this is so without restartnig mysql by running this: 
+
+I would scrap the data on the slave. In fact, I would just use brute force by getting a logical dump (mysqldump) of the data: 
+
+Load the data into a new server. Don't worry about the master_log_file='slsnbj' and master_log_pos=1. Line 22 of the dump will have the correct log file and position. Run START SLAVE; on the new server It should start working. You may have to worry about firewall considerations. Give it a Try !!! UPDATE 2012-03-23 17:11 EDT You only have one chance left. See if you can set that last privilege with this: 
+
+In order to change a dynamic option in Amazon RDS, you will have to modify the DB Parameter associated with the DB Instance. Edit the option max_allowed_packet value, setting it to . Once you save it, it should be applied immediately since it is a dynamic option. Afterwards, you can verify the change by logging into the RDS instance and running 
+
+Please make sure Master2 has it. If you are not sure if it has it, login to MySQL on Master2 and run 
+
+MyISAM will do all the heavy lifting of assigning the next for each I discussed this a few times before 
+
+What is interesting is that net_store_data() calls net_store_length() on line 482 in . That code looks like this 
+
+This cascading would be a little worse because the cascading for table access would now occur among three files instead of two. Here is one more scenario some have thought of: Instead of moving the ibdata1 to a different volume, how about enabling innodb_file_per_table and moving the .ibd files to one or more different data volumes ? The cascading effect would now be a factor of the number of InnoDB tables multiplied by three(3). Percona has expressed very good reasons for not doing this that you will find helpful. 
+
+The IO Thread is responsible for communication between Master and Slave. It downloads binary log entries from the Master and stores them in the Slave's relay logs. The SQL Thread is responsible for 
+
+If all clocks are sync'd, I would suspect high write load on the Master. Why? The Master is responsible for doing two things: 
+
+You have one of two options: OPTION # 1 You may want to experiment by adding an additional UNIQUE KEY 
+
+This seems to be one of those errors that won't go away. In this case, it may be a case of human error. First of all, here are a series of links with similar error messages on Shutdowns 
+
+This will not run over to SQL Server and do a deletion of all records in a single transaction. What MSAccess does is pick up every PRIMARY KEY and issues an individual , probably as individual transactions (explains the delay before the confirm). I remembered this wonky behavior going back 15 years because I saw this happen when having linked tables to SQL Server, MySQL, and Oracle. If this is still what MS Access does to a linked table, you are better off connecting to SQL Server via isql and issuing the on the server side, especially if there are a lot of rows to delete. At the very least, you should minimize executing bulk operations against SQL Server from MSAccess. Although I have never worked with it, MSAccess can allow "pass through" queries where you issue a SQL Command and the ODBC Driver simply passes the query to the Server Side for parsing and execution rather that trying to parse and execute the SQL the "ODBC" way. If things have changed over the years with linked tables, I'll leave it to the SQL Server community to address this if I am way off base. 
+
+QUERY #1 Generate all dates from Jan 1st last year to 1000 days later, extracting all dates spanning 2 weeks before this past Monday 
+
+Once you use the clause , the must generate a result first. Your result has no boundary (no WHERE clause). The LIMIT is applied afterwards. That explains the temp table creation. OBSERVATION #2 You mentioned the following in your question 
+
+Then I connect to mysql with an intentional bad password I then connect to mysql with the right password 
+
+After restarting mysqld, rerun mysqltuner and evaluate the resulting recommendations. Taking key_buffer_size out of the equation is enough in your instance. 
+
+Make sure binary logging is already enabled on the master. Here is how you can tell: run . If you get nothing back, you need to enable it like this: Add this to /etc/my.cnf 
+
+Afterwards, the table shold be fully accessiable. CAVEAT (Windows) If Windows has the CSV table locked, run these commands 
+
+UPDATE 2013-02-11 15:22 EDT I have a nice suggestion: Create an index that only stores two characters of . Perhaps this: 
+
+You could reindex the table and even shrink the table. However, if you want to delay such disk-based maintenance, you should, at the very least, recompute the index statistics. Without recomputing the index statistics, the MySQL Query Optimizer may make bad choices for query EXPLAIN plans. This could adversely affect SELECTs if the statistics for nonexist data is still present. This is true for both MyISAM and InnoDB. You don't have to shrink the the table to compute the index statistics, although it will be better for overall performance. To compute statistics for all indexes in a table, you would run 
+
+This causes every base_id to experience a CAST and a comparison. Full table scan required. Your second query is a pure string comparison and the index has string-based values. 
+
+If you have the query cache disabled, then a high read environment of where the SELECTs are very simple, then there are no locking mechanisms enabled. I just recently experienced this with MySQL 5.5 using Multiple Buffer Pools. If you call the same basic queries repeatedly, no need to parse the same query over and over again till the cows come home. A small query cache should suffice in a heavy read environment using a small set of SELECTs you know will always be called. memcached is much more handy for large sets of data in heavy read environment. Query cache is a lame duck at that point. 
+
+Interestingly, @DTest gave a good idea in his answer. Make a Stored Function. However you have to pass in three parameters: NetID,UserID,EventID. Here is that Stored Function DoesUserHaveEditPrivs using the new refactored query: 
+
+This will acquire the lock, insert or overwrite the previous lock owner, and cleanup the lockbox by locating all entries whose connection had terminated. Since GET_LOCK() is unsafe for statement-based replication, you can locate the warnings written in the error log and should see the names of the locks. 
+
+EPILOGUE When everything is done, all the files will be gone. All the data and index pages will be inside ibdata1. You will find accessing the INFORMATION_SCHEMA against all InnoDB tables shockingly fast. Here is the InnoDB Architecture 
+
+If the file exists, open it in an editor and add under the header If the file does not exist, run this 
+
+This stores the password on disk but does not push it into the in-memory copy of the MySQL Grants. As long as you don't run or restart mysqld, you have a chance to change it back. Newer versions of MySQL 5.5 may not be as forgiving. SHORT ANSWER : For , Yes, for , more than likely. 
+
+I am glad you were able to mysqldump 1.5TB database. You are sure patient. Now for the reality check. You will some downtime for reboots and pausing. No need to mysqldump anymore. STEP 01 Did you put this line in on both Master1 and Master2 ? 
+
+Other than these things, all other features of mysql's --safe-updates is totally your responsibility. 
+
+If you are asked to create it, please do so. Next, create the following entry under the [mysqld] group header in my.ini: 
+
+This will tell you how much data needs to be flushed from the InnoDB Buffer Pool. Please keep in mind that InnoDB has many moving parts in the system tablespace (the file ). Click here to see the Pictorial Representation of the entire InnoDB Infrastructure. Some of transactional information is written in such a way that Crash Recovery is performed when you run . OPTIONAL You can get all data flushed and all transaction cleanly committed from ibdata1 and the Transaction Logs (,) by running this 
+
+GOOD NEWS Using InnoDB is absolutely in your best interests. You will have to do some work for this to become a reality. STEP 01 : Create a Script that will Convert all tables to InnoDB Conversion of all tables to InnoDB is incredibly straightforward. 
+
+My original anwser posted is considered 'old school'. Yet, in this case, I would definitely look into the file formats being used by .ibd and/or ibdata1. 
+
+Perhaps it is order of doing things. IMHO a combination of SERIALIZABLE isolation and every other transaction test may be the problem. For starters, what does SERIALIZABLE mean? According to MySQL 5.0 Certification Study Guide 
+
+What you need to do is establish the file my.ini When installing MySQL for Windows using the MSI, the location of my.ini is expected to be . Please run the following in a DOS Window: 
+
+You shouldn't put those lines at the very bottom of the file. Look for the group header in and put those lines under it 
+
+BAD NEWS Anything you have collected in the text file version of the general log will not come for the ride. You can collect new entries going forward. 
+
+OK, let's get a little more granular. You said you have reports per Perhaps the query could be adjusted per user 
+
+One day, a server I was restoring to had mismatched configurations on the innodb_buffer_pool_size. Because I had set innodb_buffer_pool_size=512G instead of 512M (obvious typo), InnoDB would come up DISABLED. When loading the data into the new server, every CREATE TABLE defaulted to MyISAM upon execution. I didn't notice anything until I saw dozens of DB Connections that were waiting to write to the same table, which was typical of heavy writes against MyISAM. The solution was simply to start over with the correct InnoDB settings and reload. MORAL OF THE STORY 
+
+However, the introduction of triggers slows down app performance just to authenticate users, particularly if the number of user login is high. Rhetorical questions for your research: 
+
+As was stated in the comments by @yercube, you have a case sensitivity issue. SOLUTION #1 Create the first table with the name 
+
+That will do what you want, but remote root is not recommended. SUGGESTION #3 Since already exists, then remove the root@localhost. 
+
+If you are looking for a running total for each row, you have to set up a user variable. The purpose of the user variable is to keep the total value after each row like a spreadsheet cell. PROPOSED CODE 
+
+This query will not get every . Why? If there is an in that is missing in , that does not write a zero in the column. To cover for values missing in , run this one:

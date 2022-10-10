@@ -1,0 +1,39 @@
+Concerning clustering keys, here is a great resource by Kimberly L. Tripp (start with links at the start of the article): More considerations for the clustering key – the clustered index debate continues! She gives detailed explanation of why a good clustering key should be unique, narrow, static, ever-increasing, non-nullable and fixed-width. The articles are about SQL Server, I'n not sure if the exact holds true for other RDMBSs aswell. 
+
+I can show you an example for SQL Server, but it should you help for your RDBMS aswell. I hope I understood the question. Suppose you want to get TOP users based on the number of same skills as the current user. Some sample data: 
+
+First, are you sure the data growth won't happen again? If there's a realistic chance it will and the empty space doesn't hurt you, leave it, do NOT shrink the database. However, if you're positive you want to reduce the data file size, then you should be aware of the pitfalls of data file shrinking: 
+
+Run the first to see exactly which rows will be updated. If needed, adjust the clause to get the rows you want to target. Only then mark the sentence from the till the end and execute it. Much safer then running a "blind" update, as you did, forgetting the clause (I assume that was the problem). Even safer - do it on some test database first :). 
+
+Suppose Alex provides a service to Emma. Emma is charged for it, and Alex is paid some percentage. In the table, this would look like: 
+
+Since I was going to have a table anyway, adding this "meta-relationship" table is less redundant than representing the full triplet. However, it now becomes a lot more abstract and difficult to understand. Which way is more correct? 
+
+Notice that these are not captured by the binary many-to-many relationships I described earlier - John can be tutoring Maria, and Maria can be enrolled in History, but that doesn't mean that John is tutoring Maria in History. The way I see it, I have two options: Option 1 - A single table containing triplets Table : 
+
+I am designing a database which needs to store some fairly complex relationships among many different types of entities. In the simplest example, let us say I have three types of entities - "Student", "Tutor", and "Course", each with their own tables (, , ). First of all, I need to represent simple many-to-many relationships between each possible pair of entity types: 
+
+I refer to the advice of Paul Randal from his article "Why you should not shrink your data files" (read the whole article to get a clear picture what happens with index fragmentation): 
+
+The query you posted is not valid for creating a view; running for this query will result in an error. Are you using a clause? A view, being a table expression (a set), can't have the order defined, since that would be against the principles of a relational model (there is no order for rows in a relational table - a set is an unordered collection of tuples). Same goes for other table expressions - derived tables, CTEs etc. From BOL article about the clause: 
+
+It specifically mentions SQL 2012 at some point, but I guess the same would work for 2008 R2 aswell: 
+
+Long story short: Use the clause in the outer query that references the view. Do not use it in a view. Even using it with (or on SQL Server 2012, the equivalent) does not guarantee presentation order, it just means you'll get the top 100% of the rows, in any order. 
+
+This is nice because it explicitly lays out the full relationship in a single row. However, I now need to maintain this table in addition to my simple relationship tables. Option 2 - Meta-relationships Table : 
+
+Transaction 3 is essentially "Emma funding her account", while transaction 4 is "Alex withdrawing from his account". Any account's current balance can be derived by adding all of the amounts where their account appears in the , and subtracting all of the amounts where their account appears in the . Our "accounts receivable" would simply be the sum of all negative balances, and "accounts payable" would be the sum of all positive balances. This seems like a good approach, but it doesn't really reflect the actual flow of money. When Emma pays us from her credit card, from the banks' perspective there is no "Emma's internal account" - the funds are simply transferred directly from Emma's bank account to the Company's bank account. Is it a problem for us to model "Emma's internal account" anyway? There is also the possibility that Emma will pay $50 to Alex directly when services are rendered, and then Alex needs to pay the Company their share ($10). Under my proposed system I would model this as follows: 
+
+The main point has already been stated in answer by mendosi: the Columnstore Object Pool is located outside the Buffer Pool. See the blog he linked. The question is a bit unclear. Do you want the Buffer Pool to have the same memory available when you start using columnstore indexes? If yes, then: 
+
+You can build the "Export from SQL to Excel" part also via the SQL Server Import and Export Wizard in BIDS. Check this video for a demo. For the Send Mail Task, check this BOL article. If you want to automate and schedule it, you can use a SQL Agent scheduled job with an SSIS job step. A video demo is available here. If you automate it on a server, make sure Microsoft Access Database Engine 2010 Redistributable is installed (you do not need Excel there, just the "drivers"). 
+
+The where condition is not applied at this part, as you can see from the whole query you posted. Looking at the predicates and outputs of the nested loop and the clustered index scan, I suggest you try to create a nonclustered index on . 
+
+I'm developing a new double-entry accounting system for my company, which has Customers and Workers. Customers pay the company for services rendered, and in turn the company pays Workers for providing these services (sort of an Uber model). The idea is to model an Account for each Customer, Worker, and the company itself. Each transaction therefore, is either a transfer of funds between two of these accounts, or a transfer of money in/out of the system as a whole. The latter case would be, for example, when a Customer makes a payment or when a Worker receives a paycheck. For example, consider the following accounts: 
+
+Negative account balances are allowed, but transaction amounts must always be positive. So at this point in time Emma has an account balance of -50, Alex has an account balance of 40, and the company has an account balance of 10. For the system as a whole to become solvent, Emma must deposit (make a payment) and Alex must withdraw (be given a paycheck). As these occur, we add additional transactions: 
+
+So under this model Emma has fully funded the cost of the service, and Alex has "withdrawn" $50 from his account (though he only gets to keep 40 of it). Thus, Alex ends up with a -$10 account balance. Alex's account will become solvent again when he does more work, or pays his balance to the company. Is this a good idea, even though the reality is just that Emma handed Alex $50?

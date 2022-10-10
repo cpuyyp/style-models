@@ -1,0 +1,97 @@
+The first warning is probably the answer. You have NameVirtualHost defined as *:80, however by the looks of things you have or similar rather than on the bit of config defining each virtual host. 
+
+One of the better command line tools for checking bandwidth available is iperf. However you need another box on an known fast connection to run the test against. I'm not aware of any public iperf servers. 
+
+If you're moving the mail over the Google Apps, the MX record is going to point to Google Apps more than likely so the forwards on your DirectAdmin box aren't going to do a thing, so the dummy account method is probably your only option. However, there's another gotcha to look out for! If you're going to keep the domain setup on the DirectAdmin box, you're going to need to disable the Local MX feature. DirectAdmin provide the instructions here. The reason for this is that if you don't, any time you try sending email to your domain from the DirectAdmin box, the Directadmin mail server will think it's local and refuse to pass it onto the Google Apps server. If you don't have access to the "MX Records" page from your DirectAdmin login, you will need to contact your hosting provider. 
+
+Another thing to watch out is the "lovely" perl scripts that often get uploaded to out of date third party CMS installs. These often have their own SMTP engines which avoid the local mail log. Fortunately this is relatively easy to stop with iptables: 
+
+Why not just use Fail2Ban? It should be easy enough to setup a filter for it. However, something like the following would also work. 
+
+The fastest way to get it going would be to add the startup command to . This is run at the end of the system boot. The "proper" way is to use the init system. There's a file called which is a basic framework for making an init script for starting a service. Copy it to /etc/init.d/svnserve and customise it as needed. There's also plenty of examples of svnserve init files on the web. Once works as expected, you can then run . This init script will be then be started on boot, and stopped on shutdown. 
+
+The most likely cause is that you're sending email through a shared ip address at GoDaddy which has a bad reputation. This is one of the risks with shared hosting, just because you're doing everything right, it doesn't mean that everyone using the same shared resource is. You can check the IP your email is coming from against multiple black lists at sites like this. If your not sure of the ip, look at the headers in the email that blocked as spam in Google and look for the `Received: header with the connection from GoDaddy to Google. It's very possible that the IP won't appear in any public RBL, but will be on internal RBLs used by Google and Yahoo. 
+
+Put the above in .ssh/authorized_keys2 and then see if you can figure out what command hg push is running and put it in the command field. It's possible that hg push is only doing an scp, in which case the scponly shell might also do the job. Hopefully this will point you in the right direction. 
+
+Do they have a local DNS server with the IP pointing at the wrong place? Or a hosts file? If they run "ping www.website.com" does it resolve to the right ip? 
+
+This would be more of a question for StackOverflow, but I'll bite anyway! Presuming there's no Port Forwarding or load balancing involved, you can use the variable to get the ip that the script is running on. Another gotcha is that it might not be the ip that any connections from the script are going out from. Take for example if you have a server with a primary ip of 192.0.2.1, and a secondary ip of 192.0.2.2 for an SSL site on which the script is running. When you use the variable above, the ip returned will be 192.0.2.2, but when you create an outbound connection in the sciprt, it will be from 192.0.2.1 unless you specifically bind to 192.0.2.2. 
+
+I've seen old Celerons handling 80-90Mb/s of normal traffic on a Debian/Quagga setup with 3 full feeds without even breaking a sweat. However, the qualifier there is "normal" traffic, mainly HTTP/SMTP and DNS. The same machines have fallen flat on their face during DDOS situations where the Packets Per Second went to ridiculous numbers of mainly UDP packets. It's normally not the bandwidth you normally need to be worried about, but the PPS you will be handling. Unfortunately, I can't help you on the Linux VS BSD for routing performance part of the question, but it shouldn't make any difference on current commodity hardware for a few 100Mb connections. 
+
+Em, you don't seem to have a DocumentRoot defined in the HTTPS virtual host. Copy the DocumentRoot and Directory Stanza from the HTTPS virtual host. 
+
+The best bet is to look at top's batch mode. You can do something like to get a snapshot of the system. I'm not aware of anyway to get top to stop clearing the screen on exit. 
+
+My theory is that Virtuozzo hasn't touched the OOM manager in the host kernel to make it aware that there's virtualised processes running, so it doesn't realise it's killing privileged processes in your "VPS". However, that's just conjecture as I haven't been able to check it with Parallels, who're the people responsible for Virtuozzo. 
+
+The best bet is having a default drop policy in iptables and then only allowing what's required. Something like: 
+
+Check to see if exists as a command. If it doesn't, run . Part of this package is the mount.cifs helper program that fstab uses. 
+
+is very handy in situations like this as it will basically umount and ask questions later. What it does is immediately umount the file system, and leave any open files hangining. As it can it will kill off any open files to the dead nfs mount. 
+
+I use DSC for monitoring multiple DNS servers. It's slightly awkward to setup, but provides a LOT of data. 
+
+You can point the domain's A record at your VPS. This can probably be done from 1&1's control panel. Otherwise it's either have the frame redirect masking your ip, or having the ip shown in the address bar when using a HTTP Redirect. 
+
+Most likely it's listening on localhost only now. In Debian it's probably that you need to check. See if there's something like: 
+
+Untested, but the basics are that $? is the exit code of the last command. If grep finds the ip, it will exit with 0. If grep fails to find the ip, it will be non-zero and the if condition will be triggered. 
+
+You don't mention OS, however: Linux: You should be able to get at least the Product Name and Serial from the output of Windows: Run the following on the command line: . You can also run to get the information remotely. 
+
+is specific to RIPE so not supported in the generic client. Fortunately the whois protocol is exceptionally simple. This means you can telnet to port 43 on whois.ripe.net and type in the following: 
+
+The PTR record matches the FQDN of the server, see the output of Your SPF record specifies that the server in question is allowed to send the mail. 
+
+Why not have a look at something like Fail2Ban. It can monitor the log files and block ips based on certain criteria using iptables. This means that Postfix will be left to do what it does best and deliver mail. 
+
+Get SSH access into the IPCop box and run . This should give you a real time view of what's happening. 
+
+The simplest solution would be to get a second ip on the server and have OpenVPN listen to port 443 on that ip. Don't forget, mod_proxy is for HTTP and HTTPS requests, and OpenVPN doesn't support either protocol as a transport. Corkscrew will allow you to tunnel SSH over an SSL proxy. It could be used in conjunction with the SSH port forwarding that Khaled mentioned if getting an extra ip isn't an option. 
+
+If it's because of accounting reasons as mentioned in the comments, you might want to look at the GNU Accounting Utilities. These will allow you to do everything upto and including seeing which users ran what process, for how long, and how much CPU and RAM they took. This does require kernel support, but most modern distros will have it compiled in already. 
+
+Trying to pull from a device on a mobile network is going to a pain. It's very likely to be on a NATed ip which means no direct access, and there's no easy way around that. You'd be a lot better off changing the software on the mobile device to some form of a daemon that PUSHS the data to a centralised server rather than attempting to get the server to pull from the phone. Of course, there's other hacks you could use like implementing something like SSH tunnels. In this case, the mobile device would create an SSH connection to a centralised server which then allows connection back to the mobile device on a certain port. However, managing this with multiple devices would become a nightmare. 
+
+It depends very much on the hoster. The bigger ones will have their own AS number and IPv4/IPv6 space. These will be "Default Free" networks. What this means is that there's no Default Gateway. They will connect to a large transit provider and rather than getting a default gateway, they'll get a list of every route that the transit provider knows of. They will do this with a number of transit providers like Global Crossing, Level3 or Cogent for example. Then their routers will look at all the routes received from the different providers and decide which which ones they like best based on different criteria, for example, the number of other AS numbers in the path. They might also connect to an IXP where they get a smaller set of routes directly from other ISPs and Web Hosters. Most of time these days, the connections are simple ethernet over Cat5/6 or Fibre, although I'm sure there's plenty of places still using SONET and similar. If a Webhost doesn't have their own AS Number or PA space, they will usually be either a reseller of a larger host. Alternatively they might just have a few servers in the larger hosts network. In this case, the servers will be connected to a switch which in turn will be hooked into a much more powerful core network. 
+
+Read the second line, specifically . Your system doesn't have any swap, so that alert is really a false positive unless there should be swap there. The only systems I've seen without swap recently are OpenVZ/Virtuozzo contatiners/VPS' where there's no swap given to each container as the hardware node handles all swapping. However there are plenty of other reasons for not having any swap space setup. 
+
+Working in a mainly Cisco shop here, and even the most basic of 29XX series support ACLs. It's as simple as adding an access list at the top like: 
+
+Replace with the external ip of your server. You might also look up DKIM records, but I'm not familiar enough with GoogleMail to be able to see if they're support there or not. 
+
+In have a look for the line mentioning . If it's still commented out, uncomment it and then run to get the packets forwarding. This should allow you to ping 192.168.0.1 from 192.168.100.101. However, then you're going to have to look at using iptables to NAT the connection coming from 192.168.100.0/24 to the outside world. 
+
+This example also gives you control over the Reply-To headers. There's no need to touch anything in Postfix! 
+
+Have a look at mod_status and in particular the extended status. It should be easy enough to match the PID given in the server-status page to the output of top and ps. 
+
+With technologies like XEN and HyperV, if you have a SAN with multiple servers hanging off it, you can live migrate a running SAN backed virtual server from one server to another. Very handy for load balancing and doing maintenance on physical machines without any downtime. 
+
+Every well run shared hosting shop will have their servers with names like serverXX.hostingcompany.com with the PTR records matching. Blocking based on the whether the PTR record domain matches the email's From: domain would affect a massive amount of legitimate mail. You'd be better off making sure that: 
+
+"gethostbyaddr" gets the reverse dns for a connection ip address. What you are probably looking for is the referrer, which is available in echo $_SERVER['HTTP_REFERER']; 
+
+Movable Type might also be an option. It also has the advantage on generating static pages, so the load on the server will be generally lighter, and it's very easy to scale out. 
+
+What this means is that the only ip address allowed to be on the device on Fa0/1 is 192.0.2.1. If the user tries adding other ip address, they'll get no where. Of course this will only work where each host has a static ip. It might work as well with DHCP! This is on Cisco, but I'm sure other switches have similar features. 
+
+By default a 32bit kernel will only address the first 3G or so. You need to get a kernel with PAE support. and a reboot of the VM should let you see all 4G. 
+
+What do you mean by fake? Non-existent server or a public secondary in front of a hidden master? I can't see any issues with having it as a public secondary. However if it's straight out non-existent, there's plenty of CCTLDs that check the SOA and NS records before letting you change the NS servers, and their systems probably will throw a hissy fit. 
+
+In your version NOW is defined once as that time, and it stays as that for the rest of the run of the script. Above, the date is generated at the time of the "echo". If you don't want to be adding date each time you can use a function: 
+
+In this case, if you query either domain1.com or domain2.com you'll get the info from the default zone. However, please be aware, I only done this in the small scale, and it hasn't been tested with 500K zones up, so I'm not sure now Bind will structure it in memory. So for example, I'm not sure if it will only load the one zone file and point all the zones at it, or if it will load the same zone file 500K times! 
+
+In order to block it in one section of our network the following domains were redirected to a site with instructions: 
+
+That means you have no A record for just mydomain.eu. *.mydomian.eu won't match just mydomain.eu. You need something like: 
+
+Have a look at WinEXE. I'm not sure if it will compile correctly on an N900, but it will allow you to run command to run "process -k whatever" remotely. 
+
+Looking at the output of . The default should be 32768. The safest way of changing it is to edit to whatever value you want, and then run to make it active. This way it will survive reboots. However, you're probably going to run into limits in CPU, RAM and Disk IO long before you hit the max number of processes. Without knowing what your app does, the best bet is to simply test and benchmark your app limiting it to differing amounts of forks.

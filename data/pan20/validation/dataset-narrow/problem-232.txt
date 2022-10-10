@@ -1,0 +1,49 @@
+This is really easy now. Don't use , use information_schema.innodb_locks. Here's an example I wrote a blog post on with foreign keys: $URL$ 
+
+The simple answer is that there is usually some overhead to be able to do book-keeping and there is padding to be able to have fixed offset locations to be able to jump ahead when searching for data. If you are concerned with the size, maybe try using InnoDB page compression, or compress the blobs in your application before storing them? You'll probably find the TEXT column compresses very well. 
+
+Virtual columns are created on base tables, and will co-exist with columns which will be material. This can be useful as it has more of a mixing/matching behavior than views. Virtual columns permit indexes (which are materialized). Views do not. 
+
+There were 497839 leaf pages (~8GB), but only 416 pages above (6.5MB). I've ran this command a few times on production data, and it always surprises me when I have millions-billions of records, and only level 1-3 pages + leaf pages. 
+
+The test-case here relies on isolation (MySQL default), but a time-window also exists for isolation where the session2 read occurs before session1 commit. To put it another way: the optimization is only safe if you issue a to read the rows followed by an . does not use MVCC and always reads the latest version of the rows. 
+
+Multiple queries executing at once A single query executing in parallel Some sort of logical read ahead for table scans / clear cases where the next pages are well known. 
+
+First let me clarify by confirming that MyISAM does not do asynchronous I/O, but that InnoDB does and will by default from MySQL 5.5. Prior to 5.5 it used "simulated AIO" by using worker threads. I think it is also important to distinguish between three situations: 
+
+I think this is a two-part problem. 1) Common port scanning software may try the common ports first, but there is nothing specifically limiting it from trying all ports, and it you need to be able to assume it will be able to finger-print the protocol when it finds an open port. 2) When the more aggressive port-scan is happening, you need to be able to detect it, and do something with this knowledge (like fail2ban, etc.) Your admin is proposing (1), ask what ideas he has regarding (2). 
+
+"It depends" is the answer - there are configuration options, mentioned here. Small nitpick: a database can be durable but not ACID compliant, since ACID is the superset of features (A-C-I-D). I don't think any NoSQL database can claim to be fully ACID, but many of them may claim to pass individual sub-requirements, such as durability. 
+
+Most databases are client/server, although some embedded databases can be used purely like libraries, and share the application's address-space. The server architecture can vary between databases, and differ from what you described too. MySQL runs entirely as a single process (with multiple threads). It does not require any OS shared memory segments or inter-process communication. 
+
+Memory is not instrumented in MySQL until version 5.7 (currently in development), so this does make your question a bit of a guessing game. I can see from inside InnoDB status, that it doesn't appear to be InnoDB consuming the memory (assuming you collected this from when the problem was occurring): 
+
+According to the MySQL manual, the recommended size is "up to 80% of system memory". Or more specifically, most people will recommend 50-80% of memory. I think you are misquoting the 10% figure for the approximate overhead that will be required on top of whatever you allocate. 
+
+Let me maybe try and describe the historical problem with log flushing and how adaptive flushing works: 
+
+As a side note, another commonly used feature with some overlap here is triggers. It is often better to have a virtual column than a trigger updating legacy columns on insert/update. In response to this specific question: 
+
+Not strictly an answer, but perhaps a very long comment: MySQL is very similar to Mac OS X versioning. Mac OS X was first released in 2001. MySQL 5.0 in 2005. It would be just as unfair to compare OS X El Capitan to 10.0 as it would MySQL 5.7 to 5.0. The History: Version 6.0 of MySQL was canceled, and 7.x is the versioning scheme of MySQL Cluster, which makes it more confusing to pick a next number to use. MySQL 5.6 contains more new lines of code than any release prior. Making the de facto major version number the first and second digit combined. 
+
+What happens when you set to 2 (and why you get better performance) is that you just buffer changes for longer, and therefor get more IO request merging, and better performance. It doesn't create more work. Shameless plug for additional reading - When does MySQL perform IO? 
+
+Correct. To be able to recover all (setting: 1) ti also assumes that the underlying hardware is not adding additional buffering to improve IO performance. I have no reason to assume that Amazon doesn't do this, so I think setting it to 2 is a good cloud practice. 
+
+I would recommend using InnoDB memcached over Handlersocket. The advantage of InnoDB memcached is that: 
+
+So there is a small time difference between slow + changed value, and slow + no changed value. So I decided to look at another metric, which was pages written: 
+
+I think the answer is - it's complicated. I tried to write a quick proof using a column in MySQL, but the answer is a little inconclusive. Proof first: 
+
+You can kind of do this from MySQL 5.6 and onwards using . I have an example of finding the ideal buffer pool size on my blog here: $URL$ The caveat is that you may need to either restart or lower the buffer pool size first. Inactive pages will just stay in memory if there is no need to make free space - which could skew your result on a server that's been running for a while, yet has plenty of memory. 
+
+By default the master holds all it's binary logs indefinitely. There is a setting to expire logs after N days () but sometimes this can be a little impractical, since in my opinion you really want to allocate based on storage capacity (GB; not time). It sounds like as a result of this, Amazon has written their own retention mechanism as an alternative to , but it doesn't always work as smart as it could. I am not sure you will be able to get an official documented answer. This is more in the domain of RDS internal management. 
+
+Total memory: 24.41 GiB (InnoDB needs about 5-10% more than your buffer pool for internal structures) Buffer Pool memory: ~23.85 GiB I'm going to have to guess that the memory is consumed at the MySQL layer (not InnoDB), and two common causes are intrinsic temporary tables, and very large sort/join buffers. 
+
+Correct. There may be reasons to hide changes that other transactions see (as part of multi-version concurrency control). If you're trying to build tests to prove things - make sure you understand how transaction-isolation levels work :) 
+
+The biggest reason to have a large table_cache is so that LOCK_open mutex is not hot. MySQL prior to 5.5 has a lot of contention when you are trying to open/close tables, so you want to restrict doing this as much as possible, i.e. have a large table cache. So you don't care about any particular ratio of hits to misses (infact you should ignore ratios altogether - this blog post explains why). What you care about is the miss rate, because the more times this happens per second, the higher the chance that you will have contention (one thread has to wait for another thread to release the lock.) How do you spot the miss rate? You fetch a few samples of Opened_Tables a few seconds apart during the busiest period of the day, and if there are increases in each sample, it's probably a good idea to see if you can bump up the table_cache. Note: I very specifically do not recommend comparing to uptime.

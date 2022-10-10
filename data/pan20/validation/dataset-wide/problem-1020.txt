@@ -1,0 +1,97 @@
+This situation, governed by the order the entries were made, would yield inconsistent results should you ever try to recover from the binary logs. This situation is even more evident when doing Master/Slave Replication because the Slave could theoretically be inconsistent for this reason. In your particular case, you can breathe a sigh of relief because you, the Developer/DBA, already predefined the role CUSTOMER in the Role table. You need not worry, right ??? Therefore, that warning is just a reminder for everyone to streamline their input of data. You could ignore that particular warning. However, for the sake of clarity, or if you want the error log to stop growing due to the warning, you should do this: STEP 01 Make the Stored Procedure as follows: 
+
+Smaller datatypes, especially for JOIN keys, will make the same query go faster. If the fields will not exceed , use for even smaller columns. OPTION #2 : Use a Bigger Join Buffer Add this to 
+
+According to the MySQL Documentation, the InnoDB Buffer Pool is set to 128MB by default in MySQL 5.5. You can show how much of the InnoDB Buffer Pool is in use and reserved as follows: 
+
+This will index the data both ways. Consequently, this blows up the table and index files in size. You will have to do searching with the following clause 
+
+POSSIBLE WORKAROUND Since and are duplicate indexes (because they have the same first column), you should run 
+
+I changed A and B to be subqueries using 1 for and If you want the opposite, just reverse A and B subqueries to something like this: 
+
+Of course, this is not for InnoDB. From another angle, whether the tables are InnoDB or MyISAM, if the indexes are larger that than the table, you may have too many indexes. I usually guestimate that a reload of a MyISAM mysqldump should take 3 times as long as the mysqldump took to make. I also guestimate that a reload of a InnoDB mysqldump should take 4 times as long as the mysqldump took to make. If you are exceeding the 4:1 ratio for reloading a mysqldump, you definitely have one of two problems: 
+
+Find out if you can manually change the default character set before connecting to the the desired DB server If you connect to a remote DB using mysql client program and the characters for DB names look normal, then you are just dealing with character set issues with phpmyadmin. WIth regard to the error message, do not surround database names with single quotes ('). Instead, surround them with back quotes (`) 
+
+That's it. No restart needed for installing expire_logs_days. As for the replication parameters, yes restart is required. 
+
+and start mysql and see if it comes up UPDATE 2012-05-15 15:59 EDT Since it fails to start up, you may need uninstall MySQL 5.5.24 and go back to MySQL 5.5.23 or whichever version you were last running with. UPDATE 2012-05-15 16:06 EDT Please run on the mysql error log and paste that in the question.f it is not configured, go to the data folder and do to find it. UPDATE 2012-05-15 17:54 EDT Based on the display you pasted in, you evidently had MySQL 5.1 running before. It just so happens that MySQL 5.1 has a table called mysql.plugin. It may have been populated before. It probably had something concerning the InnoDB plugin. MySQL 5.1.38 introduced the InnoDB plugin which has new features that are now native to MySQL 5.5's InnoDB. In other words, MySQL 5.5 does not need any plugin to run the new InnoDB. Please run this query: 
+
+Under normal circumstances, I would have closed this question as a duplicate. There are already close votes. In this particular instance, since you put a bounty on this question, I'll try to answer it as best as I can. Look at the first post you mentioned. Note the table definition 
+
+Getting replication lag from the binary logs yourself takes a lot more leg work. mk-heartbeat checks for a heartbeat table and record only. Using a live table on a master and comparing the slave's copy of the heartbeat table to UNIX_TIMESTAMP() on the slave is a much more concise realtime lag measurement. You should go with mk-heartbeat. 
+
+in the new server's This will work seamlessly if the new server has the same version of MySQL as the old. If the new server has the next higher major release (5.1 -> 5.5,5.5 - > 5.6) you will then have to run . Make sure you keep a backup. If you are using InnoDB (in whole or in part), get all the InnoDB settings from the old over the new server's . Give it a Try !!! 
+
+You should consider using Nagios XI or MONyog to do all that for you. If you want to be a hero, use Google Charts 
+
+Once in a while, someone may run to run a backup. If is issued just after step 4, the temp created disappears and so does its data. When you run Replication breaks instantly complaining the table does not exist. This is normal because when a DB Connections terminates deliberately or accidently, all temp tables opened using in the DB session are dropped. Running kill the SQL thread who was holding opening the temp table. The only workaround for this is to create the table using instead of . When run , the temp table you created normally does not disappear. I have seen this happen maybe 10 times in my DBA career. Fixing it using the binary logs to find out the name of the temp tables, to create those tables using , then starting replication up was the only maintenance possible without just brute force copying the master. OBSERVATION #2 only works on tables with primary keys and/or unique keys. It works maybe 99% of the time. I have seen instances where the checksum of a table on the master and slave were different. I would run , there were still differences (Of course, I was doing in circular replication with 3 masters, which can be a little dangerous. Using it in Master/Slave is far more stable) OBSERVATION #3 You mentioned There is some unsafe queries. Does it get some problems with MIXED based replication? It depends. The most popular unsafe query is any UPDATE or DELETE that uses . With SBR, this could possibly cause MySQL to UPDATE or DELETE rows from a table on the Slave in a different order tham that of the Master. With RBR, I believe the exact changes in a row are more identifiable to UPDATE or DELETE on the Slave. SOLUTION : Avoid using unsafe queries. Then, you will not worry !!! OBSERVATION #4 I just read your second link. ROFL !!! I am familiar with the poster of the answer. 
+
+I would say . I have good three(3) reasons why, but there are possible workarounds if you cannot acquire another DB Server. Before I discuss those reasons, have a look at a Pictorial Representation of the InnoDB Architecture (from Percona CTO Vadim Tkachenko) 
+
+facilitate automated logging via triggers You would definitely have a penalty to pay because you would introduce additional disk I/O using triggers to record every login. You could pull off some elaborate infrastructure nuances to alleviate most of that disk I/O as follows : 
+
+This could reduce the number of bytes that the index and table rows take up and potentially speed up queries in so doing. 
+
+MySQL Documentation Under Natural Language Full-Text Searches Paragraph 1 returns a relevance value; that is, a similarity measure between the search string and the text in that row in the columns named in the MATCH() list***. 
+
+With reference to the mysql schema, please don't touch it. Why ??? In MySQL 5.5, all tables in the mysql schema were MyISAM. 
+
+Give it a Try and let us all know if this helps. UPDATE 2012-01-13 18:26 EDT This may sound very gross but you can pipe the output of mysqldump into sed as follows: 
+
+In the OS, go to that folder, run (or for you people using Windows) and look for any file that begins with the hostname followed by followed by six digits. The only way to disable relay logs is to disable replication completely. Otherwise, MySQL will generate relay logs once is executed by hand or by a mysqld startup. 
+
+This will also defrag all InnoDB tables that are already outside ibdata1. INSERTs and UPDATEs against those tables inside ibdata1 can still make ibdata1 grow. Is that bad? If ibdata1 resides in ext3 disk, there is OS-dependent size limit of 2TB. If you are nowhere near 2TB, then don't worry about performance. Switching to innodb_file_per_table spares you any growth spurts of ibdata1. If ibdata1 ever approaches 2TB, you need to 
+
+The first thing I noticed is that the column is not indexed. For all intents and purposes, your acting is since it is the only unique key present without a definition. Since is not indexed, I could see mysqld wanting to do a full table scan to fulfill the query. You should want to create a UNIQUE KEY on as well if you intend on having two different unique keys and having two different references to one row. Note that has the auto_increment attribute. There is no need to increment it manually, like you did with 
+
+I would set the innodb_buffer_pool_size to 1536M (which is 1.5G). Then, upon mysqld restart, innodb_buffer_pool_instances would bounce up to its default of 8. Even though innodb_buffer_pool_size is dynamic, innodb_buffer_pool_instances is not. Therefore, you must set these values in and restart mysqld (it is required). 
+
+If you find the Sort_merge_passes and the rate too high, then feel free to increase sort_buffer_size. Suppose you want to raise to 4M. You would run this: 
+
+Yes, it is equivalent, provided the slave error you are skipping is 1062 (Duplicate Key) It would have to appear in the section of my.cnf like this 
+
+If the slave is not a master to other slaves, then you do not need binary logging on the slave To reclaim the space of those logs on the Slave immediately, run this 
+
+If nothing comes back from this second query, that means no user in mysql.user has ssl_type and ssl_cipher filled in properly. Another thing you can investigate is this: Did you add this to my.ini ? 
+
+Since MyISAM requires a full table lock for INSERTs, UPDATEs and DELETEs , this makes the table have the same mechanical behavior as a sequence. CAVEAT You periodically need to clean up the table You could just truncate the table 
+
+STEP 06 : Move from Master DB Server to /root on the Slave DB Server STEP 07 : On the Slave DB Server, load the Stored Procedures 
+
+If dates are partitioned correctly, then you have a bug-infested mysql in relation to the query optimizer. If dates appear in a partition that do not belong, I would reload the table from scratch as follows: 
+
+Therefore, if the second INSERT had failed and rolled back, it makes the gap. You may have to set innodb_autoinc_lock_mode to 0 or 2. Please read the MySQL Documentation on Configurable InnoDB Auto-Increment Locking to understand what changing innodb_autoinc_lock_mode can do for you. 
+
+or disable autocommit using .NET protocols (Disclaimer: I'm not a .NET developer) Although I am leaning toward READ-UNCOMMITTED to allow "dirty reads", you must experiment with other transaction isolation levels at some point to see which one has the desired effect. Give it a Try !!! 
+
+This will let you see if anyone ran a shutdown from within the server. Note that this will not let you see remote mysqladmin shutdowns. Perhaps running and locating the word or might help. MySQL's Viewpoint Shutdown commands do not exist from command line utilities. Therefore, binary logs will not have shutdowns recorded. You are on the right track when you said; 
+
+When crosschecking for mutual friendship, it could incur a little expense because the userid may be retrieved from the table when traversing the index. Perhaps you could index as follows: 
+
+Under these two options, you would have to perform a manual COMMIT or a manual ROLLBACK. CAVEAT If the table is MyISAM, then the explanation is simpler. Since there are no transactions for the MyISAM storage engine, all INSERTs, UPDATEs, and DELETEs executed are permanent. No rollbacks whatsoever. 
+
+Since error 1452 breaks the SQL thread, you can make MySQL Replication skip that error by adding the slave-skip-errors option under the group header in the Slave's as follows: 
+
+Provide a list to tables that you want to dump row by row Use --skip-extended-insert, which forces each to be one row Use --hex-blob 
+
+EPILOGUE When everything is done, all the files will be gone. All the data and index pages will be inside ibdata1. You will find accessing the INFORMATION_SCHEMA against all InnoDB tables shockingly fast. Here is the InnoDB Architecture 
+
+Any database with no tables in it simply do not appear in this query's result set. How do you mysqldump these nonempty databases? Using the aforementioned query, like this: 
+
+I can understand you saying "stable". There is no clean mechanism in MySQL to implicitly govern the order in which MySQL can delete rows using . It is actually not transaction-safe for MySQL Replication. The only way to guarantee an orderly deletion of rows is to delete by a PRIMARY KEY or UNIQUE KEY that does not rely on an auto_increment column. EXAMPLE OF STABLE DELETE Suppose you want to delete the first 10 employees in a company table (layoffs do hurt, this is only an example) 
+
+If the summonerID drives which gameIDs to retrieve, then the query needs to have be the lead table in the query 
+
+to see your DB Level users. Please also look into your DB level user having the TRIGGER privilege, which can allow a database level user to create, drop, or execute triggers. Your real problem comes from Drupal's required settings for CiviCRM 
+
+I searched around Google, and I'll admit, it's tough to find any documentation. You can try these links 
+
+Rhetorical Question: Do you really need to rank all 12,000,000 records? At my employer's web hosting company, we have a gaming client that ranks its top 10,000 players per game platform. They use the same construct you do. You should just limit it to the top 10,000 or whatever number is reasonable 
+
+From here, just install MEB on the Linux Box (For free version, use XtraBackup) and run your MEB backups locally on the Linux. 
+
+So, you would have a TRIE with a maximum height of 10. Starting at the root of the TRIE, if you have the number 4294967295, you traverse branches 4,2,9,4,9,6,7,2,9, and 5. At each branch, you would perform an array-styled binary search. If the branch located at that TRIE node is an exact match, you can assign a percentage to that level, and recursively walk down that branch to check for the next digit and return percentages from deeper TRIE nodes to add to the percentage you have at the currently searched TRIE node. If the branch located at that TRIE node is NOT an exact match, you stop your recursive search there and return either 0 or some other percentage you may want to designate. Given the sum of return values from all searched TRIE nodes, you may want to sum up the percentages and divide that answer by the length of the string. In other words, Pct per Node = (1 / (Number of TRIE nodes that need to be searched)) or Zero(0). Sum(Pct) = (Number of TRIE nodes exactly matched) / (Number of TRIE nodes that need to be searched [length of the string being searched]). Given the length of the numberic field you store, you have O(log n) due to field length. For each TRIE node, you have O(log n) for searching for the proper branch. Overall, your search should have O(log (log n)) search time. This performance stands out ever more if the field is alphanumeric. Assuming using only ASCII, each TRIE node would have 256 branches. The height of the TRIE would depend on the length of the character field. Representing this TRIE for variable-length strings would produce TRIE nodes that would be very sparse, but quickly searchable nonetheless. Regardless what database you use, carefuly plan the data types you will be using to represent the TRIE node. You may also want to partition the table so that strings of length n terminate in partition n. Thus, you will have O(log n) search time at each partition. $URL$ $URL$ $URL$ $URL$ 
+
+I think a chunk is a set number of rows to be scanned and checksummed. I never did like chunks because if the table order matters, each chunk could be completely different if just one row was written ahead or behind another. Try not setting a chunk size and see if the entire table is checksummed as a whole as a opposed to each chunk checksum. You can also run mk-table-sync using the option and redirect to a text file to see if there is any SQL created that would have been executed to sync the slave had you used the option. If nothing comes out into the text file from , you will have to resort to doing physical copying (for MyISAM) or mysqldump the table and loading it on the slave (for InnoDB). Give it a Try !!!

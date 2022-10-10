@@ -1,0 +1,135 @@
+It's hard because there is no object to work with as the will never return so you can only add the once via the constructor. Code The delegate shouldn't be nested inside the class. It also shouldn't be a custom delegate too - if used as an . By convention we use the delegate for this. As you want to pass the input to the event handler you'll need to create custom to make it possible. There is a generic where you can use the new class. 
+
+You are assigning the command to a field. This is a very bad idea. If you call the methods in a multithreaded scenario each thread will overwrite the work of the other one(s). It's better here to use function local commands rather then a class wide field. There also a risk that each thread will dispose the other one(s) command as you also call the method. Have you considered to create extensions instead? You may also take a look at Dapper? It does exactly the same thing as your class. Executing queries and mapping them to objects. 
+
+This is where you actually use the method as an event handler. But its name doesn't match the event. The correct name should be . So going this path you should now have this: 
+
+Overall I find this code is very messy and contains a lot of misleading names and comments. You should work on smaller methods with precise descriptive names so that you don't have to write comments trying to explain what you code does. Comments are to explain why you are doing something, not what or how. 
+
+I wonder that the linked SO question does not mention the method. With it you can randomize the list in place by creating a custom . You should also return the new result so you can chain other extensions if necessary. 
+
+So how does the work? I turned it into a hot observable with + . I want it to be ticking regardles if there is anyone listening. The new also can check how many jobs are already running and decline starting a new one. How did I fix the missing second issue? The is publishing timestamps the same way it did before but now it additionally checks if the difference between the last and the current timestamp is greater then . If it is, it publishes the missing second before publishing the current one. This is achieved by switching from to . Two intervals published virtually at the same moment don't really matter. More important is to guarantee that nothing is left out and that jobs at any second can be triggered. I think it's extremely unlikely that this would cause any issues ever. 
+
+The two main filters are the and the . Each of them customizes the patters further to create the final version that either must start with a or be at the end of the string so that I don't have to use for common exclusions like . 
+
+It would probably be too easy if the old worked as intended being that simple. But an eye-openig review showed that from time to time it'll miss one second due to 14ms timer incaccuracy. This of course would have bad implications on the schedules (they wouldn't fire if their second was skipped). 
+
+There still other improvements possible like: - separate the saving from the console output into two methods - encapsulate the file reading in another method The final version should look like this: 
+
+Decorator You can also build different cars with a decorator pattern instead of an inheritance. You leave the untouched: 
+
+This is tricky. The does not have a default constructor. This means that the method should throw an for types without a default constructor. An empty instance of a string is of no use. Strings are immutable so you cannot set anything useful and therefore it should be forbidden to create one. In such cases the tester-doer pattern is recommendable. To implement it you'd need to add a property like or . This would be the tester. is the doer. There is one more issue in this method. The usage of this is invalid: 
+
+Nowaydays I wouldn't chose XML anymore. With JSON you'd be better off. The most popular framework (JSON.NET) can solve all your problems because: 
+
+For this you don't even need to write an extension because there is already one: and its safe equivalent . 
+
+I guess the name of is just an accident because you gave everything else very good names ;-) and when I see this line: 
+
+The order the trim arguments is weird. It doesn't follow any logic. It should be clockwise like in WPF or CSS: top, right, bottom, left. 
+
+There is one issue with stopping the scheduler. You are using the variable to control the loop of the method but there is nowhere any mechanism to stop the task. I think the scheduler should be and use a to cancel the method that initialized it. 
+
+If you were applying for a position of a senior developer this code would be unacceptable. I would expect from you: 
+
+Example With my unit-tests I can now pass it the and several parameters and check their equality in one go. This is an example from one of my tests: 
+
+It wasn't easy but I managed to move all code that needs to be tested into a new class - I know, lolcat speak :-) that now receives a bunch of serivces and is created by Autofac too. Everything is abstracted and everything can be replaced for testing. Now I can test the application's behavior for example to verfiy it exits if one of the requried files is missing or doesn't crash if an optional one is invalid. 
+
+We actually don't use the anymore. The same thing can be done much easier with the newer Task Parallel Library (TPL). 
+
+We usually don't do that because you are creating a new stack-trace here. To rethrow the exception should should just use the keyword, without the : 
+
+You seem to be using expressions. Be aware of the performance hit if you use it a lot. If you use C# 6 then this would be a better alternative: 
+
+This is a code smell. The class and the namespace shouldn't have the same names. The namespace should probably by . 
+
+EDIT You can move the implementation into an abstract class so that you don't have to repeat yourself if you have another connection: 
+
+I picked an abstract class because it provides the event. You may need to handle it in the hard-level where the timer runs out. 
+
+You have es for everything but this method. If something goes wrong here the application will crash. 
+
+This is the next line following the but this can go sideways if the is the first value of the enum it might be returned as a default value and the flow will enter the even if the massage part wasn't in the correct format. 
+
+Try to be consistant with the LINQ API and don't invent new method suffixes like . Use overloads instead. In fact you can implement it once and call the core method with other overloads. Notice the order of parameters. It's consistant with current APIs. first then index. There is also no explicit parameter checking because it uses an empty collection if the is and the operator to not call the delegate if this one is . You can also throw if you want. 
+
+You write in the comment modifiter for every effect type so why not give the variable such a name: ? I nowhere see the being used. This could be removed. 
+
+Your usage of and full type names is very inconsistant. Inside the same method you use both conventions. 
+
+I can imagine that such a service would have this API. You don't return but nothing if it worked and throw an exception if it didn't. If you don't throw exceptions then the user cannot know what went wrong if a service wasn't able to send a notification. 
+
+You could also use strings but ten you'd need to parse the values and then sort them before you compare the collections. Usage: 
+
+now you need to derive the and classes from an that will provide both locations some general properties like or maybe coordinates etc. 
+
+In an interview it usually doesn't matter if you actually solve the problem. What is most important is the way you (try to) solve it. If they don't tell you it should be the possibly fastest solution ever you should not optimize it prematurely but instead show that you know how to write SOLID code like encapsulate propertly, make the code testable etc. show that you know the techniques. 
+
+I'm aware of the fact that the LINQ solution might not be the fastest one but it's definitely the esiest one. If you don't notice any performance hit then why make it so complex? Premature optimization is the root of all evil. The point is that you should separate each feature so that you can work on it and test it without affecting the others. If you can focus on one thing at a time you can better optimize it. 
+
+If you however want to keep the change tracking then you should encapsulate it in another class. You could reuse it for other models and it wouldn't polute the API with unnecessary methods or fields, even if only private - they don't belong to the model. You may have the idea to derive the model from a change-tracked-model but I don't think this is such a good idea as in WPF you'll need to often derive the view-model from the . 
+
+I find it is not obvious to the user what happens when he sets the and that he needs to actually wait while setting it. I prefer to have a method like 
+
+You obviously implemented the Observer pattern here. So let's improve the naming and the overall design so that the pupose of each class and method is clear to the user. First instead of just the class should be called and consequently the interface should be: 
+
+I think you are not testing everything. The API should create a user but the only thing you assert is the 
+
+Since you are not reading your 1:1 into a data object but you use a lot of conditions there to get alternative elements like here: 
+
+to encapsulate all those fields that hold data related to players like , , , etc. Currently player data is scattered over multiple classes and assemblies. You hold some of it in and in . Your enum then gets the name and you change to and make it a dictionary of players: 
+
+This should contain a but even with it, it won't work yet because the first won't pass the second time. The logic is more complex and it would require a flag to skip "" spaces. 
+
+This shouldn't be there. You either need another method that sets default values for uninitialized properties so that the user knows his objects are modified or... you need another really safe approach. This means you need a special comparer that you can use with the 
+
+When writing decorators you should not actually use the word but give it a more meaningful name that clearly expresses its purpose. 
+
+I would also prefer if the method returned the loaded session too so I can immediately use it without switching to the property: 
+
+There is always one message that can contain any number of nested elements. Desclimer: the class names are not random, they are industry standard element names like stands for Inbound Flight Information or stands for Operational Outbound Flight Information and so on. I use full names in the production code but used the letters for testing the tree algorithm. The is rather straightforward and just implements the interface (nothing unusual here): 
+
+These lines are unnecessary because if there are not properties the resulting collection will be empty anwyway. 
+
+In my library for styling the I need to be able to add or update two styles: and . The use case is very simple. There is a string with styles that I'm building and that I update to change the color if necessary. I divided this task into three steps: 
+
+It's a weird process. It first validates the object and then calculate the offer. The property should be a getter-only property and use the calculator to get the value and the validation should take place where the other properties necessary for the calculation are set because they need to be validated as apparently they can be invalid. 
+
+Hardcoded numbers? No settings? What if this won't work and you have to tune it? You'll have to update all instances! 
+
+There are APIs like the extension that require the to work. I find it's too much work for such a simple task to implement an interface so I thought why not automate it. 
+
+It's better not to use this keyword. It doesn't really help the readability and you're not using it consistently anyway. 
+
+Names Names Names Members We don't use UPPER_CASE in C# at all. Ok, I could live with UPPER_CASE names but other members or even function parameters are a no-go. To me it looks like everything was a constant. It's very hard to read. You are also not consistant because some members have almost correct names like that actaully should be . Classes We don't use the prefix for type names. They are reserved for generic placeholders like . Structs We don't use the prefix for struct names. We use it only for interface names like . 
+
+You have too many obvious comments here. There is no need to comment start as start ;-) One of them can even be replaced by a helper variable that makes the comment unnecessary. Meaningful variables are always better then comments. 
+
+I have a collection of full type names where I need to reduce common namespaces. For this purpose I wrote two extensions. The first one explodes each namespace into pieces and the second one removes the first name for as long as all first names are equal thus reducing each namespace. 
+
+You start by creating a custom attribute. Whether you use indexes or letters or whatever it's your choice. This is just an example. 
+
+however in this version it is the one that throws exceptions after checking a validation rule. The method can be overriden in a derived class which allows to create a new validation context for unit testing. It is now able to throw a different kind of exception that the unit testing environment will notice. It forwards the original exception as the inner one. 
+
+You'll find the in the namespace. With the loop you don't need the helper because the body is an (an anonymous method, a delegate) so you can safely and skip the rest of it. 
+
+The main class is the that encapsulates the enitre setup process that I had to repeat for each query/database. Most databases that I use are readonly so I do not need hte change tracking and thus the property allowing to disable it. I use model-first for all of them. 
+
+This change will allow you to remove lot's of code (several fields) and make your classes simpler and easier to read. So a line like this one: 
+
+Functional To make it even cleaner I suggest encapsulating the in its own method so the final extension could be: 
+
+There should be a helper variable for this. It's not clear what you are checking here especially that a is used. 
+
+We add the suffix to methods that are marked with the keyword. This is a naming convention that as you'll see in a moment Entity Framework follows too. 
+
+It depnds on what kind of tooling stuff your are coding. If this is some tiny helper then I'd go with tuples. If I was creatng a general purpose library then and big type would be better. You could validate the parameters and make sure that etc. As an example you can take a look at my generic that is supported by expressions to be able to work with any comparable type . 
+
+you can use what makes you code more readable, the type is clear so it's not necessary to repeat it twice: 
+
+You can however make the lookup faster by using a . Its method is an O(1) operation unlike the array's O(n). Additionaly you should instantiate it with so that you don't have to use . 
+
+On top of all other answers... Your current code can be made even simpler. There is no need for the parameter. Just try to parse it as int and if this doesn't work assume it's a string. After all you need only one validation method which is that you can use for both numbers and strings. 
+
+It would require a couple of adjustments to the models and to the sorting and finding logic but this way you could implement it once and for all and use it in any other project to link all kinds of stuff this way. Not just the entity. I also think you don't need the collection type because as soon as you know one document (a node), you can rebuild it from there.

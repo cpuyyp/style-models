@@ -1,0 +1,59 @@
+Running this inside a transaction at default level will fail under load. The reads aren't mutually exclusive and serialized so two concurrent transactions can both read that the row does not exist. You could add hints to the . 
+
+This appears to be incorrect! It seems from my testing that the value it actually uses for the in the second case is the of the default schema for the executing user rather than an identifier for that specific user. Running the four statements again under a different login with default schema "dbo" gives. 
+
+But you can see that under SQL Server's cost model this plan is given a higher estimated cost than the competing CI scan (roughly double). 
+
+Note that it says invalidated not garbage collected. Also see the Garbage Collection section (emphasis mine) 
+
+The mechanism behind the sargability of casting to date is called dynamic seek. SQL Server calls an internal function to get the start and end of the range. Somewhat surprisingly this is not the same range as your literal values. Creating a table with a row per page and 1440 rows per day 
+
+If friendship is intended to be symmetrical (i.e. it is not possible for to be friends with but not vice-versa) then I would just store the one way relationship with a check constraint ensuring that each relationship can only be represented one way. Also I would ditch the surrogate id and have a composite PK instead (and possibly a composite unique index also on the reversed columns). 
+
+You can permissions on individual objects, schemas or the entire database but not filtered by object type to only include Views. For this sort of adhoc task I'd probably create a new role called , add the user to that role then in SSMS run 
+
+Subtree cost is not a good general indicator. Even in actual plans the costs shown are based on estimates and inaccurate cardinality estimates can occur. Even if the cardinality estimates are perfect however the costs shown are still just derived from costing formulas which may bear little relation to the true actual performance. Certain constructs such as scalar UDFs are generally woefully undercosted in the plan. Logical reads can be a very useful indicator but not all logical reads are equal. A read of one row on a page that is already in cache is obviously much cheaper than reading all rows on a page that needs to be brought in from disc. One other issue to be aware of is that logical reads for work tables report rows read not pages so the units are not always consistent. Elapsed time is a useful indicator but that requires some interpretation too. When looking at the elapsed time of two queries you might prefer a query with a slightly greater elapsed time that uses less resources (e.g. lower memory grant or serial plan rather than parallel) 
+
+is just a session option allowing you to insert identity values explicitly in a subsequent statement. It doesn't do anything to the transaction log. I presume your first transaction wasn't actually committed and now is rolling back. This could happen if you have on Or a possibly more likely scenario is that you were already in an open transaction unknowingly. This could happen if your original script contained an error between the and . Executing could then terminate execution leaving an open transaction (If you had used any error would have rollbacked the transaction rather than leaving it open.) Then after fixing the error and rerunning the script in the same session the would be called again and increment and the would just decrement it down to 1, leaving the transaction still open. Rather than killing the session and causing transaction rollback the correct thing to do in that case (assuming you were happy that everything was OK and the original error condition hadn't caused changes that you wouldn't want to commit) would have been to check and again as many times as needed (I.e. in the event that there were multiple executions before the error was fixed) until that reached zero. 
+
+Which I imagine will resolve your issue (if it doesn't try inserting the into a temp table first and referencing that in the ) More details 
+
+So it appears that all the computed column definitions get expanded out then during the Project Normalization stage all the identical expressions get matched back to computed columns and it just happens to match in this case. i.e. it does not give any preference to the column. If the table is re-created with the following definition 
+
+The addition of the trailing wildcard has now caused an index scan. The cost of the plan is still quite low though for a scan on a 20 million row table. Adding shows some more information 
+
+/ have 1 byte each for precision and scale. have 2 bytes for max length and 4 bytes for collation id. have 2 bytes for max length. 
+
+The below is a simplified version of something I came across in production (where the plan got catastrophically worse on a day where an unusually high number of batches were processed). The repro has been tested against 2014 and 2016 with the new cardinality estimator. 
+
+The transaction logs would need to be restored after a compatible backup has been restored. This is telling you that there is no such backup as one has never been taken since the database has been in full or bulk logged recovery mode. It doesn't look like step 1 was run successfully for that database, or possibly someone temporarily changed the recovery mode for that database to simple and broke the log chain so you must take another full backup. 
+
+The fact that you are comparing it against an variable is irrelevant. The plan for always has an where is the label for the expression representing the result of the . My assumption has always been that the code for just ends up calling the same code as and the cast is necessary to convert the result of that back down to . In fact isn't even distinguished in the query plan from . Both show up as . does get distinguished in the execution plan from but the latter still gets an implicit cast back down to . Some evidence that this is the case is below. 
+
+so it averaged 1.36 microseconds faster per row in my test so it seems like a micro optimisation not worth spending time on IMO. Regarding efficiency you could consider not persisting it at all. It doesn't need to be to be indexed. Just deterministic. The index does of course persist it anyway but it won't bloat up the row size in the data pages. 
+
+The blog post you reference also indicates how you could have answered this yourself. If you execute 
+
+No. This is a metadata only change in SQL Server 2008. See Size-of-data operations when adding and removing columns SQL Server 2012 can also add non nullable columns with a default without having to update all rows however there are also some circumstances in 2012 in which adding a nullable column is no longer just a metadata change. 
+
+No this isn't possible. I'd probably create a separate table that holds the relevant s (instead of having the flag) and have the FK reference that table instead. Another more convoluted way to enforce it and keep the column would be 
+
+Shows estimated rows of 1856. This is exactly what would be expected by getting the estimated rows for the 19 equality predicates individually and adding them together. 
+
+There is an implicit at the beginning and at the end as the table goes out of scope that aren't associated with either the or the statement. If you replace with a table you should see some additional reads for both the and statements. For me I see 36 for the and 100 for the so that accounts for 136 of your missing 137 reads. (Script with table) 
+
+The low selectivity issue mentioned by Remus is not sufficient on its own to cause the problem on that size table. The uniqueifier starts at and can go up to before actually overflowing the range. It also requires the right pattern of repeated deletes and inserts to see the issue. 
+
+The plan is able to perform a merge join between the results of the two indexes on the column. (More details of merge join algorithm here). Merge join requires both inputs to be ordered by the joining key. The nonclustered indexes are ordered by and respectively (nonunique non clustered indexes always have the row locator added in to the end of the key implicitly if not added explicitly). The query without any wildcards is performing an equality seek into and . As each seek is only retrieving one exact value from the leading column the matching rows will be ordered by therefore this plan is possible. Query plan operators execute from left to right. With the left operator requesting rows from its children, which in turn request rows from their children (and so on until the leaf nodes are reached). The iterator will stop requesting any more rows from its child once 10 have been received. SQL Server has statistics on the indexes that tell it that 1% of the rows match each predicate. It assumes that these statistics are independent (i.e. not correlated either positively or negatively) so that on average once it has processed 1,000 rows matching the first predicate it will find 10 matching the second and can exit. (the plan above actually shows 987 rather than 1,000 but close enough). In fact as the predicates are negatively correlated the actual plan shows that all 200,000 matching rows needed to be processed from each index but this is mitigated to some extent because the zero joined rows also means zero lookups were actually needed. Compare with 
+
+Doesn't benefit from column statistics. It can just use that directly and even if statistics are disabled will be accurate. A query with would use the statistics and return the whole table. As it happens the statistics don't get updated in your case anyway when such a query is executed as you haven't hit the threshold for modifications for an auto update to occur. But the estimates are still accurate. The statistics records that there were 1,000 rows at sampling time. 
+
+Another way (that meets the requirements and is compatible with 2005+ but should likely not ever be used in practice) is 
+
+No there's no way of configuring SQL Server to do what you want to do. Under snapshot isolation the call to gets blocked waiting for a shared key lock on one of the system base tables () when doing a from The Using Row Versioning-based Isolation Levels topic in BOL does say: 
+
+The reason for is to avoid problems with snapshot isolation. One problem with the approach above is that because the constraints are evaluated RBAR it can fail some transactions that ought to succeed. For the example data 
+
+Testing against on my machine this brought the runtime down from about 10 seconds to 250ms (after the first run was out of the way as the plan took 2 seconds to compile). It adds an eager spool to the plan that materialises the result of the Join on the first recursive call then replays it on subsequent calls. This behaviour is not guaranteed however and you may want to upvote the Connect item request Provide a hint to force intermediate materialization of CTEs or derived tables I would feel safer creating the table explicitly as below rather than relying on this behaviour. 
+
+The table variable version spends about 60% of the time performing the insert statement and the subsequent select whereas the temporary table is less than half that. This is inline with the timings shown in the OP and with the conclusion above that the difference in performance is down to time spent performing ancillary work not due to time spent in the query execution itself. The most important functions contributing towards the "missing" 75% in the temporary table version are

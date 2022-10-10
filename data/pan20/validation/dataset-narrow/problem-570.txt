@@ -1,0 +1,41 @@
+That's 5000 * 5000 iterations for the outer 2 loops and 5000 * 5000 for the inner 2 loops. Lets be really conservative and say that the optional inner loops run for only 10% of all cases due to your condition. That's (25m) * (2.5m), or 62,500,000,000,000 iterations. Now let's be really optimistic and say that Excel can do a million of those per second (it can't). Using those assumptions, your first nested loop structure should finish sometime in early 2019. If each of the 3 sheets has 30k records, we're looking at somewhere in the neighborhood of 2500 years for it to complete. The next 3 nested looping structures are similar, but hardly relevant as by the time you reach that code the chances of an equipment failure, forced restart, etc. will be trending toward 100%. 
+
+The original code cached the result of the call to . This code only calls once when it set up the loop: 
+
+Each one of those is basically a function call that is going to return the exact same result. Miscellania The variable is always the same as (and has a much better name). I'd just use it as the loop variable. You aren't checking for invalid casts anywhere. One simple way to check this is with the function. It's generally a good idea to treat a Worksheet as user input - no telling what is going to be in a cell. EDIT: A couple of things that I noticed in the additional code that was posted for the class: AddToReport method You can exit your loop that checks for existing worksheet names early if you find a match: 
+
+...you set the font to the same value regardless of whether the condition is true or false. There may be others that I missed. I would also try to use consistent syntax. For example... 
+
+@M.Doerner addresses some possible optimizations to the loop structure, but I think it's important to illustrate why this code is (probably) still running. Let's count the iterations. For the sake of discussion, let's assume that each of the 3 sheets has the minimum number of rows from your estimate, 5,000 and do the math. Your first loop is this: 
+
+...instead of: Then you can simply use to get your array. 7 - Guard clauses should be in the procedure that they guard - not in the calling procedure. I'd move this code... 
+
+So, since we don't want to wait that long, lets step back and break the task down into smaller pieces: 
+
+Since your offsets are all fixed (and you have a reference to the worksheet), you can skip some overhead by using direct cell addresses. For example, can be replaced with . The only that you use for anything other than its value is . So... you should probably be pulling the 's into variables instead of the 's. For example, in this section of code it's possible to request 3 times. 
+
+The Code Note, is set to . For convenience, the raw file is available on pastebin. Yes, yes, I know - I'll get it up on github eventually. 
+
+This is a bit more efficient and much more readable. The test is unnecessary because your loop counter is already bound by that condition and the can't change inside the loop. It can be omitted entirely. With blocks should be outside of loops unless the object they are referring to can change. Remember, each keyword is at least one dereference. The value for is repeatedly calculating the last row of the Worksheet. You only need to do this once - afterward you can simply increment it: 
+
+No reason to use the object when you are selecting single cells. Use instead so you skip the concat. 
+
+DateRange() function Array handling You have a bug. The first element of will never be populated, because you give yourself a single element on this line... 
+
+VBA doesn't short circuit the calls, so first you get the value of (implicitly) twice, compare it to two different things, and (then this is the huge one) get the exact same value for every time through the loop. Again, cache values that you need to reuse. This is much easier if you use a loop (there isn't an statement): 
+
+Use With appropriately: You're doing this for your worksheets, but it doesn't actually do anything for you: 
+
+OK, I'll make a couple of assumptions here. First is that you are mainly looking for changes to individual cells or only changes in a specific row. The reason I am making that assumption is that if it isn't true, you aren't handling the cases where changes occur in multiple months at the same time. Remember, the Target object that you get as a parameter to Worksheet_Change is a Range - not a Row or a Cell. When you call Target.Row, it returns the top row in the passed Range making no guarantees that only 1 Row was altered. A good way to check to see if your final code handles this robustly is to select a 5x5 or 10x10 array of cells and clear them. Does this give you the desire behavior? If not, you may have to re-think your approach to the problem. Now, going on the assumption that you only care about single cell or single row edits, you need to test for that in your code. My general rule is to always try to resolve a Range into something more useful. The .Offset method is typically asking for trouble, as it gives a value that is relative to the Range as opposed to having a hard location on the Worksheet. You can always get your location on the Worksheet from a Range by getting the Row and Column of the upper-left most Cell: 
+
+is not free. In fact it's the complete opposite. It yields the processor to every other thread that needs to clear it's event queue. It also makes absolutely no sense to call when you've explicitly disabled 95% of the functionality that would make the call useful. 
+
+The C# code doesn't have a return statement outside of the loop. I don't have VB.NET installed in Visual Studio so I can't test it, but this is probably defeating optimization code in the compiler because it assumes that the return instruction can be reached. In fact, C# will give you a different warning if it is include in its source and warn you that unreachable code is detected if you include the corresponding code: 
+
+2 - There isn't any need for to return by reference. You can simply get the last row from the selected itself. Since you aren't even using in , it allows you to get rid of this dead code in that procedure: 
+
+A class can be thought of as a structure with additional functionality, but I wouldn't take that literally. I find it much more simple and more readable to just create independent backing variables to use: 
+
+Properties: I'm not sure if I like the "flag" properties as and . , , and might be better. Opinions are obviously welcome. is read only because it is intended to only be set by the passed parameter to (and is probably misnamed - again, suggestions are welcome). 
+
+...makes 3 cell reads (two are the same), but if is , it doesn't just stop there. You can either nest the statements...

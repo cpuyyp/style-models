@@ -1,0 +1,81 @@
+You also need to install the RPM to provide compatibility with system packages that were built against a lower version of MySQL. The current filename is which you can find at any mirror site. If this fails to resolve the issue, report a bug to MariaDB. 
+
+The hp-ilo package doesn't need to exist anymore on modern Linux systems, since the driver is now part of the mainline kernel (since 2.6.33 or thereabouts). It should not be necessary to do anything with a standard kernel on any mainstream Linux distribution, since they all build the module and make it available by default. However, you seem to have a nonstandard kernel from a third party. In this case, you may have to manually load the module: 
+
+We can see from the call trace that Apache tried to delete a file, and got hung up waiting for a lock to be released. Since the files are on an NFS server, you should be looking at the NFS server and the network connection between the web server and the NAS. One thing you may want to make sure of is that you have explicitly specified to use NFSv4 on both ends. It is much more reliable than NFSv3 and solves a lot of problems that used to plague previous NFS versions. The server should already be doing this if it's, e.g. RHEL 6 or later. It just remains to ensure that you have specified to use NFSv4 in your clients' mount options. (For instance, filesystem type, or filesystem type with mount option.) 
+
+simfs is not an actual filesystem; it's a map to a directory on the host (by default ). To check the filesystem, you have to check the host filesystem from the host, which also means you have to bring down every container on the host. If you believe it's necessary to check the filesystem, schedule a maintenance period and notify all the customers with containers on that host. 
+
+Congratulations, you've run into a kernel bug. While Ubuntu is shipping a fixed kernel for 12.10, the fix has never been backported to 12.04 LTS. (And while reading the bug on launchpad, I could not figure out how to mark Precise as affected...) 
+
+You started MySQL with the option, either on the command line or in , but you have MySQL users whose names include a hostname, rather than IP address. Since MySQL isn't resolving IP addresses to hostnames, it can't authenticate those users. To resolve the issue, do one or both of: 
+
+This turns out to be quite a difficult problem, if you limit yourself to the single system which you're trying to validate. Fortunately, we live in the real world, where there is more than one computer! Some possibilities for verifying the binary include: 
+
+(It's highly unlikely that you don't have a web server on your local network...) If you have to install lots of systems, consider using Spacewalk. 
+
+Yes, the tool is Red Hat-specific, allowing you to manage Red Hat subscriptions. Since CentOS doesn't have subscriptions, the distribution omits this tool. CentOS 7 now includes , though as it isn't RHEL it still doesn't really do anything useful. 
+
+Only the private key that you originally created will ever match the certificate. If it were possible to recreate it, then it would not be secure! If you lose the private key, then the only thing you can do is to have your existing certificate revoked, and a new certificate issued with a new private key. 
+
+The technology you're looking for is called NAT64. Note that this will generally run on a router upstream of your IPv4-only service, rather than on the server itself. What to use to implement NAT64, and where in your network to put it, is going to depend on your existing network architecture and the services that need to be accessed using it. Speaking of those services, if at all possible, they should be made IPv6-capable, or replaced. 
+
+Your system seems to be trying to mix packages from RHEL 6.0, 6.2 and 6.3. This isn't going to work very well. My first thought is that your yum caches are stale. Try cleaning them before you install the packages again: 
+
+This attack disproportionately affected universities because, for historical reasons, many universities use public IPv4 addresses for most or all of their network, and for academic reasons have little or no ingress (or egress!) filtering. Thus, many individual devices on a university network can be reached directly from anywhere on the Internet. In your specific case, a small office with an ADSL connection and home/SOHO router and static IP address, it's most likely that someone at the office explicitly forwarded TCP port 9100 from the Internet to the printer. (By default, because NAT is in use, incoming traffic has nowhere to go unless some provision is made to direct it somewhere.) To remediate this, you simply remove the port forwarding rule. In larger offices with proper ingress firewalling, you generally won't have any allow rules for this port at the border, except perhaps for VPN connections if you need people to be able to print over your VPN. To secure the printer/print server itself, use its built in allow list/access control list to specify the range(s) of IP addresses allowed to print to the printer, and deny all other IP addresses. (The linked document also contains other recommendations for securing your printers/print servers, which you should also evaluate.) 
+
+You're missing a directive in your block. So I don't expect your existing site to work without issues. As for adding more sites, just create more blocks. 
+
+You are checking the wrong variable in your rewrite condition. Because you are using Amazon Elastic Load Balancer to terminate your SSL sessions, Apache in your instance is unaware that they came in via HTTPS, and does not set HTTPS. ELB sets the X-Forwarded-Proto header to or depending on how the request was received. You can check this header instead, to effect the redirect. 
+
+The EPEL repository is intended for use with Red Hat Enterprise Linux and its clones (e.g. CentOS, Scientific Linux). It is not guaranteed to work with other distributions, even if they use RPM. Since Amazon Linux is not a clone of RHEL, (it was a fork and is significantly different today) and is not guaranteed to be compatible with packages built for RHEL, this is why it is not working. The only thing you can do is to remove the EPEL repository, or switch to a distribution other than Amazon Linux. 
+
+You can set the environment variable in order to cause all such questions to be suppressed. However, how packages get configured in this scenario may vary, so you should test thoroughly. 
+
+Your user's home directory may not be group or world writable, and the directory and may be readable only by the user. Once you fix the permissions, you should find your logins working again. 
+
+You've got it exactly backward: If you revert to your snapshot, then whatever is in it is replayed (in reverse) and merged to the volume from which the snapshot was taken. This makes the volume identical to the snapshot, and the snapshot is destroyed. If you delete the snapshot, nothing at all is merged; the snapshot is simply destroyed and your volume, which already has the current state of your filesystem, is unchanged. 
+
+Once that's done, rule out any possible problems with your cache being out of sync with the repositories by clearing the local cache. 
+
+The problem is that you named your zone but then you referred to it as , which isn't the name you selected. Either change the zone name from to in the directive, or change the zone name from to in the directive. 
+
+Per RFC 7208: You can use any mechanism with except for the mechanism. Note that it doesn't make much sense to use unless you are redirecting to records for a domain that is also under your control. If a third party asks you to do this, beat them over the head with a copy of the RFC; they should generally be asking you to instead. 
+
+First, get rid of phpMyAdmin. It's just a giant security hole, and doesn't even have a very pretty interface. You'll find that almost no professional DBAs or system administrators will go anywhere near it. It's not even really necessary, since the basics of SQL aren't hard to pick up. Second, the database files themselves are in MySQL's , so just check that in or ask MySQL where it is. 
+
+Docker is the usual solution these days, but it's not well suited - on its own - to a multi-user environment. You can scale up - way up - with something like Kubernetes or OpenShift, but for a little VPS that's probably way too much complexity. Nasty hackery like pm2, supervisord, forever, etc., are usable but systemd largely makes them obsolete. Consider moving to systemd user services, which each user can control at will. I've run services in NodeJS, Go and Ruby on Rails with this method. It's suitable for practically anything you can think of. A trivial example (which probably will require expansion): 
+
+This is the problem that SPF solves, and you can integrate it into Postfix with one of two SPF validating daemons for Postfix. The Python version is probably the best choice. The installation will vary a bit depending on your Linux distribution, but in general you'll do what's in Ubuntu's tutorial: 
+
+Based on your filesystem features output, you didn't actually convert your filesystem to ext4. To resolve the issue, convert the filesystem to ext4. Reboot your live CD and run the appropriate commands: 
+
+You have defined in two different blocks. Since the intent of one of them is to redirect traffic to , having it there is clearly erroneous. 
+
+You have also installed the remi repositories for EL6, but you are actually running EL7. You also need to correct this by using the EL7 repos instead. The easiest way to do this is to install the appropriate remi-release RPM for EL7. 
+
+As far as I can tell, if you have a functional DNS, you should not need LLMNR at all. It was designed for scenarios in which there is no DNS, such as ad-hoc networks and very small workgroups on a single subnet. 
+
+The usage statement clearly says that requires a argument, but you haven't provided one. Add in your router argument and optional SNMP community: 
+
+Send a copy of this pcap file to your ISP's network people. They should be able to figure out what in their network is broken. 
+
+What happens depends on whether the trigger is set to fire once. If the trigger is set to fire once, then the changes get applied to database A and Streams faithfully replicates them to database B. This sounds like what you want. Otherwise, the trigger fires again on database B after Streams replicates the change that caused the trigger to fire on database A. Which method is appropriate for any particular case depends on what the trigger does. See Oracle's documentation for a fuller explanation and another example. 
+
+I think your "virtual machine" is actually an OpenVZ container (which you can verify this by running ). In this case, you can't change sysctl or many others. The values are fixed. This is a well known issue with elasticsearch (issue #4978). It's not just Elasticsearch. Java apps are well known to perform poorly on various OpenVZ providers, mainly because the hosts are often poorly tuned and there's nothing you can do about it. One commenter on that issue echoed what would be my recommendation exactly: 
+
+For your purposes, the is an opaque blob. Just capture the value from the last log entry you receive on one call to and feed it to the next call: 
+
+You can't. This manual crash functionality is embedded in the PS/2 and USB keyboard drivers in Windows, and keystrokes originating from remote desktop connections never go anywhere near those drivers. Thus, you can only trigger this manual crash from a directly attached keyboard. 
+
+You're doing something wrong. is meant to operate on and recover disk partitions, which is not the problem you're having. Most likely you want to use its companion tool instead, which recovers deleted files (and not just photos). 
+
+So, only the URLs and would match these directives. Neither nor will match. What I think you want to do instead is to capture the remainder of the URL and use that in the destination URL. 
+
+I'm not sure why you keep mentioning EPEL when you've made it clear the repo at issue is the remi repository. In this case, the problem is that you got PHP from remi, but you disabled the repository. You will need to re-enable it to install additional packages from it. Edit the . 
+
+Use the DVD or Everything images or the netinstall image to install, instead of the Live CD that you are trying to use. You then have access to the regular installer. The Live CD does not include anaconda, the installation program, but only a custom installer that installs only that particular system image. 
+
+will monitor the memory controller and report memory error events to syslog, and in some configurations can offline bad memory pages. This is, of course, in addition to its usual use to monitor machine check exceptions and a variety of other hardware errors. Most Linux distributions have a service set up to run it as a daemon, e.g. for EL 6: 
+
+The kernel uses a small amount of memory for each physical extent that exists in mounted LVM volumes. So setting a larger PE size can save memory if you are severely memory constrained. For a server intended for virtualization, you should not be memory constrained. Also, tools which manage LVM may have to traverse the list of physical extents, and if there are more of them, then the tools will work more slowly. This doesn't affect regular day-to-day I/O, just using management tools. However, setting the PE size very large can result in wasted space, up to slightly less than the size of a PE per physical disk. With today's multi-terabyte drives, losing up to 31.9MB (32MB PE size) is really minor, but in the past when drives were only multi-gigabyte this was a serious consideration. The PE size, of course, also affects how you can size your LVs, since the size of an LV must be a multiple of the PE size. So setting the PE size higher than 1GB or so is probably not useful. In the end, the 32MB PE size seems perfectly reasonable for a virtualization server. You may even want to increase it further. For the smaller volumes created within the virtual machines, you probably want to use the system defaults, or 4MB, for much the same reasons.

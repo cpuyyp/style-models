@@ -1,0 +1,39 @@
+This is currently not the case and it looks like something you could improve on. If it were the case, you could then decide in your controller which of those Repositories to choose. This might either be an option in your api, or something you can do in a service container before the request is handled. I dont know your requirements here. (See $URL$ for service container, dependency injection ...) So e.g. 
+
+We see a speedup approaching 100x for this test data. You could also update your function to take a vector of lengths in a pretty straightforward way using sapply: 
+
+It seems that you are looping through seeds to find the one that causes a randomized procedure's output to match the output from a previous run. If you had set the random seed immediately before running the randomized procedure and have simply forgotten the seed you used, then this in theory would work; all you need to do is loop through the billion or so possible input seeds until one matches. There's no real way to speed up the process (beyond parallelizing, which would be easy because the problem is embarrassingly parallel). is just a wrapper on a loop, so that would not speed up the process. Unfortunately, more likely than not you did not set the random seed immediately before running the code. Therefore you would really need to test all the internal states of the pseudorandom number generator (PRNG) that you used to find the one that matches the results. Unfortunately there are intractably many internal states; for instance, the most popular implementation of the Mersenne Twister, which you are likely using, has a period of 2^19937 - 1, meaning it has at least that many possible internal states. Clearly it's impractical to test this many states, so it's probably hopeless to try to match an exact PRNG state if you hadn't set the seed immediately prior to running your randomized procedure. 
+
+Now what is ? This could either be the ElasticSearch or the relational DB oder the NoSql version of a MusicRepository. To do that you would have all those Repositories implement the same interface e.g. 
+
+I have a fairly ugly controller method I would like to refactor / extract. I can only test this in a integration type test which kind of signals a code smell. The method processes the form and needs to do one of 5 things, depending on which button was pressed 
+
+I think the task you are attempting to accomplish (obtain indices to reorder a data frame by several factors, one after another) is already handled well by the built-in function. Let's consider your sample data: 
+
+Another advantage is that the built-in function is more efficient than your implementation. Let's see on a resampled version of your dataset with 1 million rows: 
+
+These sorts of operations are tough to vectorize because you need to compare every element to all later elements. If the counting operation is a performance bottleneck in your code, then one possibility would be to implement it in C++ using the Rcpp package: 
+
+This doesn´t look all too repetitive to me, I see no obvious duplication. You could extract a local variable or two to make the naming more explicit and to not query for the same element twice. That would however be a tradeoff between function size and readability. Also you see a few references to the variable in one place, this indicates that this could be pulled into its own function. 
+
+if submitted and valid (button 1) => update some values on the entity and re-render the form if submitted and valid (button 2) => perform another controller action that shows a pdf print of the entity if submitted and valid (button 3) => save entity and redirect if not submitted or not valid => render form (plus errors) 
+
+Additionally, this part of the code hard-codes the choice of delta=60/61, which may make it harder to see what the code is doing or update to another delta value. It would be best to pass to the function and then use instead of in this expression. Here is the updated function: 
+
+The following code fixes these two issues by combining the data for all fips codes in a single call to rbind and by using a vectorized rolling mean function from the RcppRoll package. I did a few other cleanup tasks: passing the data to the function to make it more flexible and using instead of with . 
+
+I think your current solution is already right on track, you just need to take it further along. To combine the currently two controllers into one, lets write the code we wish we had. You want your controller to know almost nothing about the source the data comes from. Since your two actions are similar in interface already, lets start with this: 
+
+If enforcing the same interface for all the repositories is not what you´d like to choose, you could also introduce another layer of abstraction through some kind of mediator object that decides the repository for you and does the work to provide a consistent output for the controller. Instead of returning an array from your repositories, you could instead return objects relevant to your domain. E.g. an object, that knows nothing of databases and the sort. Each of the repositories can then populate such an object, and the controller can use another layer of abstraction to turn the array ob s into arrays/json. Update The package is implementing the ActiveRecord pattern which is certainly useful. However it means that you comes with a lot of stuff that is not relevant to an per se. It inherits all the Active Record methods provided by Eloquent. I find when I have the need to swap backends, the ActiveRecord pattern is less useful. The object relevant to you domain could simply look like 
+
+As you can see, is returning row numbers instead of row names; this yields an identical reordered data frame: 
+
+In addition to being a lot less code, this will result in sensible speedups for larger datasets. For instance, consider the performance with 10 million elements and 10 classes: 
+
+The Rcpp package takes some time to compile the function, so this option is probably only helpful if you are operating on very large vectors or if you are repeating the operation many times. 
+
+Not knowing anything about any datastore. Your different Repositories / backends would then simply populate this entity. Compare to the Doctrine Project which is more of a Data Mapper pattern implementation. Update 2 As posted above, "pluggin in" a different backend is as simple as getting the relevant repository from the service locator. You can do this by either aliasing the "selected" one to , or by selecting it on the fly in the controller 
+
+You are summing from j=1 through j=i by looping through the values individually and adding them up. In R you can get significant speedups by using the vectorized function: 
+
+In two places you are growing objects element by element. Please see Circle 2 of The R Inferno for why this is an inefficient way to grow objects. A vectorized rolling mean function should be much more efficient than one you code on your own with a loop in R.

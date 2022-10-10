@@ -1,0 +1,83 @@
+There is an error There is actually an error in your code, a hard one, a compilation error: you use without including . In some implementations, this header may be included by or , but this is no guaranteed by the C++ standard. Including whenever you use a standard exception is good practice. Stream operations It is not cear from your code which header is incuded for and which one is included for the stack implementation. Note that for the stack alone, including is enough. Also, as @Loki said in a previous iteration of the review, please provide an overload of to actually print your stack to a stream, this is the standard way of doing things. It's kind of strange to print things when you do operations. Containers are supposed to be reusable enough to have some requirements about efficiency. Printing things while doing the operations may slow down a program if the stack is used often (and produce unreadable diagnostic when you don't actually care about the stack). Growth factor Not even the standard data structures (e.g. ) do that, but it would be handy to allow users to control the growth factor of the stack. Some vector implementations have a factor growth of 2 (e.g. libstdc++'s one) while some other implementations have a different growth factor (e.g. folly's one) and argue that the growth factor can be directly related to performance. It could be a good idea to let users change the growth factor when they feel it might generate faster code. 
+
+Also, I have a remark about your spacing: it is too inconsistent. For example you sometimes put spaces after a comma, sometimes not; other times you put some when opening a brace but don't put any when clising it, etc... Your code would definitely be more pleasant to read if its style was more consistent. 
+
+As you can see, it even allows to drop the needed to differentiate the variables. The syntax only allows the member names on the left and the name resolution picks the parameters first on the right. About the destructor I bet that you will want runtime polymorphism with your widgets. In this case, follow @glampert's advice: make the destructor and . If it does not do anything, the simplest thing to do is to explicitly default it: 
+
+and structures I would go even further than @glampert and create and structures as well as a one. Experience has shown that this kind of small classes are extremely useful and can be used at many places in a GUI library (for example, getting the coodinates of the mouse can return a , computing the centre of a rectangle too, etc...). Moreover, once you have and classes, you can overload some of their operators to implement expressive and unambiguous operations such as multiplication by an integer. In the long run, you will see that it is easier to reason with these objects, and you can even return them from functions while you can't return and if they're not in a structure. Back to the Here is a concrete example of what your class does but should be actually performed by a class instead: 
+
+Fold expressions While the fold expressions are properly used, they do not always contribute to make the code more readable; I dare say that they are not the tool you need to solve your problem (for example in the implementation of , you need to resort to yet another template expansion trick to make the whole thing work). Moreover, be aware that N4358 proposes to remove the defaults for an empty pack for the operators , , and , so if a follow-up paper is accepted, then your implementation of will become ill-formed when the exponent is \$0\$. Anyway, if you choose to stick to fold expressions, it is safer to explicitly write the identity element of the multiplication to avoid surprises: 
+
+Now, if a destructor is and in a base class, then the derived class automagically have a destructor, you don't have to write anything. Therefore, the simplest thing to do would be to simply remove the destructors from , and if they don't do anything more than 's destructor; you program will then be correct but simpler. 
+
+The fact that your class uses an is an implementation detail. You should have written type aliases in and in to provide a better abstraction: 
+
+The function I propose allows to find the minimum and maximum values of a collection and to check that it is sorted up to a certain element. Basically it is a combination of and in a single pass function, without any significant overhead compared to a call to . 
+
+This line is so long that you had to split it. The inline does not add anything to the code or the readability here. Just go back to a regular : 
+
+I understand that passing the length around can be useful if you pass dynamic arrays to your functions, but you could still write some reusable helper functions to handle statically-sized arrays: 
+
+Order of the headers You often want to add/remove headers from your code and/or check whether some header is already included. It's really easier to check whether a header has already been included or not if you keep your directives in alphabetical ordering: 
+
+Also, as mentioned in one of the comments, I can replace by a lambda. Taking by reference in the lambda capture also allows to drop and the corresponding . Here is the modified : 
+
+Since you are using end-of-line commands, I will assume that you are using at least C99 in this review (it may be a compiler extension to C89 though). 
+
+That seems good. I really like the callback mechanism to do whatever we want with the marked positions and not one specific action. That makes for a generic tool; good design. I don't have much to say to improve the algorithm itself, but here are my two cents anyway: 
+
+Since you have access to a C++11 compiler, you should use the standard type trait in the default version of your template instead of just writing . Also, it should be : 
+
+You could also use curly braces, even for one-line statements. They always help to avoid errors, even though many think that they are useless for one line. Unfortunately, all I have in mind to simplify your task is some macro trickery to generate the code you need. While that may help, too much macro trickery often leads to code that can be too clever and hard to maintain; that is probably not a "reasonable" way to improve your code. 
+
+Power algorithm You are computing many powers in a tight loop, you probably want your power algorithm to be as fast as possible. Did you try from the standard header ? It operates with floating point numbers, but might still be faster than your algorithm. Otherwise, you can implement an exponentiation by squaring algorithm to reduce the number of operations you're performing: 
+
+Instead of checking whether the list is sorted in ascending or descending order, you could simply offer to the user the ability to choose whether the list is sorted according to a predicate and make the predicate default to . Then your function would be as simple as: 
+
+The ellipsis is a GCC extension to the C programming language known as Case Ranges. Using it hinders portability since not all compilers support it (as for most of the extensions). If you want to get rid of it, you should use the function proposed by Jerry Coffin: 
+
+Here, is only used if is . Since the variable is not used later, you should move it inside the to avoid creating a useless when is : 
+
+is an interesting tool, but there are alternatives built into the language: namely, you can use the Immediately-Invoked Function Expression (IIFE) borrowed straight from JavaScript and made usable thanks to C++11 lambda functions. Here is how you can use it to initialize : 
+
+That said, be aware that the function might be a little slower than your formula since it is implemented in such a way that it avoids overflows and underflows in the intermediate stages of computation. That's speed vs. security. Comparing distances In you compare distances to know whether two circles intersect. While it works, it is generally advised to compute squared distances instead of distances because it avoids to compute a potentially expensive . The function could be rewritten as follows: 
+
+Before reviewing the algorithm and its complexity, there is a number of things to be said about the code itself: 
+
+Here is the revised version of your code. I applied all the aforementioned modifications, appart from the ones which I explicitely stated are not: 
+
+Now, add a couple of methods to to make a downcast when needed. Since you know the derived type at compile time thanks to the template parameter , you can make a safe downcast with a : 
+
+This one review will be a little bit tricky: I was trying to implement a template struct in C11. Of course, templates don't really exist in C11, so I used a few macros to get the desired interface. Here is the implementation of the core features, trying to mimick those of the c++ . Some are still missing though. First, the macro : 
+
+The code above generated the same assembly than the hand-rolled version when I gave it five integers to rotate in the compiler explorer, with both GCC and Clang. I wanted to make a companion function, but repeatedly finding the last element of a template parameter pack is not as easy, so the easiest solution for a programmer is to pass the variables to rotate to in reverse order. Do you see any way to improve this simple algorithm? Anything that I might be missing? 
+
+The PEP8 explicitely says that comments that contradicts the code (that's often the case when you modified the code but not the comments) is worse than no comments 
+
+Perfect forwarding It's clear that you already used it. But there are some other places where it would make sense to use it: 
+
+@MikeMB answer already covers some interesting points, but there are still some more things that you could improve in your code: 
+
+The algorithm remains several orders of magnitude slower than most common sorting algorithms, but it's more correct and a bit faster than the original version in the question. 
+
+This will be a somewhat strange answer but the thing is that I can't find anything wrong with your code: it is not that easy to understand what it is doing, but it is only because the algorithms are not the most straightforward in the world; if we compare your code and the algorithms pseudo-code, it's easy to see that they are performing the same computations. Everything seems well-written, the language is used as it should be used... In the end, I only have a few almost-irrelevant remarks left: 
+
+Once again, I am assuming some implementation details that are not shown though. Anyway, try check whether coud be used to do what you want it to do. Standard algorithms can often do much more things than thought. 
+
+Work with larger integers than what allows Here, you seem to be asking for templates, so that your code works with any integer (and actually, any type which properly acts like an integer). I will convert the function for you so that you can analyze it, then templating the rest of the code will be left as an exercice: 
+
+Anyway, whenever possible, try to use reference smantics and to hide pointer semantics inside the classes so that the users of the classes don't have to bother with the pointers. 
+
+Names The names you use are all but explicit. While is good as a loop iterator, and should have more explicit names. NOTE: Hadn't it been for the , I would have thought that your code was written in plain old C, and not in C++. Is it intentional? 
+
+Sometimes, more is less Currently, we use the fact that at some point and will eventually become \$0\$ and that only one modification can happen right after this point. However, we currently don't use the fact that at some point or is \$0\$. We can actually write two loops instead of one: one loop that runs until the smallest of and is \$0\$ and another that runs until the other one reaches \$0\$. The second loop can be simplified since we know that one (the smallest value from the ) is \$0\$ during the iteration: 
+
+I doubt it would change a thing, but you could also try to find the point where to insert the value in a linear fashion, then rotate the values. It may be simpler for a compiler to vectorize code that linearly compares things then linearly copies things rather than a code that mixes comparison and copy operations on-the-fly. I did not test that, so don't take it for granted. To sum up: for small collection, it's unlikely that you will beat linear insertion sort unless you have specializations for some specific types or some specific sizes, which means more code. 
+
+To sum up: you write ten lines of code, then you get an automatic destruction of an SDL object with without any overhead, be it memory or performance overhead. That's awesome. 
+
+Counting sort is an excellent tool when you know that you will be sorting integer values in a tight range, so I would keep it as is with its « problems » instead of trying to turn it into a more generic algorithm. If you want a more flexible integer sorting algorithm, radix sort would be the way to go :) However, while keeping the spirit and simplicity of counting sort, there are still several small things you can do to make it better: 
+
+The algorithms in the standard library which care about order usually have an additional overload that takes a comparison function to replace . It can be useful to compare instances of types that do not have an overloaded or to compare things differently (for example, passing an instance of to will sort a collection in reverse order). Transforming your algorithm to take such a comparison function is more or less trivial: 
+
+Well, otherwise, I don't think there are obvious errors in the design. There are probably some other things that can be improved, but generally speaking it's not bad :)

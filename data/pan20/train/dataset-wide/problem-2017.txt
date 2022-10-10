@@ -1,0 +1,51 @@
+Cases like this can usually be solved for certain by enabling trace events 10046 (if you have authority to do so), and run tkprof on the resulting trace files: 
+
+You may need to add additional fields to the group by clause, depending on what your definition of a location is. (Does HoleID uniquely identify a location? Or is it a combination of HoleID and SampleID?) For your sample output, you would need to include as your group by fields. 
+
+If disk space is not at a premium, you could be able to create a "work" copy of the table, say , using CTAS (Create Table As Select) with criteria that would omit the records to be dropped. You can do the create statement in parallel, and with the append hint to make it fast, and then build all your indexes. Then, once it it finished, (and tested), rename the existing table to and rename the "work" table to . Once you are comfortable with everything to get rid of the old table. If there are a bunch of foreign key restraints, take a look at the PL/SQL package. It will clone your indexes, contraints, etc. when using the appropriate options. This is a summation of a suggestion by Tom Kyte of AskTom fame. After the first run, you can automate everything, and the create table should go much quicker, and can be done while the system is up, and application downtime would be limited to less than a minute to doing the renaming of the tables. Using CTAS will be much faster than doing several batch deletes. This approach can be particularly useful if you don't have partitioning licensed. Sample CTAS, keeping rows with data from the last 365 days and : 
+
+The higher the cardinality the more selective the index is. event_impression_ibfk_1 is being used on experiment_id and bucket_label neither of which appear to be particularly selective. If I am reading the explain plan correctly it thinks it needs to scan 14.9 million or your 40 million row table. If you have some quiet time or preferably downtime available it might be worth running 
+
+This is to ensure the distribution statistics of your table are up-to-date and thus help the query optimiser. Make sure you have physical resources for such a command to run, it will hit CPU and disk quite hard Is there some combination of fields in your table that are unique? If so then this will cause the InnoDB engine to use it to create the clustered index for the table. Clustered indexes are very fast when it comes to range scans which will play to your advantage if one of those fields that make up uniqueness is timestamp. A table can only ever have one clustered index. In MySQL the precedence for the DB Engine creating a clustered index is as follows:- 
+
+Personally I would rehearse it within a test environment and expect to do it during a quiet time out of business hours. 
+
+db_datareader is a built in role that grants read access to everything. db_datawriter is its equivalent for writes. If you want to grant limited CRUD access then you need to create a new role and use the GRANT statement to assign permissions to that role. After you have done that you can use the statements above to make your user a member of your new role as well. 
+
+Any application that uses GPUs for processing has to be custom-written to access the GPU's processing power. Where GPUs shine are in floating point arithmetic, something that is low on the list of database operations, so no, no database software is likely to harness GPUs for processing. 
+
+I get OK results from from server to both instances on , and I can connect to a non-dba user from server to both instances. I recreated the Oracle password file using on server instance and that did not help. Instance names are and on server . Here are my password files on that server: 
+
+Is this a one-time update, or are you planning on running that query after inserts, where the insert statement is not setting SSC.NUMAR_CHEST? If you want ascending numbers, it sounds like you need to use an Oracle sequence; your subquery will return the max value at the point in time of the start of your query. To use a sequence, create it once (using the name in the examples below), then reference it in your update; every time you access you will get a unique number: 
+
+If you have access to the server, use SQLPlus running on the server to invoke your query; that will eliminate the network delay. To get somewhat precise timings, invoke these SQL*Plus commands first: 
+
+RMAN command to see what can be deleted. Then do a to delete them. Do you have any guaranteed restore points defined? 
+
+It is possible to generate the GRANT statements dynamically but on any database with a security sensitivity I would be very careful doing so. 
+
+For the stored procedure part of your question I would set up an explicit role for stored proc access. I would keep this separate to MyLimitedCRUDRole as the visibility of what MyLimitedCRUDRole is of increasingly high importance in a GDPR world. I would also advise having roles that have clear and single purpose for clarity. 
+
+If you want a user to be able to read any table and view in your database then you would run the following from SQL Server 2012 onwards 
+
+Failing that try putting an index across timestamp, experiment_id and bucket_label. Again, you had best do this in quiet/down time and make sure you have the physical resource available to do it. On a separate point be very careful using field names that are reserved words such as timestamp. You can get some peculiar exceptions thrown in applications that are very hard to track down. 
+
+It depends how complex your spreadsheet is, how many worksheets, whether someone has put all sorts of merged cells, fancy titles etc I've had some success using Apache Tikka as a content extraction tool with basic Linux bash utilities such as grep, awk, sort etc. I've had to do this to determine which spreadsheets might contain GDPR sensitive data. Tikka can extract data from over 1400 file formats and is a JAR file that can be called just like any other Java program. The useful output from a spreadsheet will be tab delimited. The name of the sheet will without leading tabs. Cells will be separated by tabs and the first column in any sheet will be prefixed by a tab. This makes it really easy to grab what output you need and use the MySQL COPY FROM statement to ingest it. 
+
+You can use the clause on an alter table statement for things like partitioned tables, or tables you know will not have any rows. 
+
+Also, if your application is a commercial application, there may be several tables with zero rows. Or if you have partitioned tables, you may have some partitions with zero rows. You can drop space allocated to them with 
+
+command and see what LANG or LC_ALL is set to; you may need to set export NLS_OS_CHARSET=UTF-8 or the like. You can list the available locales in Unix with 
+
+Not really; but if the goal is to improve the performance of the query that aggregates information in the GTT, you could set OPTIMIZER_DYNAMIC_SAMPLING to maybe 5 or higher, if your Oracle version is 10g or higher. That would encourage Oracle's optimizer to work harder to determine the best plan by running some sampling queries. You can use that via a hint: 
+
+Using a different blocksize would probably be the last thing to try, and only if there is a good reason to do so. A good reason might include 
+
+An index-organized table (IOT) is just that; an index with no "real" table. All data besides the primary key are just "tacked on" to the primary key, so for example if you have an IOT with 6 columns, 2 of which make up the primary key, behind the scenes you just have an index with 6 columns, of which the first 2 columns make it unique. So, sorry, only way to fix it is to recreate the table; to improve the rebuild time temporarily disable logging. You cannot use an hint on inserts to an IOT table to force a direct path insert: 
+
+Let us suppose that you have built a reference data set that has two (or more) fields. For the sake of argument lets call the table geography 
+
+Potential pitfalls to watch out for are the data types, size and collation discrepancies between data_table.field1 and geography.Area_Code. If geography.Area_Code is unique and must always be present make sure you stick a primary key on it. It is probably worth adding an index to data_table.field1. Again, if it is mandatory and unique make it a primary key. 
+
+The technical limit on the number of columns depends on the engine. InnoDB allows 1017 in MySQL5.7 Those 1017 columns can cover a maximum of 65535 bytes. Records are stored on "pages". InnoDB allows the page size to be configured to 4, 8, 16, 32, 64Kb. Your record must fit on a page so you can't stick a 5K record on a 4K page. The problems with having wide records is that when the DB engine retrieves records it does so in pages. You can get few wide records on a page so retrieval performance decreases. DBs pull the results through memory so subsequent retrievals will see if the data remains in memory before falling back to storage. Having many records on a page means that the first physical retrieval of a page is more likely to load into memory records which can be logically (and much faster) read from memory. From a design perspective it depends on what your use case is. In an OLTP system then I would feel uncomfortable with 450+ columns. A database is not a dumb store. It can be used to enforce rules on the structure of information and the relationships between different data entities. This is an incredibly powerful weapon to have in your arsenal. In a data warehouse supporting certain analytical systems 450+ sounds like a lot however I have seen some wide denormalised tables used to feed OLAP cube technologies. If I saw a 450+ column table I should also ask questions about security. When I grant access to that table do I want everyone with access to have access to all 450+ columns? In addition to storage efficiency/performance normalisation can also factor in a security design. Consider performance. Of those 450+ columns which ones get retrieved the majority of the time? Do you really want to have the expense of retrieving 450+ columns if only 32 are used on a regular basis? The answer I have given assumes that InnoDB (the default) is used.

@@ -1,0 +1,47 @@
+The sys.database_principals Fixed Database Roles are owned by (database principal_id = 1) and cannot have ownership changed. But other Database Roles can be created and assigned to an owning principal_id. 
+
+If you have a string with a value that is too long, then the index create will fail. I tried a little test code using SQL Server 2012. 
+
+The KILL command cannot kill a UOW of {00000000-0000-0000-0000-000000000000}, so that leaves you hanging on what to do next to get rid of it. To get rid of spid -2 with the unit of work {00000000-0000-0000-0000-000000000000} you can do something, but it has side-effects: 
+
+A spurious tuple is what you may get if rows in a database are joined incorrectly. This may cause a 'new but spurious' row to be created due to the error. In your example from the book Databases Illuminated Third Edition by Ricardo and Urban, they show this example: As you can see, the splitting of the records in 6.8(B) into two tables, but not maintaining the meaning of the data causes the join in 6.8(C) to join Jones Designer to both Amazon (which is correct) and to Nile (which is spurious). So, join carefully. The join that caused the error in 6.8(C) was due to losing track of the relationships between the data. Easy to do if you do not include the original join criteria. If you want a slide show discussion here is an example from: $URL$ 
+
+Although I find simple Clustered Indexes and Primary Keys useful there are some good reasons for thinking through whether to use them in a table or in a database. Do you need a Clustered Index at all? 
+
+You can only get data from a SQL Server that you are logged into. The metadata of table definitions, stored procedures, and so forth is also data. So, your login through the linked server must be successful. This can be done by granting your login rights on the other server. Or, the security of the linked server could be through a specific login that has the needed rights. However, getting rights to the metadata of a database does not imply that you need rights to the data in the database. For example: 
+
+Some notes from the MSDN Table Hints topic show limitations on how the ROWLOCK hint may work or not work. Remember, this is a HINT not a REQUIREMENT. For examples of issues that may not match your expectation: 
+
+If you need a free and much more functional version of SQL Server, consider using SQL Server Express. Its limits are considerable above the Compact edition. You can lookup its limitations. 
+
+However, the maintenance of this table and cleaning up after it will be necessary. If the 'current record' is based on the client application, perhaps just persisting that in memory and passing the current_id (or equivalent) into any queries, procedures, and so on that you use. If you are concerned about concurrency, then use the appropriate locks to control that piece of the picture. EDIT: Based on your update, since there is one single 'current record' then I would concur that a one row table with the current record id is sufficient. 
+
+That looks like serious damage to your installation. Have you considered uninstalling all SQL Server and Visual Studio (especially VS2010) software? If you have database files, you can probably leave them in place (but I would prefer to also make copies elsewhere). Then delete the folders that may still have some SQL Server components from previous installs so as to have a 'clean' slate to work from. Then Install from the installation media for a brand new install. Attach or restore the files and see if that resolves your problem. 
+
+The mirror state is likely confused at this point and should not be trusted. cherish.j.wang posted the following at: $URL$ 
+
+ALTER TABLE (Transact-SQL) You will need to alter the columns in the user databases in order to change them. You can alter a column to a particular collation using the clauses as described in . And, of course, you can cycle through the columns to change all their collations, if that is needed. Note the caution on : 
+
+Basically User CALs are for people, not for Service Accounts. In the User CAL model you need a CAL for each person whether they directly access SQL Server from their account or they access SQL Server through some Service Account. This is a CAL per each and every person that uses the SQL Server, not a CAL per simultaneous user. However, your CALs will allow you to access as many SQL Servers that use CALs as you can reach within your organization. Edit: There are also Device CALs for when several people share a device at different times. Read about CALS at: $URL$ Regarding Service Accounts on the SQL Server I cannot find my old link on the subject, but perhaps this post will help you: $URL$ See the sentence that says 
+
+The reference in the SQL Server 2012 documentation is at: $URL$ Therefore you can control where the space is used, in-row or stored out of row. 
+
+So I would say that, whatever the mechanism of the log backup, it will be available within the constraints discussed in their documentation. 
+
+No, an Active Directory group cannot be the schema, though I suppose you could name a schema with the same text as your AD group, but that does not get you more auditability. If individual logins are all members of the AD group, they still appear in the database by default as their login name, not the AD group name. (You can, of course, rename the database users to different names, but I do not see how that would really help you.) However, using 'multiple users' (i.e one login and user per person) does not mean that they will all create their own schema. You have considerable control over this behavior. When you create the user's you can assign them to a default schema, such as . Likewise, if you need to set that up after the fact you can: 
+
+Some of your comments obviously depend on your infrastructure of servers, network, storage, and so forth. You need space for backups. You need to determine how long you will maintains the backups (perhaps 1 month would be a good target) and then get enough storage to handle the needed backups. In terms of automating your process and making sure that the databases are maintained, I use and recommend the free solution from Ola Hallengren to manage all of those issues. You can find that solution at: $URL$ This is a very widely used solution and is well supported by Ola. 
+
+If you have a more detailed problem description, as John M asked, then perhaps some more targeted help can be provided. 
+
+If you have a single file with all of a set of backups in that single file, you should be able to use the command: 
+
+Since you are using FREETEXTTABLE the ranking is very loose because its interpretation of the string is loose. The text you supplied for row 2 only has one direct match ("Engineer"), but row 3 has 2 matches("trail" and "Engineer"). But you need to understand the difference between FREETEXT and FREETEXTTTABLE operators and the more precise CONTAINS and CONTAINSTABLE operators. See $URL$ which explains in part: 
+
+Since one potential 'band aid' to the NOLOCK issues is to stop using NOLOCK and begin using READ_COMMITTED_SNAPSHOT isolation, I want to point you to the blog post at $URL$ by Kendra Little: Implementing Snapshot or Read Committed Snapshot Isolation in SQL Server: A Guide. Kendra provides a fair amount of detail on benefits and risks with using the READ_COMMITTED_SNAPSHOT isolation level. 
+
+As Martin Smith commented, "It depends." The factors that control the processing of Full Text indexes depends on the configuration you use in your command. 
+
+This happens because the stored procedure is actually dropped and recreated. When the procedure is dropped it loses all its permissions. Therefore, when the 'altered' version is created there are no permissions attached. Your process to update the procedure needs to include a re-grant of the needed permissions. I don't know your full environment, but here was a 2013 forum discussion for one MySQL tool set: $URL$ 
+
+If that is insufficient for your question: "What metadata is stored and how does Sql Server keep it in sync?" then I suggest reading books such as: Microsoft SQL Server 2008 Internals (Developer Reference) authored by Kalen Delaney, Paul Randal, Kimberly Tripp, Conor Cunningham, Adam Machanic, and Benjamin Nevarez. (All SQL Server powerhouses.) A link, in case you need one: $URL$

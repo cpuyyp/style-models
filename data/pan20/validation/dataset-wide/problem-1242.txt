@@ -1,0 +1,73 @@
+The only real difference is we have to get the parent element first. I have created two fiddles. For the first option, you can use this fiddle and the second one is this fiddle. Hope that helps. 
+
+So in the above statement, we are passing as , as well as the and objects (for a slight performance boost) and, to deal with older browsers, making sure is actually . The next thing you could do is cache your jQuery selectors. This will improve the overall performance because selecting an element in the DOM is one of jQuery's slowest performing functions. Your are using ID's which help but caching them is even quicker. We want to do this as soon as the DOM is ready. I usually create a single function for everything that has to happen there and then call the single function. Also, since we will be referring to these selectors we will declare them immediately inside of our IIFE. I have also included the reference to create the piecharts: 
+
+You don't need to specify and . By having all three, you are making the code get evaluated three times per key event. 7) As stated previously, naming your variables a little more descriptively will help you and any other developer later on. when you have to come back to this code in six months or a year, it will be much easier to figure out. Congratulations on learning to code! 
+
+Here is an updated code sample based on the above. Note: I call an function on to kick off the functionality. 
+
+First we encapsulate the code in an IIFE, then on , we get are selections and add our event. Now, if you can't change the HTML, you can still use this code with some slight modification: 
+
+The next thing you should consider is caching your selections. Since accessing the DOM is one of jQuerys slowest operations, you want to minimize this as much as possible. Anything you refer to more than once, you should cache. 
+
+The first thing you might want to do it put all of your code into an IIFE to create a private scope for yourself that way you aren't polluting the global namespace. Since you are using jQuery, you can pass that into the IIFE to make sure that always refers to . 
+
+Then when you are ready to show the content, you can just do to show the area when the is clicked. FYI: I changed to a simple class in the examples. Here is the adjusted code: 
+
+With this function, will always be at least 2 characters long. Now before updating the charts, check to see what are current value is. If it's the same as the new value (which will be typical for minutes, hours, days), then there is no reason to update them (or there text for that matter). Adding a element with jQuery is a great way to keep track of this. 
+
+There a few simple things you could do to help clean up this code. The first thing I always recommend is to create a closure for your script using an IIFE. This allows your code to run in its own scope and keeps everything out of the global scope. You can also pass in to the function expression and safely refer to it as . 
+
+Notice how that is pretty much the same thing repeated over and over? That means it needs to be it's own function: 
+
+The first thing you should do is encapsulate your code inside of an IIFE. This will create a private scope and help prevent pollution of the global namespace. Since you are using jQuery, you can pass it to the IIFE to make sure your reference to is always . 
+
+I prefix all of my jQuery selections with $ so I know they are jQuery objects. You should also start using for defining your events instead of the shorthand of . Behind the scenes, uses so just skip the middle man. 
+
+I would also recommend not using the classes. Just removing the class should be sufficient. If you additional CSS in the class, then you should create a class called (or whatever make sense) for styling. Next, you need to DRY your code. In your functions, you are repeating a LOT of code. These repeated calls should be their own function. For example, you do the same manipulations on the in each set of code. Move that code into it's own function and just call it where ever you need. Third, you should cache all of your selectors. As a general rule of thumb, if you use the same selection more than once, you should cache it. So create a variable and use the variable everywhere. 
+
+Next, you have each droppable in its own call. That is unnecessary. You only need one call. We will add that in at the end of the code. Since most of your code is actually in the event handler and it is almost entirely the same for each instance, we can DRY out your code. Just pass in a string that contains the one difference between each function and cache some of the variables. 
+
+I will leave that code up to you. At this point, you should see a noticeable increase in the performance of the page. Some other things to consider: In your function you have a bunch of Magic Numbers such as 86400. Although this is fairly straight forward when you know what you are looking at, it might be easier to set up some variables to hold those that provide some explanation for them: 
+
+First, I'll get to the fix for your problem. The problem is more in the CSS than in your JavaScript. Because you are updating the graph every second, that area of the page has to be repainted each time. Due to the way browsers handles these things by default, it has to also check the surrounding area to see if it now needs to be changed as well. So the idea is to minimize this. And the simplest way to do this is to add the following lines into your CSS: 
+
+One quick item that no one else seems to have mentioned is the use of an IIFE. I always recommend this. It basically creates a private scope for your code and prevents your code from polluting the global scope (which is a very bad thing). The more code you have in the global scope the more chance of your code conflicting with someone else's code. Here is how to do it: 
+
+Basically, if you are going to use it more than once, then it should be cached. If multiple functions need to access it, you should probably add it at the top level of your private scope so its available to all your functions. So the top of the code would look like this: 
+
+Although that is perfectly valid, it is the same thing as which is shorter to type if nothing else. You definitely need to cache your selectors as well. Diving into the DOM to get the element each time is very resource intensive and one of jQuerys worst performing methods. So caching the selections into variables will increase the overall responsiveness of your page. For example: 
+
+A lot of what you are doing is repeated code so you should DRY it out. For instance, is the same code except for the values of and . We can also simply all of our checks by setting them up as s. So that could be re-written like this: 
+
+The first time through, the data element is not set so it will update the chart. Each other time through, it will check that existing value and only update the chart when the value actually changes. Once the code is added for each chart, it becomes obvious that this can be DRY-ed out as well. Maybe with something like this: 
+
+One other big change you need to make is to not update all four pie charts every second. There is only one chart that needs updating that often (seconds obviously). You should only update the minutes chart every minute, the hour every hour and the days every day. That way, on almost every interaction you are only updating the one chart. Another way you could improve this code is to DRY it out a bit. One place that would greatly benefit from this is the function. We need to make changes here anyway to help out with the problem mentioned above. Let's take this code: 
+
+Also, all of your code is in the area. Does it all need to be in there? You can probably define a lot of what you want to do before the load event and then kick it off when the load event fires. 
+
+What this code does is move the charts onto there own rendering layer. This prevents the browser from having to check the surrounding areas because each chart is now separated from the rest of the content. In Chrome, you can see the performance difference this makes by watching the Timeline in the Dev tools. In the original, it spends ~180 ms repainting the screen and ~100 ms performing calculations. In the updated version, it spends ~20 ms for each. Add this over four graphs and you can see why the cpu is pegged. The is a new CSS property that will basically do the same thing as the two lines above in the somewhat-near-future. I have updated the fiddle with just this change and you can see the difference. Now, the code review: As always, the first thing I recommend is to remove your code from the global scope. The easiest way to do this is to use an IIFE. This will basically create a private scope for all your code which reduces the amount of code you place in the global scope, which in turn, reduces the chance of collisions with other peoples code. Since you are using jQuery, this also provides a way to make sure always points to it. 
+
+The next step would be to DRY your code. The answer given by @atmd is a good step in this direction but it can be taken farther. It looks like there are two things your checking: 1) whether is and whether its the or the . So you can set up a few checks and remove all of the nested s. Taking the click event and making it a stand alone function (like above) will help with debugging of the code later. Here is a click handler function: 
+
+After looking at your code, I don't see any real issues with your CSS and HTML. If it works it, then nothing else to do there. However, there are a couple things you can do to simplify your JavaScript code. Since you are using , you are supporting IE10+ (unless you add a polyfill). So this means you do not need to use the old events and you can use the newer and to simplify your code. My first suggestion is always to wrap your code in an IIFE to provide yourself a private scope. This will keep your code out of the global scope and help prevent issues with other peoples code. Its easy to setup: 
+
+That's a simplified explanation. But you see we are passing in jQuery but we refer to it in our function as . 6) In your function, you are creating all these events on the same element. You can simplify this as: 
+
+Also since we don't care about the order in which this is done, we can use a loop. It is typically the fastest ways to loop in JavaScript. 
+
+Also, repeated is the actual function on each implementation. So you could create a single function and change to something like this: 
+
+There are a few simple things you should do first. 1) Move all of your tag to the bottom of your html right before the closing tag. Because of the way browsers parse your page, having them at the top will only slow down the page load. 2) You have two references to the jQuery library. You only need one. 3) Your HTML is not consistent. You have some open tags without closing tags. You also have different markup around some of the form fields than around the others. For instance: 
+
+Also notice, the parameter for the function. It isn't required but it's one of those things you should use anyway. That way the parser doesn't take the extra time to figure this out on it's own. I hope that helps! Feel free to post any comments or questions. Updates based on comments/fiddle I have created a fiddle with all of the updated code, including some of the things you were trying to do on your own fiddle. To show you the performance improvements, I created a couple of screen captures. Note these are both showing when the seconds chart goes from 1 to 59. This first one is your original fiddle linked in your post. Performance Before This is the updated fiddle I linked to above. Performance After By reducing the number of times each of the charts have to update and using the CSS above, you can see the execution time has improved significantly. These samples were taken with Chrome dev tools. If you are seeing significant CPU thrashing, try running in an incognito window to see if it is something else (tab or extention) interfering with your performance. 
+
+In this you have consistency around each input. They are given a attribute which is needed when sending the data to the server. s are used for labeling the input. Default placeholder text there to show the user what kind of input you are expecting, etc. By having this consistency it will make it easier to manipulate with code if you need to. 4) Always your variables. You did this on all your variables except . Maybe just an oversight. 5) You should encapsulate your code in what is called an IIFE or Immediately Invoked Function Expression. It's a fancy name for creating yourself a private scope. This will help you avoid clashes between your code and code written by someone else. It's very easy to do: 
+
+In this function you can cache all your selectors, create the initial state, etc. A lot of your code is repeated or very very similar. You can DRY them out a bit. For example, both and are the exact same function. Also they return a value just so another function can update the screen. You can combine all of that into one function: 
+
+Much more concise. I have updated your fiddle with the changes above. Also, in the fiddle I reduced the speed to 200 because I'm lazy and didn't want to wait that long :) FIDDLE Let me know if you have follow up questions or comments. 
+
+Here are a few items that I could think of. I know nothing about Knockout so if these changes do not work in that framework (I don't know why they wouldn't). The first thing I would do is wrap the code with an IIFE to create a private scope. Again, this might not be necessary with Knockout. 
+
+I am also passing in local references to the global and objects for a ever-so-slight performance boost. You also select your drop downs multiple times. So we can just create a single variable in our private scope to hold this selection. That way we can get the elements once ( on load) and not worry about it further.

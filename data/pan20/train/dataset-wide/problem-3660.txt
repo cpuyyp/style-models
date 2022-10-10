@@ -1,0 +1,105 @@
+That should be . The leading is missing. I'm not sure exactly what the behavior is when that happens, but it's clearly not what you want. 
+
+Versions of nginx prior to 1.1.16 did not properly support returning 307 responses. The change log reads, in relevant part: 
+
+You replaced the wrong EPEL repo (for CentOS 7) with the correct repo (for CentOS 6) but the system still is trying to download EPEL packages for 7. In this case yum still has cached metadata from the EPEL repo from the last run with the wrong repo. To resolve the problem, clear the cached metadata. 
+
+In fact you can just copy and paste that to your ISP; that's exactly how it will look in their bind (DNS server) configuration. 
+
+So it's likely a previously expired domain that was used for something else. The KB article was last updated almost a year ago. 
+
+This error occurs when the is too large to fit in the hash bucket. The default for is chosen depending on the CPU cache line size of the server. In particular it's meant to be as small as possible, to reduce CPU cache misses, as s must be looked up on every request. As for why you're limited to 14 characters instead of the expected 31, I suspect one of two possibilities: 
+
+You use both, but in different locations. The first goes in your and handles all requests coming into the . It has nothing to do with security, and is a pretty common setup. The second goes in the PHP and prevents the attack. Note that this requires that nginx and PHP be reading the same files, on the same server. 
+
+Use 64-bit to preserve an upgrade path. RHEL 7 will only be available in 64-bit, so if you use 32-bit, you will not be able to upgrade and will have to do a fresh installation when you want to move to the new version of the distro. 
+
+It sounds like you forgot to install the intermediate certificates. A copy of these should have been included with your certificate, named or something similar. If not, download this from Comodo. Place it on your server, and set its location in Apache's directive. 
+
+Your domain doesn't have an MX record to specify where mail should be delivered. When this happens, the address record (AAAA or A) will be tried instead, but your domain name doesn't have those either. Or, the domain has an MX record but the host named in the MX record label does not have address records. To resolve the problem, create an appropriate MX record. 
+
+Use an appropriate directory to store your web documents, so that you do not need to disable SELinux. These directories are: 
+
+should not be an actual directory containing your files, but a symbolic link. This is the way capistrano does it: 
+
+This is being caused by SELinux, which blocks the web server (and PHP, which runs under the web server's context) from attaching to processes to trace their execution. This was reported to Red Hat some time ago, but they declined to do anything about it. You can check your and you'll find this denial logged in an AVC similar to: 
+
+The security downside is that now your user has no password, and anybody can log in to it without a password (or a key)! To resolve the problem, the account should not be locked, but should have a password, even if nobody ever uses the password. Set a random password for the account, and make sure the ssh keys are working correctly. 
+
+You have a typo in your configuration: Your device name should be , not . This applies both to the filename, and to the device name within the file. The former indicates VLAN 10, the latter is an old-style interface alias name which has been deprecated for years and is no longer supported in CentOS 7 (and in particular doesn't indicate a VLAN). 
+
+The error message explicitly tells you that the directory needs the permission, so that should have been the first thing you tried. 
+
+Set up SSL Bump and dynamic SSL certificates, and be sure to add your new CA to your users' web browsers. 
+
+You're running a web server on the same machine as your "VPN" server. Thus when you connect to the virtual network, that server sees your IP address as the private internal IP address that it assigns to you, not as the global IPv4 address. That private address is the address you must whitelist. 
+
+The purpose of that particular is to prevent requests for nonexistent static files being passed in to OpenCart. You can do this with another . For instance (off the top of my head, so it may need tweaking): 
+
+Likely you only have these open in your IPv4 firewall and not in your IPv6 firewall. How you fix this depends on your operating system, what web control panels you use, if any, etc. If you're just using CentOS without any control panels you can use the command line tool to configure your firewall and it will correctly open the ports for IPv4 and IPv6. 
+
+You've tried to use on the by-uuid device file corresponding to your RAID array (md0). Instead, try running it on the ones corresponding to the physical disks. 
+
+The next course of action is to check with your provider (in this case Amazon) to see if they know anything about the issue. It seems that they do: 
+
+You can't "get rid of" these so easily. You're seeing this because other customers of your VPS provider are running Dropbox LAN sync. Personally I just drop traffic from other nodes in the same subnet without bothering to log it. For example, if your VPS's IP address is 203.0.113.148 and prefix 24: 
+
+This accepts ongoing traffic for any existing connections that we've already accepted through other rules. 
+
+Apache is trying to connect to an upstream proxy at port 20559, but there is no service running at that address/port. Since no service is running, Apache gets and returns a 503 error. To resolve the issue, either start the service, or use the correct IP address/port number, as applicable. (It's unlikely that is the correct address.) 
+
+The qemu-guest-agent must be installed and running in the guest. Run before taking the snapshot. This tells the qemu-guest-agent to stop all filesystem activity and bring it to a consistent state. Take your snapshot. Run after taking the snapshot. This tells the qemu-guest-agent to allow filesystem activity to resume. But the snapshot will remain as it was when frozen above. Back up the snapshot. 
+
+The virtual machine host can see and defeat any security measure you mentioned, including encryption of the virtual disks or files within the virtual filesystem. It may not be trivial to do so, but it's much easier than most people think. Indeed, you alluded to the common methods of doing exactly that. In the business world, this is generally dealt with via contracts and service level agreements, specifying compliance to legal and industry standards, and so is usually considered a non-issue as long as the host is actually compliant with the relevant standards. If your use case requires security from the host, or more likely, from the host's government, then you should strongly consider obtaining your service in another country. 
+
+which you place as the file (creating the directory if it doesn't exist). You can also use to create the file. And of course, either creating the systemd drop-in, or putting this script in crontab, must be done as root (try using for a long running root shell). 
+
+Using is meant to be reserved for things which truly need to be cryptographically secure, such as private key material, because it relies on an entropy pool which can be depleted rapidly if the RNG is overused. Unless for some reason you think the NSA might want to influence the results of your card games? So , a PRNG which never blocks, may be sufficient. Note well, however, that many serious online card games, especially those which allow gambling, use external physical hardware random number generators for this purpose. In some jurisdictions, using such a device for your online card game is required by law. As for security, I would expect someone who broke into the server to not bother messing with the RNG and just take your money, or sabotage your application so that he always wins. 
+
+It appears that elrepo has built their kernel module against the (pre-release, at the time) CentOS 7.2 kernel, 3.10.0-327. 
+
+Why did you add ? That's not necessary, doesn't work, and isn't even in the tutorial you linked to. Just remove it. 
+
+Append to the end of the grub line which begins with (and ends with ). Reset your password and reboot normally. Don't forget it again. Consider installing . 
+
+The MX record should be for your domain, not for a subdomain. An MX record should not point to a CNAME. Point it to a record with an IP address. 
+
+I don't know where you got that abomination, but the best thing you can do is delete it and start over from scratch. Its primary problem is that it's needlessly complicated and difficult to follow, even if it might work (and I can't be sure from reading it, so I'm certainly not going to test it). Firewalls should be as simple as possible: Accept only what you need and reject everything else. Follow this and you won't need any complicated and difficult to understand rules. So let's take a look at a live, working IPv6 iptables firewall. I just pulled this off one of my live servers: 
+
+Remove the or commands from the file, and then find the prankster that added the command and inform him that That's Not Cool, Bro. 
+
+The mpm-itk Apache module is available in the package in EPEL. I've never heard of anything else that solves the same problem in any similar manner. 
+
+Mounting a filesystem at a mount point hides any files that may be in that directory on the parent filesystem. To resolve the issue, move your old files somewhere else temporarily and create a new empty directory to hold the mount point. Then move the files into the new filesystem. 
+
+If you want to reject with a particular ICMP message, you can create a reject rule as the last rule in that chain. (Also, of course, you really shouldn't manually build firewalls anymore.) 
+
+I wrote a WordPress plugin which you will probably find helpful. Bad Behavior has a good track record of stopping these sorts of brute-force attacks. It's sort of a minimalist web application firewall which blocks link spam and some other malicious traffic very early, before all of WordPress is loaded, saving CPU and other resources. (I say minimalist because what can be done only at this layer is minimal compared to what you can do in the web server or even with a separate appliance, though it was designed for people with no other option.) You'll find it in the WordPress plugin repository. 
+
+This apparently is an issue with iOS. It does not automatically pick up WPAD. You can work around this by going into the Wi-Fi settings for your network, setting the HTTP Proxy setting to Auto and entering into the URL setting for the device. 
+
+OK, so you have two problems here. The first problem is that the hostname you referenced in your doesn't exist in the DNS. A different hostname does exist, though... 
+
+If a user can DROP a table, then he could DROP all the tables, which effectively drops the database. So there's no point in separate privileges for DROP TABLE and DROP DATABASE. If you want to grant a privilege for a user to DROP only a single specified table within the database, that's something that might be useful, but MySQL doesn't support it. 
+
+You've trashed your system beyond repair, and will most likely need to reinstall from scratch. Next time, inspect the list of packages very carefully when using as it very often can and will remove critical system packages. 
+
+On nagios.local, the unreachable virtual machine, avahi-daemon is (obviously) installed and running, and I have the proper hole punched in the firewall: 
+
+goody-games.com and www.goody-games.com return identical content for the home page. If you're sure all the malicious code is cleaned out, you can resubmit your site to Google for testing through Webmaster Tools. 
+
+So, conforming implementations of SPF will completely ignore everything after the first . This doesn't mean, however, that every implementation conforms to the spec. In particular, this was probably thought worthy of clarification precisely because one or more implementations did not conform. It's not at all clear why an online validation tool would not catch this misconfiguration, but if you intend for anything after the first to be used, you should correct the record, as proper implementations will ignore it. 
+
+If you really want to be running SLES, then you have to have the subscription in order to gain access to SLES packages. Unfortunately OpenSUSE is reported to be not exactly binary compatible, and so it's not guaranteed that RPMs taken from it, or any other RPM-based distribution, will work exactly properly. (RPM is just a package format; it doesn't guarantee that what's inside the package will work for you!) That said, it is possible to upgrade a SLES 10.x box to OpenSUSE 11.x by doing an upgrade through the OpenSUSE installation media. This of course requires a maintenance window, and plenty of testing beforehand to ensure that your applications will run under OpenSUSE 11.x. You could also take this opportunity to switch to a different distribution which might better fit your business needs. 
+
+Those headers were not present in the HTTP response at all. Neither nginx nor php-fpm ever sent them, so trying to block them is pointless. They are synthetic response headers added to the response by your user agent, libwww-perl. If you don't wish to see them, make HTTP requests with some other library, such as libcurl. 
+
+Rename the computer. Anything that's not would be sufficient. After all, this computer almost certainly isn't. Perhaps or ? 
+
+This is a catch-all that will match any host name not specified in any other directive. You are also correct when you note that when is missing, the block matches only requests without a header. Note that this probably won't work on nginx 0.7.x, which is antique and horribly out of date, and for which many things have changed. If you insist on using debian, please do yourself a favor and use the dotdeb repositories to keep current with software such as nginx, MySQL, and PHP, for which it's critical to update much more rapidly than Debian does. 
+
+This is meant to be set to the Ruby binary itself. But you have set it to a directory. Change it to the location of your interpreter. 
+
+There is no package in Red Hat Enterprise Linux. The package name for the same files is . It appears that someone installed a package on your server from a different Linux distribution, and overrode the errors they would have received upon attempting to do so (which are just about the same as those you saw here). This of course puts your RPM database in an inconsistent state relative to the actual software installed, and may cause compatibility and dependency problems such as that you ran into today. It becomes no longer possible to update packages from the supported repositories, for instance, and difficult to determine exactly what code is running on the system. My best guess is that someone (who really doesn't know the right way to do this) attempted to upgrade glibc beyond the version provided by Red Hat, most likely to take advantage of a new feature which isn't present in the version of glibc shipped with EL6. The right way, if you really need this late version of glibc, is to take Red Hat's source RPM, tweak the spec file and any patches to build the new version of glibc, and use the new binary RPMs of the new version. You then are responsible for maintaining it yourself, may lose vendor support, etc. so this is something you should only think about if business requirements absolutely demand it. (And since you lose your support anyway, you may as well switch to CentOS...) 
+
+To resolve this issue, install display drivers provided by the video card manufacturer. AMD's Catalyst 12.8 or later "for Windows 8" has been working perfectly for me on Server 2012. Or, you can just ignore the issue. If you're going to install Server Core into production (eventually) anyway, then it doesn't really matter much whether you have display drivers or not. (I don't know about your audio; mine works fine...)

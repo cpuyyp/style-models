@@ -1,0 +1,89 @@
+2. Create a SQL Agent job Create a standard SQL Agent job which inserts one row in the table every one minute. Make step 1 run this code: 
+
+In order to move TempDB to a disk with more space, I had to restart the server. This stopped the SQL Server as well as SQL Agent, and the new "SQL Server Launchpad". It was easy to restart SQL Server and SQL Agent. To restart LaunchPad, I needed to go to Administrative Tools -> Services and find "SQL Server LaunchPad (MSSQLSERVER)" right-click it and select "Start" and my scripts run again. 
+
+It does not show that rows are inserted into the wrong table. I have not seen that on my production system either, because I stopped the MERGE command before it finished. But it does show that the Execution Plan is retrieved from cache: 
+
+Partition is Enterprise Edition only, hence quite expensive. It makes large tables (>1TB) easier to work with, but it my book, it does not necessarily make queries run faster. You need to describe the contents on the A column a bit better, to determine if the column should be part of the Primary Key, and also if it is always WHERE A=42 or WHERE A in (1,2,3,42) IMHO the Column A needs to be NOT NULL if you want it as primary key. Kimberly Tripp has some good blog posts on selecting the Clustered Key: for instance this one. 
+
+It turned out to be a good exercise for me. Not only did I find two databases that were not backed up, I also discovered that we do have databases where we have never checked that we can restore the backup. So; I have provided one solution to the task in the answer section. We have the convention that database names are unique and my script lists production server and test server(s), so I can compare them. Do you have a solution that is better? Best regards, Henrik 
+
+And finally I get a list that shows me where Estimated Cost is small compared to runtime, without the job being blocked at all 
+
+Update: We did another backup and restore from the old server to the new server. This time we got this message: 
+
+It is not possible to convert the TimeStamp colunm into a Date & Time format. Microsoft has renamed the TimeStamp data type to RowVersion to avoid the confusion. The timestamp/rowversion data type is really just a Database Transaction ID, and it can also be stored in a column of the Binary(8) data type. But here is a work-around to implement the ModifiedAt, UpdatedDate column type. This will translate (or "convert") a RowVersion column into a SmallDateTime datatype, that can be formatted according to your needs. But you need to do a bit of work; 1. Create a table "UpdateTimeStamp" with three columns (CreatedDate Smalldatetime, NewRowVersion, OldRowVersion) like this: 
+
+I would like to change all file groups in my database to AutoGrow_all_Files, but only if it is currently AutoGrow_Single_File, like this: 
+
+But this is a database from Microsoft. Is it wise to change the Page Verification to CheckSum? Or should we wait for Microsoft to release a new version of MDS? 
+
+I'm trying to install the new SP2 for SQL Server 2016, but it fails during the install with an Engine error. This is what I can read in the errorlog> 
+
+The DateTime2(0) datatype takes up less space on the harddisk (6 bytes per row) The DateTime2 datatype is searchable, as it is possible to write a query that will span from December 30th 2013 to January 2nd, where the SQL Server will disregard dates before and after. Such a range query is not easy to write with individual columns. The DateTime2 datatype is easy to calculate on a date or DateTime2 datatype. Last day of month, etc. And most important; The DateTime2 datatype travels well; there are many different date-time formats around the world. You never know if your software goes aboard, or your company is taken over by somebody why writes dates as yyyy-mm-dd or mm-dd-YYYY or dd/mm/YYYY or one of the 20 odd other formats that SQL Server support. Joe Celko has written a lot about this, today I saw this : $URL$ one quote: "But one of the most common design errors is to use strings for date and time data." 
+
+You could upgrade to the latest and greatest SSMS at $URL$ It does not crash as often as the old versions, and it has a nice interface to the XEvent Profiler. 
+
+A DBCC CheckDB will take us about a week on this 70 TB database and 6 years old server. Is there any chance that it is my backup that is corrupt? Or that the new server is at fault? Or is it the production database on the old server that is the problem? This is SQL Server 2016 SP1 CU1 and page_verify_option_desc is CHECKSUM. This is what I can see from the error log on the new server: 
+
+I would import the entire spreadsheet into an empty "temp" table, then run a sql statement to copy the rows I want across to my permanent table. This way it is easy to setup rules so that you only get the rows you want and it is easy to test both the import and the copy jobs separately. 
+
+Caveat, buts... 1) Microsoft SQL Server is not very good at "date range join" clauses, so if you do not need minute resolution, but 10 minute accuracy is acceptable, then you can improve the query speed a bit with lowering the frequency of the SQL Agent job to 10 minute intervals. 2) This will only work for time periods where the SQL Agent job has been running, as it is not easy to create the dbo.UpdateTimeStamp table retrospectively. Unless you have an old table with a RowVersion/TimeStamp datatype, and this table also never sees updates, and the table has a CreatedDate column. And the table has to be in the same database on the same server. Bonus features The RowVersion column was already added to many tables already in our Data Warehouse, because I use it as a watermark for loading data into our Data Marts. So now I have the this feature as a debug option, when I need to investigate when things went wrong in our facts and dimensions. Furthermore I do not need a trigger, which may have performance issues and/or stability issues, if not coded correctly. 
+
+DBCC CHECKFILEGROUP is currently running. Finished with out errors. SeanGallardy commented on the binary numbers. It took me a long time to see what he meant, but I finally entered the two numbers in the Windows Calculator in Programmer mode, and here is what it shows: 
+
+I'm trying to query the ErrorLog files, but it sometimes fails on some of my servers. For some reason a file go missing from time to time. I do not know why. I do not think that I deleted the file :-). Worse, SQL Server "crash" with this error 
+
+), then a rebuild of your clustered index will do a "copy and rename" under the hoods. Some of our tables have 15 billion rows, and it takes 15-20 hours to rebuild the clustered index. I use the "copy and rename" approach, when I cannot accept the 20 hours of downtime waiting for the rebuild. First I copy 14.99 billion rows, then I disable the job that inserts rows, take the remaining 10 millions rows across to the new structure, and finally a rename. Yes, it is a bit expensive (using my time), but the system remains online for as long as possible. You rebuild an index like this: 
+
+If your change is a meta-data change only, this does not touch all rows in the table, and no page splits occur. As in 
+
+Set the schedule to run every 1 minute. 3. Query the data You need to write your query with a join to the UpdateTimeStamp table to your table with a between join clause like this: 
+
+I've searched high and low, but I cannot find anyone mentioning that when you run sp_rename, then you should mark the objects for recompilation too. As in 
+
+I did a complete reinstall of SQL Server. Now I know the entire SQL Server is under version control. :-) 
+
+are you beeing blocked by another process? you can check that by using sp_whoisactive (see $URL$ here you can also see how far your job is, and what the execution plan look like. 
+
+EDIT: I've finally managed to get the database restored. It took only 124 minutes, when we changed some settings on the server. I found the settings here: $URL$ and here $URL$ In case the links stops working: in HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem NtfsDisableLastAccessUpdate and NtfsDisable8dot3NameCreation should be set to 1 
+
+The master database was running "Latin1_General_CI_AS" and MSDB (and other dbs) was running "SQL_Latin1_General_CP1_CI_AS". I have new backups of all databases on the server including master and msdb. I'm tempted to try to restore the master master as shown in $URL$ But I'm trying ensure that it will actually work, and not just make the situation worse. How do I get my SQL Server back up and running? EDIT: I've started the mssqlserver service like this: 
+
+May I recommend that you read Sommarskog.se/dyn-search? It investigates all the possible solutions known to the community until today, and does a SWOT analysis on each option. Best regards, Henrik Staun Poulsen 
+
+I'm quite new to PowerShell, and now I've found dbatools.io, where I would like to run a PowerShell task in SQL Agent like 
+
+Our SQL Server 2016 development servers have trace flag 10260 set on start up. The other servers that run SQL Server 2016 do not. I've searched high and low, but have not been able to find any info on the subject. What does this trace flag do? Is it safe to remove? 
+
+I'm not affiliated to Red-Gate, but I would like to point out that if you hit Shift-F5, when you own a newish copy of SQL Prompt, then the query your cursor is on, will be marked green, and executed. It has really saved me a lot of keystrokes. 
+
+It might be a DataFlex data table. If the client has a dfrun.exe on the PC, then you can be 99% sure. If you're lucky, it also has a dfquery.exe, which will let you export the table as a .csv file. 
+
+I'm seeing the re-use of old execution plans, so it looks as if the new rows that I MERGE into the table are inserted into the MyTable_OLD table. I know there are several issues with the MERGE command, but I'm using it with TABLOCKX, so I've never had any problems with that command. I've tried to create some code that reproduces this. Here it is: 
+
+Same problem. It runs ok in Windows PowerShell ISE, but just hangs in SQL Agent. So now it has created a new table for me, and populated it with data, but the job just keep on running. 
+
+Here is how I used the answer to my question. I'm a great fan of sp_whoisactive. If you don't have that, stop reading; download here. So I've set it up to collect a snap-shot every 10 minutes, like this: 
+
+It is a very interesting list, but it comes with a bit of noise. For a start, I've chosen to ignore quick small jobs that run less than 10 minutes, but that limit depends on your situation. Now it is a lot easier to find jobs that run with a bad plan.Thank you very much for your help. 
+
+I have tried to Google this message, but the only advise I can find is to restore the database (which is what I'm trying to). The real question is; what should I do next? 
+
+But I'm only getting one line printed. If I take out the line, or replace it with then I get the expected result. Is this a bug in SQL Server? I've tried it on SQL SErver 2016 SP1 and 2014 Sp2-Cu1. 
+
+2 options: Apart from the SQL Agent job (which is fine, as long as you do not have to follow the current status, nor debug), I use a desktop PC in the office, which is not far from the server room. I use Remote Desktop to work on the Desktop PC, when working from home via VPN. In my previous job, we had a Citrix solution, which also worked great, as long as there are not too many upgrades to SSMS. 
+
+would this script use a temporary table? Then the table will have the server default collation. If it just a quick one-time solution, then I would modify the source query to provide the data in the correct collation, here Hebrew_CI_AS 
+
+Brent Ozar had an interesing newsletter on 2015-06-22; How do you manage dbas measuring backups, where he thinks that a good DBA should check when 
+
+into a temp table, because I want to check the settings for all databases on my server. So I wrote this code: 
+
+the third time I run the MERGE, after I have renamed the tables. But in my example, it does use the named Primary Key, so it must be a different plan??? On my production server I saw it using an index that was named something OLD, with an execution plan suitable for the old table, but not the new table. This went away when I ran sp_recompile 'dbo.Mytable' 
+
+This gets the server started, and I've looked into msdb110_upgrade.sql, and found quite a few missing "COLLATE DATABASE_DEFAULT"s which I've added. But it is not taking my changes. 
+
+But then there will only be one row per database, not the four rows that I expect from running a plain select in each database. I know there are better ways to code this than using sp_MSForEachDB, and I tried several. But I still only get one row per database. I've tried this on both SQL Server 2016 RTM and SP1 Is this a bug with SQL Server 2016, or am I doing something wrong? 
+
+I have tried many things; TRY-Catch block, a separate sproc to do the insert and dynamic SQL. They all eat my error message. Here is my code:

@@ -1,0 +1,87 @@
+--- using Old Detach / Attach method (not preferred, but still people use it.. unfortunately I used it recently on a NON prod server). 
+
+updatable subscription is deprecated. If you still want to implement it, you have to use T-SQL. You wont be able to do it using GUI. See Updatable Subscriptions for Transactional Replication and Deprecated Features in SQL Server Replication 
+
+Note : You can do many cool things by digging into Plan cache as described by Jonathan here. Also refer to DMVs for Query Plan Metadata 
+
+Make sure to check max memory as I have encountered that due to memory pressure, the AG redo thread dies leaving AGs not syncing causing all sort of issues. Doing Index rebuilds, should not cause AG failover unless you are running out of worker threads or hitting an unknown bug in sql server. I agree with Brent that doing Index rebuilds daily tells you to look into adjusting fill factor and investigate if it is really necessary to do it ? Ref: Recommendations for Index Maintenance with AlwaysOn Availability Groups 
+
+Unfortunately that what you have to deal with when you refresh your QA with PROD backups that is involved in T-Rep. What I have done is 
+
+is an intermediate view allowing to join the DMV's that are primarily identified on - DMV's with other DMV's. This view will tell if the transaction is a user transaction = 1 or a system transaction with = 0. On the other hand, - is the DMV that will store transactional information showing status, state of each transaction - initiated but not completed, type, etc on the sql server instance. It also gives info on distributed transactions as well. This DMV will give results for all databases on the server instance and it is a point-in-time snapshot of currently active transactions - results will change each time the query is executed as the sate of the individual transaction will change. Refer to sys.dm_tran_session_transactions and sys.dm_tran_active_transactions for column lists and what each column means. 
+
+What is the best practice in order to have this scenario done? It depends on how much data you are replicating i.e. 
+
+For backup and restore you can use PowerShell (make sure you use backup and restore method) or tsql. You can completely automate the above pseudo code using sql agent job. 
+
+You can explicitly set only to replicate SP defination, execution of SP or Execution in a serialized transaction of the SP while setting up Article property. Refer here. When you select "serialized transaction of the SP", the entire execution is replicated as a single transaction there by reducing the Transactional Replication overhead i.e. With the replication of stored procedure execution, replication sends only the command to execute the stored procedure at the Subscriber, rather than writing all the updates to the distribution database and then sending them over the network to the Subscriber Test it before hand as performing such a large update (25 million rows) will be way too much for replication to handle (depending on your replication topology - same distribution server as publisher, geographically separate publisher and subscribers, etc) and some caveats as described in BOL. You can probably thing of another approach like -- 
+
+An approach worth exploring is to use service broker's asynchronous mechanism to do update in batches. Remus has written about - Asynchronous procedure execution that will give you a good start or you can use service broker - Asynchronous Triggers 
+
+Below statement will make sure that UserA is able to see schemaA and NOT schemaB. The good thing is that you can just add users to role and they will inherit all the permissions granted to that role. 
+
+Always remember that session level setting will override database level setting for the above SET options. Reference : SET ANSI_NULL_DFLT_ON and SET ANSI_NULLS 
+
+Recently, we upgrade from SQL server 2012 to SQL server 2014 and got hit by the new Cardinality estimator short coming - queries were timing out, cpu pegging close to 100%. After much troubleshooting, updating stats, rebuilding indexes, doing query plan analysis, we figured out that changing compatibility level to sql 2012 works well. Paul White explains - Cardinality Estimation for Multiple Predicates 
+
+This is a good question and made me thinking. But .... the answer is NO as of SQL Server 2016 CTP 3.0. The documentation says : 
+
+Server side trace does not have a limit of 1GB. I have 5GB trace files created in my environment every hour. 
+
+Update: below is a prototype code that will help you. Note: you dont need any Stored procedure, A trigger will do the job. You can put try/catch to handle errors, which I have not done as this is only to help you understand the concept. 
+
+Alternatively, you can wrap below in a transaction with TABLE_LOCK so that no one can insert/update/delete while the change is occurring -- 
+
+You can use to check using cmdline. Additionally, you can check what got cached earlier in the registry on the client side as to what port it is using to connect to sql server : 
+
+To balance CPU and I/O throughput to achieve good performance and maximize hardware utilization, SQL Server includes 2 asynchronous I/O mechanisms - sequential read ahead and random prefetching When SQL Server has to scan a large table, the storage engine will initiate the read ahead mechanism to ensure that pages are in memory and they are ready to scan before they are needed by the Query Optimizer. If you are using Enterprise edition, then there is a mechanism called advanced scanning or merry-go-round scanning that will allow multiple tasks to share full table scans. This advance scanning avoids users to compete for buffer space and taxing other resources on the server. 
+
+If you only want to allow UserA to execute SP's which are owned by SchemaB then below statement will do the job: 
+
+You should create roles and grant access to roles rather than granting users access directly to schema. Once you assign permissions to the role, you can just add users to the role. This way you dont have to manage permissions for individual users. The users inherit permissions granted to role. 
+
+Easy one ... Think about why do you want to do it ? Any specific reasons ? From BOL : To change the options for the current queries, click Query Options on the Query menu or the shortcut menu of the SQL Server Query window. Under Execution, click Advanced. 
+
+Third party software are : ApexSQL Log. It has free trial as well. Toad for SQL Server - It has Log Reader management which Rolls back transactions in the transaction log without the need to restore from a backup Native to SQL Server are below methods : you can restore your Database from a backup, and then RESTORE Transaction LOGS to a point in time with the STOPAT = '6/10/2013 12:30AM' argument. Read this excellent post from Paul Randall - Using fn_dblog, fn_dump_dblog, and restoring with STOPBEFOREMARK to an LSN 
+
+If you only want to allow UserA to execute SP's which are owned by SchemaB then below statement will do the job: 
+
+Thats why I use SQL Sentry's FREE Plan Explorer (I invested in Pro version and its worth the money). 
+
+Go for something like Redgate's sql data generator that will generate test data -- OR -- You can do a 1 time import of data as I suggested and then backup database and for your rest of testing you can just keep restoring the database from the backup (keeping in mind the data that you imported will not change). I cant think another way of doing what you want to achieve, so will keep this for others to answer ... 
+
+These logins are members of the sysadmin fixed server role, so they can do anything in the Database Engine. Keep them in role even if you are using Domain account. See SQL Server Per-service SID Login and Privileges section. A really good answer detailing above stuff - Service/Database Accounts - NT SERVICE\MSSQLSERVER & NT SERVICE\SQLSERVERAGENT … what are they for ? 
+
+There is a wealth of information and scripts on blog written by Pedro Azevedo Lopes - Exploring the plan cache – Part 1 & Part 2. Also, Jonathan Kehayias has written a lot about exploring plan cache. A gentle note: Dont do knee jerk performance tuning e.g. dont just blindly create missing indexes when you find them, etc. Instead follow a more methodological approach by baselining your server instance and then take it from there. 
+
+There is no way that you are going to get this 100% accurate. Though you can use to check against a list of weak passwords (you can add to the list of weak passwords and do a comparison). I have written a similar script that does the comparison and gives you the results. I have posted it on github. 
+
+Considering, you are not updating the data on subscriber, when you want to reseed, you should always take the max value from the identity column and then reseed the value accordingly. You can use below sql to find that out : 
+
+Subscriber can have different set of objects than publisher. Its perfectly fine to have a stored procedure on subscriber ONLY. @Tara is correct, it wont drop the proc at the subscriber when you reinitialize the publication. The only time that I think you would have to remember to recreate the SP is when you have to Initialize a Transactional Subscription from a Backup of publisher . 
+
+Another option is to use sysinternals process utilities especially : make sure you use the filter button to filter out unwanted things :-) Process Explorer Find out what files, registry keys and other objects processes have open, which DLLs they have loaded, and more. This uniquely powerful utility will even show you who owns each process. or Process Monitor Monitor file system, Registry, process, thread and DLL activity in real-time. 
+
+What you are referring is not related to windows. It's for *NIX systems. For windows, you should monitor 
+
+WHY ??? what you are asking is : Give me all the students name with max grade. That is logically also incorrect as you cannot get that (if you think about it for a sec.) Instead of that, you should ask - for each student, what is the max grade - which will logically translate into sql as : 
+
+Why are you reinventing the wheel .. as there is a cost to reinvent it ! You are also using deprecated stuff e.g. .. instead use . You should use - 
+
+This is your issue. Increase to 5.5 or 6 GB for sql server since you have 8GB installed RAM. From BOL : 4GB is minimum requirement for all editions except express. 
+
+Yes, you can restore the backup of Standard edition to web edition. Just make sure to use if the file locations are different between the servers. See the comparison matrix for more details. 
+
+This is a knee-jerk response to a performance problem. Your page counts are less than 10 ! Rebuilding the indexes will be a least help in your case. I would start by reading and understanding How to analyse SQL Server performance ? 
+
+The link that you pointed out gives a good starting number, which in most cases is sufficient enough as a good configuration. I would suggest you to leave min memory as DEFAULT and adjust the max memory. Also, best is to baseline your database server usage during your full business cycle as that will give you the best number based on your workload using below PERFMON counters : 
+
+Make sure you do a 1-1 matching between Primary and Secondary replicas since in the event of failover, your secondary (now primary) should be able to handle the same workload as the old primary. Note: Since you have 30 cores, make sure that you are utilizing your resources and not having your cores run idle .. time to do some consolidation if possible. 
+
+using TSQL: Look up the sys.messages catalog view to check if SQL Server supports a message in your local language. 
+
+IT depends on what you want to actually monitor. Also do you want to log the data you have collected for baselining or performance trend reporting as well ? 
+
+For completeness, converting my comment to answer : If the database is EMPTY, what is the initial size of the transaction log defined when the DB was created ? If the initial size of the T-log is defined more than you need, then thats the problem. You should always carefully define the transaction logsize. 
+
+Even though you can use to copy the directory, I would not recommend to do it using SQL Server. You were right in thinking of using PowerShell and/or robocopy to copy files or directory to wherever you want. Powershell will even allow you to send email once the task is completed. Currently, in my company, we use native sql server backups with compression and then have powershell scripts kick off the move to backup server on a different schedule.

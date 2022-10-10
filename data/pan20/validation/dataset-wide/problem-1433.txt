@@ -1,0 +1,51 @@
+Concerning the class: Since this class is a wrapper for a and already contains method, it would be better if it implemented the interface. This will allow the users of this class () to benefit from try-with-resources block and they will not need to call explicitly. If an is thrown in method (which would hardly occur here, but imagine that is replaced by another source), the objects created in constructor will become inconsistent, with . Probably, that is not what was intended. Returning in this context is a replacement for an exceptional situation and is not a valid value for the calling routines. I'd suggest to avoid it here (as well as in general) and to re-throw the exception, which should be caught and managed outside. The resulting class will look as follows: 
+
+Visibility and Encapsulation class contains too many public final s, which is quite suspicious. Number of them should be made private or protected and thus the visual pollution with will be reduced. 
+
+is suspicious. Not only it returns a tuple containing another tuple, but also it looks like the purpose of the is to show if the return object contains data or marks a missing value, according to : . Scala has a dedicated type for that: 
+
+The main thing about it is the usage of . iables are discouraged in Scala; they should be used in reduced scope without external exposure ( has public access here). So we can just transform the field into : 
+
+We do not need field in this class any more. The events handling will be separate for each element of the GUI. In the constructor: 
+
+represent violations of Law of Demeter. It looks like there are more problems with other entities design. JUnit Tests The test case class must be in the same package than the tested entity. There is a mess in initializations: 
+
+You are right, the code looks messy. Here are some hints that concern only the fragments listed in the question (I looked briefly inside the project repo, but it's too huge to analyze here). 
+
+Misc There should be a general check for input data that the args contain numbers. I've tried to pass "test" string to and it returned , which is not explicit from the user's point of view. type does not seem to be used elsewhere except in the optional return type declaration in function. The type and the declaration can be removed without any harm. In functions, and should be renamed according to their meaning, something like and . I'd also suggest to extract clipboard operations into dedicated functions, for example: 
+
+Consequently, some changes will be necessary in class, concerning the initialization of the instance and exceptions handling. 
+
+The arg above allows us to reduce the number of references to pass from one object to another. Now we can introduce companion objects like following: 
+
+Please note that there is not a single left in this function. BTW, there is a potential bug in the original implementation. shouldn't be initialized with , but rather with . function can be refactored using the same principle, bu there will be two more things: 1) the call needs to be separated into a dedicated loop, for example: 
+
+They have ate least five similar arguments. It really seems that instead of having this pullulation of methods there should be an abstraction like . 
+
+Opening braces on new lines for code blocks are not Java-like style, so format them properly :) Other 
+
+It's just a cleaner practice: prefer interfaces over implementations. Bug or Suspicious Comparison of Dates The old are compared with , which will lead to unpredictable behavior, because they are compared up to milliseconds. So two s created within even a short delay will not be equal. Just try this simple test: 
+
+5) As already mentioned in another post, do not use for prices. BookRepository 1) map should be . 2) In , instead of checking two times in the map, one call could be enough: 
+
+For the current condition, this means that 0.5 < h < 1.0 and 0 <= t <= 0.5. 0.5 is not included in the lower bound for generation of values, which favors very slightly. The condition for equal distribution should be . 
+
+Since and are pre-validated constants, I suppose that they cannot represent a cause for a . But from the original code, it is not clear whether is validated as part of URL pattern or not. If so, an would be appropriate here. Otherwise the catch block should log the exception message and return an instead (also change the return type to and the return statement respectively). I'd also suggest to rename this method to . 
+
+The advantages are significant: 1) flexibility and separation of concerns; 2) tests are much easier. The private methods , used by all the builders, should be grouped in an abstract class and be accessible from the implementations, so the builders class headers should finally be like . should be abstract and implemented for each concrete message builder, without the conditions. Other Issues Args Validation Multiple not-null checks might be extracted: 
+
+If you mean that invokes , that is absolutely OK and should remain as a private function. Nesting within each other should not be overused. I would recommend it only when the nested function is 1) really short; 2) simplifies the readability of the parent one; 3) never needs to be invoked from other functions or itself; 4) does not call other functions of this entity. For most these conditions are not met. Mutability 
+
+Other Stuff The boilerplate response building instructions in service methods can be avoided in two ways: 1) Create an ad-hoc shortcut method like 
+
+The idea would be to validate the candidate value before setting it on the object. Not sure that dedicated classes are necessary, because they are just wrappers for the only field, aren't they? Exceptions Handling Taking into account the current listing, the code 
+
+The number may also be extracted into a vairable. Draw a Rectangle If I'm not mistaken, with you are trying to draw a rectangle. It may be replaced with the respective method call, thus reducing the stuff to a single line: 
+
+The approach with + definitions is indeed extremely hard to maintain. There is no need to create intermediate wrapper objects like , because JAXB supports annotations and the same output can be achieved by using: 
+
+Well, the contents of this method is really too complex and firstly should be split in two parts (dedicated methods): 1) parse arg in order to extract , and ; 2) invoke method on the target object. Parsing 
+
+Which reads as "X is greater than or equal to 0 AND X is less than or equal to 1". When X is reversed in the two parts, and you begin to read, it can become a brainer uselessly: 
+
+Although I don't like - sequences, in this case it remains simple and readable, but it still can be simplified like this

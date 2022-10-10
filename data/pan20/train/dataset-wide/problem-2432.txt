@@ -1,0 +1,63 @@
+I also suggest that you declare of type instead of so that it becomes unambiguous for anyone reading that the synchronisation in is guaranteed. 
+
+Exceptions are (badly) swallowed is closed but not opened in this method. This could be a major flaw because it induces a nasty side-effect. It is a general idiom that the one who opens a resource is the one who closes it. is declared in the , no need to close it manually ! (it will be done automatically) 
+
+Class is open to modification should be closed for modification, this is the OCP principle. If it's not, its behaviour can be altered (by inheritance for example) and can lead to an unpredictable behaviour which make it rather difficult to test and maintain. How to achieve that ? Mark . Executor never shutdowned Once started, the executor can never get shutdown, which causes the task to be run indefinitly. How to achieve that ? Create a method: 
+
+I see at least one big problem in your method: there is no separation of concerns. Everything is mixed into this method: common rule for password double-checking, business rules for password validation and UI calls for user response. Extracting the business logic The business logic in your case if the password validation specific rules, as you named them rule1, rule2a, rule2b, rule2c and rule2d. Everytime you will need a password validation, you will need these rules to validate a password, therefore I would extract these rules into a BO. 
+
+I assumed using a timestamp should be enough (guaranteeing you one unique filename per second). Here is after this refactor: 
+
+I also voluntarily removed the log statement. I'm not sure it really add any value when only logging "Create File". Either add more information such as where the file was created, with which name, etc. or get rid of it. In the end you could use these methods like this: 
+
+Next portion of the code is reached only if we still have work to do (we didn't get to the inside the ). It's outdented, but maybe that's hard to see with my comments between the lines. Now, look at your line. What you really want is , because you use it in the next line (). So we'll use map. It should be pretty straightforward: 
+
+That's the end of our callback function. Now remember, the function works with , but so far we have only the . Let's fix that: 
+
+So that's the extraction part. Pretty trivial with CoffeeScript. Next part is little bit trickier. If you're familiar with recursion, you know the base case is usually written before the other parts of recursive function. We'll do something similar - check for your condition before we do anything else. If it's true, it will simply mean that we don't need to do any of that sieving mumbo jumbo, that we're done and just need to wait till we get through all the elements, because we can't stop the reduce function midway. 
+
+By the way, thanks for your question - I see the Sundaram's sieve for the first time. Seems very elegant :) The final code: either copypaste the snippets above or use this gist :) But I sincerely hope you at least read through this and not just use the final thing, because of the time I put into writing the explanations... :D 
+
+And we need to prepare these new values for the next "iteration" - and return them. You can see that instead of deciding whether to finish or loop again right after changing the , we delegate that to the beginning of the callback. If we had it here instead of at the beginning, we'd do unnecessary (and potentially harmful) changes to the numbers array, because we can't stop the reduce from getting through all the steps. That's a minor disadvantage of this approach - we do some unnecessary work. But we can limit it to just finding out if we actually need to do something or can just return immediately. 
+
+The method could event be marked so anyone reading this code knows that this method doesn't have a side-effect on an object attribute. 
+
+Bill What does a need in order to compute a price ? A base charge and a distance. These two values must be provided in the bill constructor. The bill doesn't have to know about the . Then, the implementation becomes (note that I have made this class immutable): 
+
+is fine. The resulting string in is misleading. The is the amount of cans the vending machine currently holds and the is the number of coins that have been inserted. You should also directly return the string instead of creating an empty variable 
+
+This parameter is the thing that bothers me the most in your class, and also the one who gave me the most trouble when trying to remove it. Why does it bothers me ? Everytime you have a in a method (or constructor), it's a sign of poor design because the class/method should do 2 things now (one for each boolean's value), therefore violating the single responsibility principle. It makes your code hardest to test and to maintain because of the conditionnal logic flow. If I understand correctly, the purpose of this flag is to avoid client code retrieving a when calling because the cache has not been updated at least once. I would rather resolve this problem by blocking in as long as the cache has not been computed once. In Java, one have the who is a thread-safe class able to fulfill this responsibility by blocking only until the cache is computed the first time. I came up with the following wrapper to achieve that: 
+
+TaxiMeterApp This class also doesn't need to depend on , the only useful information is the amount of the base charge. One now takes as a parameter since the distance is obviously not known when starting the taxi meter (the base charge is, however). I also removed the App from the class name because I think it has no value and only bring visual noise. 
+
+Cycles never end. This problem is not as simple as it first appears. All path finding algorithms need to be aware of the paths that lead in circles. Your problem and the solutions for this are , , and ". but if we change the last link to we create a circular link. Your code will follow and so on until the call stack overflows. In most recursive problems where you encounter a cyclic reference you can easily avoid the endless recursion by simply tracking the objects you have already referenced. Ending the recursion when you find a link that has already been traveled. But your problem requires ALL paths which complicates the problem (Actualy impossible as cyclic links create infinite paths). Consider the links It has the following solutions 
+
+Foreknowledge of result length This type of problem has a short cut because you can know the size of the resulting array by just inspecting the first and last items. You can then use the calculated result length as an exit condition. In the best result you only have to inspect the first and last value and exit without iteration if there are no missing values. The worst you will have to count over all the values in between the first and last. The resulting algorithm is very efficient 
+
+By breaking the problem into smaller parts you reduce the overall complexity and make it easier to read and maintain. 
+
+Prototypes used to be good for objects that are frequently created or hand many instances. Now memory is cheap, GC is much better making the overhead of prototypes not worth and benefit you get instantiating, and using object pools you can avoid instantiation and memory overheads almost completely. There is only one use for prototypes and that is prototypical inheritance. 
+
+You could reduce complexity via reducing the overall count of function calls to $. There is only one bit of missing information. The state of of the handler span which will be in the CSS. As it is not clear when the code runs I can not assume it is in its initial state. 
+
+The hardcoded string for the path The fact that you directly depends on , making the method hard to test 
+
+The is really nasty here ! One expect to only return a value but before it does some unexpected computation ! You should write it in the form of a simple getter. 
+
+Meter I think this class totally useless since you only wrap an (for nothing ?) Don't you think it's a bit redundant to write instead of ? I would remove it. CarType As Tunaki said, I won't couple the distance into the , this has nothing to do with a . Don't you have the feeling when you compare , and that there's a lot of redundancy ? From my point of view, it's screaming for an enum since the only difference between all of that is the value of . I would refactor all of that into the following: 
+
+This is the kind of test I would write (I picked a convention for the names, you can choose another since it stays coherent). Given the previous refactors, the test implementations are more expressive now: 
+
+contains only notion of blocking until the value is not computed. How the value is computed is totally abstracted here. 
+
+The requirement doesn't state what's the behaviour when there are no cans, so I assumed it is nothing. If you know what the requirement is in this case, I'll update my answer accordingly. Looking at your current method, I think the requirement is not reached. First you erase the old amount of tokens with then you refill the vending machine with 50 cans when it is empty, which looks really strange and induces an unexpected side-effect (see Principle of least astonishment for details). The requirement also states that you should be able to only retrieve one can at time (and not many). Here is how I would implement 
+
+Using LocalDateTime Since Java 8, there's a new API to use when you are using dates. I refactored the code to use this new API instead of the old one. 
+
+OK, we have the s, now we have to deal with the sieving. If you look at your code and think about it in terms of transforming one array to another, you realize you either change an element to 0 if it was unlucky and its index was in the , or don't change anything if the index wasn't there. Look how it translates to code: 
+
+Now, when I hear "functional paradigm," I hear "loopless way" and "immutability." Functional programming is about more things, of course. EDIT: oh man, I had in the code. Stupid mistake :) Fixed now. 
+
+As you can see, equals , at least at the first go. What we'll change will be the loops. Instead of thinking in terms of , we'll think more like - transforming the arrays with our , , functions or their CoffeeScript counterparts. Now, we have to define the transforming function for the , because we want to do something like . You see, with a little bit of imagination you had in your code. Now we'll do exactly that - our function for the will get a step at every call, just like your loop did. So that's that. Next problem we have is rewriting the "global" changes you make inside the loop. So we need to do something about the and lines. We'll make the changes propagate through the result values. But how can we make two things propagate through one value? We'll use an array. Remember, is an array and is a number. Essentially we'll insert the at the beginning (or the end, wouldn't matter) of the array and at each call of our reduce callback extract it from there - and of course, after the reduce finishes. 
+
+And now for the functional ways. (Disclaimer: I don't think my functional rewrite of your code is any prettier - but it's more functional. Maybe someone can make it look more elegant?) I'm no expert on functional programming, but from what I've learned, you generally try to use things like map, reduce, filter.

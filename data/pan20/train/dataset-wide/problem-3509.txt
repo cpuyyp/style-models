@@ -1,0 +1,65 @@
+I'm running into an issue when setting up a Windows 2012 R2 RDS Farm. I mistakenly set up my High Availability Connection Broker's DNS round robin name to something that didn't match my cert. I found a way to easily change the DNS name here: $URL$ using the PowerShell cmdlet Set-RDClientAccessName. When searching online I can see that a lot of people are having success using that cmdlet, but I am not. Here's the error I'm receiving: 
+
+I found the solution, and it's painfully aggravating that I missed this- I wasn't running Powershell as an administrator. Correcting that oversight allowed me to fun the command successfully. Thank you to everyone who viewed this. 
+
+If anyone has any troubleshooting steps I'd appreciate it. I am worried that the dash in the hostname is a problem, but I tried single and double quotes to attempt to rule that out. I'm also not a Powershell buff so I'm not certain what steps are advised after that error. 
+
+You could use one of the many well known tools out there to test passwords. One I saw is L0phtcrack. Maybe there is even a way to do this offline with a dump of you authentication database. In "the other world", we use "john the ripper" for stuff like this. 
+
+"Have you tried turning it off an on again?" :) No. Really. This seems to be a network messup where your client doesn't see the domain controllers. Maybe there's something wrong with DNS or IP addressing, or anything else preventing proper communication between Client and DCs. 
+
+Is "PersonX" the actual name of the user account? If so, it conflicts with names in the AD. Users and computers are both AD objects and need to have a unique name. I'd suggest to prefix the name with something like and go ahead with the CNAMES. 
+
+Make sure nobody execpt can read this script or put the credentials somewhere else. is the directory where the backups reside locally. Of course you need to edit the obivous parts. HTH, PEra 
+
+Is the Windows 10 system part of a domain? When you load this module by default, it attempts to look at your service records, find an efficiently located domain controller and map it to the PSDrive "AD:\" so that you can navigate it within powershell and review records. It is possible to disable this: $URL$ 
+
+Your best solution to this problem is absolutely a conditional forwarder, although as someone pointed out above a delegation would probably work as well if your DC can route to it. Of course, if it can't you'd have bigger problems. Otherwise, just typical split-brain DNS scenario where you're answering most clients for what you have, but anything specifically to www.contoso.com you can forward to this other server. With the contoso.com it gets a wee bit hairier for kind for the same reason the other commenter mentioned. Your AD domain is using this. If your domain were instead a subdomain such as 'ad.contoso.com' you could also simply use a CF here. That, of course, assumes your dept1/dept examples are correct and not like dept1.ad.contoso.com If your servers are at least 2012 R2 I believe there is a new functionality for this: $URL$ Hope this helps. 
+
+The DNS server itself does not contact to your webserver at all, therefor it's impossible "to tell their DNS servers that this IP is wrong". Also, a HTTP redirection to the new IP address will probably not work as expected (named VHosts, etc?). Have your lowered the TTL of the DNS records? If not, do it now... 
+
+Here is an article about the different backup methods, including replication. Please don't put Username (probably root) and password in a script, use the file of the user running the backup script (probably also root). Make it read-protected to the outside world () For reasonably busy sites, use mk-parallel-dump or make a snapshot at filesystem level (using LVM), backup the data files and remove the snapshot. 
+
+You could send a series of commands to and wrap it in a shell script which calculates the filename of the too old files (see the script below). 
+
+As routeNpingme pointed out, you should configure the switch accordingly. If your NIC driver supports LACP, use is on the switch aswell. Otherwise, you'll have to stick with a static trunk on the switch. Here is a config example for Cisco: 
+
+Not sure if this answers your question because there's not a lot of detail but this is just asking you how you'd like to configure this new domain controller. Do you want it to be a DNS server? Do you want it to be a Global Catalog? I'm guessing the plan is not to have an RODC since you already have one there, but those are recommended if the site does not have a secure computer closet or data center. You only have to have the DNS service on one domain controller technically, but in all honesty with most scenarios I set them up as both a DNS server AND as a Global Catalog. DNS for the local site if there are enough users, and Global Catalog so it can answer queries through 3268/3269 TCP (GC queries). The GC is a read-only port that returns partial data for your entire forest, if you have a multi-domain environment this is especially useful. Old documentation says you should only use it as you need to, but this was based on slow connections in days gone by, these days with reliable network speeds that's usually a non-issue. 
+
+I prefer using varnish in front of tomcat instead of Apache, because Apache's tomcat connector is quite b0rken. Varnish is a very efficient reverse proxy and cache and speeds up delivery of tomcat's HTML output. Without the hassle of tomcat connector. 
+
+The error means that the user does not have sufficient rights on the target machine. "Something" went wrong with the administrator rights for that user... Is it a Domain setup or standalone? Could you paste the command line you are using (without password and/or public IP)? 
+
+If the mail server's hostname is anything other than "www", you shouldn't have to worry. As Jush Budde pointed out, you just need to change DNS records: 
+
+However, I see some disadvantages for using Windows here. Am I right that you want do use a 2k8 license just to filter and forward some traffic? Sounds expencive. And somewhat insecure. There are pre-packaged Linux/BSD distros with nice web-GUIs if you have no Unix experience. Have a look at pfSense, it's a really nice firewall. And here is an article, which describes Snort integration. You can test it using VMWare, for example. HTH, PEra 
+
+data 52e is the key, this means that the AD server is saying 'Invalid Credentials.'. I'm not readily familiar with JXplorer so I'm not sure how you set the credential for the session, but something is going awry there. 
+
+I believe this will answer your question: $URL$ In short, windows permissions vary based on whether the target is a folder or a file. The tables in this explain it in detail. The information is dated but for the most part this should still be intact. This is a bit more up to date and applies now but a bit more complicated. $URL$ 
+
+You could install a second NIC and multi-home the server if the software will support it. The risk to your AD domain depends on whether the credentials are used to log in to that server. If so, they are at risk and you probably want to manage it with an account that only has permissions to that box. Yes, someone owning it could be a further risk if you don't notice it, but as long as you're not logging into it with domain admins and the like, it wouldn't necessarily immediately compromise the whole domain. Long run though, it would be best to get the extra network gear and configure a DMZ and separate it from your internal network and open only absolutely required ports back to AD or anything else internal. 
+
+In addition, consider using a good loadbalancer, HTTP-cache (e.g. ), PHP-cache (e.g. ) and , if it fits your web application. This may obsolete some backend servers on a reasonably busy site. 
+
+If you need to port Unix shell scripts to windows or just like to work on the CLI, have a look at GNUwin32. It provides the common tools like cut, grep, etc for Windows. 
+
+You could use the good old well known Squid proxy for this. Here is just one howto with config examples. Google will give you a lot more in no-time. HTH, PEra 
+
+Generally, a DHCP server is able to provide any IP you like as the default router. Only the GUI used for configuration is often stripped down to a minimal set of features, so you just can not alter the DHCP option. You could check if your main router can serve DHCP, too or move the DHCP service to another server on your network. If you have any Linux servers, install ISC's . The DHCP service for Windows Server is also free of extra charge. The ultimate solution would be slightly different: Create another IP subnet for the wifi and let the AP route beween wifi and wired network (routing instead of bridging). Then, on the wireless-router, use your main router's IP as default gateway. 
+
+Sure. Create a GPO with a WMI filter scoped to Windows XP, and apply the deny logon interactively/locally rights to DOMAIN\Domain Users, that should prevent them from being able to logon. Although you might get some loud and rowdy responses, be careful of that if you have any concerns of more senior management frowning upon it. However, they cannot actually "hide" this from you. The operating system is included in the computer object and you can perform a powershell query to detect the systems that still report as that version of Windows. As I recall this value should update if they use install a new operating system. A powershell script that seeks out the values of each computer object's attributes called "OperatingSystem" and "OperatingSystemVersion" would tell you what you needed to know. For example on my workstation, these return: OperatingSystem: Windows 8.1 Enterprise OperatingSystemVersion: 6.3 (9600) (Major,minor and build#) Does that help? 
+
+Pardon, because I'm not super experienced with various Linux distros, but from the Active Directory side, this sounds like you may have a problem with your RID Master. If the pool is depleted and not being replenished, it may be that the other domain controllers cannot communicate with it for some reason. What happens under the hood is the RID master allocates a pool of (i think) 500 RIDs at a time for new objects, and when that gets to less than half a new request is made and a new block of RIDs is assigned. I would recommend trying a full dcdiag and looking through it for any errors (or asking your AD admin to do so) as a starting measure. 
+
+The problem here is, that your router does not NAT your internal client's address. Thus, the TCP handshake fails. Let's assume following IPs 
+
+You could boot with a live cd like GRML and use the boot option to check the RAM for errors. If you boot the normal grml OS (debian based linux), there are lots of tools for diag (like cpu burn-in). 
+
+Could you post the config file for the bond interface and the switch connecting to the NICs? You have to make sure that all NICs have the same Aggregator ID configured. Make sure you set an ID also on the switch and set its trunk mode to "active". 
+
+I'm not familiar with Windows servers (I'm some kind of networking guy) but have to setup an ISA server from the networking point of view. It will connect an internal LAN to a DMZ. There will be a cluster of two ISA servers using NLB. Obviously, the cluster will have 2 NLB "sessions", one for internal and one for DMZ zone. My question is concerning the heartbeat: What (and why) would be the best way to go out of the following possibilities: 
+
+If I'm reading you right, then I guess it depends on how you're assigning IPs from your VPN and whether or not you have the capability of setting the DNS Server address, guessing you would but not every implementation is the same. You'd want to configure the zones that you want to be answered internally on that DNS server and leave recursion intact (although this is generally a bad idea if that DNS server is exposed to the public, as it opens you to potential denial of service attacks, and you might need to be more complex if so). This way your DNS server will answer what it can first and if it has no zone for the query it will forward to the internet roots by default. 
+
+I think you might be looking for 'erroractionpreference', this article explains through a few examples of how it works. $URL$ Given the other answer, if your script is larger than this function and you need to continue troubleshooting, then you'd need to wrap this bit of code by setting it at the beginning and setting it back to 'continue' after you are done processing. This will suppress non-terminating errors like that so they are not printed to your host.

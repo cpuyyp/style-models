@@ -1,0 +1,47 @@
+This is reaction to comments: firda: Why do you have all those small classes connected through properties instead of using class hierarchy? I would create SearchRequest and UpdateRequest both derived from Request, while making SecondAction virtual get or protected set. Any problem with such solution? archytect: That seems logical, but it's not easy to grasp. Could you provide some code to better visualize it? 
+
+Not much left to review Your and looks like helpers that should in my opinion be , have a bit different names (already pointed out in other review) and there could possibly be non-static members taking no parametr for this. A bit about the design, you have mentioned: 
+
+Usage example That was not part of the code for review, just and imperfect example. The real objects are a bit different. 
+
+Normal Class (not static) Read-only (getters and reaonly collections) Tiny objects if you really need to change the index - create helper class that can access the collections and return the indexed value. 
+
+First to note, your code seems to work and the code-style is OK. There is not much to review :) ...but still: Using the not to write reallocation (growing) yourself is fine, but the is unnecessary, as all the time, it is redundant. will throw IndexOutOfRangeException if the queue is empty. It would be better to check and throw InvalidOperationException instead. 
+
+Something more.... immutable Static reference to normal class What I had in mind was static reference to the class, where is like calling and is like and you can even have in it. But if you cannot redesign, you cannot. You got my thoughts, now it is up to you. 
+
+But if, heaven forbid, you're doing some assignment that explicitly states that you must use malloc on pain of death that you ever use any of the multiple better alternatives that have so kindly been made available to you, this is how you do it: 
+
+Finally, if you're absolutely positively 100% sure you can't use std::vector or new[], ask yourself if you can do it via calloc: 
+
+For this reason, both of your first two arrays are well designed, and are quick and easy to understand during a code-review. The two lists are iterating x and y over all of the items [0,0] to [max_x_index, max_y_index]. But if you poison one of the two for loops so that they no longer look normal by adding some semantically unrelated variable (count) to one of the loops, suddenly the entire loop becomes harder to mentally understand. count is not related to [x,y] iterating over the loop. It's semantically related to how many elements are in some2DArray, and moving them far from each other makes the code as a whole harder to read, and inevitably, harder to maintain and debug as well. Instead, good practice is to modify variables close to their semantic meaning, which aids comprehension of the code. To do this, you should modify count at the point where count ought to change - not when the loop iterates, but when you modify some2DArray either via inline increment: 
+
+There doesn't seem to be a reason to filter out the s. List comprehensions neatly let us skip the empty tail, and get rid of . 
+
+I would separate the looping queue logic from the rest. A general implementation of necessitates a state monad here. 
+
+If you used , would be Using , is , except that the list is the right way round. Replacing with allows you to remove the last line, and thus the recursion, in loop's definition. Prepending to allows you to remove the . skips getting system time. 's allows you to require ability to generate random numbers in exactly the upwards call hierarchy of if you use mtl-style type signatures. You won't even need to specify that it is actually provided by (except in ), giving type level gurantees that you aren't using IO except for random numbers. Then you can wholly reduce to . 
+
+When you need to reverse afterwards, that's a hint you should have folded the other way. But this can even be written in terms of : 
+
+One property that comes to mind is that applying any permutation before does not change the result. But what is a permutation? I'd say it's a function that doesn't exploit properties of the element type, has a left inverse and preserves the length. (The first ensures that only input elements are used. The second ensures that no elements can be dropped. The third ensures that there is no space for duplicated elements.) 
+
+How it works At first it was very confusing how it really works, but I think I got the idea: You are taking advantage of how is dispatched - through main message loop (the same way as implements interface). This allows you to have absolutely no in your code but still make it thread-safe (as your synchronizer is not designed to be accessed from any other but main/UI thread). EDIT: The importat thing here to understand is that BackgroundWorker is executing all the events except DoWork in main/UI thread - that makes it working. See comments and description bellow for synchronization needed if used with threads. Synchronizer and BackgroundWorkers speration I don't know why you designed it that way and if you plan to wrap it all in another helper that will be spawning the workers while connecting the callbacks as well, but I think it would be a good idea, because the synchronizer is quite unclear (how it works, how is it to be used). EDIT: I was at first assuming that the code is fine and working and therefore that it is designed that way - to be used with BackgroundWorker that is doing all the hard synchronization. The Main/UI thread only design I think that the main problem with your class is, that it is not clear that it is designed for main/UI thread only. To make it clear (and for better usage), you should derive it from the same way as is (and probably join it all together as already suggested). EDIT: When used with BackgroundWorker, all those actions/callbacks are executed on main/UI thread (no matter which thread started it). That is the nice thing about BackgroundWorker and why it is a Component - it is designed to run some job in the background (some thread) but report progress and completition in main thread that we can happily acces our controls without problems. 
+
+Firstly, decide whether your program actually needs to be C and not C++. It's much safer and generally easier to use a std::vector<check_t> than a manually allocated region, as std::vector does automatic memory management for you (it makes it hard to memory leak) and it makes it hard to index the vector outside of bounds, which would cause a potentially exploitable memory corruption vulnerability in your program. If for some reason you must do this without the standard template, next decide whether you can't use new[] in C++. This will simplify your code and be more clear what you're doing: 
+
+So in answer to your question, it's almost never a good idea to increment multiple variables within a for loop. The for loop should deal exclusively with modifying elements that are being iterated, and leave other variables well alone. Violation of this confuses the semantic of the program, and makes it much harder to read. 
+
+Several people on this thread have talked about how a for loop works, but few have mentioned the semantic difference between a for loop and a while loop. When a programmer encounters a for loop when reading code, the semantic is that the loop definitely terminates and iterates over some range of numbers or some list of elements. That's why all programmers immediately know what the following loops do, and they are very easy to mentally understand and parse. 
+
+provides a matching instance for , but we want to modify the number of s to one, so we'll need an . Let's submit that. Usually could have done our job, but we don't want to target the arguments of the and constructors. 
+
+Here's a version of your list of lists version using list comprehension and no !! and no explicit recursion: 
+
+Try to put configuration-like parameters to the left and data-like parameters to the right, it composes better. condenses much conversion. lets me improvise a query language so I don't need to unpack the tuple everywhere. You already wrote and then you didn't use it. 
+
+Your strings are no longer than 80 characters. Do you mean your lines of code? You don't need , you can pass the do block directly to . The conceptual no-op should be replaced with , but in this case captures it more precisely. The next-player arithmetic is wrong - if a player is removed, you skip over the original p+1 which is now p to the new p+1 which was originally p+2. Make sure to set echoing to False, so people can't see what the others put in. Since is only used in one place, I'd inline it. 
+
+Edit: Since we've already silently been passing into the last case, we might as well get rid of , which can also be handled silently, for: 
+
+Combining with is a fool's errand. (I don't know where you get and , so I'll assume they start at 0.)

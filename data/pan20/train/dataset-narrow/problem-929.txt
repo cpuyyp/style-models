@@ -1,0 +1,83 @@
+I think if you combine @Abbas suggestion with an extension method and some enumerators you'll get a fairly elegant solution: 
+
+This code appears four times (in other places or are used instead of but the assignments are the same): 
+
+This is quite a long implementation (667 lines of code) and as such I'll concentrate a bit on reducing the amount of code this time. 
+
+Of course of you would make your matrix an actual 2d array then you could skip the whole shebang and just pick the cell by the index which should speed up things a bit. 
+
+Update: As for your question whether using a would be better - it depends. Using a reader-writer lock is more complex because now you have to make sure you correctly obtain the read/write lock in the correct places. Using a plain will be sufficient in 99.99% of all cases and should only be optimized if you actually have proof that it causes a performance problem. The statement also has nice compiler support which will generate the block around it to make sure it's released when anything throws - something you have to do yourself if you use another lock. And last but not least I'm suspicious of your need for a thread-safe list. The main feature of is the random access capabilities for reading/writing/inserting/removing items at a specific index. However in a multi threaded world these features are less useful than you might think. For example doing this: 
+
+and use in the inner loop wherever you used before. Again the JIT might perform this optimization but I wouldn't count on it. This is not really a good way to calculate : 
+
+Magic character should be moved into a named constant like . Since you need to classify the another way to encapsulate this logic is to create a set of extension methods like this: 
+
+If by convention the instruction commands are all named the exact same as the corresponding classes dealing with them you can build the dictionary dynamically once via reflection by finding all the types deriving from . Something along these lines might work: 
+
+Since we're interested in the smallest (so the resulting number has the maximum number of 5's and is therefor the largest matching one) this leaves you with roughly this pseudo-code algorithm 
+
+Kill the process after you have found the line. This may have unintended consequences depending and what exactly the process is doing. Perform the reading of the process output on a background thread raising an event when the desired line has been found but continue reading until the process has terminated afterwards. This will tie the lifetime of your program to that of the called program but that might be unavoidable. 
+
+Not sure if it's just a result from copy-and-pasting the code here but the code formatting needs improvement. 
+
+Your list holds values of type yet you named the node type very specific in relation to file descriptors which will be a bit weird if you make a list of lets say prime numbers you want to operate on. Consider renaming your node type to something more generic rather than (especially sincere there is a type in ) Your method actually doesn't insert an element, it appends it to the end so it should be named . doesn't work when the node you want to delete is . I know you handle that case separately in but it's still bad that the caller has to know that fact. It also clutters the code with lots of special handling. is a bit weird: It skips the first one, then prints all following nodes in order and then prints the first one. So while it prints out all nodes I'd say it's still unexpected from a usage point of view. None of your methods can deal with the fact if is being passed in. If you your structs then you can save some typing work. 
+
+The main issue is that the key event handler and the timer tick will run on different threads which means that someone could press a key while the timer tick fires - in which case the could be modified while you are trying to read it from another thread. You will need to safeguard against that by protecting the access to the with a You can probably get away with it because the runs on the UI thread where the / events are also being raised. The idiomatic way of subscribing to event handler is to let the user subscribe to the event rather than passing the event handler via the constructor. What happens if the user has shorter lifetime than the event provider? In your case it would keep it alive because you can't unsubscribe. When raising the event you need to check if the vent handler is null - subscriptions to an event are considered optional which means no subscriber might exist. Also you should not pass null as sender or EventArgs. The idiomatic pattern in C# goes like this: 
+
+In C# methods are generally same goes for public fields and properties. Prefixing names with their type like or (also known as hungarian notation) generally provides no value and just creates clutter which decreases readability. Please use sensible names for variables, fields etc. , , , , , ... etc. That just nuts. A name should convey the purpose of the variable/field - what is it being used for and what kind of information does it hold - in a concise but readable manner. Maintainability is about someone coming back to it 6 or 12 months later and still being able to understand what that stuff all means. 
+
+or if you want to be really paranoid (to protect against someone trying to cast the return value back to a in order to try adding elements): 
+
+First off your methods are not extension methods as the name would indicate. Not sure if this intentional or. If you want to make them true extension methods then I'd consider passing the parameter as rather than as . Other things I noticed: 
+
+Programmer error (the passed in heap pointer is ) Failed to allocate memory The element already exists in the heap (this may be perfectly fine) 
+
+Your class really looks like it should be an interface. And in fact it is actually two interfaces: The public one for the user and the internal one for the manager. So I'd suggest you split it up: 
+
+The way this works is: First we try to find the node which should be removed and we also keep a pointer to the previous node. Once the loop finishes there are several cases to check: 
+
+You don't really gain anything by abbreviating your queue related functions. So name them , etc. You are also being inconsistent with naming. Sometimes you have a suffix like and sometimes you don't like in . You should use a common naming convention for your data structure. Extract the data structure in to separate files. The queue implementation is independent of the algorithm and should be treated separately. A dequeue (double-ended-queue) is a generic enough structure to possibly re-use it in the future. is a rather bad name for that constant. would have been better. should not do a - it should take a function pointer as callback which gets called on every node. This makes it more versatile and the user can chose what to do (dump it to stdout , write it to a file, send it over the network, etc.) There could be some merit in checking the return value of for and in that case. Your code will probably most likely crash as it stands (which is what you want in that case) but technically per C standard dereferencing a pointer is undefined behavior and theoretically your system could do all kinds of stuff in that case. 
+
+When creating the cipher if you split the index finding from the appending then the code becomes slightly more readable (below assuming you use the extension method shown above): 
+
+Service locator is an anti-pattern because it tends to create implicit dependencies which are not easy to see and usually cause grieve when trying to write unit tests. Especially your implementation which references what seems like a singleton instance which can cause additional problems (i.e. you need to take care to reset it between tests). Avoid it. I can't say much about the MEF injection but it seems roundabout having to write all that code. It also creates an implicit dependency which will probably cause grieve when unit testing your class and makes it directly dependent on MEF while there is no need for it. Avoid it. Clean and simple. Explicit dependency, easy to unit test and injection can be easily manged by any IoC container of your choice (Unity, Ninject, Windsor, etc.). The way to go. 
+
+Since you're asking where the code is failing: Your logic is flawed for at least the case in which case you assume the whole number must always be made of 3's but that is wrong since for example for the number consisting of all 5's would be larger and still fulfill the requirements. Also your code invokes undefined behaviour since might be used before it is initialized in the case . Ultimately what you are looking for is a solution to: 
+
+In fact given that your inserts happen inside a single transaction you could consider throwing an exception rather than printing a message when an ill-formed line occurs. This way you get all or nothing - which might or might not be preferable (depends on what kind of data you are importing for what purposes) 
+
+Now let's see if I understand your problem: Given a sorted list of unique numbers you want to find all instances where (the important part is the unique). 
+
+Effectively this means you only have to write as rules instead of so you saved yourself some typing work by reducing a case to a combination of the existing ones. Why does it matter? If you consider the problem as the business logic given provided by a customer then approx. 5sec after the deployment of your solution the customer will come back and say: "Ah yes, I forgot, if it's divisible by 3 and 5 you have to print FixBugz because some of our legacy applications which we can't change have a typo in their parsing code." Now instead of just changing into you have to change a whole bunch of implementation code and unit tests. In the end you have generalized a solution which might not fit the requirements because the requirements have changed (they always do). 
+
+just submits a single job but it doesn't automatically parallelize it. If you want to process the input in parallel you need to submit jobs each working on 1-nth of the input and then combine the results. I think your parallel execution code should look something like this: 
+
+If speed is your goal then the next simple step would be to first use which in C99 or later is guaranteed to have at least 64bit. The next step after this is using streaming intrinsics, for example allows you to compare 64 bytes at once. However this is pretty much leaving the land of portability so depends on what exactly you want to do. In general is probably by and large mostly memory bandwidth rather than CPU limited, so once the memory bandwidth is saturated comparing more stuff in parallel won't achieve much. For learning and educational purposes this might be a fun exercise though. 
+
+You should check if the references are equal first to save a whole lot of comparing when there is no need to. If both objects are your method will return false which is probably unexpected. You call several times on these objects - It should only be called once for each object and then stored in a local variable. There is a typo in - should be You call several times - again just call once per loop and store in a local variable. 
+
+If you want to optimize for memory usage and code size you could resort to a simpler algorithm by simply walking up the tree from each node to the root and remember the longest path. Worst case this would result in runtime if I'm not mistaken but would not require any additional memory for building the children lists. The code would also be much simpler. As indicated by @200_success you could sacrifice a little bit more memory and find all leave nodes and just walk up from them: 
+
+Instead of spawning a new thread every time you probably should execute them on a thread pool. You want to wrap your list in a or else you might run into unexpected race conditions when removing multiple servers at the same time from the list from two different threads. 
+
+I'm not a huge fan of reading all input in one one go and transform it in one and then write it in one go. It seems clumsy and will not scale properly (although in the given case it's probably not going to be a problem). The basic structure I'd go for is this: 
+
+For wiring individual components up you could pass a into the which decides how things are wired up (so you can simulate broken wiring for example). 
+
+plus you can pass in an arbitrary combination of targets (in case you add more later). should be renamed to state more clearly what it does: . You have a lot of duplicate code in your two methods. The single message one could be shortened to one line of code . 
+
+Your trimming of whitespaces is not the most efficient - you only remove one at a time. with a regular expression should do the trick: If you rephrase the problem slightly you will find that a more efficient solution comes to mind: Any occurrence of and separated by exactly three characters means "Is there an three characters on either side of any or a three characters on either side of an . The algorithm is: 
+
+You don't need to cast the return value of in C. In fact it's considered bad practice as it can hide problems (like forgotten to include the appropriate header). You should check the return value of - in case it fails it will be and you are usually left with a somewhat meaningless segfault when trying to access the memory. You do but then immediately after in your for loop you do 
+
+Why do you use in the for loop? If you think that one of them could be negative then you are already in trouble with . You only check the return value of the second and not the first one - you should check both. You should also close the first file descriptor if the second fails. Even though the open file descriptor will be closed when the process exits it's still a lot nicer to do it properly. Unless I missed it you close but never . Your comparison for valid pixel is duplicating code and could use refactoring into a single method like this: 
+
+Design As it stands your code is hard to unit test due to the async nature of the timer. Consider creating an interface which you can pass in with a thin wrapper implementation around the .NET . This way you can pass in a mock implementation in unit tests which you can control as to when it executes. This is somewhat annoying but so far the only way to reliably test things like this I have found. 
+
+You should use descriptive names for variables and parameters. Descriptive names go a long way of describing the purpose of a variable or parameter which can greatly improve readability and maintainability. See them as built-in documentation. You have defined enums for attribute and skill names so why do you use an to add them to your object. They should be using the enum types, e.g.: 
+
+Well, "thread-safety" is a fairly vague term. Read/Write access to basic data types like for example is guaranteed to be atomic so in that sense access to is thread-safe. However your method is not thread-safe in the general sense as in that if two threads call it at the same time they could very well both be passing the guard check and both be performing the expensive operation. The call order would be: 
+
+You could copy the values back into - provided is quadratic and therefore and will have the same dimensions. Otherwise if the class offers a re-sizing option then you could re-size left afterwards and copy into it. However that is extremely ugly and I would question that requirement. As a side note: It seems weird that provides a static method for setting a cell value of a object. I would have expected that to be an instance method as well like . 
+
+Since C++11 I generally prefer to stick to the standard types and etc. as defined in . With custom typedefs like or you can never be sure that the correct type has been used unless you go and check the typedef. Similar seems to be a custom macros - I'd prefer to stick with the standard . I'd say is somewhat non-idiomatic C++. I would expect a constructor instead taking a buffer of type .

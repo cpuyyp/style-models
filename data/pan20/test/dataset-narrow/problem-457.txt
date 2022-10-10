@@ -1,0 +1,75 @@
+Note that I'm not totally comfortable with this method because it has 2 responsibilities: creating an excel file and filling it. Long answer Now you might wonder how I ended with the code above, so let's begin... Filename requirement You stated 
+
+Exceptions are (badly) swallowed is closed but not opened in this method. This could be a major flaw because it induces a nasty side-effect. It is a general idiom that the one who opens a resource is the one who closes it. is declared in the , no need to close it manually ! (it will be done automatically) 
+
+There's still a bit of duplication between the but I think you get the idea. The goal is to avoid duplication in order to have tests that are easy to understand and maintain (clean tests are as important as clean production code). 
+
+I assumed using a timestamp should be enough (guaranteeing you one unique filename per second). Here is after this refactor: 
+
+Using LocalDateTime Since Java 8, there's a new API to use when you are using dates. I refactored the code to use this new API instead of the old one. 
+
+TaxiMeterApp This class also doesn't need to depend on , the only useful information is the amount of the base charge. One now takes as a parameter since the distance is obviously not known when starting the taxi meter (the base charge is, however). I also removed the App from the class name because I think it has no value and only bring visual noise. 
+
+I also suggest that you declare of type instead of so that it becomes unambiguous for anyone reading that the synchronisation in is guaranteed. 
+
+The requirement is fulfilled. However how it is implemented is a code smell now. It's a good practice to have only one main constructor doing the fields assignments, the other constructor just calling the main one with other arguments: 
+
+My reasoning against returning is this: It is never 100% clear if a method will return or not in Java and maybe someone will think this won't so they won't guard against the null condition with . If you return an , it's an extremely clear signal that the content of the result may or may not be present. They still may handle it wrong but at least you can be more certain they know what's going on. My reasoning against throwing some exception when the book is not present is this: 
+
+Specifics The below code is a little odd to me, it's saying in the th word in the th character, find each in the th character that is any of the vowels. 
+
+This is worse. This is like saying . If you're set on leaving some comments it'd be more beneficial to leave some in the other methods with more logic involved like the method. 
+
+Everyone has commented about how to better replace the spaces, I will answer how to better test. I suggest making a proper unit test with Junit. This way you do not need to manually look at your output, you can simply run the test and it will tell you if it failed or passed. Unit testing is extremely crucial in a professional environment and is a very important skill to pick up early. (The below assumes your class is named .) 
+
+Note: I don't have much experience with the operator, if or something similar is valid I would prefer that instead of making the variable. DRY is still relevant though! While writing tests like this takes up more space I think it's more important that the test be clear. All that said I don't think DRY is completely useless in unit tests. Suppose you were doing more checks on , like making sure it's not , contains a specified number of elements, etc. I would put all those assertions in a separate method. Basically the assertions that are tangential to what you are testing. For example, you're not specifically testing the list has one element above, the assertion you care most about is that the only element is . You can't really do something like that so you have to assert that the first element is . Anyways, I tend to put these tangential assertions in methods like this: 
+
+is fine. The resulting string in is misleading. The is the amount of cans the vending machine currently holds and the is the number of coins that have been inserted. You should also directly return the string instead of creating an empty variable 
+
+Update: taking into account This is how I would fully replace a boolean into a business class. It looks like overkill but in reality it's not. Each class has a single responsibility, is testable and maintainable. is now abstract because the "blocking" behaviour can't be defined here but only in suclasses. 
+
+Class is open to modification should be closed for modification, this is the OCP principle. If it's not, its behaviour can be altered (by inheritance for example) and can lead to an unpredictable behaviour which make it rather difficult to test and maintain. How to achieve that ? Mark . Executor never shutdowned Once started, the executor can never get shutdown, which causes the task to be run indefinitly. How to achieve that ? Create a method: 
+
+The is really nasty here ! One expect to only return a value but before it does some unexpected computation ! You should write it in the form of a simple getter. 
+
+I see at least one big problem in your method: there is no separation of concerns. Everything is mixed into this method: common rule for password double-checking, business rules for password validation and UI calls for user response. Extracting the business logic The business logic in your case if the password validation specific rules, as you named them rule1, rule2a, rule2b, rule2c and rule2d. Everytime you will need a password validation, you will need these rules to validate a password, therefore I would extract these rules into a BO. 
+
+This kind of requirement is the kind of which clutters the code with at least one and is in general irrelevant. If you are okay to have a number in the filename (going from 1 to n), then why not having 0 ? After all, the requirement behind that is that no filename should be erased by another with the same name. So the real problem to resolve here is how to make sure this method won't create 2 files with the same name ? Since you stated 
+
+I don't like the use of here. If is null then it's fine (but I still don't like it). It seems better to throw a . In addition, if it actually was null it would throw a "real" at the first if statement. 
+
+A short suggestion because no one has suggested it yet. Instead of returning or throwing an exception when the book you are searching for isn't found, you should use . 
+
+The idea is simple, most people have some one directory containing all their projects as subdirectories. When you are in the top directory and you run this script like so it will run the command in each of the folders. I have another script called that fetches all remotes and fast forward updates them which I usually run each morning with this script. 
+
+It's unlike Java where single quotes are for characters. One exception to this is when using the in Strings, you have to use double quotes for this. 
+
+Method signature This may be an unpopular opinion, but I like not using in method signatures and instead using explicit types. It makes IDE suggestions and readability a lot better. 
+
+I recommend this, but it's ugly. I'd like it better if the throwing was at the top, but it's a trivial change you can figure on your own (It makes sense for all preconditions to be at the top). 
+
+I know this is a small script but I am new-ish to writing Bash scripts and want to learn. The lines seem a little ugly, though they do work. Also I can't pass multiple commands in with a like because the ends the statement in the line, so I am wondering if there's a better way to write that line (or pass them in). 
+
+If you throw a checked exception every single call of this method will need to be wrapped with . Checked exceptions are a pain to deal. If you throw an unchecked exception then you have the same problem of , maybe people don't realize it could happen. So they don't wrap it in a try-block. 
+
+This is the kind of test I would write (I picked a convention for the names, you can choose another since it stays coherent). Given the previous refactors, the test implementations are more expressive now: 
+
+Extracting UI calls Finally the UI calls must stay in the UI-part, namely into the JavaFX controller. Typically it could looks like this (simplified): 
+
+The requirement doesn't state what's the behaviour when there are no cans, so I assumed it is nothing. If you know what the requirement is in this case, I'll update my answer accordingly. Looking at your current method, I think the requirement is not reached. First you erase the old amount of tokens with then you refill the vending machine with 50 cans when it is empty, which looks really strange and induces an unexpected side-effect (see Principle of least astonishment for details). The requirement also states that you should be able to only retrieve one can at time (and not many). Here is how I would implement 
+
+Going even further As I said in the first chapter, the method has actually 2 responsibilities. I would split those in something like that: 
+
+If the rules are likely to change, it would also be possible to refactor this code and take the "final predicate" as a constructor argument. Extracting "standard" logic In your case, it is only the rule that assert the password and the confirmation password are equals. This is not a business-specific rule but rather a commonly accepted rule everytime a user creates a password. Moreover it seems you have a "validation flow" defined (first check the equality between the two password, then check if the password in itself is valid) that can be extracted into a separate class 
+
+I also voluntarily removed the log statement. I'm not sure it really add any value when only logging "Create File". Either add more information such as where the file was created, with which name, etc. or get rid of it. In the end you could use these methods like this: 
+
+Return a String instead of printing Instead of your method being make it return a and remove all the from it. Then from where you call instead do . This limits the side-effects of the method. For tiny programs this is not a big deal but in larger projects knowing exactly what a method will do is very handy -- especially if the method is what is known as a "pure function" which means it literally has no side effects and its output is directly dependent on its output. Consistent formatting In some places you have spaces before braces () and in others you don't (). It's less important whether or not you use them than how important it is to be consistent. Personally I put spaces before them. 
+
+Scope and `translated are only ever used in your for loop. It's important to limit the scope of variables as much as possible. So it's probably better to declare them in the loop like so 
+
+I actually just looked this up writing the answer. You can use a method called on arrays in place of a closure. Documentation 
+
+The only reason I even include the manual throwing of is because I assume you do more stuff in the part, if you don't, remove it because it will do that on its own without you writing it in. 
+
+I am only going to talk about the sports method, from there you should be able to get the info you need for the others as they are all basically the same. DRY isn't a big priority As I said in my earlier comment, DRY (don't repeat yourself) principle applies to production code more than unit test code. I think even in general it's easy to take this too far, readability is important, but that's off-topic. Your code however is tough to grasp. To me, something like the below is more clear. I like to specify "given/when/then" in comments (although usually I do nothing more than , etc.) but it's not necessary.

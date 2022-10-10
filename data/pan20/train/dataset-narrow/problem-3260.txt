@@ -1,0 +1,67 @@
+$URL$ explains backup and restoration. You don't indicate what OS you are using but it is simple on any 'NIX system. I use the following on macOS 
+
+No. Writing an image to the SD Card (or any other storage device) using or disk imaging software does a low level block copy and will totally overwrite any contents (including boot sector, partition table and any partitions). You can format, if you like, but this is just another unnecessary write cycle to the card. If you want to install NOOBS or PINN the card needs to be formatted as . 
+
+I read recently (I don't remember exactly where) that you could power the Pi from a "cheaper" USB powered hub. I just tried this, and it works. On checking the Pi schematics, it seems the USB port Vcc pins are directly connected to +5V0, whereas the 5V Power micro-USB goes through the poly fuse. I don't know what the specifications of USB powered hubs are supposed to be, but if they are just feeding +5V0 to the USB port Vcc (as the Pi itself does) this makes the poly fuse a joke for anyone using a powered hub, and all warnings to people attempting to power their Pi through the P1 port a bit academic. PS I know similar questions have been asked before. I further tested and the Pi voltage between TP1 TP2 was 4V45, while the 3A PSU supplied 5V25 (off load). I assume this means that the Hub feed is via some circuitry (probably a diode), so if the Pi is using its own PS it should reverse bias the diode, and be "safe". Powering the Pi via the Hub (mine at least) is below the minimum recommended voltage. 
+
+Have you enabled in ? This is disabled by default. You can set it in in I am rather surprised that telnet is enabled - this is insecure. 
+
+I presume you are talking about 5v logic circuits. You could specify the value of the resistors. The Pi GPIO would be damaged by connection to anything higher than 3.3v. A divider is one way of reducing voltage, but level shifter or clamp are more conventional (and better) solutions. For non-demanding (slow speed) applications this is OK. PS If you were thinking of just connecting via a series resistor - DON"T. This may limit the current after it has damaged the input. 
+
+Any file can be an executable, the extension of the file name has nothing to do with this, but it is determined by the executable permission attribute. These can be script files or compiled binaries, but the latter need to be compiled specifically to run on an ARM processor. Windows will not run. (Incidentally Disk Image files are OS X disk images, not executables - they are run by a package program on the Mac.) 
+
+The Pi 3.3V rail is widely assumed to provide 50mA, but AFAIK this is not officially documented for the Pi2 or the other recent Pi. The original Pi has an on-board linear regulator which was limited, but the B+ and later have a switch mode regulator which may well supply more. The regulator chip (which supplies both 3.3V and 1.8V is rated at 1A). I haven't tested this, but you could give it a try. You can use 5V with the ADC and safely interface I²C to the Pi, provided you use the on-board pullup to 3.3V. To use SPI you may want to use the inexpensive level converters which are probably less costly than the regulator. The risk to the Pi of providing more than 3.3V is greatly overrated. Provide this does not exceed 3.3V by more than a diode forward drop and limit the current with a series resistor this should be quite safe, and you could be doubly sure by including a clamp diode to the 3.3V rail. I doubt the ADC could provide enough current on digital pins to cause any damage. 
+
+All the ground pins (and the 5V and 3.3V pins) are connected together. There are only multiple pins for historical/convenience reasons. Only a single connection is required. (On devices with high currents there are reasons for multiple pins, but this is irrelevant for the limited current of the Pi.) There are a few cases where multiple connections are desirable - e.g. to minimise crosstalk. You mention 20mA LEDs. Strictly GPIO are rated at 16mA. That is not to say they won't deliver more, but is inadvisable - even if poorly documented. 
+
+No modern computer system with R/W mass storage can safely by powered down by unplugging. Most computers with a soft power button actually run software to ensure a safe shutdown. The Pi has no such circuitry, although you can add your own. It is NOT possible to run a completely RO Linux system. Systems which use RO media (such as CD) make a R/W system in RAM, which is discarded on power off; obviously this user changes can not be saved. You can make a Pi system to do the same. The Raspberry Pi will ignore RO flags, because it simply can't work this way, although it is possible to configure a system partition which RO. 
+
+Yes. The USB ports on the Pi are a direct connection to the +5V rail. How much current you can draw will depend on the device doing the backfeeding. This, of course, bypasses the polyfuse and negates the transient overvoltage protection. 
+
+It appears you have been following some other instructions, NOT those on the PIXEL post. You should have done to install in a existing Raspbian (it should already be there in a new install). Who knows what you have now? Undo what you have done and follow the official instructions. 
+
+If it worked before just go back to your backup - which you should always make before any change. If you don't have a backup start again. Don't run "In normal circumstances there is NEVER a need to run rpi-update as it always gets you to the leading edge firmware and kernel and because that may be a testing version it could leave your RPi unbootable". $URL$ 
+
+Based on your post, I suspect your problem is the charger. The link you provided indicates you are using a Nokia charger. The specification for chargers allows up to 1.5A, but the voltage specification is much looser than a USB power specification, and is allowed to drop as low as 3.6v. This is perfectly acceptable for a charger, but not for powering the Pi. Rather than fiddling with the Pi, and risking damage, you should check the charger. If you connect the charger to a load e.g. 5.6Ω (which should be rated at 5W). This should be 5V ± 0.25V There are lots of good chargers around. The Apple chargers work, and most hub supplies should work. 
+
+is probably easiest; is also a possibility, but you can use almost any networking protocol. is available in the repository, and easy to use from the GUI, but you can use from the command line. 
+
+Your question is not really answerable without details of the internal circuitry of the display. Assuming you are using the actual device you linked just wire it as described. Connecting the potentiometer as described is applying a variable voltage, between 5V and 0V to the contrast pin. The display almost certainly has some active circuitry controlling the contrast, and presumably would work at full contrast without an input. PS I haven't used the device listed, but those I use have a "piggy back" board with a I²C interface (which only requires 2 pins on the Pi) and includes the contrast potentiometer on the board. 
+
+What are you trying to connect to it? They DO work as inputs e.g. if you connect a switch to GND. These pins have 1.8k pullup to +3.3V, so high impedance circuits will have no affect. 
+
+It is generally not possible to power a HD from the Pi, which has only limited current (depending on what else is connected), due to the polyfuse. Connecting to a USB PS will attempt to backpower the Pi. I recommend a powered hub, but even in this case some will backpower. It is not a good idea to connect a backpowering hub at the same time as a PSU. You can easily check whether a hub backpowers by connecting without a PSU. If the red light comes on it MAY work - depends on the "USB charger". Many do not provide a sufficiently regulated voltage. If you want more discussion search this Forum for "backpower". 
+
+You COULD run the LED (plus current limiting resistor) in parallel with the gate, but it would seem more sensible to use with the load. 
+
+While you can use in a the results may be unpredictable as services run acynchronously. The ONLY thing you have to do is include in /boot/config.txt: 
+
+The Pi already has a unique ID shown in MAC (or Serial number) The following script can be used to set the of each Pi, but shows how to access this. 
+
+No you can't power via the GPIO, but you can from the +5V rail connected to the expansion header. You should follow the Foundation recommendations in the HAT specification $URL$ PS Pin 6 is Gnd NOT -5V. 
+
+There is only a single download for Raspbian, but this includes ARM6 and ARM7 kernels. If you look at the files installed in the boot sector there is support for all models, with different internal settings. The Pi determines at boot time, the appropriate kernel and Device Tree settings for each model. The Pi2 and Pi3 share a common kernel, and modules. There is no specific 64 bit support. This has been discussed, but no convincing advantage for 64 bit support seems to exist. Indeed with 1GiB of memory, it is hard to see what advantage 64 bit would provide. 
+
+The pin on most Pi is directly connected to the RESET pin on the SOC. Grounding should reset the system regardless of what state it is in (similar to removing and re-applying power). I haven't tried this on a Pi-Zero-W, but it works on B+, Pi2, Pi3. If yours isn't working there may be something wrong with the connection. The pins 5 and 6 is implemented in bootcode.bin See $URL$ Once upon a time it used to be possible to HALT the Pi and restart, but ALL the Poweroff and Halt options now seem to do the same thing, and are implemented in the same code. It may be possible to execute the HALT in software. 
+
+I have modified my script to support NOOBS (which has multiple Linux partitions) by changing the line which detects the . 
+
+If you are running a Mac with a SSD the disk will have been updated to Apple File System (APFS). AFP can’t share files on Apple File System (APFS). See $URL$ I noticed this on my daughter's Mac. I can see mounted HDD on her computer, but not the main SSD. You will have to share using SMB. On my old Mac (with a conventional drive) I can still mount the Pi and use normally (I don't actually use Finder). I don't have a Mac with AFPS. 
+
+There are many posts on these subjects, including on this site, many providing authoritative answers. Unfortunately there is no definitive documentation on some aspects. I have collated the following from many sources, and augmented with testing. Electrical Specifications of GPIO Raspberry Pi Power Limitations 
+
+You are wasting your time trying to control the on-board LEDs. They are controlled by kernel services, and additionally for the Red LED a hardware power monitor. You CAN change their state, but the kernel will change them independently on its own schedule. You can modify their behaviour, to a limited extent, by setting up the appropriate configuration in Device Tree. 
+
+I suggest you try a terminal application. If you scan a RFID tag the reader should respond as if the card number had been typed on a keyboard. Most such devices claim to be readable on Windows. It should be possible to read input from the specific device, but I have never tried this. 
+
+You could set SUID permission. This allows any user to have permission to owner privileges. There is also a guid option. (This won't work for scripts.) The program has this set. sudo chmod u+s yourprogram 
+
+but substitute the IP address of your Pi. You will be prompted for the Pi username and password. You can then opt to save these in your keychain, so future logon is easier. 
+
+Have you disabled the serial console on the Pi? It is possible that the Python serial and console I/O are both trying to communicate. This can be disabled using (I don't have access to a Pi at the moment, so can't check which menu, but it shouldn't be hard to find.) PS I have used serial from my Mac to Pi without issue, but rarely do so - it is MUCH easier to use . 
+
+The strip with DI, CI uses the interface, and is not usable with a RGB LED strip. I would be wary of using the RGB tutorial you referenced. This does not even provide a circuit diagram, only an unlabeled "wiring diagram". This appears to connect the bases of the power transistor direct to the Pi without either a pull-up (if LED is supposed to be on if Low) or current limiting (if LED is supposed to be on if High). Series resistors are a good idea in any event to protect the Pi. There are no current limiters in series with the LED (these may be on the LED strip). 
+
+The Foundation do not support upgrade from Wheezy to Jessie. There are good reasons for this. It is not impossible (and many have succeeded) - Apple and Microsoft both do similar, but they have much more controlled environments. Linux allows users much more flexibility which would multiply any compatibility issues. The Foundation also lacks the massive engineering teams and resources to support upgrade, and chooses to use its limited resources in other areas. If you choose to try an upgrade you need to have the requisite skills to perform your own fault finding. Time and effort which would be better employed in backing up your user data and restoring to a fresh install. 
+
+You CAN use device id (which may be appropriate if you had multiple adaptors), but the Foundation recommended method is:- To turn off wifi, ; to turn it on, . For Bluetooth, and .

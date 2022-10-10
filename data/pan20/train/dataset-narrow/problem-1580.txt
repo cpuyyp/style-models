@@ -1,0 +1,87 @@
+For some reason MySQL is using an old-style init script, even on CentOS 7, which uses systemd. They should have distributed a proper systemd unit file, but chose not to. The proper way to enable an old-style init script is with , i.e.: 
+
+You'll have to write a script that periodically crawls your internal content that you want cached, and have the script crawl each URL that you update. In the script, set an HTTP header (the actual header doesn't matter) and then use proxy_cache_bypass to force nginx to retrieve it from upstream. Example: Your cache priming script sets the HTTP header . In nginx.conf you will set: 
+
+Your header has no value. This is a pretty blatant violation of RFC 5322. Fix your application so that it provides a valid value for the header. 
+
+The behavior of your proxy cannot be said to conform to either the old or the new specification. In the meantime, your workaround is fine, since it introduces the correct behavior. 
+
+You changed the default PHP session save path. On a Debian system, the PHP directive is set to 0, preventing old sessions from being cleaned up, and a cron job is set up that clears out the old PHP sessions - but only from the default save path! So you can fix this in one of two ways: 
+
+You can use to make images of the hard drives in these systems (or the individual partitions, if you want). can be used to read or write data to a plain file, as well, and you'll take advantage of this. Since the hard drives are likely much larger than the actual space used, I recommend compressing them as well. So the general idea would be something like this: 
+
+Have you tried pressing Alt+Home? As a general solution, you should consider changing your Remote Desktop settings to send Windows-key events to the remote server. From Microsoft: 
+
+Ultimately this (or something like it) needs to be incorporated into the Tor default config and systemd unit shipped by Fedora/EPEL, which will resolve the problem for everyone. 
+
+Your Internet Service Provider is filtering outbound traffic on those ports. This is very common with residential Internet connections. The block affects Windows NetBIOS and CIFS traffic, and is intended to prevent customers from browsing files on their (poorly secured) neighbors' computers. 
+
+This is not correct. Relative URLs are constructed by stripping everything following the final from the base URL and then appending the relative URL. So has nothing after the final and would have nothing stripped before adding . Therefore, the constructed URL is constructed correctly. You will need to have the application developer fix this problem. 
+
+Your code is running twice because you explicitly asked for it to be run twice. First, finds your URL, or more specifically it doesn't find your URL, and so it runs your PHP script because you ended it with . This causes nginx to execute your script using the directives within . When this returns a 500 error, the directive in that kicks in. This tells nginx to deliver a specific document instead of its own internal 500 error page. In your case, it tells nginx to hit the location, which has the effect of calling your PHP code again. To resolve the problem, you need to think more carefully about what you want to happen when a 500 error occurs in your program, or perhaps better yet, not return 500 errors. 
+
+This appears to be a bug in RHEL 5.8 and 6.3 (mirror). You should contact Red Hat for a solution if the one provided does not work for you. Edit: Since the other answer was actually correct, and whoever it was deleted it... You also must have an active Red Hat subscription for the machine. 
+
+Make sure you have the package installed properly. If it is installed, you may have accidentally deleted its files and need to reinstall it. 
+
+The IP address remains attached to the VM until you stop it. If you reboot the VM, you will get a new ephemeral IP address. From the documentation: 
+
+If you run then the prompt for your password will also be niced, but since you'll spend far more time typing it, it really doesn't matter much. As ThoriumBR noted, if you are lowering the priority, then the order is irrelevant, but if you want to raise the priority, then (since this must be done as root) you must use . Otherwise I can't imagine any real difference. 
+
+On current versions of Fedora, the Zabbix agent, like many other system services, has a private namespaced and cannot see files in which are created by other processes. Since you're testing, try checking for the existence of a file in another directory. 
+
+You may need slightly different command line options such as to authenticate with Kerberos; check the man page. 
+
+Without knowing a bit more about how you have WordPress set up, it's hard to give more than general advice. The varnish wiki has a great set of suggestions for preparing for traffic spikes on a WordPress site. As for me, I run all my WordPress sites on nginx and php-fpm. WP has W3 Total Cache plugin installed to generate static content, which nginx then serves directly. WP and PHP never get touched in these cases and nginx just blasts the static data out the door. So far it has not been necessary to cache further. I presume something similar could be done with varnish. 
+
+That's not a fix, it's a workaround. But it should get you going. The reason it didn't work is that it's expecting to be capitalized. 
+
+RHEL/CentOS did not include the Hyper-V network drivers until 6.4. You should first start with the latest service pack if at all possible (currently 6.6) and test your software with it. If you're certain you can't update, you need to install the Linux Integration Services, which provides out of tree network drivers. 
+
+It's highly unlikely you have enough RAM to have 500 PHP processes running. On my boxes, they typically take up 40-80MB each depending on what they happen to have been doing. So what happens here is, when you start PHP, it tries to start 400 copies of itself, as that's what you've specified. But you would need at least twice as much RAM as you currently have! So the machine very quickly starts swapping, and grinds to a halt. Drop these numbers dramatically, until you are well within the bounds of your memory. You don't need 400 simultaneous processes running to handle 5-15 pageviews per second. You also should set a value for in case of memory leaks in PHP or another PHP module that you might be using. These are unfortunately far too common. To get your server back under control, try starting with: 
+
+Thus in the general case it's trivial to disambiguate between your Pandora stream and your coworker's. Packets coming in to a router are generally processed in the order they're received, unless the router is instructed to handle them differently (e.g. to provide traffic shaping/quality of service). But a full discussion of that is rather too broad for an answer here. 
+
+The primary problem I see in your output is that you interrupted a previous yum transaction before it could complete. 
+
+I should probably also add that it's a good idea to keep your systems up to date to resolve a variety of bugs and security issues. 
+
+There's no such host as . You've gotten invalid information from GoDaddy or somewhere. Ask them to give you the correct hostname. I would guess it will be and that you put it in backward. That is a valid host. 
+
+This limits you to only serving 25 simultaneous requests (everyone else has to wait in line). But you are very unlikely to hit that unless your blog suddenly winds up on the front page of reddit or something. And if you expect that to happen on a regular basis, you need a bigger server and a professional sysadmin on call. 
+
+You will never see a process name for a service handled by the kernel itself, such as the NFS server, which is what runs on TCP port 2049 (and UDP 2049, but you usually shouldn't use UDP for NFS). 
+
+Your nginx rewrite rules look fine. The most likely cause of this issue is that your DNS records aren't yet up to date. Double check to ensure that you've pointed the DNS A records for domain.co and www.domain.co to the right address. If you've recently updated the DNS records, it may take additional time before the updates are propagated and the old records expire. This is reflected in the Time-To-Live (TTL) value in your DNS SOA record. Finally, if you've updated your nginx configuration, you also need to reload/restart nginx. 
+
+You can't use LLMNR in that scenario because it was introduced with Windows Vista/Server 2008. Windows XP does not support it. Since Windows XP is end of life, and nobody should be using it anymore, (though some are) you can use LLMNR once you have completely eliminated XP from your environment. 
+
+(The old name of Wireshark was Ethereal; this made the package update work properly when the software was renamed several years ago.) 
+
+Congratulations, you've managed to use nearly all of your swap space. The first obvious problem here is that you went very deep into swap. This is probably what's causing the system to thrash so hard (lots of time spent in system, I/O wait and software interrupts). It looks like you killed some processes before this output, though, so some memory was freed up. First thing to do is to reduce the number of Apache processes that are running. You don't need that many for a small site, and it's just going to throw you deep into swap and kill your performance...which is what already happened. I would recommend you start very small and increase when it becomes necessary. An example: 
+
+The Elastic Load Balancer health check determines whether ELB sends traffic to any particular instance. What you want to do is very simple: Don't start the web server on your instances until you've finished bringing them up and configuring them. 
+
+Windows has a built-in NFS server service from Server 2003 R2 onward. This is completely separate from SFU and can be installed from Windows Components (2003 R2) or Add Roles (2008 through 2012 R2 inclusive). 
+
+Your directive refers to , but the endpoint you are trying to use is . Because a exists with the same path, with a appended, nginx generates an internal redirect. If is the WebSocket endpoint, then you should be using . You are probably missing some other necessary headers. Here's a working example of things you should have: 
+
+Most likely, you've blocked the ports in the firewall. So you should open TCP and UDP port 53 incoming traffic. (Also, you only have one nameserver, which isn't good for a variety of reasons, but that's another issue...) 
+
+Go to Administrative Templates/Windows Components/Windows Error Reporting. Find the policy Prevent display of the user interface for critical errors. Here, the Local Group Policy Editor is shown. You may also use Group Policy Management if you are in a domain. 
+
+Ensure that the system timezone configuration is in a sane state. Unless there is a very strong reason not to do so (such as software compatibility issues), server clocks should always run on UTC time. If you decide not to use UTC, choose a timezone by running . A timezone will be printed on screen which you will use below. An example would be . Otherwise use as the timezone below. 
+
+So php-fpm sees the file at and not . Therefore, you must adjust the path for so that it matches what php-fpm will see in the chroot. Do this by stripping off . 
+
+If the motherboard has integrated graphics support, then you can use either processors with or without integrated graphics. See the compatibility list for this motherboard. But if you use a processor without integrated graphics, you must also provide your own video card and the onboard video port will not work. If the motherboard does not have integrated graphics support, then you can use only processors without integrated graphics. Compare to the compatibility list for a similar board without integrated graphics. 
+
+This turns out to be quite a difficult problem, if you limit yourself to the single system which you're trying to validate. Fortunately, we live in the real world, where there is more than one computer! Some possibilities for verifying the binary include: 
+
+You should never subscribe someone to your list without their permission, which is exactly what you are doing. If that email address does get reactivated, you have no way to know if it is the same person or not. So your email would then be unsolicited, and safely considered spam. If you get a 5xx bounce, you should permanently unsubscribe the address. 
+
+This appears to be failing because doesn't exist. If you're unable to create this directory, try creating a directory elsewhere in the filesystem and mounting your share there instead. 
+
+That is verbose output from the utility for shrinking PNG images. You may suppress this output with the option. Though probably one of your gems is calling it and you have little control over whether it passes the option. 
+
+In grub, edit the kernel command line and append . The system will then boot to single-user mode with a shell and you can begin checking the logs to determine the actual cause of the problem.

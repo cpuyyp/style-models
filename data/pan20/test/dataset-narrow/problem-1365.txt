@@ -1,0 +1,67 @@
+As far as I know all those devices are able to show up to 60 fps, however, for mobile development you should think differently: 
+
+Personally, I'd go with the account approach due to a simple reason: In the end, you can't keep people from stealing CD keys (bruteforcing, reverse engineering or scamming). As such People could just create a new key to continue playing or to lock out others from the game. With account bound keys noone is able to do anything with a key that is already in use. In case someone bought a key someone else generated, you could still transfer the account ownership assuming there's sufficient proof of this. 
+
+Bonus feature: Having the weapon separated makes it rather easy to tint or adjust the weapons as well. In Secret of Mana this is used to show different weapon buffs, for example ice magic making the weapons freeze enemies on successful hits: 
+
+No, essentially has been replaced with , which will do the same things for you. The only difference here is, rather than telling the specific size to use, it will scale based on some factor (which is usually preferred, especially in pixel art 2D games). The code example you posted would be perfectly fine to use here. As an alternative, you could as well update your so the rendered view matches the texture's dimensions. Or - probably the most elegant way to do it - you could just define a which will render a quad filling your window using the correct texture coordinates. 
+
+To further reduce the number of frames, you can just mirror facing west and east. People looking close might notice the difference, but it's really just minor (if done right). Depending on the animation frame and the character's facing, the order in which the layers are drawn can then adjust dynamically, e.g. to fake the weapon being swung past the character (or its head). For example, Secret of Mana draws weapons behind characters when facing down (which is not always the case, see below). 
+
+Another example would be Mega Man 2. There's one stage featuring stars in the background. They've added a very easily noticeable Ursa Major right before the end of the Crash Man stage: 
+
+What you're doing here is perfectly fine, since it indeed can be considered minor letterboxing. Even Google does it as well (e.g. YouTube). You can't avoid this. What they don't want to see (or you to avoid) is writing apps that would look like they're having a thick black border around the whole screen, e.g. to avoid upscaling. If you're still unsure, try watching a YouTube video in portrait orientation. You'll notice that they'll fill the available screen space with the video description, suggestions, and comments, rather than leaving that area blank. In this case they don't want the area outside the video to be unused/blank. 
+
+Did some testing and I think your only mistake is in adding the offsets rather than subtracting them. Other than that it's been working for me, although you could simplify those equations quite a bit to get rid of all those divisions. 
+
+The basic idea is rather trivial. First you should start drawing a grid. Simplified, I'd just define a quad using four vertices. would be , would be : 
+
+The problem here is the case where the object's distance to its goal position is constantly too far (i.e. ). As long as this condition is true, it's velocity simply increases over and over again (i.e. indefinitely). Two possible solutions for this: Define a maximum velocity: 
+
+Regarding your last note with positioning: Your actual vertex coordinates should always be local. E.g. their origin should be at the cube's (or chunk's) origin. Then adjust your world matrix to "move" these into position. This way you don't have to touch vertex data again, resulting in another performance gain. Overall, in DirectX there are three matrixes determining how/where something is rendered. Right now I'm not 100% sure how abstracted away these are in XNA, so I might be a bit off here: 
+
+Profiling (and adjusting code where necessary). There's different profiling software available (your compiler might provide built-in hooks for this or bring the tools like GCC and MSVC do) that won't require you to actually edit or modify your code just to take measurements. The easiest - and most generic way to do it (which will require modifications of your codebase) - would be adding several measurements on your own, e.g. track how long it takes to render backgrounds, track how long it takes to render objects, track how long it takes to process shaders, etc. For example, this page shows you some example screenshots on how this is presented when using the Unreal Engine 3. You don't need any fancy things for this, you don't even have to print it on screen (just log it somewhere). One important thing to note: If you're running Windows, make sure you don't write anything to the console window; or at least try not to flush the output too often (e.g. by using ). This can slow you down quite a bit compared to any real work being done. 
+
+A few current-gen examples: The Wii U and NDS, 3DS, and 2DS essentially run on two screens each, which could be considered two windows behind the scenes. If you want a non-Nintendo example, take a look at some mobile apps, the YouTube Android app. You can connect your tablet or smartphone to a TV and watch YouTube videos in 1080p while controlling playback using the far smaller touch screen device (with a lower resolution). 
+
+I'd just use some simple binary Format, especially if you don't want users to easily edit the file (and also to remove some redundancy). For example, for a new Trainer you just add the number of Creatures he got. Then, for every creature, you just add the creature data/stats (assuming they're fixed length or you can determine their length). From your example above, the first trainer's dataset would just be something like this: 
+
+Just remember that the game doesn't necessarily simulate a full 3D world. In fact it might be just 2D and such 3D collisions are resolved just in time using a minimal set of 3D calculations (i.e. only the direct Environment is built up with 3D primitives for collision). 
+
+Don't load (heavy) ressources directly. Instead cache them and return the already loaded ressource if possible. Since you haven't specified any language or library, here's some pseudo code: 
+
+You might be overcomplicating this a bit - plus this is something the different matrixes have been introduced for. This is how I'd do this (don't calculate the rotation and stuff in software; it might be nice for a training exercise, but in the end let the graphics hardware do the math): 
+
+Now, to apply this to your problem, all you have to do is determine the angle the player is aiming to (hint: ). Scale this to the range between 0 and 1, apply the formula above, scale it back and use it to rotate your turret, bullet, whatever. 
+
+It's been a while since I've played, but the types of armor and damage you've listed, are pretty much exactly what Dark Age of Camelot uses (with some added flair). I don't think I could come up with anything better. The following is from my memory. It's been ages since I've played, so there might be slight inconsistencies. 
+
+Does the player have card ID 323 in his deck? (naïve approach; will slow down/fill your map over time) 
+
+This assumes the camera () is supposed to rotate around a specific point (). To rotate the camera around a specific point (simplified): 
+
+This is a really hard question, because in the end it will depend on the kind of game you're trying to create. In most cases however, using a physics engine like Box2D might be overkill. Especially for simple 2D platformers that don't include any physics puzzles, I'd go with doing the math on your own. It's not that hard to be honest. To be able to stand on terrain and slopes, you just have to implement some very basic movement: 
+
+I wouldn't even try to use pixel perfect collisions for this. Given the fact that you've got a limited and fixed amount of possible tiles as well as pretty simple rules ("allow player to leave the tile in some direction or not"), I'd just work with a bitmask/property for your tiles. For example, you could create an enum with the possible directions: 
+
+The actual offsets might need some adjustment, based on how you'd like to originate your tiles etc. As a bonus, I've left your own screen to grid conversion in there, so just uncomment it to see it working (all I did was subtracting offsets rather than adding them up). Although keep in mind the offsets aren't 100% correct when using your formula in the example. 
+
+This would result in two values, each ranging from 0 to 1 based on where in the tile your position is. This can then be converted to pixel coordinates within the actual tile texture: 
+
+Once this is done, the bone should be rotated and where you want it to be. What you're experiencing here is doing this in the wrong order (translating the bone first, then rotating), which just overcomplicates things a lot. 
+
+Here's a short example on Ideone.com that will show you "scan results" of a given number of systems. They should always return the same results, no matter how often or where you retrieve them (at least as long as the host running the script is the same). 
+
+This is essentially simple trigonometry. Assuming the center of the screen is your origin (i.e. ), then it's pretty straightforward: 
+
+Doing it that way - no matter whether you use fixed time steps or not - has the advantage that your game will always run at the same speed, no matter whether you're running at 60 fps, 100 fps, 5000 fps, or only 15 fps. The only reason to force sleeps could be to save battery (e.g. mobile games), but again I wouldn't sleep for fixed time, just sleep based on the time this iteration took and the time you planned for one frame. For example, if updating your game and drawing takes 10 ms and you plan on running at 60 frames per second, sleep for 5 ms (15ms total; perfect time would be 16.67ms, but you're leaving some space for other stuff like context switches and the like). 
+
+When your round starts, save the current time, e.g. copying . Once the round is over, compare your old value with the current and you should end up with the time span representing the length of the game (keep in mind that the precision is limited and different based on your operating system, but it's usually around 10-16 ms). 
+
+Both approaches got their advantages and disadvantages, depending on what you're trying to achieve. For movement and such, dynamic timesteps might be better, but for things such as animating pixel graphics, fixed timesteps might be more interesting. You can mix and match both as you like. In general, as I mentioned in the comments, you should never let your program sleep in the game loop. This slows down the game without any reason and might even create stutter despite the computer being powerful enough to actually run the game without slowdowns. Your generic game loop should look a bit like this (pseudo code): 
+
+Basically, what you're most likely looking for and what I'd try as well would be something like this: 
+
+So what makes a mini game a mini game? Personal opinion. IMO even the term itself isn't fixed. A mini game can be some sub game being embedded in some other product, but it can as well be just a very simple and minimalistic game. 
+
+Back to your initial question with the slope: Using the above logic, your character won't follow the slope at first. It will essentially move "into" the slope. But thanks to the logic under Collisions he'll be adjusted upwards, essentially following the slope up (or down).

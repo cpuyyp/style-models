@@ -1,0 +1,111 @@
+uid is unix user id and if you do not specify, the system will generate one for you. User name actually is called full name, which is not used in login. Therefore only the login is required. The actual Esx or esxi server stores data like so jlogin:x:501:501:John Login:/home/jlogin:/bin/bash Here the first field is login, the third is uid, and the 5th is the user name. 
+
+Nowadays, I would not use too many separate mounts, but probably a few key ones would be helpful in system administration. Just 2 or 3, esp. with one that varies in size. This depends on what you are using. I would say just / (relatively stable) and /var (changing). Depending on the os and disk geometry, /boot may also be needed. /tmp is likely a tmpfs mount set up by the installer. The changing (/var mostly, but could be just /var/log and /var/lib/mysql etc.) volumes are usually what you need to worry about and plan for expansion. So if possible, use lvm etc. to make resizing easier. 
+
+openid usually runs at the web application level so is os-independent. since most web apps such as php, python, ruby all run on windows, you should be run one, though i have not done so. $URL$ 
+
+In linux you just install rinetd for your distro and configure the parameters, and you are done. Windows has a port as well: $URL$ Yes, iptables can do that as well but I have always used rinetd as it is more straightforward. 
+
+If you can afford, I suggest that you use Oracle Goldengate which targets this sort of things. I used to be an Oracle DB admin a long long time ago and otherwise have no relation to them. Or else you can just export sql, massage the data, and import yourself (you can stream the delta changes to make it look like synching). The effort in that case depends how much your schemas differ and how much nonstandard SQL you are using. 
+
+to manage hundreds of servers you likely would be better off using some sort of configuration management tool such as puppet and chef, or ansible etc. you still would have to set it up once but you can do much more than just ssh later so it would likely be worthwhile, for instance when you want to update the ssh key, a single change in the puppet master (or equivalent in other CMs) would suffice. for security it is recommended that you change your key once in a while. 
+
+It would depend how your mail is set up. Generally pacificseatheat.org sounds better, as in most cases, organizations use this format regardless of the actual server sending the mail. However, using the longer one will work as well. You can always change that later in /etc/mailname. 
+
+It could be the hardware I used, but periodically the openfiler would freeze up and required a reboot, about a year ago. However, judging by your needs it is probably adequate. However, the new version could have improved. RH is simpler to set up for me as I am more familiar with it and can have full control easily. Openfiler has another problem that I did not quite figure out in file permissions and ownership, if you go the nfs route. If you use iscsci however, it is just a block device so it is easier. So I would say RH if you are a linux guy, and openfiler if you are not, because the latter provides a web gui to configure things very quickly and easily, for those who has no prior linux/bsd experience. 
+
+You can recursively setfacl the folder to give you write etc. while still have http own the tree. Acl should be supported in arch linux. Man getfacl and man setfacl for details. 
+
+yes, by default nfs server has root_squash on which makes client access nobody:nogroup. you can turn that off (less security) if you want during the export. 
+
+different shells may have different syntaxes, but in bash we just do this: export TZ="/usr/share/zoneinfo/EST" go to that directory for a list of timezone names. 
+
+If you don't need to use it, yes, burn or smash it with a hammer. Otherwise you can also boot up a ubuntu livecd, install wipe, and wipe the usb clean. This assumes that your OS is not linux. If it is linux to start with, wipe can usually be found for your distro. I found this one for windows, but have not tried it. $URL$ 
+
+You would have to change the adapter to bridged so that the vm can get an ip in your LAN. Or you need to have a way to forward the icmp traffic in your LAN to the vm. 
+
+this is because the tty that opened need to close and thus cannot keep the command running. to see the output, change /dev/null to an actual file name. i have not tried to use remote screen so I omitted that. you may be able to get it to work but maybe the syntax is off a little bit. 
+
+yeah, in ovf export (File -> Export). not sure if it is a good idea to save to usb directly, as usb i/o is often iffy. it is better to save to your hd and then copy. done many many times with no issues. 
+
+not familiar with uCLinux itself so cannot be for sure of any specific place, but for things like this that you need for all the processes in linux, you should look into /etc/inittab or equivalent, where things are initialized for the system. see if you have a /etc/default/init which is supposed to be used for this purpose. I did some research and here is what the manual says, so /etc/rc is where you should add things, but look at it to see where is the appropriate place. The init process, that automatically is started by the Kernel, first starts the script file /etc/rc and then uses /etc/inittab to start more processes, if some are defined there. By default the uCLinux-dist uses an empty inittab thus only /etc/rc is used to bring up the system. 
+
+Check your resource allocation to see if there are swapping and/or ballooning. Also, do you have an equivalent physical server or nonesxi vm to run the same software stack to compare with? It may not be esxi and could just be how your application configuration is causing the excessive memory needs. 
+
+sudo yum update --assumeno this will list all available updates without actually updating anything, assuming you have a yum version that support the switch. otherwise just be careful because by default it will ask you before it does the update and you can still say no. 
+
+It should be available for all major distributions, though not considered part of OS generally, and if it is not installed, any admin can install it. since it is opensource, even distros that don't have it can compile it. There is a windows port as well. 
+
+msiexec can do that in admin mode. msiexec /a something.msi TARGETDIR="c:\windows\temp" /qb you may need some other switches, though. 
+
+would not that be the job of sudo? or you can look into jail or restricted/limited shell if sudo is not what you can use. 
+
+sudo lsof | grep -v IPv4 | grep -v IPv6 would this work for you? this would exclude only what -i lists. 
+
+If you could virtualize these servers, then you can periodically return to a base snapshot which was taken after everything is verified. This has the advantage of being guaranteed known state, because configuration management works but does not guarantee returning to a known state of the entire server. 
+
+Likely the process is still holding the file space after the file is deleted. Trying to restart the suspected proceses. 
+
+while it is possible, it is quite risky. you should back up the data before rebooting. it is easy to forget something and the system might drop to a maintenance mode. so i would not recommend it unless you have have out of band access to your server. take a look at this: $URL$ 
+
+You might want to look into vagrant up as well, especially if you choose virtualbox as your platform. $URL$ 
+
+You can specify user shell when you realize the user, which should be created as a virtual resource. See or search for puppet best practices to get details. 
+
+If you separate os and data, and if os is on lvm, you can use lvm snapshot to backup os and rsync for data. That is how i did it a long time ago. 
+
+even within the same minor version, there are different kernel updates so definitely you can stay 5.4 and update your kernel. how did you compile the drivers? unless you have used dkms (search for that), you will have to recompile if you upgrade the kernel. there is something called ksplice which may do what you want. search for that again for details. it dynamically patches a running kernel to block vulnerabilities. 
+
+This is the standard behavior. $URL$ says Clients SHOULD NOT include a Referer header field in a (non-secure) HTTP request if the referring page was transferred with a secure protocol. so if your client is doing that, it is violating the standard. then again, google IS the standard, and they can do whatever they want :-) 
+
+the limit is actually 127 or something like that so there is nothing to worry about that. however, if you are going to use them at the same time, you may run into some sort of limit elsewhere, such as your bus speed, etc., and you may not be able to sustain the throughput you are hoping for. i have use 4 at most in the past, so have no practical experience. 
+
+can you use acl? you can man setfacl for details. this allows you to specify what each user or group can access which directory/file with what permission. if that command does not exist you can install it from repos. unless your file system is really old, acl should be supported. you might have to specify acl support in mounting however in some cases. 
+
+This is the compressed kernel and you should care if it ever changed without you knowing about it, because if the kernel was replaced, you could be open to any attack. It may have been a legitimate reason, but unless you are sure, you should not trust the changed kernel. 
+
+default install of SQL server express only allow local connections with no network enabled. So tcp/ip is disabled by default, and you have to enable it manually. Named pipes should be enabled by default though. 
+
+Only is expecting a shell command to be executed, not a condition like what you have, which should be a case instead. 
+
+Yes, it is possible. You can edit the settings of the vm and add a new disk or an existing disk. However, your guest OS need to do a rescan to discover the disk and use it. So it is a multiple-step process. 
+
+I have used this and it does support it, not sure if it is builtin or it is a custom field, as it was a couple of years ago in a different company. $URL$ it has 30 day free trial. 
+
+Can you try to run rpmbuild with -vv so that you see where exactly it choked? Likely the file in question is not found in the working directory for some reason, or otherwise corrupt. Magic number refers to the starting bytes of a unix file. Man magic for details. 
+
+using postfix is pretty simple /etc/postfix/main.cf just set up this line: relayhost = $mydomain assuming rest of your configuration such as firewall etc. allows this. this package is available in all linux versions. however, delivering to your gmail account is trickier, as gmail may consider it spam if it figures out that an agent is sending it. you need to do more research if that happens. this is what i ran into at one time. 
+
+logrotate itself has no such option. You can add a cron script that find the oldest log to remove whenever the free space falls below your criteria. You can do some other validation as well. However, getting disk too full all the time is not a good idea because the system will not be able to create large temporary files and could cause application failures. 
+
+there is no command to do auto paste, but you can recall any command into an editor to edit it before executing. this may achieve what you are looking for, but upon exiting the command will execute so if you want to abort, you should clear your edit buffer before exiting your editor. fc -e vi 372 372 
+
+sometimes the service is called mysql instead of mysqld. maybe you can try that. do an ls of /etc/init.d to show what is actually there. 
+
+Use tar instead of cat, and tar preserves mode as well if exec has x bit on. tar cf - ./exec | ssh user@server 'tar xf -; ./exec' 
+
+snapshots over time makes performance problematic, so what you are doing is definitely a good thing. it is generally advisable not to use snapshot for any long-term solution of anything (more than a week or 2). however, ovf creation of vms with snapshots did not cause problem for me when i tried it and i have not found any documents that says snapshots would adversely affect the ovf export. still, i have been like you, clean up snapshots whenever i can and whenever i need to use vm for something such as export. 
+
+Yes, it should be your TTL setting, IF all the dns servers are standard and honor that, which is not always the case. You can use a tool like $URL$ to verify the propagation, however. 
+
+single user mode has no network so you cannot do so through ssh. if you cannot get the vm console access, you need to contact azure support to help you, such as have them boot the vm into a livecd and set up ssh access with sudo. 
+
+You may use heartbeat to detect failure and run a script to change dns. You need to use a dedicated connection for heartbeat. 
+
+If it is a running lvm, you should create a snapshot of it, and then back up the snapshot. Otherwise your command looks fine. It is better if you unmount the lvm before doing the copying. Then, force a filesystem check on the resulting loop file before attempting to mount. 
+
+what eth device do you see? dmesg | grep eth will show you. was it renamed? if eth0 is available, sudo ethtool eth0 to see if it is really up. is the nic light on (most nics should have indicator lights) 
+
+if you have a windows ssh server installed, and the logged in user has administrator rights, yes you can: 
+
+well, theoretically it is safe, because raid6 adds another parity block, so there is no data deletion. if the power goes off, conversion fails, and you go back to where you started from. however, as all good system admins know, it is mandatory to back up your data whenever you do something that could affect the data. this is just the best practice, regardless what the raid controller might do. 
+
+Ubuntu by default does not use root so remote ssh login with root is disabled. You can set a root password and set PermitRootLogin to yes in sshd configuration to allow that, however, since ubuntu user has sudo All, it is really all you need. You must have a very good reason to make the change, really. 
+
+plus sign means the last job you suspended, so fg alone will recall it to the foreground. minus sign means the job before the last one that you suspended. what you see agrees with this designation. 
+
+I think you are trying to delete f1 in sdcdir (what is its permissions?), not in testdir. That may be your problem. in this case f1 is owned by root and only has write permission set for the owner (root) and a user with uid not 0 will not be able to delete it. To delete a file, you must have both write and execute permission to its directory. 
+
+if either of the PVs gets corrupted, your LV will also, but that is not a likely occurrence when you have raid 1, because it would take both disks to go bad. i am not sure these days we have disks that small, or are you using logical disks? in any case, it is quite a robust setup otherwise. everything has risks and you can really only compare with an alternative configuration to say more. 
+
+if that linux machine is ubuntu or similar distributions, it will not bother checking the ip conflicts and will grab the ip whether it has been used or not by another server. windows may be doing the same thing (i have less experience there so am only guessing). you should contact your network administrator to sort this out, as neither servers will be working correctly.

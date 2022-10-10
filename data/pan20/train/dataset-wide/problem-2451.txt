@@ -1,0 +1,37 @@
+Less code, less clever (clever is bad) and thread safe. Some goes for your except that you can't do the static init as it's destroyed occasionally. I'd stick to a simple lock unless it's proven to be a performance problem. is not atomic. You do that a timer callback while assigning it in which can lead to the assignment of 0 being overwritten. Use Interlocked* methods to increment/decrement shared counters. You swallow exceptions in many places. This is usually bad because the caller will have no idea that something went wrong when it does. I sincerely hope that you at least log them. Returning from a method () which returns a collection is a pain in the butt as the caller as to specifically check for that. Returning an empty list is much nicer from a service consumer point of view. It is not obvious from your code why protects both and . In you dispose of the read context while potentially accessing it in . The end result will be that the caller of will not get any result. It also means that was called in about 10sec intervals so I guess it doesn't matter that much for your use case but it's still ugly. It's bound to cause weird problems in the future when the code is extended. 
+
+The method could accept an or a and use it to write the result to it. Return the results as a list from the method. 
+
+Just saw in the comments to your question that you've identified some speed issues with the regular expressions. One potential change you could make is to replace those by simple string matching. The refactored code in this case would look like this: 
+
+The loop apparently fills from the end which seems little bit unexpected to me (kind of string reversal). 
+
+Consider checking for and abort when it's true (apparently the passed in string wasn't long enough). Depends on your usage though. Alternatively to the previous point you could add a parameter to let the caller supply the information of how long the sequence really is. I would consider changing the interface slightly. Have some methods which manage the object for you: 
+
+I don't know if this just the latest "hip thing" with C++14 but I find int _c = 0; much clearer to read since it's explicit and will have the same effect. Just because a language feature exists doesn't meant you have to use everywhere. 
+
+This means that all threads can simultaneously enter the block protected by the semaphore. So what's the point of having it? In the main part is the loop. However it never seems to take anything of the queue (it only seems to do it once at the beginning of the method) so how does it work? 
+
+In the end copying complex examples from MSDN is not always a good idea from a design point of view as their examples are trying to show the usage of methods rather than convey good design. 
+
+This way the mutex will automatically get unlocked when the lock guard goes out of scope (either via return or through an exception). 
+
+Next thing is that you need to build the contents. The weird thing is that in your code you actually discard all the strings being returned except for the last call. I'll assume this is a bug for now. 
+
+The return type of should be because that's what it returns. You can also get rid of in there and use in its place. In you asked some questions on the return value. I guess you want it to indicate whether the initialization was successful or not - which is if is or not so you can just write this: 
+
+I strongly dislike the class. There is an implicit dependency from the view model to it via the , , etc. magic strings which is not easily visible and makes the code brittle. It would be better to create an interfacelike an which can be queried for the different menus. This will make unit testing the code easier as well. 
+
+However this is a micro-optimization which will probably have close to no effect on the execution speed, in fact I wouldn't be surprised if the generated code is almost the same. 
+
+Just something minor: I'm not sure why you keep on insisting to name data structures after specific algorithms (you seem to do that in most of your code you post). 
+
+Apart from that I think your approach should be fine. You may want to consider adding support for cancellation via 
+
+and use in the inner loop wherever you used before. Again the JIT might perform this optimization but I wouldn't count on it. This is not really a good way to calculate : 
+
+Update Regarding your question of making more efficient: is already pretty efficient - at most 8 compares and 3 ANDs. You could turn it into a switch: 
+
+One other gripe I have with the code is the static member of . Maybe I'm missing something but I think this can get you into trouble. Assume you have two databases you want to talk to and you fire off to calls to - now the member is set to whatever instance where the calls happened to be executed last which will probably cause funny results as might now wait on the wrong database instance for one of the calls and/or in the lock will be released against the wrong instance. While this might be a rare use case I don't see the benefit of making this a static member in the first place - it's only accessed locally in either the task trying to acquire the lock or in the method. For the case a non-static member would work fine. For the locking task the instance can be captured locally in the closure as it's passed in. So it should be easy enough to remove the problematic hidden gotcha. 
+
+Quite a bit of code is duplicated. For example , and are pretty much the same bar the different state it sets and the state name it logs. Code duplication is bad since if you want to change the way how the code acts to state changes (log differently or do something else like raising an event) you have to change it in multiple places instead of just one. Design As other have already mentioned - everything is static which in generally is a bad idea. There are many implicit dependencies which are not clear until you read the code. The public interface is ill-defined and it's unclear what methods should be called when and if there should be any particular order to things. You mentioned that this is called from 22 locations in the solution - you and whoever else is working on the project will be in for a lot of pain in the long run. Static classes with static state used all over the place will increase coupling and create an utterly brittle system which falls apart at the slightest change. I've seen this happen in more than one code base and it's a massive amount of work to backtrack from this. You should get this right from the start. Also you said something about mutual exclusion - this makes me wonder if you are talking about multi threaded access. Currently your code will explode if used in a multi threaded environment. There is no locking of shared state anywhere.

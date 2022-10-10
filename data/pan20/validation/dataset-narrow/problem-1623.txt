@@ -1,0 +1,57 @@
+The 115200, none, 1 part can be done with the stty command (man stty). The standard drivers/UART do not support 16 bits. If 16 is a serious number you might be able to bit bang with my pigpio library. See e.g. gpioSerialOpen and gpioWaveAddSerial. However don't expect a great deal of reliablity at 115200bps. 
+
+Kernel module writing would require quite a bit of effort on your part. I'd guess a week or so of work to get a working module. I'm not sure why Python is eating so many resources. It should just be waiting. I'd go for a standard userland C solution. 
+
+The method requires an ADC per microphone and can only sample one channel of a multi-channel ADC at a time. For that reason there is little point in buying a multi-channel ADC. See SPI bit bang read MCP3202 (12-bit ADC) for an example using the MCP3202. 
+
+The processor is not really the problem. The reason Windows software does not generally work on ARM is because it is closed source and Microsoft have not released ARM versions. Although Android has its roots in Linux the kernel is incompatible with the Linux kernel used on the Pi. If you can find a way of running Android on the Pi you will be able to use Android apps. No one has been able to find a satisfactory way to run Android on the Pi. You find out if software will run on a platform by seeing if there is a version available for the operating system you want to use on a platform. The pre-requisite is that the operating system itself will run on the platform. 
+
+For a general Linux solution pigpio is probably the best you are going to find. It uses DMA to capture the GPIO levels and uses DMA to time-stamp the event time from the 1MHz system clock. The latest samples are reported to the interested processes in 1 millisecond chunks. That means the average latency is about 500µs. However that wouldn't normally be a problem as each report has already been time-stamped. If you go the interrupt route expect an average latency between GPIO event and process notification in the 50-100µs region, of course outliers can be much more, easily 10s of ms, and you will not know which is which. pigpio will sample at 1Msps, but I wouldn't recommend it if the system is likely to be busy doing network stuff, you will get DMA timing jitter as the memory bus starts to get busy. I'd stick to 500ksps or less. I don't see a way to meet your 1µs or better goal under Linux. 
+
+That does appear to be a bug. I'll need to look more carefully at the code to be sure. In the meantime I suggest you use 
+
+There is no reason why you can't power more than one device at the same time. From 5V, 3V3, an external voltage supply, or any combination thereof. You need to ensure that you do not feed more than 3V3 into a Pi GPIO. That may be a problem for devices you power with more than 3V3 as any device output is likely to be at the input voltage. You need to check you are only outputting to the 5V LCD, i.e. you are not reading back any LCD data. Another problem you may have with a 5V LCD is the Pi's 3V3 GPIO may not be able to drive its inputs high. Typically 0.7 * input voltage is needed by a device to see high. That would be 3.5V which the Pi can't supply from a GPIO. In practice the LCD will probably work. 
+
+The small 2.5" drives I have seem to work OK powered from USB ports. Have you enabled the B+ high power USB mode? This lets 1200mA flow to the USB rather than 600mA. To enable high power mode (only available on the A+/B+) write 1 to gpio 47. 
+
+You are running everything with root privileges (). The web server you are using will not and should not have root permissions. Do you actually need to use with any of those commands? Python, motion, and cp should not need to be run with . 
+
+Doesn't the device provide a method? Some I2C devices will return 0xFF if you try to read then when they are not ready. Alternatively record the time when you sent a message and don't send a new one until x milliseconds has elapsed (where x is determined by experiment). 
+
+You are using the wrong tool for the job. Servos require accurately timed pulses. The RPi.GPIO module uses software timing which leads to all sorts of timing jitter, which leads to a twitching servo, which shortens the life of the servo. Use something like my pigpio which uses hardware timed pulses. Try 
+
+There are two PWM generating commands. s g us # send servo pulses p g dc # send PWM pulses where g is the (Broadcom) gpio number, us is the servo pulse length in microseconds, and dc is the PWM dutycycle (out of 255). Use the s command to control servos and ESCs. Use the p command for LEDs and DC motors. E.g. s 4 2000 # send 2000µs pulses on gpio 4 (50Hz) p 4 128 # send 50% dutycycle pulses on gpio 4 (default 800Hz) 
+
+gpio6 is only available on a Rev.3 board, a model B+. See $URL$ and use the proper Broadcom number for the gpio which is connected to your LED. 
+
+That's the default size of the swap file, 100 megabytes. If you want to make it smaller edit /etc/dphys-swapfile and change 100 to some other number. Use the following commands to put the resize into affect. 
+
+There are several libraries which allow proper servo control without the need of external PWM generators. My pigpio library will let you do what you want. pigpio servo examples. 
+
+The timing requirements for the DS18B20 (Dallas 1-wire bus system) are quite tight, and the kernel driver depends on interrupts to read each bit. Unfortunately interrupt latency and processing time can get jittery even within the kernel when the system is busy. Video streaming is a fairly busy activity. I am not aware of a solely Pi based solution using those sensors. 
+
+Use gettimeofday(), it returns seconds and microseconds. You are unlikely to get satisfactory results for servos using Linux sleeps. There will be glitches. Unless you have a particularly poor servo the glitches will result in servo twitches. A B+ has two channels of hardware PWM suitable for driving servos. The C libraries which generate hardware timed PWM on all the gpios use paced DMA to time the pulses. 
+
+The biggest obstacle I can think of is programming the OTP (One-time programmable) memory of the Broadcom SoC so that it will boot. I am not sure what infomation is publically available for that purpose. 
+
+will delete all files more than 14 days old. I suggest you find an appropriate value for 14 to limit the amount of data stored to the size you want. 
+
+Probably neither. 1.8V is probably in the hysteresis region and could be seen as arbitrarily low (0) or high (1). See $URL$ 
+
+It's a switch. Connect it like you would any other switch. The only thing to decide is if you want to use it as normally open (normally reads as off) or normally closed (normally reads as on). There are two basic ways - connect common to ground or connect common to 3V3. Whichever you choose it is safer to make that connection through a resistor to prevent the risk of a short circuit. Something between 1-5 thousand ohms should be suitable. Connect the other chosen contact to a GPIO set as an input. Connecting common to ground and normally closed to a GPIO 
+
+Any GPIO library you choose to use will almost certainly provide an interrupt capability. Use that interrupt capability to inform you when the GPIO level changes from 0 to 1 (rising edge), or from 1 to 0 (falling edge) or on either change. By the way I've used Hall effect sensors to detect magnets spinning on a shaft at about 9000 RPM (from memory). 
+
+I'm not convinced that a Pi based implementation of I2C will be at all helpful towards an ATmega implementation. Perhaps you'll let us know when you have done both. The following link points to some of the many GPIO libraries available on the Pi. It also gives a sysfs method (accessing the GPIO via a filesystem). $URL$ 
+
+You start by reading and understanding its datasheet. If you examine the datasheet you will notice you can communicate with the device by I2C or SPI. If you buy the LIS2DH as part of a module the module itself may only support I2C or SPI. I think I2C is usually slightly easier to use if you have a choice. SPI will generally allow for higher communication speeds though. The Raspberry Pi supports both SPI and I2C. Both SPI and I2C are usable from Python and C. 
+
+The power LED being off indicates that the Pi voltage is less than 4.65V. That's not a problem if everything is happy with the power it is getting. I'd just take it as a warning to expect a crash if you stress the Pi or add further components which need power. 
+
+The correct I2C address is 0x53, so you need (at least) to strap CS to Vcc. Check the documentation for you module. Mine required two lines strapped. 
+
+All the Pi's GPIO are digital. They are either on (high, true, 1, on) or off (low, false, 0, off). It makes no difference which synonym you use provided that the library accepts the term. 
+
+As far as I'm aware nobody has got PiFM to run on the Pi2. There is no particaular reason it should not work on the Pi2. However the people who know the required changes seem reluctant to publish. Mainly, I think, because of the doubtful legality in some juridstictions of transmitting radio waves with multiple harmonics. 
+
+All the GPIO have internal pull-ups and pull-downs which can be enabled or disabled by software. In addition GPIO 2/3 have external 1k8 pull-ups fitted. In your case either GPIO 21 (pin 40) is damaged or it is connected to something which is pulling it low. Check the mode of the GPIO with . If it is not set as an INPUT (returned pigs value 0) then the internal GPIO hardware may be setting the GPIO level.

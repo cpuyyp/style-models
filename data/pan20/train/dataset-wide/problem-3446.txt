@@ -1,0 +1,75 @@
+I have a similar working set up - I'm not using DKIM or DMARC, just SPF for spam fighting. Here's mine - I set mine up using this as a guide and while I follow it 90% of the way there are a few things I do differently - $URL$ Here's what is in my various files for hostnames. Like you, I'm hosting multiple domains and they all work fine. Reverse DNS is set to I get a letsencrypt cert via the standalone method, and specify example.com, mail.example.com, and www.example.com as hosts on it. - ( w/ appropriate mapping to 127.0.0.1 in ) - In I have the following references to hostnames or FQDNs - 
+
+This is "tunnel traffic from port 3456 on my localhost to port 80 on whatever remotehost resolves as www.example.com". You could then point a browser to $URL$ and see the content of www.example.com HTH 
+
+It looks like you are trying to host the entirety of your DNS on your own machine with one IP address, referencing your own domain as the DNS server. You can't get there from here. First, you need 2 DNS servers that resolve to different IPs. If you want to name your dns server(s) ns1.example.com and ns2.example.com then you need to set up what is known as "glue records" with your registrar. This will allow ns1.example.com and ns2.example.com to be the only dns servers for the example.com domain. Once you have your glue records set, remove the forwarders from the /etc/bind/named.conf.options - you shouldn't need it unless you have clients querying your servers directly. 
+
+Turns out this is a bug in the version of OpenSwan I am using. I am using Amazon Linux AMI and the problem RPM is: 
+
+Can anyone tell me what is going on here? My aim is to prove that there have been no invalid login attempts in the 261 days the server has been up, but lastb doesn't appear to be able to confirm this. 
+
+Will this work? Can the J2 templating engine refer to vars in roles/my_role/vars/main.yml in this way? Or is it limited to globals vars and vars specific to the play the initiates the templating engine? 
+
+It is based on an Allow rather than a Deny, and uses positive string matching rather than negative string matching. Is there any reason you want to use a Deny? Using a Deny, you are saying: If the user tries to create a volume, deny the action if (1) the tags "empname" and "team" are not included AND (2) if any tags specified are either "empname" or "team". When you specify random tags, the first condition is satisfied, but the second one is not, so the Deny will not occur. I think it would be much more logical and less confusing if you followed the AWS example and used Allow and positive string matching. Otherwise, try changing the second condition to: 
+
+If it reports loading OK (with maybe a "out of zone info ignored" for your glue record servers) then edit again, increase your serial, and restart bind. 
+
+If your mail servers are actually provided by a 3rd party, the correct thing to do is for them to provide SSL certs of their own on their own machines with their host names, and for you to set your MX records in your DNS zone to point to their server(s). IE, 
+
+The premise in your edit note is wrong. The MX protocol/decision tree/whatever is designed to handle this. 
+
+The error tells you - you have no A records for your name servers. This means you are probably hosting your own primary and secondary name servers, so you'll need glue records as well. 
+
+If your friend wants you to do his DNS for him, all he has to do is enter ns1/ns2.yourdomain.com for his name servers with his registrar. You need to set up a zone file as appropriate for him, with A records, MX record(s), SPF/TXT records, etc. If you want to delegate a subdomain to him, you need to do some things on your end, then some things on his end, and then he'll have a subdomain of yours with a working name server. Note that I've not tested this subdomain name server as a NS entry in a domain registry for a 3rd domain, but it should work. First, on your domain, create the subdomain in the zone file. 
+
+I'm trying to centralise logging in an environment that using multiple application technologies (Java, Rails and various DBs). We want to developers to bring up stacks with Docker Compose, but we want to them to refer to a central log source (ELK) to debug issues, rather than trying to open shells into running Docker containers. The applications all write to the file system rather than to STDOUT/STDERR, which removes all of the options associated with the Docker logging driver, and logspout too. What we have done is configure the containers to have rsyslog include the application log files and forward those to logstash which has a syslog input. This works in terms of moving the logs from A to B, but managing multi-technology logs in ELK based on the syslog input is horrible (eg trying to capture multine Java stacktraces, or MySQL slow queries). Is there a better way to do this? Should I be running logstash in each container, so that I can apply filters and codecs directly to the log files, so that I don't have to rely on the syslog input? Of is there some way to use the Docker logging driver with application log files that are written to the file system? 
+
+The "milter service" is a pass-off from Postfix to run messages through an anti-spam (spamassassin) or anti-virus (amavis, etc) scanner before sending out and/or delivering to Dovecot/etc. to be sent ot a users in-box. That "can't connect" message means that your milter service is either not running or it isn't running on the port that you've specified. Check in your to see exactly what the milter service is supposed to be providing, and then look at the configuration for that thing. Or just post your file (properly formatted please) 
+
+First you'll need to turn your USB filesystem(s) into a bootable ISO image. Remastersys may do this for you... it can clone a running system as configured. Once you have the ISO image, you'll need to set up a PXE boot system using a TFTP server, DHCP server with some options, etc. 
+
+First issue is did something change on your end ? No longer listening on your LAN address and only on localhost, etc. New firewall policy being pushed down by domain controller/etc? Then you would be looking at addressing. Does yourcomputername.company.com still resolve to the address your computer actually has? Does it resolve that way on other computers? IE, things could be great BUT that name is resolving to the wrong address... Errors would be "can't find server named ..." or "dns resolution" if the name isn't look-up-able at all and you'd need to check what address it does resolve to separately... Last check is routing. Many sub-netted networks do not allow packets to travel between "client" subnets, only from client to "server" subnets and then out to the world. Can someone on the same subnet connect to you? Can you connect to others on other subnets? Routing issues typically give a different error message (no route to host) 
+
+I have a basic 3 member MongoDB replication set. 1 x Primary 2 x Secondary A = Primary B = Secondary C = Secondary The Mongod service on the Primary stopped, and as expected, one of the Secondaries took over as Primary. I restarted Mongod on the former Primary, and it became a Secondary, so I now have: A = Secondary B = Primary C = Secondary Should A automatically become the Primary again, or is this something I have to do manually? I haven't set any priorities on the nodes. 
+
+Another proposed solution here: $URL$ Use a generic certificate for all agents connecting to the puppet master 
+
+To /root/.hgrc When mercurial is executed, its looks in $HOME/.hgrc for trust relationships. On my existing server, the puppet agent was being executed with cron, so cron would have seen $HOME as /root/.hgrc On the cloned server, I was running the puppet update interactively, having opened a root shell using 
+
+I resolved this with a couple of changes. Firstly, I used the ruby23 variant instead of the full variant: 
+
+In my I pull in the domains to service as well as users and passwords from a mysql database (per the howto I linked above). Once I enter a domain in the proper table and create a user account or alias under it I can work as a mail server (incoming and outgoing) IF the other domain puts in as the highest priority (lowest number) MX record for the domain, and any SPF records they have specify that my is valid for sending - I use the MX record option 
+
+RAID - no matter what level - is not a backup. It is hardware redundancy and is meant to mitigate any loss of either data OR run time/uptime due to sudden catastrophic hardware failure. RAID will not protect against accidentally deleting the wrong file, redirection of the wrong output in the wrong way to the wrong file, uninstalling the wrong package, overwriting the contents of one file with another, the effect of a virus or trojan (file removal, corruption, or ransomware encryption), etc. That is what backups are for. Now, that said, I'll admit to not using backups, or if I do it is a one-off backup of "gee, its been a year since I've saved my mozilla bookmarks, better export that out and upload it to my VPS", or "I just finished this final project for a programming class, I'll tar it up and put a few copies on other machines". BUT I also run RAID-1 for my /home partition on both my work and home desktop machines. Why? Simple - I've lost more data over the years to "just lost power and my hard drive is now dead" than I've lost data to "where did I leave that floppy" or "I got a virus" or "I deleted the wrong file" 
+
+Apache will basically proxy your requests by creating new http requests via the mod_rewrite module, which is enabled by default 
+
+If there are 0 replicas, elasticsearch will never try to assign shards to any other "replica" then itself, thereby removing the issue of unassigned shards and corrupted indices. My full (stable) standalone, non-default elasticsearch config is: 
+
+There is a way to do this, but it should only be used in development environments. Do not use this in any environment where security is a requirement. You can open up the puppet REST api to allow agents revoke and delete certificates. Add the following to the auth.conf on your puppet master 
+
+I've made some progress on this. The issue appears to relate to the choice of using ram nodes rather than disc nodes in the rabbitmq.config file. From the documentation: 
+
+Note: in this case the role "Admin" is an example. You need to update that to whatever cross account role you have created. Similarly, "dev" is an example profile in my configuration. Source: $URL$ 
+
+This will give you 2 sets of certs, under the directories. When you create your vhost configs, instead of specifying the use the actual IP of the host and point to the appropriate certificate files. 
+
+If you want to serve multiple domains, you can still do so at least for modern browsers that understand SNI/etc. First, obtain separate letsencrypt certs for each domain. If you have multple hostnames (ie, both and ) they can share, as long as the actual domain is the same. 
+
+Depending on how the client is configured, it may or may not send the hostname when it makes a DHCP request. But, as the example shows, you can access it via the MAC address. On my own home set up, I use the hostname field in the dhcpd.conf so I know which machine it is (livingroom-tv, my-desktop, wifes-iphone, etc) and depend on the MAC address option to determine which machine is actually getting that particular IP. DNS is handled separately with a fake domain (my.house) because only a few machines actually need DNS entries (for me/my convenience) and is not integrated in any way with DHCP. Almost all of my static-dynamic MAC address based IPs are given out to control access - I have a VERY short lease time, and when the kids need to be blocked from access, I simply change their default gateway or point them at a second DNS server that restricts where they can go/what they can do (ie, on their phone facebook.com may say "you should be doing homework!" :) ) 
+
+The correct $HOME variable was set and the puppet update worked. The 'user' parameter in vcsrepo refers to the user used to authenticate to the mercurial remote server, not the user who runs the process on the local server. 
+
+Its possible that this is occurring because I am using a larger Ec2 instance (32GB RAM). It may not be an issue on smaller instances. 
+
+Create the user in the Default Directory (Active Directory) with whatever permission you want Follow the steps in the link above to create a new subscription user, which you can then choose from the list of users in the Active Directory Log out of everything and then try to login at $URL$ as the new user 
+
+One thing that is very disconcerting about using the Azure portal when you are familiar with AWS is the frequency with which is spawns new browser windows. As per normal with Microsoft, in trying to make this product idiot-proof, they've made it a horrible experience for people who understand how to work a computer. 
+
+It depends on how exactly you've configured it all to work together. My set up is similar to that as shown at workaround.org, here's what a message looks like in mail.log as it arrives from "out there" and is processed by postfix and dovecot using lmtp to pass it off. You can see the log entries for the lmtp pass off. 
+
+Now is an authorative name server, and create more hosts in its own zone, or it should be able to be a primary nameserver for some other zone. 
+
+Create a new group, put the www-data user and your trusted dev(s) (ie, you or whovever else), set perms and ownership appropriately. Freelancer could still write code that could fopen() the files (and then display in his browser, whatever) though since the www-data user needs to be able to read the files... If www-data doesn't need to read the files, they don't belong in the webspace. 
+
+Then enable SSL in apache - - and then restart apache2. The output of you show looks like it is correct - if you (re)start apache2 does it show as listening if you look via ?

@@ -1,0 +1,69 @@
+That looks like you have a CPU with 4 cores (or at least Linux treating it like 4) and dm-crypt takes one core completely without being able to use the others. If the CPU does not allow more than 70 MiB/s then increasing I/O speed does not make a difference, of course. I am surprised, though. dm-crypt shall be multithreaded since kernel 2.6.38 (that was March 2011). Maybe you can increase the throughput by configuring a different cipher. Or you get a CPU with AES-NI (crypto in hardware, unlimited speed...). What is your cipher ()? Edit 1 I just found this on $URL$ 
+
+As a general recommendation: You should always install Linux twice on such systems. A small service Linux makes many serious tasks easier (and a lot faster). That way you could easily backup your main installation because it would be inactive during this. 
+
+Probably the metadata knows several steps of "Does this disk belong to an array?". I am not familiar with those details; I just assume that it is similar to the dirty flag of a file system. When you take a new disk into an array then it is probably marked as spare until it is completely in sync. After that the metadata is probably changed to "is a full member of the array". The best solution would indeed be to create a new array and restore from backup. If you do want to give the disk a chance (knowing that the "truncation" will get the file system into really bad mood) then you should create a new array from this disk: 
+
+As this is always the same path I think it doesn't make sense to put effort into that. You could disable the bash feature (MAILCHECK=0) and put your own check code into PS1. But why bother, if 
+
+This may sound stupid but the truth (your truth) is benchmark results. There may be file systems which are faster than others in every case but the optimal structure most probably depends on the speed characteristics of your disks and the amount of RAM and the cache effectiveness. What happens if you use smaller directories with a deeper hierarchy? Less data has to be read to find a directory entry but maybe (if that directory's entry in its parent is not cached any more). Let's assume a directory entry is 50 bytes. That's 15K for the whole directory with 300 files. When doing consecutive reads your disk probably delivers 150+ MiB/s. Thus the difference between reading 300 files or 600 files is 0.1 milliseconds. The positioning time is 4ms at best (if that's not an SSD). I.e. for each saved directory lookup you can read the entries of at least 12.000 files. That makes me assume that your directories are rather small. But maybe all your directory entries are in the cache (I don't know how to monitor that, would be interesting though) so this calculation is irrelevant. Perhaps it helps to keep a script in the background which accesses all directories once every few seconds so that none of them gets thrown out of the cache. I assume that the problem is not the lookup time for the file inode. Probably a lot of processes try to do I/O simultaneously. If this leads to the files being read in several steps then performance is dead, of course. The same is true for file fragmentation. Have a look at and your cache files. And have a look at . You should adjust that to your average file size (or the size which is more than 90% of your files) and check whether this has any influence. I also found the hint (several years old, though) to set this value to zero for all devices except for the topmost: 
+
+Edit 1: You can check your (file system) access rights by changing to the Apache user and trying to read the files then: 
+
+I would say that "jail" is a general term while "chroot" is not. chroot is just one of several possibilities to limit a process's accesses. I have never heard of "jail" in another context though. You may use AppArmor, SELinux and the like to reach similar results but "AppArmor jail" seems to be an uncommon term. On the other hand security is not the only reason for using chroot. Though the effect may be the same it may make little sense to speak of a "chroot jail" in certain situations when the aim is not security but a special configuration for a certain process. 
+
+It is not possible to get this done with only one command per DNAT – unless... see below. But it is possible to enter the data just once. Let's define the mark range 1024–2047 for connections which get DNATted and forwarded. One line with each DNAT match condition in mangle: 
+
+You are not required to filter anything before DNAT. You ask the wrong question. You should have a look at especially the module with its options ``--ctstate DNAT--ctorigdst--ctorigdstport`. 
+
+You can check the exit code of You can check whether the socket given in $GPG_AGENT_INFO exists. That should be enough but you can also check with fuser or lsof whether the process given in $GPG_AGENT_INFO is the one that has opened the socket. And if you want to be really exhaustive you can also check whether /proc/$PID/exe is a link to /usr/bin/gpg-agent (or whatever). 
+
+If you don't use the short rule to allow all established traffic then you also need something like this: 
+
+Compare the files /etc/sysconfig/network/ifcfg-eth0 on both systems. Maybe something is missing there. 
+
+Not a solution but a workaround: You could start rm with . If you can reproduce this problem you may trace it with and contact the ext4 developers. 
+
+I noticed a difference between the two configurations which could in principle explain the reversed performance rankings for latency and throuput: 
+
+"Encrypted email" is a very general term. Outlook supports X.509 (S/MIME), for OpenPGP you need plugins. It does usually not make sense to use the same certificate for several users. Doesn't look very professional to the outside world neither. If that is your aim then it may be easier not to use any crypto on the clients but use a crypto mail gateway instead. That way it should even be easily possible to support S/MIME and OpenPGP simultaneously (without having to care about Outlook's limited capabilities). A key distribution infrastructure exists for OpenPGP but not for S/MIME. 
+
+You have set default ACLs only! That are those for new objects created in this directory. You need this command: 
+
+OpenVPN. I have used it as a server on Linux only but never had these problems (it's available for Windows, too). The client connections break, the clients reconnect. That's it. A watchdog script: Keep a script/program running which checks ever minute or so whether connectivity is still there. If not, restart the VPN software. "Hardware": Get an additional vserver, for optimal performance from AWS, too, or cheaper from somewhere else. Run a, ehm, another OS on that. Then you have a stable connection to your sensitive Windows server and can use a more flexible connection from the other vserver to your office. It may not even be necessary to route all your traffic through this box. Probably you can have more than one VPN interface on your Windows server. If the normal one is broken then you can connect via the fallback vserver and hopefully restart the broken interface that way. 
+
+neither to a connection which this user has opened (i.e. he is not listening on a port at all) nor sends from an allowed port. 
+
+a firewall problem on B (counter intuitive Netfilter blocks packets over a bridge, too) a firewall problem on C (not very probable) a routing problem on C 
+
+have a look at the disk and see the LVs there. But as the kernel cannot provide access to them in the configured way they are not available for access. 
+
+I wouldn't call it "traffic shaping" with a time resolution of one month... You do not want to impose any restrictions before this hard limit is reached? I think you need to watch the traffic and disable the account when the limit is reached (or activate traffic shaping then, making the connection quite slow). You may add rules (without target) for each of the connections (after configuring static addresses as mentioned before) in order to see the amount of traffic from and to this user. Every hour or so you can call a script / program which reads this amount of data, adds it to the user's traffic log, resets the counter (iptables --zero), sum up the traffic log and take the appropriate action if the user's limit turnes out to be reached. 
+
+This will nor affect the memory impact (even make it a bit worse) but save CPU load: If you don't already do that you should whitelist the rest of the world instead of checking all incoming connections against your long list of blocked IPs. 
+
+Maybe an MTU/MSS problem? The small initial packets get through, the big ones (data transfer) get killed somewhere? A work-around is to reduce the MTU (on both sides) a bit, from 1500 to 1450 e.g. Or to use the Netfilter target just for the affected connections (or differently for separate connections). But the real solution is to get path MTU discovery working again. So check whether ICMP packets (fragmentation needed: Type 3, Code 4) are blocked. Use to see whether such packets arrive. 
+
+No. Only hosts on the same (physical or virtual) link can do that. The reason is that you must create a layer 2 (e.g. Ethernet) packet which is aimed at your system but contains an IP target address which is not that of your system. Hosts which need at least one gateway to reach your system need the help of at least one (maybe all, depending on the circumstances) of these gateways to get this done. 
+
+Do you see anything on that interface by tcpdump -i eth2 -n I have no idea why this should be the case but is perhaps something wrong with the routing? ip route show table all ip rule list 
+
+Edit 2 The approach with the table failed (for incoming connections because only the first packet of a connection is checked in and the first is the incoming one which hits only where the module is not available). Thus all checking and marking is done in the default table () now. The script: 
+
+If your Apache does not happen to run as ekrem or root then you have to make the subdirectories readable and executable for the Apache user. Check also the access rights of the parent directories: You need a definition for so that access is allowed there. You also need a definition for which allows to follow symlinks. 
+
+If server1 is not the gateway for server2 then you need SNAT, too. Otherwise server2 will send the reply to the client which doesn't recognize the packet as it doesn't have server1 as source address but server2. 
+
+Problem and aim We don't get IPv6 from our ISP thus I have an IPv6 tunnel which works fine but is, of course, not very fast. And not really reliable. I like to have IPv6 available "just in case" but I want certain hosts (domains) to be connected with IPv4 only. Default protocol It seems to me that all applications try IPv6 first; this is probably a glibc setting. I would be fine if this default would be reversed (for all applications). Netfilter It would be possible to block IPv6 addresses / networks with Netfilter but there are two problems: 
+
+either don't use the system for anything else and connect it directly (or via VLAN) to a router which prevents network traffic to anywhere else but the gateway (and perhaps DHCP server) or (if performance is not a problem) try to put VMware itself into a VM. Please mind that I know that this is possible with hypervisors but I don't know whether it is possible with VMware. 
+
+Without saying that using an RAM disk is a good idea: I remember having read an article (unfortunately no URL at hand) about benchmarking the two kinds of RAM disks which surprisingly showed relevant differences (I have forgotten which was better). 
+
+I think that e2fsck cannot correct certain errors on the volume it is run from. This is why I always have a small additional Linux installation. How do you make changes ("set FSCKFIX=yes in /etc/default/rcS") on a corropted filesystem? 
+
+Does the same happen with Netfilter DROPs or REJECTs? Such an error should not cause a relevant delay. DNS filtering Another solution (rather easy one if that is possible) would be to filter AAAA records for certain domains. If that is not (easily) possible: Is it possible to connect the DNS server and Netfilter so that I know "IP address X belongs to domain Y" so that I can add it to Netfilter? Anything more elegant than logging everything and grepping the log? The way to go? Which (other) possibilities are there and what is the easiest? 
+
+I don't know where the order in which ext3 and ext4 are checked is defined. I believe there is no mark in the FS itself: "Prefer to be mounted as ext4." Something similar to a mark are non backward compatible ext4 features which are set in the superblock. These would prevent the FS from being mounted as ext3 but that's not what you want. 
+
+puts the rule at the end of a chain. Thus your one never matches (or at least with no effect) because the second () already got those packets / connections. Instead of you need . Or you create chains to make the structure easier to understand:

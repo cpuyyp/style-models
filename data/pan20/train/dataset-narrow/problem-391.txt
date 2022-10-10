@@ -1,0 +1,83 @@
+Mirroring uses T-log to replay everything from principal server to mirror server. So Full recovery is only possible. check : recovery models. 
+
+Yes you can just replicate the tables (articles) that you want along with its subset of data. e.g. --> You need to use static row filter as it uses a WHERE clause to select the appropriate data to be published. selecting specific articles (tables) : 
+
+Thomas Stringer's points are all you need for your answer. But I would put some more insight on how you determine your autogrowth settings ? 
+
+Note: make sure you have a final full backup of the database before you drop it, just incase if you need to restore. Normally, mode is used for getting your database out of corruption. You are right, that mode will allow only sysadmin members and the db will be read-only - nothing gets written to T-LOG. I would suggest that get the database to and then drop it. e.g. or Note: This is just my preference which distinguish between mode --> use to take DB out of corruption vs or --> give it chance to breathe before you drop ! 
+
+Ask your boss to get you a pluralsight subscription. Additionally, read answers from people like Paul White, Aaron Bertrand, Remus, etc and try to answer questions on this site. Read blogs from sqlskills.com, brentozar.com, mssqltips.com, sqlperformance.com. Also folks from sqlskills and brentozar are giving inperson training in LD. Sqlbits event in UK and the videos on it are extremely helpful and don't forget virtual academy from Microsoft. 
+
+Note that there are many other factors that will directly or indirectly affect your choice as to whether your workload is OLTP or DSS ? 
+
+Alternatively, you can use a mix of Event Notification or Profiler with Blocked process report to detect blocking on your database server. 
+
+See my answer 1. Once you failover to 2017, you wont be able to switch back to 2012. Remember that it will have the same old IP if listener. You can technically add 2nd listener (as client access point) with an OR dependency of your AG on both the listeners. This way once you decom you old listener, your AG will not go offline. 
+
+You should use Ola's backup solution. Brad talks about it in more details on simple talk. The solution is very simple to implement and its tested by many organizations. 
+
+You must remember to resume data movement once secondary database is online. Also, depending on the database size (if its small), you can think of removing the database from AG and putting it back again once the move is successfully completed. 
+
+There will be no issues as SSIS 2012 will work with previous versions of SQL Server. I recently upgraded from 2008R2 to 2012 with 45 SSIS packages and all are working fine. As Always Test all your packages before hand on 2012. from this link : As you may already know, the SQL Native Client OLE DB provider is being deprecated. This doesn't affect other OLE DB providers or the OLE DB API. Also, the SSIS OLE DB components are not being deprecated. In SQL Server 2012 SSIS, you can continue to use OLE DB connections and will need to for components such as the Lookup transformation and the Slowly Changing Dimension transformation that require OLE DB. In the post-Denali release, you’ll be able to upgrade and continue to operate these packages without needing to do additional work to explicitly remove OLE DB from the packages. 
+
+(Image source) Also refer to Grant Fritchey's article on Rollback and Recovery Troubleshooting; Challenges and Strategies 
+
+From SQL Server 2014, there are good amount of enhancements for native backups. Note: There is only a slight difference in compression between Redgate and SQL Server backup taken with COMPRESSION. For larger database backups, you can play with and and enable Instant file initialization. 
+
+We have mixed instances of SQL 2008R2 and 2012 on the same server running either windows server 2008R2 or 2012. there are no problems at all and it is supported by Microsoft. note that we are a company that make software for investment banks and our software is used in biggest and critical deals like Facebook, twitter, etc globally and we do hosting for different investment banks that use our software. 
+
+Too late to the party .. Since this question was edited and showed up on the front page ... My answer below will help future visitors .. 
+
+- Setting it to - it will change the computer settings to include the latest updates when you scan for Windows Update. I would suggest to set it and you decide what updates you want for SQL Server in-terms of SPs/CUs. From BOL : 
+
+Open Query Analyzer Run After it is done, check temdb value and it should show the true values. Also, this might help you. Also, check if there are any open transactions using dbcc opentran or sp_whoisactive (Adam Mechanic's SP) This was a bug in SQL Server 2008 SP1 described here. Out of curiosity, is it causing any performance problems ? 
+
+Note: In above query you are using an arbitrary ordering in the window order clause (learned it from Itzik Ben-Gan's T-SQL Querying book and @AaronBertrand cited that above as well). If the table is large (e.g. 5M records) then deleting in small number of rows or chunks will help not bloat transaction log and will prevent lock escalation. 
+
+Option 2: As described here, you can create table SSIS_Configurations and then load them during runtime. Good example is given here. Found a connect item here HTH 
+
+Have a look at Importing Data Into SQLServer on Amazon RDS. Also, from codeplex SQL Database Migration Wizard with a reference video as well. 
+
+Your 10 jobs will be there which will be driven by your master job. Make sure you do proper error reporting. e.g. if Job 1 fails, then just fail the entire job or go to some other step to get you notified .. something along those lines. 
+
+Its there lying for backward compatibility ONLY. In SQL Server 2000 and up, SQL Server has a concept of recovery model that defines how the log truncation is honored e.g. In simple recovery - only a checkpoint will truncate the log where as in full recovery mode - only a log backup will truncate the log. If you want to understand more about Transaction Log Management then refer to Stairway to Transaction Log Management As s side note, SybaseASE even in newer version Sybase 15.7 has this option (As a matter of fact it has duplicate and the later is the one that SQL Server got in SQL 7.0 through SQL Server 2008R2 - seen in sp_dboption): 
+
+You could set the owner of model database as and then any new databases that are created will automatically be owned by . I normally tend to set the database owner to . Our applications are not using (should never use) :-) so there is no harm in setting the db owner to . 
+
+SQL Azure database does not support replication. See SQL Server Feature Limitations (Windows Azure SQL Database) 
+
+Assuming you are using SQL Server 2008 and up, A better way of doing is to create a role in the database and grant that role permissions. You can add users to the role, so they will inherit the permissions of the role. -- to grant CREATE, ALTER, DROP OBJECTS (tables, procs, functions, views) with ALTER permissions on the schema. You can obviously fine tune below ones as per your needs. 
+
+Yes, TF 1800 is required to be turned ON even if you are on SP1. This is because you have mis-aligned disk sector size. 
+
+Yes, you have to test it by analyzing the waitstats when you rebuild the index with and without . Measure run time as well and when doing in PROD, make sure you do it during a maintenance window or less server activity. Also check your read/write data and log latency. I am not sure you have Instant file initialization, but it will benefit when restoring, during autogrowth of data files and when creating a new database (just mentioning for completeness). 
+
+If you dont want to go for windows scheduled tasks --> calling sqlcmd, etc Another View point : I would suggest you to look into Service Broker which is available even in SQL Express edition. From BOL : 
+
+should I create 2 distributors? You can use the same distribution database. Though, for ease of maintenance and better performance [reducing contention - both writing to and reading from the distribution database] I would highly recommend you use separate Distribution databases. Remember that distribution database is the heart of replication. So it requires proper maintenance, backups, etc. Now if you have just 1 distribution database that supports multiple publishers and a DISASTER happened, then restoring it from a previous backup will impact ALL publishers. From BOL : 
+
+EDIT : Since you have to remove snapshot replication only from the current database which is being used for T-REP as well, follow below steps : At publisher database : 
+
+Complementing to Erik's answer, what I currently do is use CommandLog table to find patterns for endless index fragmentation and adjust it. 
+
+Converting my comment to answer : You can use . You may want to specify to see if you can connect to the listener. 
+
+Script out the database SCHEMA_ONLY and recreate an empty database on the destination server. Use BCP OUT and BULK INSERT to insert data. 
+
+Now Grant appropriate permissions to the user Note: Granting a server permission to a database role is not possible 
+
+Couple of points to note : In sp_addsubscription make sure that And the article properties should be set to : 
+
+Why do you want to roll out your own logshipping solution ? Microsoft has put in a lot of effort for giving out-of-box Logshipping from SQL 2005 and up. This is tested by millions of customers since sql 2005, so highly unlikely you will encounter any bugs with it. You can refer to : Step By Step SQL Server Log Shipping for how to configure native logshipping. References for Custom Logshipping : 
+
+Reason for slowness is that - your buffer pool (including other caches e.g. plan cache, etc) are nuked when sql server is restarted. Couple of things that you can do - 
+
+I would suggest you to create a server side trace or enable SQL Audit to track down activity from users that you dont trust. Remember that DMV data gets reset if the DMV is cleared out, sql server is restarted, etc. The closest you can get is using below query: 
+
+No it wont invalidate foreign keys. Rebuilding an index drops and re-creates the index thereby removing fragmentation and it reclaims disk space by compacting the pages based on the specified or existing fill factor setting, and reorders the index rows in contiguous pages. FOREIGN KEY constraints do not have to be dropped in advance. Now if you disable Index then : The Query optimizer wont be able to use the index and any of your queries that uses index hint referencing the disabled index will FAIL. SQL Server retains the metadata about the index and the usage stats in . Also, Foreign Key constraints are DISABLED. Disabling Non-Clustered (NC) Index: This will straight away delete the index pages and thereby freeing up the space in the database. Disabling a CLUSTERED Index: All related NC indexes and views become unavailable and FK's are also disabled. Any queries that reference the table will fail, as a CLUSTERED index is itself the data. Note that the data will still remain, but will be inaccessible. Only way to again access data is to REBUILD the index. 
+
+From database side, if you are running with a witness in high-safety mode (high-safety mode with automatic failover), then ONLY you will have flexibility of automatic failover, rest are manual failover. Even though, mirroring allows you to do automatic failover in high-safety mode, make sure your keep monitoring the REDO queue as this can impact the recovery during a failover scenario. FROM BOL : 
+
+You can read more on SQL Server Database Snapshots Note: If this is not what you want, then I will delete this answer .. which I wrote assuming stuff. 
+
+To answer your questions -- Maintenance: what are the most important (check database, reduce database, update statistics, rebuild etc) One of the best soluton for Maintenance is SQL Server Backup, Integrity Check, and Index and Statistics Maintenance Just read-up on it and deploy. Tested and used widely by SQLServer community. Indexes - I don't know as much as I should, is there a good book/ blog etc that can teach me the basics upwards? Stairway to SQL Server Indexes -- Excellent series from basic to advance level. Anything else I have missed (there's probably lots, as I said I am new to SQL Server...) There is a lot more than just maintenance and Indexing in SQL Server. My suggestion would be to read up on any content posted by below sites ... (They are the best !!) SQLSkills.com brentozar.com SQLServerCentral.com By working with SQLServer on a regular basis, you will feel the need to get more knowledge in different areas like Disaster Recovery, Performance Tuning, High Availability, Database Corruption, etc. Note: There is a plethora of information out there on the web with excellent Bad advice as well. So my advise would be to get educated from the people who have worked and are working with SQLServer on a day to day basis. Lastly, check this training from SQLSkills -- one of the best offered. I personally have taken IE1 and IE2 and trust me.. You will feel the difference !

@@ -1,0 +1,75 @@
+We're modifying here, instead of asking it to modify itself. We should be writing something like here, or maybe ('tick' is what's commonly used to notify an event about stepping forward in time). 
+
+(Why I chose this: I saw that some arguments were recursion-specific, and were basically saying "Don't do this when you're already recursing". A clear pointer that we were mixing two concerns, which are now better separated). Note that splitting like this can be somewhat dangerous when this method is called somewhere else as well with the extra parameters. Sufficient unit tests would detect it. Bisecting You probably saw I named the helper method . That is because it uses a fairly trivial bisection algorithm. The algorithm works recursively. Recursive algorithms are really nice, but Python has a recursion-limit, no tail-call optimisations, and you are also building subslices of . In fact, look at the following lines: 
+
+Looking at efficiency: you're storing in a temporary variable, and then loading it again for the while condition. We can fix that 
+
+Hope that all helps. Corner cases As an addendum, here are some cases your code flagged incorrectly: 
+
+Notice how the while and if are now both gone? All because of how already guarantees they are ordered by max-occurence. Code duplication in getting the radius Let's take a look at the inner : 
+
+There are a few lines between the definition of the operators, and the calculation of the desired result. First suggestion: use instead of 
+
+Notice how it is non-repeatable? The reason is that the hash values of strings are somewhat randomized. In the case of ties, doesn't really care which value it returns. Hash value randomization is important to prevent a 'hashdos' attack. If you really care to fix it, here's a small recipe: 
+
+The downside is that you can only iterate over once, but you only need to do it once. The inner loop One thing that bothers me is the inner loop here. could be written as (one of Pythons strengths!). But... I'd rather write 
+
+The trick is an optimization trick preventing a lookup to the global dictionary. Using compiled regular expressions also gains a bit of speed. (On the other hand: I don't see being used, so that's probably ok). Since it's not documented, I'm going to assume the calling convention will be 
+
+First of all: great work on the doctests. Your spacing could be improved, you might want to run a tool like pep8 over your code and fix the issues it reports: instead of and such. Your method is quite defensive, which is a good thing. However, do you really want to allow setting a field to when it already contains a or ? Likewise: Do you want to allow placing something on a field that already contains an or an ? Either way is fine, depending on if you want the to know about the rules of the game or not. One thing I would recommend changing is replacing the . Prefer 
+
+(Here, I use the attribute of a cursor which returns the number of rows changed in the last query: $URL$ I tried to use more sensible names for the columns, and also used string-interpolation for the values that are hopefully not under user control (and can't be done using parametrized queries anyhow), while using paramatrisation for the which is more likely to change. 
+
+Even though @SuperBiasedMan's answer makes a lot of sense and is the real solution, here's some things you can fix in your current approach. First of all, do not use the syntax as comments. They're multiline strings. Instead, prefix each line using . (Except when you mean it as a docstring, in which case you may use syntax). 
+
+It should be quite obvious that the only difference in these statements is the filename. "Easy" fix: 
+
+(where means: the result is stored in . See how it does does 5 -> 16 -> 8 -> 4 twice, (and 4 -> 2 twice). I don't have a current suggestion for a better algorithm, but please think about it. 
+
+Obviously, you already know about SQL injection. So let's forget about that. Ideally, please do defend against it, it's easy enough that it's not worth doing it any other way. Code that is not public facing now, might be next week. Some other things: You use instead of . has to load all rows into memory (I assume), which is pretty expensive. Don't use it. Also, you use , which needs to load all columns (of the relevant rows) into memory. Again, expensive. 
+
+First of all, it's quite long, but there is one thing I would very much like to comment on. If possible, do not use loops when a loop suffices. But there is actually a lot more going on. Let me walk you through a few refactorings I'd like to suggest. First, the code just before the : 
+
+In most cases, it would miss, so maybe separate the rest of the code out to another function? (Also, try instead of first). Now, the following line can also be optimised: 
+
+This way, the code is just a bit more readable, because you're left with only the functional part of the code. Another thing that's worrisome is using blocks and manually closing the file. A block closes the file when the code leaves the block. Let's get rid of the explicit . 
+
+The tuple is always the same size, and the same form. So, why not make it a namedtuple? Put the following import at the top of your file: 
+
+This is like an 'early return' (except not in a function, but in the main body of code). Second, you have 
+
+That should be faster, because now the doesn't have to be executed anymore. Useless recalculation Having written the above loop now as 
+
+This looks more like a docstring to me. It would be nice to render it as such. You can do this by dropping the signs, and surrounding it in quotes. 
+
+Let's fill in the gaps. First the merging part. You have a lot of conditionals. Consider what would happen if you'd have to handle 3 or 4 numbers instead of just 2. Let's write something a bit more generic, shall we? 
+
+as a method on the class If you follow my suggestion of turning the grid into a class, you can write 
+
+Another thing to note is that the target_file is getting opened and closed all the time. We can do better! 
+
+Memory usage What I notice most, is that this is bound to use a lot of memory. First you load all the files (at once) into memory. Then you copy over (with modifications) the data into another variable. And another. And another. ... This creates a few lists, all with the same total memory size as the entire documents you have read. Ex-pen-sive. Generators/Iterators to the rescue! In Python, iterators are really nice. They allow something like continuations and just-in-time calculation. This causes memory usage to be a lot lower, on the (perhaps) extra cost of a bit more CPU processing. But... I think in this case it will overall be a saving because you have a lot less memory usage, so probably also less cache-misses. Let's see what we can do about that. The last step 
+
+Ideally, you'd profile it on a line-based manner, seeing where the cost is. But, I might have some suggestions. The following -statement gets run every time the function is called: 
+
+I'm hesitant to do this for the cursor, because that might break things. Why, you ask? Because of the . Before a statement has been made, it is . So we must mimic that. 
+
+But, see the asymmetry. The first and last argument get summed, and the second and third get summed. Let me rename the arguments a bit to make it clear what is going on: 
+
+Re-using variables Notice how in , the variable has two purposes: It is both a number (due to the ), and a list. Please don't do that. Because the number is unused, we should indicate that to the readers by using the conventional as variable name. 
+
+Glad we got rid of that loop, and replaced it with a simple sum function. Also, is a global variable, we should replace that with (which is passed in). 
+
+Variable naming In general, you should follow PEP8, the Python style guide. In particular, it suggests using lowercase for variable names. That is, instead of . User input conditions 
+
+Moving files the correct way When doing files, and there is a risk of race conditions, (almost) always use the following pattern: 
+
+Now, I have to wonder: why are we actually printing key at every step? I think you might have made a typo, so I'm going to assume you meant the following: (If not, skip the review from here). 
+
+Even shorter. Now we can get rid of the before the loop. Also drop the comments, because the code itself is now more clear. 
+
+weird function name Did you mean pythagoras? Oh, no, you meant . what does do? What are f,g? It looks like it returns two values based on , but it is not clear to me what the expressions signify. How did you get those expressions? It probably derives somehow from and its derivatives. Maybe it would help if you could show us what the code looks like for the arclength of the arc formed by between -1 and 1 (it should return 2). arc length algorithm Also, the arc-length runs the risk of running into a recursion-error. And it's slow due to function calls. Suggested implementation (typed on phone, untested): 
+
+Docstrings In Python, it is the convention to add the documentation of a method/function in a docstring. Instead of 
+
+And isn't that how you normally shuffle? (Disclaimer: none of the code as-written will compile, unless by a freak accident of nature. Again, Java is not my native language.)

@@ -1,0 +1,37 @@
+This code is incredibly fragile and strictly "happy path" in nature, as you are doing no validation of the passed dependencies and you just assume that all of the steps in the code will work properly. Most critically, you just assume the passed schema JSON will decode properly. What if it doesn't? Right now, your code will just silently fail, perhaps giving the caller the perception that validation passed, since you currently do not return any validation result to the caller (you just echo out failures). To extend on my earlier class-based example, perhaps you need to do something like: 
+
+I would say that when you are dealing with bulk load operations, you might want to forego usage of your framework's ORM (data model) or query builder functionalities, in favor of more straightforward raw query or even command line functionality in order to leverage the DB's bulk load capabilities. In this case, if your file and DB are on same server you might consider Postgres COPY query to bulk load the CSV. For example: 
+
+Your class, as shown, doesn't really provide a method for getting at the user data. What is the point of instantiating a user object if you can't read any data out of it? Are you planning on implementing to perform lookups against the array (something I would discourage in favor of proper properties)? How does a developer even know what properties, besides are available on the user? 
+
+Are you getting any value from this class vs. just directly working with ? You are actually restricting the some of the capability of class from the calling code and perhaps encouraging bad coding behaviors (like retrieving all rows at once, which is rarely a good idea). I would prefer that, for each use case, the developer give specific thought around: 
+
+You say you want to search a text string from a database, but are not showing the database part. This is key to think about, as I am guessing you could cut out all this work if you made appropriate search requests against an appropriately designed data store. Most any modern relational database supports some level of natural language search, which would allow you to actually do this across more than a single string at a time. This is not to mention the existence of data stores both open source and commercial geared specifically towards search cases, even allowing the ability to return search matches with context as you are trying to do. Consider doing this sort of work with a tool that is optimized for this purpose. Thoughts on code: 
+
+Pay close attention to the advice from @janos regarding your SQL injection vulnerability. I agree with that assessment and so won't he-hash it here. 
+
+Once you commit to moving towards prepared statements (i.e. you are refactoring your overall application), you might also think about dropping working with altogether in favor of or other better database abstraction. for example can be made to work in "exception mode" such that you don't need to spend your time introducing exception throwing/handling code on top of . 
+
+Since there are different keyboard layouts, I wonder if it makes sense to generalize the functionality on creating a keyboard based on standard keyboard configurations? Your current logic to build keys seems basically hard-coded for standard 88 key keyboard. There is an odd mix of work that is happening before the main loop where keys are populated (setting the octave 0 keys) and after that main loop (setting the octave 8 key). I would strive to set all key values within the loop so this logic isn't disjointed like it currently is. 
+
+To me, this makes it much clearer that there is a nested mapping operation happening here. This is much easier than trying to count/balance opening closing parenthesis in your head as one might have to do when looking at original code that ends with three closing parenthesis in a row. 
+
+This way you can let the caller know that they are trying to access the object in an invalid manner such that they might do something about it. Your current code just silently fails without returning anything to the caller. Similarly, in your constructor, you would seem to be passing a PDO object. Enforce this with a type hint, so you are guaranteed to get a properly set up PDO object passed to this class. 
+
+What if property does not exist? Should you throw exception? This condition would likely mean caller is accessing this class in unexpected fashion and should probably fail loudly. 
+
+But I would probably go ahead and break each column/value on its own line in this case because I find the following to be more readable: 
+
+I don't understand purpose for your connection class. It doesn't really do anything. It looks like an improperly implements singleton. But right now, it does nothing to prevent spawning unnecessary connections to the database. If you wish to keep it, give it a meaningful name. is very generic and gives no hint that this is intended to work with SQL server. 
+
+Don't start your output to the browser (the HTML part) until you have done all of your primary PHP logic (i.e. validating form data, interacting with database, etc.). You will find over time in working with PHP that separating core logic from display becomes very important. Once you have started output, you will no longer be able to do things like change the response headers (i.e. for redirect). 
+
+No data validation here at all. You should strongly consider adding validation around all public methods where parameters being passed - either through type hinting, or inspection of parameter against expected data types/values. What is null is passed here? Is that a reasonable value? What if some other oddball data type (a PDO object for example) is accidentally passed to this method? You are allowing your object to be put into a potentially bad state as opposed to failing loudly (with or similar) 
+
+Also, if you are going through the trouble of validating dependencies in this manner, is only looking for presence of an array value being set going far enough to make sure your object is set up in proper state? What if these values are set to empty strings or other non-sensical values for your context? 
+
+Really think about whether magic getters/setters are what you want here. As noted above there are a lot of trade-offs in terms ability to validate data, make properties truly private, etc. that come with giving property-style access to protected/private properties through magic methods. Again for your use case here, I don't know why the properties wouldn't just be public, because that is exactly how you are treating them. 
+
+You do nothing to enforce that your object is set-up prior to making the database insert. Right now a caller can instantiate this class and then try to make an insert before having set any properties. If the caller already had this information, why make them do something like this: 
+
+I also don't understand the conditionals around the debug logging. I would think you would just always do the logging and just have it properly logged using or Conditionally logging in your code just means you are now adding your own log level concept outside the framework of the logger.

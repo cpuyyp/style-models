@@ -1,0 +1,73 @@
+I wrote a case statement with > 100 choices where I am using the same statement in 4 places in a simple query. The same query twice with a union between them but also is doing a count and therefore the group by also contains the case statement. This is to relabel some company names where different records for the same company are spelled differently. I tried to declare a variable as a VarChar(MAX) 
+
+I did a bit of hunting after @LowlyDBA gave his answer, and came across an extension to SSMS that does exactly what I was looking for! SSMS Schema Folders 
+
+The purpose for this UNION is to return all data for a timeperiod, and ALSO to return data for the same timeperiod for 12 months previously EDIT: Added a missing "CATCH-ALL" EDIT2: Added a second ½ of the UNION statement EDIT3: Corrected the GROUP BY to include some other necessary elements 
+
+When I went to use it in my select statement - the query just returned the case statement as text and didn't evaluate it. I also was unable to use it in the group by - I got this error message: 
+
+Ideally I would like to have the CASE in just a single place - so that there is no chance of me updating one line and not replicating that elsewhere. Is there some way of doing this? I am open to other ways (Like maybe a function - but I am not sure how to use them like this) Here is a sample of the SELECT I am currently using 
+
+I have a need to see a trend of data for "month to date" So I want to pull the 1st x number of days of each month for the last 14 months, and the n aggregate this. My data has approximately 10k data points each day So far I have only been able to figure out how to do this by writing a double while loop - the outer loop counting down the months and the inner loop selecting each day and aggregating the data for the day - then storing it in a temp table. Once I have stepped through each month and each day I then selet the data from the temp table and aggregate this to give me monthly data summed for each contract type. For various reasons I need to run my select 4 times for each day. This all ends up meaning my SQL takes around 120 secs to run. This is sub-optimal - as I am hoping to have this used by SSRS to pull a report on demand when a user wants to see it. Making them wait 2 whole minutes? Not Desirable - especially considering primary target audience is the exec team Here is my SQL (NB I've changed a couple of table/ column names ) 
+
+I am hoping someone can tell me how to accomlish what I am after... Which is to do away with the loops and have the data aggregate in a single operation NB I have done my aggregation for full month periods - that was a piece of cake compared to this 
+
+Have you looked at the pg_stat_statements extension? It won't give you the role logon time (although setting the log_connections parameter as @francs suggests would deal with that) but it will show you which roles are running queries (and what those queries are). 
+
+Oracle has a free tool SQL Developer that has can presumably reverse engineer an Oracle database. If the database isn't too large then you could possibly use a tool like DbVisualizer (which is either free or low cost depending on the version). You can only diagram one schema at a time and results aren't directly editible (it's really more of an exploration tool) but you can save the diagram as GML and edit it with a tool such as yEd (which is a free download) (Note that you will need to edit the gml file slightly before bringing it into yEd by replacing all instances of 'customconfiguration "SimpleRectangle"' with 'type "rectangle"'). Note that SQL Developer, DbVisualizer, and yEd are all cross platform tools so you can use them on any system that has Java installed. Update -- I just tried reverse engineering (154 tables) using SQL Developer. It appears to work reasonably well but it isn't going to win any beauty contests... 
+
+In addition to the other comments... If/when you have a database where any given table can be updated by one or more applications or code paths then placing the appropriate constraints in the database means that your applications won't be duplicating the "same" constraint code. This benefits you by simplifying maintenance (reducing the number of places to change if/when there is a data model change) and ensures that the constraints are consistently applied regardless of the application updating the data. 
+
+Which is what we see ($PGDATA/base/83637 being the subdirectory for the new database). Dropping that database should also delete the data files: 
+
+No, the schema is the user in oracle. In other databases, where the schema and user are actually different things (and appropriately so), then you could have a schema name that matches the user name but where the user does not have rights to the objects under that schema. 
+
+Once you've learned Postgresql then pick another RDBMS and learn their SQL dialect-- compare and contrast. Rinse and repeat. 
+
+To add to what others have said. Temporary tables can also have primary keys, constraints, indexes, etc. whereas CTEs cannot. On the flip side, you can do some pretty neat tricks with CTEs that would be harder, I think, if done with temporary tables-- such as chaining them to perform deletes, inserts, and selects all in one statement. There are some nice examples of "cool-CTE-tricks" here. 
+
+Since most of the information schema is in the form of views against pg_catalog you can get a big chunk of it using : 
+
+Turns out to have been a bug in the GEOS package-- there is an announcement on the postgis-users list. The link to the bug report is here. 
+
+These queries work on postgres 8.4/CentOS 5 (64 bit). Under 9.1 they also result in a spike in memory usage. I've run vacuum full, analyze, and reindex on the database and have also adjusted the memory parameters in the postgresql.conf (using pgtune)-- makes no difference. 
+
+The biggest issue I know of with an indefinite is log file expansion. This is describe here. SQL Server hooks into its log when you start a transaction. All transactional events, such as s to other tables, that happen after that transaction has started will be logged in the log “after” that. One can think of SQL Server writing to the log file in a circular way: when it reaches the end, it goes to the beginning and continues. However, once the log is filled with unreclaimable “active transactions”, it has to start expanding the log, if enabled. Expanding the logfile is expensive. If the server needs to log things before it can respond to clients, those responses will have to wait for the log to expand. Additionally, if transactions last forever, the log will expand until it uses all available free space. As long as your takes to run, it will prevent reclamation of the log. You can mitigate this by ensuring that your has a short enough timeout to prevent the log from growing indefinitely and handling the error condition of an event not coming in time for the timeout. 
+
+Why is a conversion happening? I thought that caused the result to be the type already. If this warning can/should be ignored, how do I stop the warning from appearing in the execution plan (so that when I debug a bigger query with a similar warning it doesn’t distract me from actual issues)? 
+
+and the list it shows does not include . However, then I’d expect all statements not found in the documentation’s list to not leave incremented. So, I looked for another statement not included in that list. I found . However, I found that if I perform a subquery with , I get the behavior I’d expect from . That is, if my has a subquery, it increments if it is zero. So it appears that the documentation is inconsistent with itself 
+
+Since I mentioned that I’m using in my clauses, I’m going to try extending that to creation as well. To do this, I’m just going to add a computed column with the of the first one and then include that column in the : 
+
+The attempt to insert twice resulted in and error, proving that I am still benefiting from behavior: 
+
+Why does increment for an embedded but not ? Is the embedded in the somehow not actually using a transaction? I’m using SQL Server 13.0.4411. 
+
+I was playing around with . I found a situation where I am convinced the database is automatically creating and committing a transaction without leaving it open. If I do or any variation, I am certain that a transaction is happening in the background which I’d expect to stay open if I’m using implicit transactions. However, after reading the docs, it says something like: 
+
+I would like to be able to store records about things that are identified by strings where space is significant. I know that T-SQL follows rules about string comparison to implicitly pad up to the length of either string when performing comparisons and that I can work around that in clauses by also comparing . But I don’t know how to make a behave similarly. How do I store data so that 
+
+Have you looked at SQLite? It is a widely used, light-weight database which has C/C++ bindings and supports in memory databases. 
+
+No guarantee that the indexes that pop up aren't ever used, but it should provide a list to start looking at. 
+
+In psql you can to make psql show you the queries used to generate the output of the commands. I've found these queries to be very useful as a starting point when digging metadata out of databases. 
+
+While you can't "copy" them you can use the database meta-data to dynamically generate the DDL to create them. 
+
+Which is what we would expect-- the $PGDATA/base/83637 directory is gone, there should be nothing to vacuum. Are you sure there isn't something else eating up your disk space? One of your other databases? log files? Something that you could try would be to: 
+
+It depends. They all speak different dialects of SQL. Not having any details to work with I would recommend Postgresql though. 
+
+No, that simply enables the use of SSL. You need to also make the appropriate changes to your pg_hga.conf file. 
+
+We have a set of spatial queries that are failing and I'm struggling with troubleshooting them. I suspect that we're running into some bug, but I'd like to nail things down a bit better so as to be sure and also so that the resulting bug report is both useful and directed to the correct party (postgresql, postgis, or other). Does anyone have any recommendations for next steps? Given: PostgreSQL v9.1 installed from $URL$ on fully a patched 32-bit install of CentOS 5 
+
+My understanding is that when you drop a database then it, and it's files, are gone. Unless you are using tablespaces then each database should have it's data in it's own subdirectory under $PGDATA/base. Using one of my servers for an example (as the postgres user): 
+
+Avoid using in the query if at all possible. Since I don't use the construct on a frequent basis the syntax may be a bit off but it should at least get you close. edit How large are these tables? Have you looked at the for the query? Indices? 
+
+If your problem is file fragmentation then no, there isn't. In Postgres each table gets it's own file, or set of files if it uses TOAST, in the file system. This differs from, say, Oracle (or apparently MS-SQL) where you create pre-sized tablespace files to drop your tables into-- although even there you could have file system fragmentation issues if the tablespace files get extended or the file system is badly fragmented to start with. As to your second question... I have no idea how to would cleanly deal with the file system fragmentation as MS-Windows is the only OS where I've experienced fragmentation issues and I don't run MS-Windows any more than absolutely need be these days. Perhaps placing the database files on their own disk(s) could mitigate that to some extent. 
+
+For Postgresql on MS Windows, the Postgresql wiki has an "Automated Backup on Windows" article that may be of use. There is also "Instant PostgreSQL Backup and Restore How-to" available from Packt that provides a good overview of the various options available using the tools that come with Postgresql. There is nothing in the booklet that can't be found on the web but they do a nice job of pulling that all together in one document and the price is very reasonable.

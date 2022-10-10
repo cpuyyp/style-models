@@ -1,0 +1,45 @@
+Well, the code you put here for review is very minimalistic. There's not much context. What you appear to have is a task which has a method name and argument, and you want to run that method on a given instance..... While your variable names are meaningful, the variables themselves are unnecessary... especially if you use the actual invocation method name for the call. 
+
+General In general, I am impressed with your code. It is neat, variable names are good, the logic is well structured, and I can mostly follow it without having to run it. This is a good thing. Some smallish items have impressed me too: 
+
+The binary search is a \$O(\log n)\$ operation, and the array-copy is a hard thing to quantify in terms of because it "depends". Anyway, food for thought. Of course, you could just sort the array, and then skip duplicates that way... it would make it a more apparent \$O(n \log n)\$ operation. 
+
+The following is a collection of static methods designed to help manage a system where you create a matrix to represent a logical single-dimensional array as a matrix instead. In addition, an implementation of a primitive array that allows some structured and dynamic access to the data in the array. ArrayOps Tools for managing the structure of the 2D matrices described above. 
+
+(I put this in an Ideone here) Note that it also keeps a counter outside the loop. This removes the need for the 'ugly' offset on a repeating character count. The code still assumes valid input (where the last character cannot be a digit, or it is lost). Additionally, I tweaked it to handle multiple digit input.... like 20z ... for fun. Update: In my mind, I immediately 'threw out' your method, because it was not needed... but I have only now just read it.... Eeugh! Yuck! You should never use exception handling (try/catch) to handle normal program flow. The try/parse/catch logic you have is very slow to run. Throwing an exception for every non-digit character will be a lot of overhead. Even though Java has improved in terms of performance, when processing exceptions, it is still much slower than the alternatives, like a regular expression, or some other mechanism... Update 2: working with the original specs (thus ignoring the multi-digit repeat), the code would be (here in a different Ideone): 
+
+For me, on my laptop, this solves the 100000 digit problem in less than 1 millisecond. First I 'warm up' Java with the first 10,000 solutions.... Then I run some big ones.... 
+
+Executors have their own Runnable that they use to create the thread. When you have your runnable, you pass it to the Executor, and the Executor runs it on one of the Executor's threads. So, you can create an ExecutorService with something like (using Java 8): 
+
+I believe you've fallen in to the hacker-rank mentality of do-it-quick... and all in the main method ;-) Your implementation should have a class, that is a container that tracks only the longest X number of lines. It should have a constructor along the lines of: 
+
+OK, the regex is more complicated, but, there's only one of them, and it is compiled only once. The regex looks for digits on either side of the colon, and returns them in either group 1, or group 2. Note that the regex expression is a non-grouping match, so does not count as a group, but the inside it, does. Also, note that your original regex probably has a bug, because it searches for just a single-digit in it: when it should probably look for and not just . Additionally, there is no need to escape the in your regexes. Now, there's only 1 regex, not three. It is statically compiled, and our code logic is streamlined. What we now have, is a function, it takes two arguments, and returns a third. I cannot see any references to 'state' in your class, so your method can easily be a static method. This makes your function a proper function if you want it to be, e.g.: 
+
+Generics warnings As far as I can tell, the generics are mostly OK. You can reduce the number of unchecked annotations you have by declaring it for the whole class ;-) But, you only have two, and, for a reflective system, that is not too bad. 
+
+would be, perhaps, the various 'types', like , , . Once you have sub-categorized your parameters, the constructor becomes simpler, like: 
+
+Your algorithm has two loops, and that's really not necessary. This question is looking for a special 'trick' to be done.... and that trick is to process the data in reverse order.... Consider this loop: 
+
+That code creates a buffer of size 4.... which is not what you want. The is the XOR operator, not the power operator, so 2 XOR 7 is 5, and less 1 is 4. You probably want to use \$2^7\$ which is easiest to do with a shift.... 
+
+Your code has compile warnings: is set, but never used You are doing a binary search on the file, but not identifying the word, but a word fragment. In my use case, for example, the code ends up oscillating between two points, neither of which is related to 'book' (in other words, your code does not work): 
+
+I would expect that your loop will run at 62.5 FPS based on the code you have.... but with some variation on timers and rounding-down, I would expect that to drop slightly to 61 FPS occasionally. This would reflect your results where you see between 61 and 62 FPS. Why? Because your code is full of integer-division, and you are losing precision everywhere. Consider the first statements in your code: 
+
+That way all the get, add, and set operations are in a single synchronized block. Better way Note, in the above code, that we are synchronizing the block on the : 
+
+Now, in a change management/version-control system, your single change (moving the line ) has changed 3 lines of code, and it looks like you added three lines in the diff, making the change look more substantial than need be. Tracking changes is often the hardest part about maintaining code, and being able to separate substantial changes from clutter is hard. By placing braces appropriately when you first write the code, you make subsequent changes clutter-free. This is even more apparent in code like: 
+
+Much of what I would comment on has already been covered.... but, I don't see any mention of the main method recursion... which, frankly, is a bug. Why? Well, how many times will the user want to process some input? 5 times, 10 times, 100 times, 1000 times? Somewhere between about 100 and 1000 the program will crash with a StackOverflowException. Each time the user says 'y', you add a new level to the stack. The right solution is a simple do-while loop: 
+
+Globals As for the actual functionality, it irks me that is a global constant. I feel these resizes should be passed in as a variable to the looping resizing function. Globals tend to become problems when things need maintenance. Error handling Your error handling is incomplete, and inconsistent. Your function returns an optional error, which is fine, but you're not trapping all the conditions. Consider this code: 
+
+Then, as you recurse, you have a single instance of that Result object that you pass to all nodes on the recursion... 
+
+The Ackermann function is not designed to be efficient... ;-) It is designed to be a counter-proof to a theoretical construct. But, the reality is that the is required. The conditions are required. About the only things I can suggest are: 
+
+That simplifies your line-lengths in a few places. This is how I would simplify the code cosmetically: 
+
+Here you are using a few structures which I feel are not the right tool for the job. Firstly, you are given an array of int, but you are returning a . I dislike , but even worse than using a List for primitives, is using a mixture of them. Be consistent! The dueue is a confusing concept. It is worse because you use a for-loop in a non-traditional way, with the loop-variable declared outside the loop, and you reuse it later. You don't have any comments explaining how you use it. At this point, I have looked through the requirements, I have figured out how I would do it. I can see that your strategy may have some advantages, if it does what I think it does, but it is complicated, and hard to read. So, I am giving up.... Code Review not successful, not commented enough, not enough background information.

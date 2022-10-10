@@ -1,0 +1,57 @@
+This is an anti-pattern. The constructor should give a fully initialised object, and if that's not possible then it should be hidden and public access should be via a builder or other factory. With a graph I would be tempted to make the constructor private and have static factory methods to build from a set of edges (as here), from adjacency lists, and from an adjacency matrix. 
+
+If you substitute \$(a, b, t) = (b, a, 1-t)\$ then the second will give you the same result, but the first won't necessarily. In particular, when \$t \approx 1\$ and \$b \ll a\$ the result should be very close to \$b\$, but in the first expression the subexpression \$b - a\$ will lose the precision of \$b\$ and it can't be recovered in the final result. 
+
+I assume that you're using C# with .Net, whether .Net Standard or .Net Framework. They both have high-level data structures which can make code easier to read and, in many cases, faster. If you flip this round as then the bulk of can be rewritten as 
+
+You'll note that I'm using the copy-constructor rather than . That's a matter of taste: fundamentally there's no real difference, because they're both special-cased. 
+
+(Actually, if you follow my previous suggestion of only calculating primes up to then you need to insert a phase because when you factor you may find entries which are primes greater than that limit and need inserting; and you would be iterating over a flat list of primes then updating a which will later be converted into a , but that's not the point). 
+
+The obvious place to look for the performance issue is . The only operations you perform on are to add values and to test whether it contains values, but List is the worst* data structure available for testing whether it contains a given value. The minimal change to fix this problem would be to instead use a HashSet. However, HashMaps and HashSets are fairly general data structures, and not all of your code assumes that level of generality. In particular: 
+
+IMO this is excessively complicated. Unless you're reusing and in contexts which require or , why not make them return ? And then you can push in the case split for the type to use, exposing a single method and leaving the responsibility in the method where it really belongs. 
+
+and read, alter a register, and write, allowing another thread to change the value in between the read and write. This is directly solved with . If the callback is interleaved with the method you could get a situation where the callback count is decremented to zero even though there are still initialisation tasks to perform, causing to be called early. This is solved by making itself an initialisation task. The increment must be done before registering the callback, lest the callback decrement before has done the increment. 
+
+Why is this mixing and ? It seems to me that if the generator generates problems involving ints, it shouldn't use decimals anywhere; and if it generates problems involving decimals, it would be clearer to use for the bounds. Why is this a private method in a generator? I can make an argument for including it in (or a wrapper around ); I can make an argument for including it in if you can find a way to do it which doesn't run into problems with the type system; and I can make an argument for including it as an extension method to . But if it's a private method in a generator, you're going to end up copy-pasting it all over the place. 
+
+What exceptions are you expecting to catch here? can't throw any, and anything which could throw would be better handled by input validation. 
+
+Variable names prefixed with are somewhat unusual. In defining the plugin you used the name avoidance strategy, but when using it you don't. The reason for wrapping the plugin definition in 
+
+What happens when exceeds 253? It probably wouldn't extend the input that can be supported without overflow by much, but using the addition property \$\binom{n}{k} = \binom{n-1}{k-1} + \binom{n-1}{k}\$ does guarantee that overflow is only a problem when it's inescapably a problem. 
+
+Given those assumptions, there's a strong case to be made for replacing the maps and sets with arrays. (Or, alternatively, for fully generalising the connected components code into a generic class and making the test wrapper instantiate it as ). * Modulo deliberate construction of a data structure which takes worse than linear time to test membership. 
+
+(Although see my previous comment on eliminating ). However, I'd be very worried about letting a random external class change or : I'd at the very least make the setters if not . Isn't just ? If so, it shouldn't be maintained separately because that's just an invitation to create bugs in the future. It could be replaced with a computed property. 
+
+First, a bit of quick analysis. The solutions with \$a=b=0\$ are trivial: \$c=d\$. There are no solutions with \$a=0\$ other than those trivial solutions, by Wiles' theorem. Therefore we may as well ignore the cases where the variables are zero. 
+
+and, as the comments mention, generates primes using an Atkin-Bernstein sieve. The interface is intended to allow operations such as composition of sequences, but in addition to that interface I find it helpful to have methods and . There are a couple of TODOs, but at the moment they're a long way down my priority list. 
+
+Both of these issues can be finessed by limiting the muzzle velocity severely, but the constructor doesn't place any limits on muzzle velocity. In fact, it doesn't even complain if it's negative! I think an would be appropriate in that case. But just to make it clear: the main point here is that the calculation would benefit from some comments to explain the derivation (or point to a reference) and the limitations / assumptions. 
+
+You're using RSA as a block cipher in ECB mode. That's not how it's usually used. Unless you have a very good reason to do otherwise, you should just do one RSA encryption, of a secure random key for a block cipher (i.e. AES), and then use that key to encrypt your message. Since you're converting to , it's apparent that neither memory nor latency is an issue, so you could avoid a lot of messing around with s by using and . You can also use to simplify the en/decoding step slightly. 
+
+MSA? NSA? SRF? If you want to obfuscate the code, try putting Proguard or a similar tool into the compilation chain rather than obfuscating the original source... Also, Java conventions (which I think Android follows) are that class names should start with an upper case letter, so it should be (and there are some other classes which also don't follow the convention and should be fixed). 
+
+This doesn't seem to me to hang together. If the code is supposed to be robust against the version length changing, why isn't the sequence (a) check is long enough for the version; (b) check the version; (c) check that the ciphertext without the version is long enough for whatever extra constraints the current version imposes in terms of block size, tag length, etc? And given that the final check forces to be a prefix of , why is the sanity check on the multi-byte flags a static check on instead of an instance check on ? 
+
+I'm also not keen on exposing the class directly, although I'm not sure what API the enclosing class would have with respect to the links. 
+
+Firstly, we can observe that the sum of Fibonacci numbers is simply offset from a Fibonacci number. I'll take the convention that \$F_0 = 0\$, \$F_1 = 1\$. Then $$\sum_{i=0}^n F_i = F_{n+2} - 1$$ Proof by induction is easy: \$\sum_{i=0}^{n+1} F_i = F_{n+1} + \sum_{i=0}^n F_i = F_{n+1} + F_{n+2} - 1 = F_{n+3}-1\$. Secondly, we can observe that since the Fibonacci numbers go odd, odd, even, the sum of the first \$n\$ even Fibonacci numbers is the sum of the first \$2n\$ odd Fibonacci numbers, and half the sum of the first \$3n\$ Fibonacci numbers. I.e. $$\sum_{i=1}^n F_{3n} = \frac{F_{3n+2} - 1}2$$ So you can skip the sum provided that you can compute how many terms you need. And you can compute the \$n\$th Fibonacci number in \$O(\lg n)\$ operations using \$F_{m+n} = F_{m+1} F_n + F_m F_{n-1}\$. 
+
+Some OO purists would argue that you should ask an object to do something for you rather than to return data to you, but most Java practitioners are not such purists. I would expect to see an override of rather than a method. (Also, for preference, I would follow 's convention for the of a map). 
+
+I would find a comment explaining more useful than a comment explaining why you made a function, because everyone ends up writing a function which behaves sensibly. I don't know much about elliptic curves, but I have worked with finite fields. Are you sure it makes sense to take as though they were integers? The only makes sense to me if is also the characteristic (i.e. if it's a field of prime order). 
+
+TL;DR: dynamic programming. If the alphabet has \$k\$ symbols (5 in the example), in the worst case there are \$k^N\$ possible strings and generating them is \$\Omega(k^N)\$. But it's possible to count them in \$O(k^2 N)\$ time and \$O(k^2 + N)\$ space using a simple dynamic programming approach. The input gives the successor function: \$a\$ must be followed by one of \$\{i,e\}\$. The first step is to reverse that to get the predecessor function: \$a\$ must be preceded by one of \$\{i,u\}\$. Then the number of strings of length \$l\$ which end in \$a\$ is \$1\$ if \$l=1\$, or the sum of the number of strings of length \$l-1\$ which end in \$i\$ or \$u\$ otherwise. 
+
+No. Firstly, as pointed out by Josay, the algorithm considers each set partition twice. But secondly, it doesn't perform \$O(1)\$ work per set partition. It's performing \$\Theta(n)\$ work in calculating the sums. As far as I can see the documentation of doesn't guarantee anything about how long it takes to generate each partition, but Gareth Rees points out that the implementation is also \$\Theta(n)\$. So the complexity is \$\Theta(n{n \brace 2}) = \Theta(n \, 2^n)\$. 
+
+Looks like either a refactor or a copy-paste which didn't tidy up the JavaDoc. I would expect the IDE to give a warning. 
+
+I'm also unconvinced by the general structure. Why should your program have to take care of mapping file types to executors? That's functionality that's built into the operating system. If the registry is correctly configured then the method should just be 
+
+was initialised as . , so there's no point initialising to 256. (And the class name isn't actually correct).

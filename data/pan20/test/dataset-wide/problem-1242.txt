@@ -1,0 +1,43 @@
+Thirdly, since PHP has a dynamic type system I think it would be more idiomatic to return just the element if , rather than wrapping it in an array. 
+
+Why does one configuration have to handle two different syntax styles? On the bases of KISS, of doing one thing well, and of potential ambiguities I would think it makes more sense to register two handlers (perhaps and ), even if they share regexes for opcodes. 
+
+This looks like a bit much for a single loop body. Why not split the input processing into a function? 
+
+I would prefer to here because it's more consistent with the way Java's and work. Although I'm not entirely sure why there's a method to compare two integers in the first place. 
+
+Just to reiterate, the view should be a very thin layer of the application. It does not have any business logic, and it should be the only place in your code where UI elements (AWT, Swing, etc. classes) reside. That is, no other classes should have ANY knowledge about what UI framework the view is using. Why? Those classes shouldn't care! (Separation of Concerns) 
+
+Keep in mind these are only my suggestions. Take them as you will, and hopefully at least they will teach a bit about good design patterns! 
+
+MusicInfo Class Long story short, you don't need this (I also think there's a better approach than using a 2D array, but for now, let's assume the array stays). The 2D array that's being wrapped here is a UI component, so it can easily become part of the GUI class. The methods in this class are just syntactic sugar, and really don't provide any additional benefits. Plus: 
+
+That's not a problem. It's easy to make the keys distinct by lifting to a tuple which pairs the key with the index in the source. 
+
+As already observed, this is terribly inefficient. The following optimisations occur to me: Sticking with quadratic time 
+
+That recurses down the tree to find a node, and then returns enough information to recurse down the tree again looking for the same node. That's a clear sign that refactoring is necessary. Special cases 
+
+Looks like a mixture of tabs and spaces. It's better to be consistent and stick to one or the other, because otherwise changing tabstop (StackExchange automatically turns tabs into spaces with a tabstop of 4) makes the code hard to read. 
+
+No need to say the method name again - the method name is automatically part of the Javadoc. What are the parameter constraints? (To be fair, you don't enforce any constraints in your code, so it makes sense to not mention any in your Javadoc) That said, you should at least have some minimal constraints on your public methods and constructors (eg. The GUI constructor takes a object - do you want to allow a consumer to pass in ?) When are your exceptions thrown? I see lots of classes which throw a , but as a consumer of your code, I would want to know what causes that exception to be thrown. Private methods. It's not wrong to add Javadoc on private methods, and some people will argue that every private method should have Javadoc. I don't necessarily agree (Feel free to come to your own conclusion on this one), and I am of the opinion that if a private method is so long that it needs documentation on what it does, you should probably clean that code. 
+
+in essence occurs three times, although as I understand it that's really a recursive function which has been transformed to an iterative function with a stack. Conceptually viewing it as a single recursive function, I think it's a traversal through a directed acyclic graph. What is certainly the case is that the same recursive call is being made multiple times with different values of (or, from the graph perspective, different values of are being pushed down the same edge to be accumulated at the destination vertex). Idea 1: if it's a DAG then a topological sort takes linear time (assuming that the structure of this particular graph doesn't allow parts of it to be done implicitly to get sublinear time), and then each edge of the graph only needs to be traversed once more. The memory cost here would be an additional \$n! \;\textrm{sizeof}(n!)\$. Idea 2: whether it's a DAG or not, iterative deepening could be used to replace the inner loop (executed up to \$2^{n/2}\$ times) with an outer loop (executed up to, I think, \$n/2\$ times). The memory cost would be a doubling, to have a second paged array containing "accumulated value not yet pushed to my neighbours" per vertex. Idea 3: if we were to label each vertex \$v\$ with a vector \$d_v\$ such that \$d_v[i]\$ is the number of paths from the root to \$v\$ of length \$i\$, I'm pretty sure we'd find isomorphic vertices (under a natural interpretation: same label and isomorphic neighbourhood). If there's an efficient way to identify isomorphic vertices or to canonicalise to a representative of the equivalence class then this would allow reducing the \$n!\$ of the outer loop to the number of equivalence classes (surely a saving of a least a factor of \$n\$), and in the best case would also save memory in the same proportion. [Edit: this turns out not to be as good as I hoped: the average equivalence class has only about 2.2 elements]. Idea 4: exploiting the particular structure of the graph, I think there's a kind of meet-in-the-middle which might be able to halve the memory usage. To be precise, I think that there's a symmetry which relates and in such a way that if each of those pairs is swapped and each edge is reversed then the original graph is recovered. This is suggestive that it might be possible to work with only half of the graph by working forwards and then backwards. 
+
+I prefer to accomplish this by creating the view, and injecting it into the controller in the constructor as follows: 
+
+BeatBoxConstants Constant Class (of Interface) are a bad anti-pattern. Instead, we can easily just pass in the number of beats to the constructors! 
+
+Who cares if it's not selected already? Doesn't hurt anything to set it to false again, plus now it's even more clear that each method is an unnecessary wrapper. Midi Class 
+
+In an example workflow, let's say we're playing a track and click the reset button. The view added a listener to the reset button, so that listener will fire. The implementation is simple and only notifies the views listeners the the button was clicked (the view is supposed to be dumb, remember?). The controller now is notified, and it is smart so it will know what to do! The controller takes charge and stops the sequencer (updating the state), and then tells the view to reset itself. And that completes the cycle! (Interact with view -> view notifies controller -> controller modifies state -> controller updates view) 
+
+After the scan is much simpler: you only have to compare each element to the ones immediately after it. (It would be "the one immediately after it", but you have to take into account repeated values). 
+
+but that's hideous. The nicest solution I can see with that space complexity is to quick-sort in place (assuming that's permitted) and then do a linear scan to count each distinct value. But that's not Linq, and I wouldn't be surprised to learn that modifying the input is banned. (Although in that case why is it an instead of an ?) 
+
+This is unnecessary. If the set is empty, the iterator will return to the first , and you'll go straight to the final . Other than that, it seems like a simple, obviously correct, approach. However, it is quite inefficient. 
+
+Again, maybe just personal preference, but I find this approach a bit easier to see how the hierarchy is being built up. 
+
+Private initializers. I try to not use them if possible, but I do understand that they have a place. When code is short and simple (like this project), then I find it much easier to read if all of the UI components are setup directly in the constructor. I've found that it's easier to understand what is all happening and build a proper UI hierarchy when they're setup sequentially. A little documentation of what is being setup can go a long way as well. Plus, any variables that need to be accessed elsewhere in the class can still be final since they're initialized in the constructor. That said, in a very complex and large class it can be more readable to break apart the constructor work into some private methods. But even then I might argue that your constructor is doing too much, or that your class is responsible for too many things.

@@ -1,0 +1,71 @@
+One piece of feedback is that your error handling code is very repetitive. You are calling in every failure block. That might seem OK for one cleanup task (though I'd tend to disagree), but once you have N things to clean up on failure (or even successful return), it gets to be a lot of effort and maintenance. There are a few ways around this that I've seen. 
+
+Note that can fail, so we don't initialize anything in that case. (Callers of should do the same check.) Actually your allocation also highlights something: 
+
+Then after this block, you can in any place you like, success or failure, even throw exceptions, and COM will still get uninitialized. (Notice I didn't initialize COM in a constructor. This allows us to inspect the on failure without wrapping it in an exception. I'm sure many would suggest wrapping s in exceptions. This is not personally my taste. YMMV.) 
+
+If you are not religiously opposed to (this probably makes more sense in C than C++), this approach is also common: 
+
+This also brings to mind... Why a vague name like ? C does not have namespaces and this is a name that could clash with others. Maybe it should be . Also more consistent with some of your other function names. 
+
+While I'm all in favor of the crazy C style pointer arithmetic loops when they make sense, I don't think it really gains you much to reinvert . And doing the compare backwards is kind of weird, especially where is perfectly reasonable. I mean, you can deduce the lengths from the previous pass... No need to be all macho. Also, this is subjective, but I don't think it makes sense to return if NULL is passed. Especially since the function lends itself towards use in a boolean expression; will be true, which is weird. Maybe you should let the program crash in that point. (Since dereferencing NULL is a bug.) Or if that scares you, you could return . (A NULL pointer can't be said to have a suffix or be a suffix, right?) I might also consider changing the name. Something like maybe? 
+
+The keys are the first two elements of each list, still in a The values are the 3rd element of each list. 
+
+Although does require C++17. If you don't want to require C++17, this Stack Overflow question discusses how to get the behavior of in C++11. In particular, you can use : 
+
+The code is pretty good, and quite readable. Here are some of the things I noticed: Header guards Your Logger.h needs header guards: 
+
+is more well known as "apply". You take a meta-function and an argument list, and apply the function on the arguments. 
+
+Please stop using fully-qualified names. You have such a large number of them that the code is hard to read. Instead, import them (NetBeans has a shortcut to automatically import such classes). Also, it's good to organize your imports into some logical order, but don't worry about it if the IDE put them in that order anyway. 
+
+Then to get the value, you'd call , but first you should check . This speaks more clearly than a , so I personally find it easier to follow in this case. 
+
+is that the can activate ADL. If was, let's say, , and if I wrote a in the namespace , this call might call the one from the namespace instead of the one we intended. This is not good. As a rule of thumb, when writing generic code, avoid unqualified function calls like ; instead qualify it with the namespace: . 
+
+This copies every string in , at the very least write . Even better, use a standard algorithm. In general, whenever you write a loop, especially a for each loop, look for a standard algorithm. In this case, comes to mind (this would make it so that you would take by value, as it modifies the range): 
+
+Oh you are using it as a delay between states of the board. In that case, it should be named something better. However, you are working too hard here. You could just use Java's built in class: 
+
+Although this would then have to be defined in the header file, and you'd probably want to move the random engine to be in a different function, so that there is only one instance of it: 
+
+So, one of the thing here is that the CPU is waiting for your hard disk to provide data, and then the hard disk is waiting for the CPU to ask for something. The first and more obvious point is that accessing disk to get a few bytes each time is terribly inefficient: disks (HDD or SDD is the same, in this case) are best for sustained reading. The OS cache will help you so that it will read a bunch of data ahead for every request you make, but you know you are going through the entire file so you shouldn't rely on the cache and try to be as efficient as possible in your code. In fact, as rolfl points out 
+
+It's just 6 milliseconds for each barcode, including save to disk: it's not that slow at the end of day, and you have a custom library doing most of the job, so that means that you really have to squeeze every single possible fraction of millisecond. In every loop you already know the size of the final string (just add the length of each single part of if), so when instancing the StringBuilder use that number to set the initial capacity. Or, just in case, set it to the maximum possible string length and see what's faster. Use a parallel for. If this thing is running on an average working PC, let's say an 8 cores, going from 6ms to 1ms could be a plausible scenario. Even taking into account that you need to instance a new encoder for each barcode, I'd say that it's realistic to at least expect the final time to go down to an half, even a third. Give proper names to loop variables. 
+
+190 MB/s is ridiculously low for an hard disk, unless is a 5-8 years old cheap model; right now even an SD card can be faster than that, sometime. From a decent SSD I'd expect at least twice that speed, and today even SSD in the range of 100$ can easily saturate the SATA interface. That is, you want to read big chunks of data every time; no matter what, don't read a line at time. There is no magic number, but unless the computer has serious memory issues 100 megabyte each time should be more than good. Now, problem is, while waiting for data the CPU is sitting idle doing nothing. Then, while the CPU is crunching your data, the disk is sitting idle waiting for something to do: needless to say this is time for some free multithreading. Deciding what to implement is a bit complicate without knowing the exact details and limits of the project, because you can simply have a number of threads equal to the number of cores, each one working onto an equal part of the file (easily doable in an hour total), or going to write a central dispatcher that read chunks of the file, create threads up to a certain limit (maybe doing some throttling), and collecting the results (and this can take up to a day of work). It all depends on money and time you have available to do this but, yeah, go for it. 
+
+Which brings me to the next point. I don't see any calls to . For a structure like this I think it's good practice to have a single alloc function (which is good, you already have that) and a single free function. So let's write the latter: 
+
+This is weird. Maybe instead of returning a magic value, your pop function should have a different interface. For example, maybe your pop function has an output parameter (pointer) which receives the popped value, and returns a boolean indicating whether or not a value was popped. 
+
+According to comments in , correct use of the library requires the caller to initialize the member being called: 
+
+Interface critique: You should have the caller specify a maximum size for the destination buffer, and error out when there is not enough space. The mark of a good C programmer is to create interfaces which make this sort of condition unambiguous, rather than blasting away on the buffer, potentially past the allocation size. 
+
+If you hit that you will leak the allocation of . Now, you could introduce a inside the block... But many C programmers (myself included) prefer to avoid early statements, because what happens is you end up with repetitive "free all the buffers" cleanup blocks. Instead of doing an early , I like to let the scope own the allocation, meaning I insert the whenever something like goes out of scope, having the same cleanup block run in a success or failure case. (This sort of imitates C++'s RAII pattern, but with C and more manual.) 
+
+You leak if any of the lines between the and the fail. There are several ways around this. In C (which does not have exceptions or RAII), the best way around this is to avoid early statements when there's something to clean up. (Allocation, file handle, lock being held, etc.) For example you could do (just meant as a quick sketch): 
+
+Note the only weird thing here is the ownership of 's allocation. If we succeeded in creating the thread, the thread routine deletes it, otherwise will. To make this sort of thing exception safe it might be advisable to wrap that allocation in RAII, but for this example it is not needed. Then notice with a quick rewrite of you can actually avoid the method pointer call entirely while still maintaining a lot of source code flexibility to change or re-use the thread creation routine: 
+
+Don't take a as a parameter. Yes, I know you are intending support for string literals, maybe thinking, "It's more efficient." It may be true that the program will be more efficient, but that's only in niche cases. If you took a as a parameter, you would save having to construct one every time the function is called: 
+
+Namespaces Your "E" for engine classes, "I" for interfaces, and "C" for concrete classes seems to be reinventing namespaces. I don't mind the "I" prefix for interfaces, but why not use namespaces? You might lay it out something like this: 
+
+Why restrict the sort-by function to being by member variables? You could easily let it work for any callable object: 
+
+This has the advantage of being easily parallelizable (which is actually only beneficial if you anticipate having a very large amount of values to find the gcd of): 
+
+Use . Not only does it avoid potential problems with memory leaks, it also is more efficient because it can declare the reference count in the same block of memory as the allocated object: 
+
+and ; those names are very similar. I can't tell what they do differently just from the name. You should name them based on what they do. would be better named something along the lines of . 
+
+Reads dictionary.csv into a list of strings (via ). Split each string in the dictionary on , into a . Collect the s into a , where 
+
+This might double-delete if takes the by value. If you feel the need to use the raw pointers, you need to get the memory safety right. I strongly recommend you don't do this yourself, and use the standard library to take care of it. You either want or , depending on whether or not you want to pass the engine by value. I recommend until you find that you need . You could then implement the class like so: 
+
+I mentioned it on the previous question, but it's important enough to mention again: avoid . See Why is “using namespace std” considered bad practice? 
+
+On that matter, it's a bit annoying that we have to rewrite the code for values as well as types. However, we could instead wrap the values in a type and reuse our type list:

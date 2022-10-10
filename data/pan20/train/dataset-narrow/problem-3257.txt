@@ -1,0 +1,79 @@
+It's not like you or your board are in immediate danger, but I wouldn't keep back-feeding the RPi without a good reason do to so. 
+
+You could implement a logical AND between the TX pin and a regular GPIO, then use the GPIO to generate the LIN break: 
+
+You will need to tell your system that you want this drive mounted to the directory of your choice by modifying : 
+
+Take a look at USB FIFO chips, like UM245R. They allow you to sample 8 bits at a time at pretty high rates, and transfer that data via USB at very decent speeds (UM245R datasheet advertises data rates up to 1 MB/s). FTDI also provides drivers for Linux, including Raspberry Pi. 
+
+Replace with the file containing the temperature value, and configure the alert frequency as you see fit (this one will fire every hour). 
+
+LNK (green) Indicates Ethernet (LAN) connection and activity: it is constantly lit when connected, and flashes off on data transfers. Located on the PCB on model B, and on the Ethernet RJ-45 socket in later models. 100 (yellow) Indicates 100Mbit Ethernet (it's off on 10Mbit connections). Located on the PCB on model B, and on the Ethernet RJ-45 socket in later models. FDX (green or orange?) Indicates Full Duplex Ethernet connection. Only exists on model B. 
+
+Several uses come to mind. None of these are supercomputer uses but rather cluster computing. Distributed compilation. If you want to build non-trivial software packages (e.g. Firefox), it will take hours, even on a powerful x64 computer. A compiler farm of 4-8 RPi boards running distcc will cost much less than a top computer and consume less electricity, while providing comparable build times. Media encoding. You may want to keep your media collection in high quality formats (FLAC, Blueray, etc.) which may not be compatible with some of the devices you own. With a media encoding cluster (e.g. x264farm), you could quickly convert selected media files to the format of your choice. Network load distribution. If you have ever tried to run OwnCloud or similar server software, you probably know the performance on RPi isn't stellar. If you host a website visited by several simultaneous users all the time, you could use nginx or haproxy to distribute load between several RPi boards to increase performance (as a side note, you'd probably be much better off simply paying for hosting). 
+
+If Google DNS is not working for you, check connection properties in Windows to find out which DNS server it is using, and configure your RPi to use the same, as explained above. 
+
+AFAIK there is a patch fixing this, but I haven't tried it myself. Considering the cost of 3D-printers, buying a second RPi to control them doesn't seem like a huge waste of money, so that's what I would do. 
+
+The file you have downloaded is an archive, not an executable. You should unpack it with fileroller or a similar tool and run . Note that NetLogo needs Java to run. NetLogo comes with Java bundled in, but that version is most probably x86 only. You'll have to install Java package provided by Raspbian: 
+
+If you want to drive a single low-voltage relay, using a 7-channel driver chip will be an overkill. You'll be perfectly fine with a single NPN transistor and a flyback diode: 
+
+Running should be enough to start whatever file manager you have configured. Depending on your setup, you may need to run as the user who owns the desktop, to allow root processes to connect to it. Finally, if your X configuration is really bizarre, you might need to tell the file manager which display it should use, i.e. . Note that this should not be necessary in a normal setup. 
+
+The second option is only recommended if you have sufficient skills and you have spent significant time customizing your system so starting from scratch would be too time consuming. In that case, you could start by checking for error messages and review any files in you have modified, especially GUI-related ones like and . 
+
+Try discarding the old image with before you load a new image with . That way, only one photo is loaded in RAM at any given moment, and since your code displays 1 photo just fine, it may just be enough. Also, check how much free RAM you have. At 3264x1836 resolution, a decompressed image will take about 17 MB, and I would expect several of them to fit in the RAM before you're out of memory. 
+
+Normally yes. Every USB device designed with a bit of sanity will enumerate its endpoints in the same order every time, and Linux will assign them names in form of , starting with 0. Note that this will not be true if you e.g. plug another USB UART adapter first - it will get the name , and numbers in names assigned to your cable will increase by one. It's also conceivable that some device names may become unavailable - for example, if you unplug the cable while a process is trying to read from , the driver may not be able to remove it properly, so when you replug the cable, it will be assinged device names starting from . 
+
+Assuming you don't have any network equipment other that the WIFI dongle that you could unplug, you could simply write 
+
+Since I did this recently and took a couple of photos in the process, I figured I'd write a detailed guide. Things you can salvage Here are the things you might want to keep from your old laptop: 
+
+This is the flip side of IPv6 protocol: every device on the network has an IP address (yay!) but exactly because of this, has no idea where to send the data if you specify just the address. addresses are valid for every IPv6 network interface, so if your laptop has more than one, will need an extra hint. Technically you don't really need to specify the argument, but debugging gets easier when you know exactly which protocol is concerned. If that doesn't help, try disabling IPv6 for mDNS. Apparently, setting and in is enough, if you need IPv6 running for other purposes. Otherwise, you can disable IPv6 completely. 
+
+Your speaker has an impedance of 4-8 Ohm (the value is usually printed on the back), while a line out typically has an impedance of at least 100 Ohm. If you connect this speaker to the line out directly, >90% of the power will be dissipated inside the RPi, and only 4-8% will reach the speaker. You may try adding a small 1:10 audio transformer like this one: 
+
+Try plugging your SD card in your Linux PC (or mount it if it's plugged already): you should be able to see the root partition contents. If you don't, there is a problem with your backup (a good practice would be to restore your system from a backup when you make one, then you know you really have a backup). Another thing you should have though of when making your backup with 
+
+Find out which terminal receives the input from your keypad, then use that device as an input for your app. If it's a script, do something like 
+
+Check the output for lines concerning , maybe there will be something useful. Alternatively, try copying to one of the standard library locations, like , and again, run . 
+
+Since your PIR sensor is rated for 3 to 12V VCC, it should withstand much larger voltage drops than your RPi would survive: an RPi would certainly reboot when the power supply drops below 3.5V. Since that is not happening, I believe PSU issues can be ruled out. Considering it's a PIR sensor, one possibility comes to mind. During CPU load peaks, the chip on the RPi board heats up considerably (to 60°C or more) in a matter of seconds. If your board is within the field of view of the sensor, the chip might produce enough IR radiation to confuse it and result in a movement detection. PIR sensors don't track objects, they only observe IR patterns, so a new hot object in their view might as well qualify as a movement. Putting your RPi in an opaque box should help. For short CPU load spikes, even putting a large enough heatsink on the chip may be enough. If heat is not the root cause and you're convinced the issue is power-related (can be easily confirmed by using a separate power supply for the sensor), using a decoupling capacitor is a natural starting point. Such a cap should always be placed on the power line. Adding a low-pass filter on the signal line would interfere with normal operation and may even be forbidden by the datasheet, as many devices become unstable if they have to drive a large capacitive load. Another idea is to add a Schottky diode before the cap, so it is not drained by the CPU during load spikes: 
+
+I believe you'll have to create a new user (with ) on the RPi running samba, to match the user which runs OwnCloud on the other RPi. As such, there are at least two possible ways to get correct permissions: 
+
+You'll need to install disk tools on your Android device. The most popular toolkit for this purpose is Busybox. Keep in mind that low-level filesystem access that you need to flash an SD card requires a rooted phone. There are busybox releases which can be installed without rooting, but those won't help you with your task. 
+
+MPEG2 playback speed on the RPi can be increased by buying a license for the hardware codec. You will need to write down the serial number of your board from , which will be required at the time of purchase. Disclamer: I have no means to know whether your particular video will be supported, or whether the performance boost will be significant enough to provide smooth playback. 
+
+Florence virtual keyboard claims to have this feature (called "auto-hide mode"), which should work with modern applications implementing accessibility API (e.g. GTK+ and Qt 5): 
+
+You should edit if you have it, or make sure it is removed if you need a global LXSession configuration for all users. If you happen to have both files, the global configuration will be ignored: 
+
+The fact that Ctrl+C terminates the program suggests that its windows doesn't get the focus, so the keystrokes are passed to the terminal used to start it. You could try pressing Alt+Tab (or whatever your desktop manager uses) to switch focus to the program manually, then try using the keyboard again. Otherwise I'd suggest filing a bugreport to the developers. It looks like a project that might consider RPi users to be in his target audience. 
+
+This will allow you to install Eclipse and test if it works with the JDK you have. Should that be the case, you'll need a permanent solution which may be one of the following: 
+
+As Milliways said, display rotation should not affect the HDMI timings in any way, since the display has no way of knowing it is rotated. This is something strictly between your X server and the framebuffer. I would try to configure the framebuffer rotation via : 
+
+Create this directory yourself in and put your calibration file there. Pay attention to the case: it's , not ! 
+
+You will need to add records for each name ( etc) to the DNS server responsible for . If you have a master DNS server for it, just add the records you need to . If not, ask your registrar to add those records for you, or use their web interface if they provide one. Example: Namecheap: How do I create a subdomain for my domain? 
+
+The value in field should remain close to 5. If it doesn't, there's a problem with your power supply. The value in the field reflects current consumption. Here's a list of typical values for different RPi models (it's in milliamps, so divide by 1000 to get values): 
+
+This isn't an answer to the original question (as I understand, the problem disappeared on its own anyway), but rather a recommendation on your scripting. I believe the big part of your problem is the statement. I don't see why you need it, and it certainly makes your code harder to debug. Also comparison operations could be made simpler using and operators. Something like 
+
+PS. You may want to take a look in this thread if you have further issues. The relationship between compatible Boost version, GCC version and supported C++ features is far from trivial. 
+
+A common mistake in electronics is using a resistor as a voltage regulator. I'm talking about which you seem to include to reduce the voltage from 5V to 3.3V needed by the accelerometers. This will not work, and almost certainly damage the ADXL345 chips. Instead, you should power your accelerometers from the 3.3V pin, and you need to connect both and pins of each chip to 3.3V line. As a consequence of this change, your pullup resistors should also be connected to the 3.3V line. Regarding , you only need to connect it when using SPI. 
+
+"Not launched" usually means the file is corrupt. I'm not sure how gets damaged considering you've done a reflash before testing. Make sure you're following whatever "Safe removal" procedure is offered by your OS, and run a filesystem check after flashing the image to be sure. 
+
+deepstream.io only provides Debian packages for x86 architecture, so you'll have to build it from sources. Alternatively, you could try the Docker image they provide: 
+
+You don't have to use X, but you will certainly need a driver which can talk to the display and provide you with a framebuffer device. It seems that you can download a driver form your seller here. Then you can use the framebuffer to draw on the LCD using or .

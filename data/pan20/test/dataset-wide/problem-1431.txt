@@ -1,0 +1,33 @@
+You would still use the visitor pattern he proposed, but this alternative IDeviceScript implementation would allow you to populate your list of available device scripts via some configuration source (a flat file, database, app.config, etc.). 
+
+First and foremost, I would strongly suggest using an ORM (e.g., Entity Framework or nHibernate) rather than doing all this manual work to update the database. ORMs take most of the drudge work away and generally make things much easier. That aside, there are a few things I would change: 
+
+I don't know your feelings on indenting using statements which are right next to one another, so I left it with default formatting. 
+
+Use of Regex Objects If your intent is merely to validate that the input is a phone number or not, rather than trying to capture anything, you can use the static Regex.IsMatch function: 
+
+That's assuming, of course, that you even want to wait to calculate pay. Another alternative which might be more usable would be to calculate on-the-fly as users enter values. To do this, you add a call to in 's property setters: 
+
+Strictly to answer the question at hand, you have local variables for the individual contracts already, so you can just re-use them: 
+
+Since we retrieve the enum values themselves rather than casting to int up front, we can eliminate the Enum.GetName calls. Passing an enum value into a string format will use the name for us (see: Enum.ToString()). In case you are hesitant to assume sorting up-front, it's pretty trivial to toss a call to just before the in our first LINQ statement. However, if you're going to order the list, it would be simpler to sort descending and skip the first (max) value, so we can drop the : 
+
+Since I switched to use DirectoryInfo, I went ahead and made two overloads of the RecursiveSearch method. One takes in the string for the initial search, but sub-directories can call the overload which takes in DirectoryInfo directly. The first allows you to make the change without breaking your interface, while the second is more useful during processing work. For speed, I pushed the try/catch up here and left out exception handling elsewhere, though you may want to add some at the lower level methods, if only to provide more descriptive logging/exception messages. 
+
+This assumes you have implemented and/or overridden on your Contract object. Given the behavior of most test and mocking frameworks, it will probably save you a lot of grief to go ahead and override so that failed tests will print out nicer expected/actual values than the fully-qualified type names. Also, as an aside, you can create your list with a collection initializer if you do so after building your individual contracts: 
+
+Another way is to use LINQ, which has the benefit of being a bit more declarative (at the expense of speed). Since LINQ requires an , you can start with a numbers table via . Then, you can build the days by taking your range and selecting the current number as a number of days and adding to your start day. From there, you just filter down to weekdays in the current month and skip to the proper day. 
+
+The private method calls can largely be ignored unless they have external dependencies, in which case you should add some injection and mocking with your parent object. This will allow you to ensure your private method calls inside PrepareAndScheduleFlowJob execute quickly and return expected results. edit: The above solution requires that you override Object.Equals. You could change the assert to a set of asserts for testing equality, but Object.Equals overrides are preferable, as it will cover FlowJob and any future/current subclasses in addition to providing equality check capability to anyone using the class. Additionally, in a framework like NUnit, overriding Object.ToString is highly recommended, as many test frameworks will call ToString when printing assert failures, and having something more than just the type name is useful when assessing why your tests may have failed. 
+
+Once again, this took around 21 seconds consistently. Finally, I created a simplistic variant which loads all the data up front, places it into a System.Data.DataTable in the loop, then binds the table to the grid upon completion: 
+
+One way to use an IDataReader's nice GetX methods is to start off by retrieving the indexes with GetOrdinal calls: 
+
+The next thing I see is that you have several discrete properties to store different types of hours, but you are using a dictionary to do the same thing. You could just as easily add directly to the properties, or with some method extraction, you could perform a in your LINQ. Another thing I see is that you are hard-coding the year to be the current year. I would instead pass that as a parameter. Sure, the 99% case is that you are going to ask for the current year, but it is trivial to parameterize that, and you'll be glad you did if you ever have to get the values for not-this-year. The last major thing I see is two-fold: 
+
+Object Disposal The most glaring thing I notice is that you aren't disposing of everything you need to. There's a statement for your reader, but both IDbConnection and IDbCommand (implemented by OracleConnection and OracleCommand, respectively) extend . The upside is that with connection disposal, you don't have to worry about explicitly closing it, so the try/catch wrapping your code in both functions can go away. Another fun catch: if you are using Oracle's ODP.NET or their managed provider library, OracleParameter is , too. End result, only addressing disposal (full disclosure - I rarely touch VB): 
+
+Additionally, instead of using , I always tend towards , as it is much more explicit about intent. could easily be a mistake, but is clear that you really do want an empty string. You can then output your result as follows: 
+
+constructor chaining The three constructors repeat assigning the children dictionary. A better way to do this is with constructor chaining. Move the dictionary assignment to a single constructor and call it from the other constructors:

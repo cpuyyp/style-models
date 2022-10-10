@@ -1,0 +1,47 @@
+This is classic market basket analysis. Clustering is the weong tool, you want frequent item set mining and association rules instead. $URL$ 
+
+It sounds as if you don't need clustering. But rather you are trying to detect near duplicates. The difference is that clustering tries to organize everything with a focus on the larger, overall structure. But much of your data probably isn't duplicate. Clustering is difficult and slow. Near duplicates is much easier, and much faster (e.g., with MinHash or similarity search) 
+
+"pathology report, doctor visit notes, prescription orders" these are classes, not clusters. Clustering may as well find "people with headache", "patients on Thursdays", ... you do not get to control this unsupervised. So I'd rather suggest to do a classification. For example, put all documents that contain "patient report" in the first lines into a separate set. Inspect the remainder for another keyword. Add another rule. If the data is as explained, 10 such rules may get the leftover documents down to a manageable scale, and they could eventually just be treated as 'others'. There is nothing wrong with inspecting documents and adding rules if that solves your problem. You probably don't need to make this work on different document collections (say, law texts) ever. 
+
+With appropriate parameters, DBSCAN and single linkage hierarchical agglomerative clustering should work very well. Epsilon=0.2 or so. But why? You know the data, just use a threshold. If you just want an algorithm to "confirm" your desired outcome then you are using it wrong. Be honest: if you want your result to be "if $F-factor-1 > 1.5 then cluster1 else cluster2", then just say so, instead of attempting to find a clustering algorithm to fit to your desired solution! 
+
+K-means does not minimize Euclidean distances, but squared Euclidean distances. This is not the same. The nearest center is the same for both, but the mean only optimizes the squares. You can find the counterexample on my earlier answers here. The proper value to use for the basic elbow approach is the "inertia", which is the sum of squares. But some evaluation measures may use other distances. For example the Silhouette index can be used with other distances. Don't forget that these approaches are just heuristics for trying some k. Always also consider other values. 
+
+You forgot the most important step. Preprocessing. Look at the axes. Scale them the same way, and you will realize that your y axis has zero effect. Your data really looks like this squeezed slice: 
+
+The adjustment is simply (Rand index - Expected value)/(Optimal value - Expected value) The purpose is to scale it in an interpretable way. 0 is "as good as random", less than 0 is worse, and close to 1 is good. The problem with the non adjusted Rand index is that a random result on certain data sets can achieve a high score otherwise. 
+
+And yes, that's the Google founders who wrote this. It's not the latest state, but it will already work at a pretty large scale. 
+
+Look at graph clustering algorithms. You have an edge from each item to it's most similar items. You can then use e.g. spectral clustering. 
+
+Clustering is not predictive. I.e., the models do not generalize to new data. Usually your best approach is to do a 1 nearest neighbor classification, but you could train any other classifier on your data set. 
+
+Comparing distance values of different distances is nonsense. Consider this distance function: $$d(x,y)=0$$ Clearly, this gives smaller values, but it also is useless. Consider this trivial variation of Manhattan distance: $$d(x,y) = \sum_i |x_i-y_i|/100$$ Clearly, this distance is equivalent to Manhattan, but will yield much smaller values. Choose the distance because it is "the right thing to use", not because of some number. Cosine is good if you desire length normalization and have sparse vectors. 
+
+Assign it to the nearest center. If you don't want to "recluster", that is the k-means assignment rule. 
+
+Use constrained clustering. This allows you to set up "must link" and "cannot link" constraints. Then you can cluster your data such that no cluster contains both 'churn' and 'non churn' entries bybsettingn"cannot link" constraints. I'm just not aware of any good implementations. 
+
+It's not enough to just somehow encode everything. That is easy: just encode everything as 0. What you need to consider are properties of this encoding. For example, KMeans is only meaningful when least squared errors on the encoding imply a better result in your original data. I don't know any encoding of text that has this property. Don't just do something because you don't know anything else to do. First understand your date, then the problem, then the solution that solves the right problem. Spell out the mathematical objective for your problem, and why it is important to solve. 
+
+Use the original papers, and books, on F1 and NMI. There is little reason to only use a 2016 arxiv (non-reviewed) paper that uses them, because they have been introduced long before. I don't see F1 mentioned anywhere in the paper,and it would be an uncommon choice for clustering (see literature for details). 
+
+In either situation, you afterwards have to combine the results; usually with some form of majority voting. So if 2 classifiers return "A", 1 classifier returns "B", then the outcome is "A". To get a good outcome, every member needs to be better than random; to improve over the individual results they must not be too similar. You could use clustering for the first approach (to get different parts of the data). But the problem is that these parts are not independent, and too biased. You would usually want each classifier to know "a little bit of everything". By withholding some part of the data you prevent them from overfitting the same way. For this, random is usually best. If you do clustering, there is a chance you get 1 classifier that thinks everything is "A", 1 that thinks everything is "B", and 1 that thinks everything is "C". You even encourage them to overfit! So you always get the result 1 A, 1 B, 1 C = no majority. 
+
+See Lucene NGramTokenizer Are you sure you can't just use lucene or similar indexing techniques? Inverted indexes will store the n-gram only once, then just the document ids that contain the ngram; they don't store this as highly redundant raw text. As for finding ngrams that contain your query sub-n-gram, I would build an index on the observed ngrams, e.g. using a second lucene index, or any other substring index such as a trie or suffix tree. If your data is dynamic, probably lucene is a reasonable choice, using phrase queries to find your n-grams. 
+
+There exist approaches for learning the structure of Bayesian networks. They just don't seem to be very popular, so I don't think you'll find them in standard toolkits. 
+
+Hierarchical clustering, with complete linkage will find clusters with a maximum pairwise distance i.e. diameter. You need two parameters: 
+
+Why the detour with the topic? You can just learn a linear SVM to directly predict the recipient and avoid all the difficulties from topic modeling. What if a mail isn't about any of the previous topics? how many topics are there? 
+
+KMeans does correctly do what it is supposed to do. Just plot your data correctly, with the same scale on both axes... Y deviations do not matter, they are tiny compared to the X axis. Deviations there are 100x larger, so squared deviations even 10000x. Since KMeans minimized squared errors, only x matters When plotted correctly, your data more looks like this: 
+
+As you have two classes, like and dislike, it's a supervised and not a clustering problem. Why don't you just try naive bayes and decision trees? 
+
+There isn't really an "objective" statement. In your example: what if he wasn't born that day? Same statement, but is it still objective? You may assume that "1 + 1 = 2" is an objective statement. But what if I'm doing binary math, and 1+1=0 then? So even that is subjective. How would a machine tell apart these things, where philosophers will disagree with each other? All you can do is provide training data examples of "your" (subjective) idea of objectiveness. 
+
+If your data is numeric, try loading it into ELKI (Java). With the it will give you scatterplots, histograms and parallel coordinate plots. It's fast in reading the data; only the current Apache Batik-based visualization is slooow because it's using SVG. :-( I'm mostly using it "headless". It also has classes for various statistics (including higher order moments on data streams), but I havn't seen them in the default UI yet.

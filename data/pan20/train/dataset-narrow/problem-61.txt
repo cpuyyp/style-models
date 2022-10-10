@@ -1,0 +1,79 @@
+You can use the depth buffer to ensure that the second time you get on a point the pixels aren't written. You start with the maximum depth value and each new path (that you want to add to the existing drawn image) you decrement the depth. 
+
+Note that there is no mention of any VBO during init, just the binding points. That binding point is then used during draw to specify which vbo to pull the vertex data from: 
+
+a GPU is heavily cache-dependent for performance. Pulling the same pixels over and over will just measure how fast a cache hit is. Sampling random pixels will only measure a cache miss. Neither are useful statistics. each texture2d call will pull in multiple pixels to leverage that, in a fragment shader, neighbouring fragments will want neighbouring pixels. The driver could optimize your shader to pull out the loop if it sees that each iteration does the exact same computation or if the computed result is not used. 
+
+If there is only a single flat mirrored surface the solution is to render the scene twices, once normally. Afterwards you use stencil to mark the area where the mirror is visible. Then only drawing into that area you render the scene again but mirror it around the mirror's plane and cull any geometry on the other side of the mirror. 
+
+In a post processing step instead of sampling the origin pixel directly from where the target pixel is you instead sample the origin pixel slightly offset. Where you get the offset can differ. For example you could provide an extra texture with the offsets encoded in the red and green channels. 
+
+Map the mouse position to the circle by drawing an imaginary line between the mouse and the center of the gizmo on the plane of the current circle. Do this for the start and current positions. Then you can easily get the quaternion rotation around the center from the start to the end by doing . This works because the dot product is the cos of the angle between the vectors and the cross is the vector perpendicular to the 2 vectors (aka the rotation angle) and has length of the sin of the angle between the vectors. This means that you can create the double quaternion out of them. Then you can nlerp that double quaternion with the unit quaternion to get the rotation you need. However with that information you can do an arcball by projecting the mouse onto the ball that is the gizmo and using the start and end vectors that way. 
+
+Normally if you paint a background image you simply draw a textured full-screen square while depth testing and writing is disabled before drawing the actual scene (where you re-enable depth) In the code you posted you draw the quad but then clear the screen again. Don't do that. Move the drawing of the quad from main to right after the call. 
+
+You can invert the shadow maps. Render a cube shadowmap at each probe. Then you can filter out any probes influence that would come from beyond a wall by comparing where the new point is in relation to the shadow map's depth in that direction. Then if the point is beyond the wall you set the interpolation weight for that probe to 0. 
+
+The transform matrix will be a uniform which is easier to update and upload to the gpu (just a single glUniform call) than applying the transform to all vertices on the cpu and uploading the new vertices. Especially with large models. 
+
+Because with 2 non-overlapping convex polygons you can always say that 1 polygon is closer to a point than another. If they are not convex then for example with a U surrounding a circle. You cannot say easily which should be drawn first. 
+
+The most physically accurate way would be to have a $l(\theta)$ which for each possible color frequency has a certain value. Converting to RGB would then need a frequency responce function for each channel and the result is then $\int_{infrared}^{ultraviolet} l(\theta)F_{red}(\theta)d\theta$. Reflected light then has a 2 dimensional response function: $L_{reflected}(\theta) = \int l_{incoming}(\phi)R(\phi,\theta)d\phi$. (ignoring the BRDF here for simplicity) Drawbacks are that instead of just 3 color channels you now have infinite channels to worry about. 
+
+It depends on how a missed frame is handled by the driver. One option is to just wait until the next vsync, causing a hitch of 32 ms and if the application is just at the limit of 16 ms can cause fluctuations. The next option is to queue the frame for display next frame but don't wait on it. This will still cause a visual hitch but the application can then immediately start on the next frame instead of being forced to wait 16 ms. If the next frame is done faster then the late frame may even never be shown. The final option is to not block and push the late frame to the display immediately which can cause tearing. 
+
+Opengl doesn't care how long it has been running. However there are a few other challenges with long running applications in general: 
+
+Instead of using a perspective projection you would use a orthographic projection. Then the trick is to position the bounding box to in front of the normal camera. An additional option is to add a skew/shear operation so it maps the light direction to the vertical and keeps the horizontal ground plane horizontal. This avoids leaving a large dead zone underground near the light source. 
+
+That it compresses the data compared to the pixel array is obvious. But what makes it different from from normal compression (like png, jpeg)? 
+
+The near clipping plane in rasterizing setups with perspective projection is there to avoid a divide by 0 and bound the possible depths for orthogonal projection. With a bit of extra math you can make the depth stored in the depth buffer linear again. However you still need the guard against the divide by 0. In raytracing the near plane can be at 0 no problem. There is nothing technical stopping you from putting it at -10 however (besides that it would be very odd). 
+
+Nvidia has an extension for creating command buffers in modern GL. The reason for the lack of similar functionality is that there is a lot of state involved regarding how to render and the display list be affected by a lot of different state. For example changing the blend state requires patching the fragment shader on some hardware. NVidia solved it by capturing all state and reseting to the state after a dispatch: 
+
+No it is not. Opengl (and most other graphics apis) require that each vertex is referenced by only a single index. 
+
+Floating-point rounding error. After you transform the T junction and the point in the T can get rounded away from the edge. Then it can happen that a fragment that gets sampled for a pixel lies in the gap between the 2 surfaces. This can be fixed by not having a T-junction in the first place. 
+
+This emulates running another 1x1x1 compute shader to multiply the index. Otherwise you can use a second atomic to hold the vertexcount: 
+
+Embedding human readable data is not supported. However you can put the data into a data uri to store the data inline in base64 format. 
+
+Because you may want to pass more than one attribute through to the fragment shader. 2 which are essential are normal vector and the texture coordinates once you start doing lighting and textured meshes. You can in newer openGL versions give a numbered location to the attributes you pass through using . Then the names don't have to match. 
+
+If the data from the capture chip is not collected then it is lost. The phone will only capture the data when it needs to (either for displaying or storing). It can also cut power to the sensor to save battery. 
+
+tl;dr The vao caches the calls to et. al. Every call to , and the binding of will store the parameters into the currently bound vao. In the case of it will also store the current binding to in the vao. This is a major help when drawing a lot of meshes because then the render loop turns from 
+
+In general when doing parametric in a ray tracer you need a solution for $\begin{cases} P = v * t + C \\ P = f(u,v) \end{cases}$ for the lowest $t$ where $f(u,v)$ is your parametric function $C$ is the camera position and $v$ is the ray direction. There are a few general ways, for example if you can tell whether 2 points are on the same side or not you can take 2 points on the ray on opposite sides and binary search until you have the depth. You can find the first pair by marching along the ray. 
+
+We are currently in a transition of API paradigms. The old school method of binding buffers, uniforms, attribute, layout and programs as (implicit) global state and dispatching draws with that state is common across D3D11 and OpenGL. However it has a large amount of overhead (in verifying state and not knowing what the program wants to do until the last minute). They are also not thread safe (for the most part). This is why new apis have come up (or are coming soon) D3D12, vulkan and Metal being the most prominent. These APIs give more control to the program and lets it declare in advance what it want to do using command buffers. They also let you manage your own resources (vertex data, textures, ...) much more directly. Using them with multiple is much more straight forward. The choice between old and new is based on how well you can manage the video memory you allocate and build the command buffer. 
+
+The actual sending of data is the same. The PCIe bus is the same speed in both directions. However when programming there is a big difference namely that when you send you can immediately start doing something else (including queuing other operations using that new data) while the actual transfer is going on. But when receiving you need to synchronize on the completion of the transfer before you can use the data that was sent. 
+
+Yes it is. Just set the component count to 2 in and the other 2 components ( and ) will be auto filled with 0 and 1 resp. 
+
+Here's a hint to get you started: Parallel lines include the line through the camera. So really all you need is the direction from the camera to the vanishing point on the view plane. Then create lines parallel to that line. 
+
+In Vulkan the shader only looks at each 2x2 and won't attempt to look beyond the neighbourhood: $URL$ $$dPdx_{0,0}=dPdx_{1, 0} = P_{1,0}−P_{0,0}\\ dPdx_{2,0}=dPdx_{3, 0} = P_{3,0}−P_{2,0}$$ For times when a pixel would fall off the geometry the shader is invoked for the values it would have if the triangle extended a pixel further. 
+
+Change the projection to always be the same no matter which face is being rendered. The simplest way is you use the direction from billboard to the camera instead of the direction the camera is facing to rotate the billboard. 
+
+If a edge corner is concave then it needs to border 2 of the output polygons. So one algorithm would be to find all concave corners (including the ones in the holes) and making cuts starting from them to other concave corners. This will split the polygon in two or join 2 holes into 1 or connect a hole to the outside. The cut from a concave corner should be constrained by the angle or it will create a new concave corner that then needs to be cut again. 
+
+Basic Vulkan availability can be checked by the presence of the loader dynamic library. This will reside in a standard place where you can load it with or . If it fails to load then vulkan is not installed. If it does load then you can get the vkGetInstanceProcAddr function pointer from it with or . After that you can query the devices as normal and decide whether or not it's sufficient to support your app. 
+
+That is $cos ( \frac{2\pi}{n}*\frac{1}{2} ) = cos ( \frac{\pi}{n})$ The triangle with edges from the center to the middle of a side, from the center to an adjacent corner and half the side connecting them is a right angle triangle. The angle of the point at the center $ =\frac\pi 2$. Then it's simply the cosine to get the ratio between adjacent and hypotenuse. 
+
+In other words the sphere is a way to pick a random direction which is biased towards the normal direction without doing a lot of fancy maths. And yeah if that hits again it will repeat the process again and again until it hits the sky box. this can be avoided by adding a parameter to avoid unlimited recursion. However that function is bad in general for a few reasons: 
+
+There's a small problem with your method. When the mesh self shadows then part of the model will be counted twice. You can get the projection of a mesh onto an arbitrary plane by finding the rotation from the normal of the plane to the Z axis and rotating the mesh with it. After that you discard the Z component. However it's more straightfoward to simply draw the mesh with appropriate projection and counting how many pixels it takes up. 
+
+Another solution would be to mimic what the modern vertex buffer based solutions do by creating a VertexAttributeLayout struct and setting it up. Then in the loop you interpret the layout struct and interpret the data as needed. 
+
+A seam can be defined as a line along the mesh where the vertices are doubled each with different texture coordinates. So that's what you should look for. The set of vertices where there is a twin in the same position with different texture coordinates. Depending on how the obj file was built that will be simple if they didn't duplicate the position when a vertex became part of a seam. Or it's not as simple because you need to deduplicate positions again. 
+
+On a desktop (or laptop) the GPU is connected to the PCIe bus. This gives it direct access to the physical RAM. If you map the buffer you want to fill and then read a file into that mapped memory. The OS will tell the disk drive to dump the file into the physical ram (the disk also has direct memory access), then when you go to use the mapped buffer the driver will tell the gpu to copy it into the vram. All the while the CPU never touched that bit of ram. 
+
+Having the horizon fall off is simply dropping the ground in the distance down somewhat. A point $x$ km away if you follow the curve of the planet will be $r-r\cdot \cos \frac{x}{r}$ down and $r\cdot \sin \frac{x}{r}$ out horizontally where $r$ is the radius of the planet you are modeling (~6.3k km for earth). In the vertex shader you can account for that before you apply the view and projection matrix.

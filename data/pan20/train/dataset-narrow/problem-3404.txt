@@ -1,0 +1,59 @@
+If you shut down properly, the time is saved and reloaded on next boot. On reboot you should only lose a few seconds if no NTP is available. 
+
+Actually a better solution is to use . This is assuming your laptop supports it (all Linux and OS X do), and it suits your problem. , as its name implies is good at keeping directories in synch, and only copies needed changes. 
+
+There should be no problem, although I don't know what you mean by "alarm wire". I would have used a section of ribbon cable, and wouldn't have bothered with a breadboard. This uses a interface, which should work over reasonable distances. The problem may where it is connected. You say (there is no such pin). Do you mean BMC 17 (GPIO 0) physical pin 17? My understanding is only works on physical pin 4 (unless you compile your own kernel module). 
+
+NOTE this blocks the process, until an interrupt occurs, so it is best to do it on a background process. 
+
+It is much easier to use the module from , but if you must do it the hard way should be a buffer e.g. not a single char. It looks like you are sending random junk and storing it who knows where. NOTE You should use to set baud rate read 
+
+I cannot answer, but (many years ago) did investigate. It is handled by the Desktop Environment. This was first introduced by Mandrake, and now included in most mainstream distributions. If you boot to the command line, there is NO automounting. NOTE It is not done by , although you can use this to PREVENT automounting. I use to STOP Raspbian automounting my external HD, and also to change where filesystems are mounted. This may or may not work with SD Cards. You may get more information on $URL$ as this is NOT specific to the Pi. 
+
+As @Max Ried has stated the voltage is likely to drop under load. It is almost impossible to build a regulator which works down to zero load. Even if it didn't it won't harm the Pi. The +5V is only used to power the peripherals (USB Ethernet) and is regulated down for the SOC. 5±0.25V is the nominal operating range, but exceeding this slightly is unlikely to damage components. It is OK to power the Pi through the GPIO, although this bypasses the polyfuse and the transient overvoltage protection. Strictly you should have isolation - there is a recommendation for peripherals which do this, but provided the supply is well regulated it is not necessary. 
+
+Without detail of the wiring - in particular the physical layout/length it is possible the circuit would be subject to interference; at a minimum you should use low impedance terminations to minimise this. A final point, naive users seem to assume that a pin should be connected to HIGH to trigger - most professional circuitry would connect between GPIO and GND; with CMOS circuitry there is no technical difference in performance, but running 3.3V supply over long external cabling is dangerous, and subjects the whole circuitry to additional risk of shorts/interference. 
+
+You provide no evidence that the "SD Card is dying". While I and a few others have had very rare card failures (usually juvenile failures, replaced under warranty) most use their cards quite hard, with no problem. Image/partition problems are also uncommon, but do happen. After repair or restoring image they work with no problem. Again most of the experienced users never have any problem, even when power failures happen. 
+
+There are ext3 emulators for Windows. You could google or ask on a Windows or Linux Forum. The best option would be to install a Linux Virtual Machine on Windows. VirtualBox is a free VM, and there are other popular emulators. Probably the easiest would be to boot from a Linux live CD. 
+
+Your question is unclear, but one thing is obvious - connecting a 2.2kΩ resistor to the output is shorting the device and won't work. It is unclear from the post what the device requires. 
+
+What you are trying to do is impossible using Linux, because it is not a realtime OS. This is not just a problem with the delay routines. Try your code, omitting the usleep calls, which might give you some idea what the maximum frequency might be, but even here you will find quite long and unpredictable delays due to interrupt handling. It is not impossible to set the Pi hardware to generate a square wave, but this requires a totally different approach. 
+
+The Pi shouldn't draw power from USB (at least the newer Pi B+ or Pi2) (unless the current is going to other USB peripherals). It is quite safe to cut the 5V line in the USB cable, but leave the GND connected to both ends. 
+
+The state of the GPIO during startup is undefined, but on boot all should be set as input. If Console I/O is enabled TxD & RxD (8 & 10) will be configured for serial IO. There are on-board 1.8KΩ pullup on I2C (3 & 5). If you need to define the state of other pins you should include pullup resistors. 
+
+You don't give enough information about what you are connecting to answer. I would use an IDC connector (possibly paired with coloured ribbon cable) for the Pi end. These are used inside PCs to connect peripherals, so should be reliable. I would solder the other ends to the circuitry at the other end, but this depends on what you are using. I use a number of 2,3,4 & 6 pin connectors to make patch cords. These can often be scrounged from old computers. 
+
+If you are attempting to connect to the Pi from your Mac DO NOT turn on ICS, just connect the Pi with an Ethernet cable. The Mac can into a Pi with a Link-local address (169.). You can either connect using the Link-local address OR using Zero-conf as See How do I set up networking/WiFi/Static IP for more detail. If you have a keyboard and monitor connected to the Pi and want to use the Mac to share internet access, ICS on the Mac should allocate an IP address. This WILL NOT let you access the Pi from the Mac. The best solution is to connect the Pi to your router (using either Ethernet or WiFi). This will give the Pi internet access, but also allow access from the Mac. 
+
+I am using on my Pi (running Raspbian) to allow access from my Mac. This has been working well for my Home directory, but I have tried to get access to the Pi root without success. I can connect OK, and see all the root directories, but not their contents. If I change the path from to I can see the contents, and subdirectories. The relevant content of 
+
+If you really MUST How to set up Static IP Address shows how to do it. You CAN NOT set 2 interfaces to have the same address. Again if you REALLY want to use the same static IP address for interfaces if only 1 is connected you can use a fallback See How to set up networking/WiFi but this is not a great idea - you would NEED to stop WiFi from connecting. I feel obliged to point out that there is no NEED to set static IP addresses - I haven't done this since 1980, unless configuring a DHCP server. I don't know what the IP of my 7 Pi or 3 Macs or other devices are, and don't care - I access them by name, and make the routers do their job! You can remove if you aren't using them - there is even less need for static ip6 addresses 
+
+I question your motivation, but what you are doing won't work. As I understand it the HAT has a female connector which is designed to interconnect to the male pins on the Pi. You seemed to have used a female to female cable (although it is far from clear from the low res photo). If so this means you have swapped the even and odd pins - THINK ABOUT IT. 
+
+The voltage divider should be of relatively low impedance (< 500Ω) to minimise sensitivity to interference. To ensure protection from transients and over-voltage to should use a diode clamp (basically a diode from the centre point of the voltage divider to Pi 3.3V). The voltage divider should aim to provide ~2.2V to the GPIO (trigger point is ~1.3V). You can use ANY GPIO, but avoid those used for I²C (pins 3,5) which have pullup resistors. 
+
+In addition to the kernel, these install matching drivers and firmware in These will be in a directory matching the kernel e.g. Current packages delete the old modules (older versions just added newer modules, which filled up the SD Card). You will need to obtain the modules which match the kernel, any you may be able to find in $URL$ Raspbian moved to kernel 4.9 in about May. If you have to use an old kernel, you should not update raspberrypi-bootloader or raspberrypi-kernel. Jessie is no longer supported, so there are unlikely to be updates, other than security fixes, and you will be unable to use current versions 
+
+Normally a piece does NOT come off. Removing a surface mounted component without the correct tools is almost impossible so it is more likely the capacitor is damaged. (Unwanted components are normally "removed" by crushing them.) Do not attempt to reattach. Most electronic design uses a liberal sprinkling of decoupling capacitors - a missing item is unlikely to cause any problems. 
+
+In general images (at least Raspbian) are interchangeable between all models. There are a few reservations - there are a few hardware differences, less memory, and it is possible to compile programs for ARM7 which will not run on ARM6. 
+
+There is NOTHING WRONG. See How do I set up networking/WiFi/Static IP for an explanation of the network settings in Stretch. The file is largely empty because it is not necessary - I used to run a late Wheezy (using without one). It was only used because was incompletely setup, prior to Stretch. The problem is no one has updated the tutorials. I have not recently used the Pi in such a manner, and I am not sure the tutorials you are following are the best practice, but you should be able to adapt them - either that or go back to an old Raspbian. See Wireless Access Point for a Foundation tutorial. NOTE this is also not up to date, and will need to be adapted. You will need to consider the following issues:- 
+
+If your question is about getting a recent (rather than just about ) There is an up-to-date repository for the Pi. I am currently running:- Add the repo to your list of sources 
+
+You are trying to allocate the same static address to 2 interfaces and Assign different addresses to each. 
+
+To be frank, powering down the Pi is pointless, they use less power than most TV on standby. I run several continuously (except when I modify them). If you do need to shut them down you should run (or similar) first. There are scripts to do this on a button press if needed, but you can remotely run via (which I also routinely do). The actual risk of uncontrolled power off is much over-rated; this happens to all of us, but provided the Pi is not actively writing to SD is unlikely to cause damage, although I should mention that the experienced users DO NOT do this deliberately. Your only remaining problem is powering your screens, although this is not a Pi issue. HDMI can be shut down remotely e.g. although whether this is worthwhile needs further study. 
+
+You appear to be using (and from the look a very old version). The SD Card root partition is using 1.2G - most of this would be waste space. PS You should ALWAYS specify what OS you are using to prevent people having to guess. 
+
+What you are trying will not work. If you are running Jessie this should be started with a service. I copied from $URL$ If you are still running Wheezy there are instructions for (which may still work). Create a new file with the following contents: 
+
+The included with Raspbian is designed to mirror a screen attached to the Pi (on RealVNC customised viewer). It IS possible to to configure to work without a screen, but you would be better to use , which creates a new virtual screen, and works with ALL VNC Viewers.

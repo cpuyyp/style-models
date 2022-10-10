@@ -1,0 +1,49 @@
+The table has no index on event_time. Your must therefore perform a full table scan every time. This has to be a big contributor to the slowness. SUGGESTION #1 Add an index 
+
+That would not be possible. Why? MySQL for Windows is very stringent about locking files. It is impossible for two MySQL Instances on Windows to lock on the same ibdata1 files. From your question, you mentioned launching one MySQL Instance from Windows and another from Linux hitting the same datadir. At the risk of sounding redundant, MySQL for Windows is very stringent about locking files. Trying to lock ibdata1 exclusively, MySQL for Windows will block another instance from anywhere (Windows, MacOS, Linux, etc) from opening a file handle on ibdata1. The reverse is also true: MySQL for Windows will not be able to acquire an exclusive lock on ibdata1 if it is opened from elsewhere (Windows, MacOS, Linux, etc). I have seen this done using two Linux-based mysql instances, only to see the data go down in flames due to file corruption. Even if what you asked was possible, there is another issue you have to account for. The following system variables need to be set properly: 
+
+on all Apache Servers on the Master on the Master on the Slave on all Apache Servers on the Slave to make sure there are incoming DB Connections 
+
+This give NULL columns. The original question asked for non-NULL columns. I'll change the code to generated non-NULL. I'll do that by flipping the order of the : 
+
+Step 05) on ServerA, ServerB, ServerC Step 06) Create GRANT for replication user on ServerA, ServerB, ServerC 
+
+Once you use the clause , the must generate a result first. Your result has no boundary (no WHERE clause). The LIMIT is applied afterwards. That explains the temp table creation. OBSERVATION #2 You mentioned the following in your question 
+
+GIVE IT A TRY !!! CAVEAT If innodb_file_per_table is disabled, this will not work for you. You will have to extract the tables from ibdata1. Then, you can try my solution. STEP #1 Set innodb_file_per_table to 1 in /etc/my.cnf 
+
+The incredible part: The output of mk-query-digest Here is a profile that ran 2011-12-28 11:20:00 for 1190 sec (20 min less 10 sec) The last 22 lines 
+
+It is not so much a deadlock in the traditional sense, but it safe to say that the option can get its loyalty displaced and lose it point-in-time window from the first victimized table and all other tables after it. SOLUTION Setup Master/Slave Replication 
+
+ANSWER TO QUESTION #3 Here is where you have to be very careful. As I mentioned earlier, if you have a database with all InnoDB tables or a mix of InnoDB tables and read-only MyISAM tables, you can use --single-transaction and every table involved in the mysqldump will exist in the same point-in-time. What Can Go Wrong #1 If you are performing INSERT/UPDATE/DELETE queries against a MyISAM table during the mysqldump, then the MyISAM tables will not be point-in-time consistent. What Can Go Wrong #2 If you are performing ALTER TABLE, DROP TABLE, RENAME TABLE, or TRUNCATE TABLE against any table (MyISAM or InnoDB), consistent mysqldumps are no longer isolated. The transaction you issued with --single-transaction is released (made null and void) and all tables afterward can no longer the point-in-time consistent. If one of these occur, recording start times or position is rendered useless. 
+
+When it comes to indexes, you may have a choice CHOICE #1 : Use a primary key of ID Setup the table like this 
+
+Not every user needs this. Giving the SUPER privilege to just anyone can actually hamper a DBA from logging into mysql if max_connections is reached. 
+
+You are going to have to recreate the mysqldump so that the Storage Engine is Specified. Perhaps just drop the from the mysqldump command. The end result is the that the table will remain a MyISAM table when being imported into MariaDB. This is just a guess but look at the error message you posted. If a BLOB prefix is 768 bytes and you have 10 BLOBs, that 7680 bytes. That leaves you with 320 bytes. If the remaining datatypes exceed 320 bytes, then it is impossible to convert to InnoDB. Since a TEXT column is the variant of a BLOB, converting to TEXT does nothing since the storage requirements for TEXT and BLOB field are identical. 
+
+This index is needed because the query has and with static values, while the has a range that that is already ordered. As for CPU usage, please add this to my.cnf (Restart required) 
+
+I would yes for one reason: InnoDB and the Query Cache are not good neighbors. Why ? On , I answered the question Why query_cache_type is disabled by default start from MySQL 5.6?. In that post, I poetically described how InnoDB man-handles the Query Cache. I originally got that information from Pages 209-215 of High Performance MySQL (2nd Edition). I have recommended people disable their query cache before: 
+
+Hey, not bad. Deleted 131,072 rows in 5.49 seconds. You need to use the stored procedure passing in a comma-separated list of values. Give it a Try !!! 
+
+All you need to do is query for that number. If you get a nonzero, mysqldump must be running. Give it a Try !!! 
+
+The inside the subquery is rather useless if you are looking for userid. You should do two things First rewrite the query (remove the ) 
+
+Bottom Line : You have no rights to see anything. From the the output of and , there is no root@localhost defined in the table . The further proof of this is the fact that you cannot see the and databases. A fresh install of MySQL would still have these databases fully visible if you had all rights enabled. You can verify this by going into the OS and running the following: 
+
+All you have to do is run these SQL commands with each mysqli function in PHP and you are all set. Give it a Try !!! 
+
+Question 5 On INSERT queries on the master, what form of the query is written into the binary log? Is it the 'raw' form of the query, or the one which already has the auto-generated value of the auto-increment key? Answer to Question 5 Whichever form is presented. Here is what I mean: The raw form would usually not include the auto_increment column expressed explicitly. On the other hand, it you import a mysqldump into a DB server with binary logging, the rows being inserted would explicitly be given. Either version of INSERT would be allowed execution in mysqld. In like fashion, either version of INSERT would be recorded AS IS... 
+
+Asking InnoDB for a table count requires navigation through these ominous things. In fact, one never really knows if counts repeatable reads only or includes reads that have been committed and those that are uncommitted. You could try to stabilize things a little by enabling innodb_stats_on_metadata. According to the MySQL Documentation on innodb_stats_on_meta_data 
+
+I added a plus sign to pankt and I got different results. What 2 and not 3 ??? According to the MySQL Documentation, notice what it says about the wildcard character: 
+
+That's one relationship I was able to take advantage of. There is another relationship visible in your sample data: The number at the end of the each field. If you can enter names in bulk and then later load country in bulk, you would then have to rely on the number at the end of each name field. Such a query would look like this: 
+
+I have a Web/DB Hosting client that has 750+ customer databases with the same number of tables (162) and same table structures. Combined, all of my client's customer data total 524GB (95% InnoDB) Imagine all of these databases competing for 13G of innodb buffer pool on nine DB servers via circular replication. Scaling out with that hardware configuration was not enough. Immediately, we recommended to the client to scale up. We recently migrated this client to 3 DB servers with far more horsepower (At all costs, stay away from SSD in high-write environments, ALWAYS !!!). We upgraded them from MySQL 5.0.90 to MySQL 5.5.9. Dramatic Differences were seen almost instantly. Scaling out must also be considered because if you have hundreds of clients hitting the same memory and disk resources, scaling out reduces their usage linearly (O(n)) where n is based on the number of DB servers in a multimaster environment. In the case of my client, my company is reducing him from 9 DB servers (Quad Code, 32GB RAM, 824G RAID10) to faster DB servers (Dual HexaCore [that's right 12 CPUs], 192GB RAM,1.7TB RAID10) of MySQL 5.5.9 (to table take advantage of the multiple CPUs). In addition, imagine 150GB innodb buffer pool in 50 partitions of 3GB each (Multiple InnoDB buffer pools is a new feature in MySQL 5.5). A smaller scale out, but massive scale up, had worked for my client's unique infrastructure. MORAL OF THE STORY : Scaling up or out is not always the solution if you have badly designed tables. What I mean is this: If index pages have lopsided key population for multicolumn indexes, querying keys from the lopsided parts of indexes leads to table scan after table scan, or at least indexes that never get used due to being ruled out by the MySQL Query Optimizer. There simply is no substitute for proper design.

@@ -1,0 +1,47 @@
+I suggest you to use coroutines for that. There are several ways of course of doing that. The code could look more or less the following: 
+
+Build a GameObject for each building building (I don't like very much the overhead of a GameObject, anyway..) Prepare each GameObject to be static batched with StaticBatchingUtility.Combine. Pack all texture into an atlas Assign the parent game object of combined batched objects the Material (basically the shader and the atlas) Change some properties in the material before drawing an Object 
+
+For anything else than pc platform or web using plugin yes, you need to purchase the platform specific license. 
+
+Yes it matters but there's no general rule, it depends on the specific scenario and requirements. Here's some hints: 1 Mesh Scenario Pros: 
+
+Side note There are several way of drawing outlines. The way you are using produce several problems other than the outline width, for example: 
+
+With new animation system, animations are handled by component. If your animation start automatically, it means that the clip is the default one (orange color) in the controller graph. To prevent this on Behavior on start you have 2 way: 
+
+I think you are only forgot to set the tag . Accordingly to the documentation Camera.main will reference the first enabled camera with tag. So this should fix the problem: 
+
+Keep AnimatorController component disabled until you don't need it. Use an empty state with no clip as default (inside the controller): transition to your animation clip must be explicitly activated 
+
+Despite you destroy or destroy immediate an object, the used resources aren't necessary unallocated immediately. Just an example, suppose your destroyed has a referencing a , even if that resource is used only by the destroyed object, it's still up to unity decides when deallocate the relative memory. If you want to force the release of unused resources you can have a look at Resources.UnloadUnusedAssets. 
+
+I quite understand how projective texturing works. I implemented successfully a shader for that following nvidia doc. The major problem I'm facing is that with that implementation the projector frustum is used only to determine the texture coordinate in projective space, but it doesn't clip anything outside the projective frustum volume. In other words, if I have a projector pointing toward a object, the texture will be projected on it even if the object is outside its frustum. In addition when projector is almost parallell to the projected object, the texture stretching is too evident and I would like to fade it out. Now, I'm trying to understand how handles their built-in projectors. I found this example. Here's vertex and fragment relevant code: 
+
+"Complicate" the layer matrix is not a problem. The matrix is limited to 32 layer, if you haven't free layers to use than you might consider other solution. Until I have a free layer I'd always go for using it. Physics.IgnoreCollision works just fine. There are some limitations documented indeed. Btw, the problem is that you are calling it when a collision as already occurred. You have to use it on an object pair you want ignore collision for, before the collision occurs(for example set up it inside method instead). 
+
+I'm doing some experiments trying to figure out how physics works in Unity. I created a cube mesh with a and a . The cuve is laying on a mesh plane with a . I'm trying to update the object position applying a force on its . Inside script function I'm doing the following: 
+
+No need to disable . Just assign different layers to monsters, spells and ground. Then use the collision matrix to specify that a spell doesn't collide with monsters. (The same process, using if you are using ) 
+
+Well, first of all you need a way to descrive such path. I would use some spline curves like Bezier curves or Hermite Splines to describe the path, and let the button follow that path once pressed. Unfortunately these curves are not available as is, you need to implement them. If you are interested here you can find 2 nice Herman Tulleken's articles(fundamentals and some algorithms), that contains a basic bezier spline implementation for Unity3D too: If you want to go another way you can define some points the button should pass through and interpolate position (and eventually orientation) of the object while updating its position. You can interpolate position using Lerp or Slerp methods. 
+
+I think I have understand the reason. Color store each component as a float value (32 bit for each component) right? When I set the color with setPixel it's implicitely converted to Color32, so some values are truncated and when I get them back they are different. 
+
+I've read draw call batching documentation. I understood it, and I want to use it (or something similar) in order to optimize my application. My situation is the following: 
+
+It's true, as said by Byte56 that's quite a matter of opinion. But the choiche you have proposed have different consequences: 
+
+In order to load a resource through Resources.Load, the file itself must be located in a subfolder of . Try to move it there and your command will work. 
+
+I'm trying to use Texture2D set and get colors, but I encountered a strange behavior. Here's the code to reproduce it: 
+
+I've studied several articles and listen some talks about behavior trees (mostly the resources available on AIGameDev by Alex J. Champandard). I'm particularly interested on event driven behavior trees, but I have still some doubts on how to implement them correctly using a scheduler. Just a quick recap: Standard Behavior Tree 
+
+In general quaternions offer a simple and natural way to interpolate rotations, preventing problems like gimbal lock. 
+
+Unity uses a Component Base Object Management approach. There's a famous article about it in Game Programming Gems 5. In a few words suchs systems put the accent on Composition over Inheritance. Any object or type (in this case ) is defined as a collection of , each one responsible for a specific domain. When you want to add functionality to an object, you'll add a instead of extending it. (a full exposition of CBOM is beyond the purpose of this thread, but search for it on the web) So for what concern your question and unity patterns in general: 
+
+Here you are on the right way. The only thing you are missing is how to extend an operation () over multiple frames. In fact you don't need to rely on the callback (in a certain way it would even be wrong or at least inefficient). You should use a coroutine for that. So you helper class simply becomes a method (for this I usually put a collection of static methods like this in a static class that act as my helper class): 
+
+Short answer: NO. Long answer: of course there will be a micro overhead, because a separate component need to be stored and updated, but this isn't even perceptible (maybe if you have thousands of components, and you could eventually try to benchmark it). In any case that's definitely the goal of a component based architecture to split functionality across specific components, so I'd encourage you to do that. Just a side (personal)note about execution order: it's true that you can force a specific update order of components, and that's sometimes is useful (rarely from my point of view). Forcing a specific update order btw, implies an implicit relation/dependency between components, that is generally not what we want if the components are truly independent.

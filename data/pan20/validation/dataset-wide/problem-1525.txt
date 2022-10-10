@@ -1,0 +1,51 @@
+Normally there's no need to specify the color to change from. You only need to specify the coordinates and leave it up to the flood fill routine to find out what color is at that location. I would define another method that is public, and make the recursive method a private implementation method. The public method would look up the color at the location and then call the private method. 
+
+A more drastic change would be rather than using , you might consider using the "Null Object" design pattern. That is, create a implementation of (an interface) that returns, for example, for any and for . This would eliminate a lot of conditionals and make the code significantly easier to read. 
+
+Finally, the implementation, with all the naming convention violations and functional confusions fixed, might look like the following: 
+
+The following is the IL generated for There seems to be full optimization by inlining , and The CIL runtime stack works only with 4 byte or 8 byte integers, even the LDC_I4_S pushes a byte as a 4 byte integer to the stack, so, there is no performance gain in changing parameter types to smaller integers, byte or short A slight improvement (may be); These methods need not to be instance members and can be defined static. Changing them to static will remove 1 push instruction to the stack (argument 0, the instance to invoke the method on) at the caller site. That's all. 100 million iterations on my 2-cpu 8 core windows 7 HP machine executes in 17-18 ms, and 8-9 ms of it seems to be the iteration (empty loop) itself. 
+
+Update: As requested by David Harkness, I have knocked together an implementation based around a polymorphic Node object. I'm not saying this is necessarily a "better" implementation, but it just shows an alternative way of implementing the code that removes a large number of the conditionals. Note: It's not a fully working implementation. It's just a gist. I haven't bothered implementing and if you the same value twice it won't overwrite the original. I haven't done any testing on it, so it may be full of bugs. I'll leave it as an exercise to the reader to finish it off. 
+
+To add one more thing to janos's review suggestions, one thing I noticed is that many of your comments are saying essentially the same thing as the code. I'd suggest leaving them out. Developers can read code and trust it more than comments, which often get out of sync with the code. 
+
+Realizing that you are trying to make reusable code, I figured I would share my methodology, as I believe it will extend your structure here. I like to wrap everything into an object with functions appropriate to AJAX, and I added in your components: 
+
+Many of these not only make the code more readable, but makes runtime much faster by preventing excessive DOM querying, having smaller object sets to source from, consolidating similarly-applied code, and removal of unneeded code / event handlers. Here's a draft of the new setup: 
+
+This function should give you a good starting point, and you can modify as needed if you need additional parameters. The only additional parameter I advise against is the use of ; for some reason, everyone using likes to include in their AJAX call (which is an intelligent guess, not a true marker) instead of doing it right. Don't be "that guy", put your appropriate header declaration in the files you are loading via AJAX and it will be bulletproof. Hope this helped. 
+
+Yes, it seems thread safe. I run a test to prove it which I give the details at the bottom, but first are some code review comments. 
+
+You can also change the method to be an extension method of . This will clearly state the purpose of the method if declared with a good name: 
+
+You keep track of class instances and not bare integer values, You can re-use this class in other projects or forms (if designed & implemented correctly), You can extend this class to enrich it's functions etc.. (There are an infinite number of benefits) 
+
+I'm not suggesting to change to and to of course. The parameters should have descriptive names in the first place. You can consider and or similar. Possible Improvements Being consistent with code formatting is important. Consider using curly brackets, always: 
+
+Other than that, you have implemented the algorithm correctly. It's worth noting that the way this algorithm uses recursion could lead to a stack overflow for a large block of color. Also, by dint of the +1 and -1, will end up calling fill() multiple times for each cell. 
+
+It's neatly formatted and follows standard naming-conventions. I found it easy to follow the logic. I'm not sure why you switched from a to a . It doesn't buy you anything, and makes the code more verbose. (If you did it as an optimization, the effort is misplaced. These days, Java compilers turn simple String concatenations into StringBuilder appends behind the scenes. In any case, even if you were doing this trillions of times in a tight loop, the possible savings from StringBuilder would be negligible compared to the time to format dates and whatever I/O you're doing). Rather than using a method, you could create an (e.g. ) and one or more implementations. This would be a bit more object-oriented and more future proof. You wouldn't have to add the flag (or whatever future formatting options might be needed) to the interface, but have that knowledge in a specific implementation. What is the foreign character string when ? If it's not a typo, it might be worth writing a comment to explain, for people who can't read that language. I'm not sure that is the right name, nor whether it is necessary. You don't use a constant for the other date/time formats in the method. 
+
+Reading through the code, I can say that it is well written, concurrent access in mind, and at the first sight, it can be said that it has no flaws. I especially liked these lines: 
+
+You can wrap your timers in ExecutionPlan class. Using a class for wrapping the timers have many benefits. 
+
+Method name is a common method name used by collection types to add a new element to the collection. An method with source as the first parameter and the items to be added as the second parameter does not make sense. and are bad names for parameters and should be changed at least to and or similar. And in Capitalization Conventions 
+
+Also, the use of is going to be inherently slow (especially with a system as large as Facebooks), so might I recommend something more like this: 
+
+I haven't worked with Facebook's API using queries like this, but I know SQL inside and out, and this screams INNER JOIN to me. 
+
+I haven't tested this at all, so no benchmarks to show if it actually improves performance, but theoretically it should maintain your code operations while executing faster. Figured it was worth a shot, since no one else answered. Hope it helps! 
+
+Using requires querying every row to build a new "randomness" ID, creating and populating a temporary table with this newly randomized result set, and then querying from that table to bring back your row. For large datasets, this can be very slow. By instead ing the table back onto itself with random pids generated, then ing and ing that dataset, it can result in a much faster query. This article explains in (enormous) detail what I mean, but also shows that a query such as the one above will be faster with a table holding as little as 100 rows, and will be no slower than the original query in any case. Even if you don't get rid of , your reduction to a single query should speed up your call. 
+
+EDIT 1: You also don't have to check and assign moannie if it is passed in as euro because it already has the value euro: 
+
+You should also check the items of the passed in collection for null references. If any of the items of the would be null, your code would fail with a null refererence exception at 
+
+Therefore, You can simplify the exact same behaviour at least in terms of the final state as follows: 
+
+The code is missing the class which I think is also important for the review. The cache items are added with keys and it is important for this method to return the same value for objects having the same credential values, and distinct values for instances with different credential values. Is it? Naming conventions. Class names should be PascalCase and the class violates this rule. Should be To achieve better encapsulation and seperation of concerns, (The creation of an empty credential object should be a concern for the Credentials class, which has control over the internals of itself) instead of having a field in this class, it is better to have a field (or property getter) in Credentials class.

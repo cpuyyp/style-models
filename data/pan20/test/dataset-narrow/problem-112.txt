@@ -1,0 +1,53 @@
+No, you cannot use SR optics with single-mode fiber. You'd be firing a 50/62.5 micron beam at a 9 micron hole; at best 18% of the light will enter the fiber. Yes, you can use LR optics with short, high quality multi-mode fiber with the use of a "mode conditioning cable". That special section of cable is the Magic(tm) that makes it possible by precisely aligning the 9 micron laser with the 50/62.5 micron fiber. [This procedure is not recommended.] 
+
+First, OSPF is not necessary (or recommended) for such a tiny network. I run much larger networks and still don't bother with dynamic routing. Second, never, ever, route to a broadcast interface (ie. ) BTW, that's proxy-arp; I'm 1000% certain that is not what you want. Third, AT&T's 3801 does not have a "bridge mode". And those modems have a particularly nasty bit of brain damage where the IP:MAC table is one-to-one -- a MAC can have only one IP and v.v., which means with a static block each IP must go to a different device. 
+
+Think of it like a mailbox. The MAC identifies a specific box. The person who empties that box then looks at the name (i.e. IP) and hands each item to the correct person, which might mean placing more than one person's items into yet another box. 
+
+This is a buffering issue. I had the same problem with a new Level 3 circuit. Their NID apparently has no measurable buffers, so feeding it at a rate 10x the circuit rate (1000 vs. 100) leads to all manner of poor performance. (They had the customer side set to auto (1000) but manually set the network side to 100. After a week of arguing, they set both sides to auto and the problem went away -- Charter/Spectrum, the actual carrier for the circuit, actually has a clue. Shocking, I know.) Note: Cisco has no mechanism to control the autonegotiation process. There's no way to tell it to advertise 100/full. And autoneg is the only way to get full duplex -- unless you control both sides. 
+
+No. The beacon contains no such fields. It's purpose is to announce the availability of networks and the capabilities of the AP. 
+
+Mostly because that's what the specs say you should use. While the client-id will almost always include (or entirely be) a MAC, it's a bad habit as NICs do sometimes get replaced (failures, upgrades, etc.) Most DHCP clients allow the user to specify an identifier. BOOTP has no choice, as it has no such option(s). BOOTP predates DHCP, and is far, far, simpler. (consult the RFC's if you really want to know how it all works.) 
+
+From the CLI, the last input or output lines could be a rough indicator. Keep in mind, a quiet interface could be off by a lot. If you are using other management engines, syslog will show interface state changes. SNMP traps/informs can also be setup to signal state changes. 
+
+Two devices operating at different set speeds will not link. If only one side is auto, they may link, but it depends on the specific device(s) as some require the link-pulse information while others will cycle through speeds to get a link; and in the absence of link-pulse information, they will default to half-duplex. (Note: the non-negotiating side may have been set to full-duplex, but the other side will be half-duplex.) In your second case, a hub is always half-duplex; as long as it supports 100Mbps, it will link. A switch can run in either full or half-duplex. Same as before, without the information from link-pulses, they will default to half-duplex. (unless configured otherwise.) 
+
+Because is a feature of switch virtual interfaces (read: vlans.) From the horse's mouth: [click here] Perhaps you want . [edit] Oddly, Feature Navigator only shows as available on cats. However, my 1720 (WIC-4ESW) allows it. (12.4(23) IP/ADSL) [edit 2] I just looked through the 1921 15.1(4)M1 universal image, and is in there: 
+
+doesn't have guest-mode enabled () so it will not beacon. See Also: guest-mode and mbssid guest-mode 
+
+IPv4 and IPv6 "coexist" the same as Appletalk and IPX. That is "completely oblivious to each other". While they both start with eye-pee, and share a packet format (at the most basic level), beyond the version number in the IP header, they are completely alien to each other. Study how IPv4 works, then study how IPv6 works. They are far more different than their names suggest. (I've worked with this stuff for decades, but I cannot point you to any single book (or webpage) that can give you everything you need to know. We're not assembling Ikea furniture here.) 
+
+The 2960S has very small buffers. For loss tolerant protocols like TCP, this isn't a problem. However, iSCSI and FCoE absolutely will not like that. (esp. FCoE) I don't know what the buffers are for the line-card, but I suspect it'll be in the same range. I like the 2960S as they're cheap (ish) and have lifetime support. But they're desktop class switches. I use them in a vmware lab with jumbo-frame iSCSI, hundreds of vlans, etc. and they've not made a mess, yet. (but iSCSI is going to be a problem) 
+
+If you pay close attention to what the VPN software installs, you'll find a shim high up in the network stack that allows the software to intercept DNS lookups long before any routing has taken place. (In linux it can be done by inserting an additional NSS module. But I've not used the cisco or juniper linux clients in decades.) 
+
+Ensure dhcp snooping and dhcp snooping trust isn't interfering with the server answers. If the switch(es) are acting as the inter-vlan router, they also need to be handling dhcp relay duty -- which will add giaddr (gateway) to requests so the server knows how to answer. Eg. from my lab switches: 
+
+In the 1841, the two ethernet ports are independent routed interfaces. You can simulate a switch by bridging the two ethernet ports, but I would not recommend it. Buy an external switch. 
+
+It can be problematic to change an address remotely. The best option is to do it in person from the directly attached console. To move the switch to a different subnet, that is indeed what is required. In your case, it's still in the same subnet with the same gateway, so you can just telnet in and change it. The instant the command is entered, your telnet session will stop, but you should be able to telnet to the new address and continue. (save the config, etc.) When moving to a different subnet, the gateway has to be changed as well. You'll lose contact the instant either the gateway or address are changed. And the address has to change first. If you have machines in both networks, and changing the address of the switch will not otherwise break the network, then logging in to each network allows you a local path (not through a gateway) to the switch in either subnet. Change the address, go to the machine in the other network and continue your work. If you have console (out-of-band) access, none of this mess is required. 
+
+Spoofing is sourcing traffic with an address that you aren't. Masquerading is changing the source to an address that you represent. (i.e. NAT) Spoofing is highly discouraged, and often out-right denied by network security constraints. HOWEVER, there are load balancing systems that use an asymmetric process whereby the answering server directly answers requests forwarded from the load balancing device. (browser sends to LB address, LB forwards to actual server, actual server replies with the LB's address directly to the internet bypassing the LB. This means the LB doesn't have to process as much traffic.) I seem to recall this being called Global Mode load balancing. 
+
+Anything that conforms to the SFP MSA ("specs") has an I2C interface to a PROM with those values stored within it. I have yet to see an SFP (or SFP+) that did not have that interface. 
+
+If you're talking about Token Ring (which no one uses anymore), the packet will flow around the ring until it comes back to you. At which point, you don't pass it on. [update] Think of your bus as a single wire. Along that wire speakers are attached to it (and earth ground.) Then add key-switches along the line to signal Morse code. Any switch can make all the speakers click, however, while a message is being sent, only one operator can be keying the message. The bus is thus "occupied" as long as the message is being sent. When done, anyone else can key their message. It doesn't matter if the message is intended for an operator who isn't listening, the message is still "put on the wire". 
+
+First off, the switches don't have to have an address in VLAN 20; in fact you absolutely don't want that. (unless you want guests hacking into your switches) VLAN 20 should exist on ports connected to (a) the APs, (b) the inter-switch links, and (c) the router infrastructure (firewall, etc.) That will be tagged everywhere but the access ports going to the router/firewall/etc. (Your switches aren't routers; they're just layer-2 switches. The address they're assigned is for management.) 
+
+In a word: LICENSE It could be your license only allows 2 physical interfaces. will show your licensed features. 
+
+Because LACP isn't "additive", it's a load balancing mechanism. The src-dst-ip hash will select only a single link, and all of the traffic between that src and dst will cross it. Thus, if you don't have a perfect distribution of src/dst pairs, some links will be more utilized than others. 
+
+The ASA port (e0/0 in this example) would go to a trunk port set to allow all the vlans configured on the ASA (48 and 101, here) The ASA is then the router between those VLANs. Any address assigned to the switches would be purely for management. And they would assigned to a VLAN, not a port. The topology between devices is, indeed, all trunks. (because you want all vlans to be available everywhere.) The access ports -- ports where individual machines are connected -- would be assigned to only one VLAN. 
+
+is indexed by (i.e. the "meaningless" numbers you quoted) contains which is the ifIndex. You may need to look through to find the full picture. Honestly, it'd be faster and make more sense to telnet in and run CLI commands to get data. :-) 
+
+defines the link(s) to be . (show run int po1) It's 300Mbps because you have three links assigned (and active) in the channel-group. (show etherchannel 1 port-channel) 
+
+When working with Q-in-Q, where there's an 802.1q tag within a tag, the inner and outer vlans are the inner most and outer most tags. 
+
+Yes. In theory, you can run point-to-point ethernet like that. Both endpoints would have to be in promiscuous mode to remove the 802.3 Ethernet MAC headers (otherwise the frames don't belong to either NIC and would be ignored.) Of course, doing this means you aren't running "ethernet".

@@ -1,0 +1,77 @@
+Also, don't write . It's just . doesn't convert to base 10. It converts to an integer, which does not have a base (it's just a number). It should be called something like and its second argument should be , usable by name. doesn't check if a number is prime. It should be called or somesuch. Instead of , it should return , since that's a valid divisor of the number. Or maybe if you don't like that. doesn't check if a value is not prime. Instead, try . Better would be which you then over : 
+
+where the is represented with . We want to find the collatz number for . The original method would find this list: 
+
+That about finishes it. There are much faster ways to solve this, but they'd all involve larger core changes. Here's the updated code: 
+
+You don't need line continuation characters inside brackets. After splitting up your lines, says most of your time is actually in 
+
+in . Your method is pointless - is public. Since you intend to use it as a struct-like container, keep it that way. I'm not sure why you even have the parameter though; your options have a static set of accepted attributes so just inline it. Again, this removes the use of existence as a variable. Attribute existence is a terrible way of hiding state. 
+
+For some reason there's a trend among scientific Python users to import things with really short names, like 
+
+Since this does not change as it progresses it's likely that this quickly stops doing anything productive, spending most of its time bouncing around a few points. It'll probably work better with a gradual slowing: 
+
+Some quick cop-out comments, since I've not taken the time to actually understand what's happening here: One thing I just happened to notice is the classic 
+
+Making a closure would be prettier but require dynamic dispatch. That's probably fine, but maybe less idiomatic: 
+
+Now, I'm really not a fan of comments on the end of lines, so I'd fix that all up. You're also using instead of ; the convention is strongly towards the latter. Since this is Python 3, you don't need to inherit from , but... is just a function, albeit one that pretends to be more. Well, don't let it! All it's done is give you unused state and a broken unused method. 
+
+is also weird; why not just ? It makes sense for to be an ABC, but by no means is this a requirement. It's worth noting that 
+
+is slightly misnamed; it only tells people that they have won and asks if they want to play again. This would be better named . However, I would probably not conflate the two options and just have , leaving the caller to run . It so happens that this would simplify code, too. The formatting here is also haphazard. Line wrapping should be logical, not just whereever it fits. 
+
+Then let the caller do the writing. You don't want the function to do the writing to call directly, because that recouples IO and logic (albeit to a much lesser extent) - just pass into the function. Further, just the output. When running the program, it's trivial to redirect to a file. Thus, printing it makes a lot more sense than hardcoding the file you're printing to. I recommend at this point as well. Lots of your documentation is in comments above functions rather than docstrings. You should write docstrings instead, and use clearer, more declarative language. Before we fix 's documentation, though, notice that it's really taking two parameters: 
+
+is prone to TOCTOU race conditions. It's probably not especially worrisome here since your whole code is one big race condition of that kind, but you should be aware of the risks. In you write 
+
+Obviously this needs a better name than , and better documentation than just an ellipsis. I will leave that as a task for you to figure out. Next we have 
+
+When you call you should also sort by the transformed value. Finally, you should consider using to store numbers instead of ; s will be lossless for any numbers passed in on the command line. My attempt would look like: 
+
+I would also consider changing the description; it's obvious from introspection that and default to empty, which is counter-intuitive. I would change it to 
+
+The function in your merge sort is \$\mathcal{O}(n^2)\$ (it's meant to be \$\mathcal{O}(n)\$) because 
+
+Your indentation is completely out of order. Use consistent indentation, keep your comments indented correctly and use a consistent bracing style. Don't just arbitrarily indent things either. Don't use double semicolons. Put spaces after comment markers. Don't have trailing spaces. Space brackets consistently. I loaded Eclipse just to format this. 
+
+is \$\mathcal{O}(1)\$. Performance elsewhere is probably uninteresting, since it devolves to basic integer operations. Extending to other should probably be done by being generic over the and traits, as well as whatever particular operation is needed to implement. Something like 
+
+Your imports are ordered in reverse. Typically one would have them alphabetical. It seems to me that should abandon and instead , which seems logically immutable, should get a . This way you can use as a more logical alternative to . This does, however, require both a and an method on . can just ; using is overkill. can be a ; I encourage this because it gives free immutability and is pretty convenient to use. I would do an explicit check 
+
+but this produces all possible such triples, whereas yours only produces a small subset that I don't really understand, in an order I don't really understand. So this is what I have. I'm not sure it'll match what you were aiming for, though, as I don't really get what your code does. 
+
+Note that this is a somewhat silly way to do things, though. First of all, takes s! I'd rather avoid that if possible. Further, this is more work than needs to be done. Instead, one can do this: 
+
+But OK, fine. At least we know what contains, then: multiple s, so a list (or other collection) of lengths of nodes. Nope, it actually means exactly the same thing as . A similar comment goes for , which should be . Then there's , which you label "adjacency matrix". Why not just call it then? But it's not even a dense matrix like that would imply, it's actually a list of per-node adjacencies, so call it . Then there's and , which are the same thing named differently. Call them or at least be consistent. Going back to , you have 
+
+This corresponds to the second line in your . For a larger script, it would be wise to avoid hard-coding the URL. Consider , or in the original. You don't handle errors. Here's the breif rundown on what errors are thrown. You don't need to catch these errors directly in the function, but you should probably deal with them somewhere. Note that you should also check the response code. Often the sensible thing is just to run to turn them into errors. Consider or the first line of the original . You do , but you should just use to get the first. Consider . This is the bottom part of the original . You originally used string concatenation, but this was changed in Josay's answer to old style string formatting. Since you previously use new style string formatting, it should be so here as well: 
+
+This also allows using to check that the whole line was used. needs reformatting. Further, the action 
+
+Note that I upped to an - there's little reason to use a small type here. Before I continue, let's mention your "parser" first: 
+
+One thing worth doing is to use to get times per line. This will show you which expressions need most to be optimized. You mention as a potential candidate. One way to optimize this call would be two write it in pure Cython: 
+
+Python uses , even if your DB columns don't, so you should be calling this - although personally it's still better named and the parameter should be renamed to, say, . 
+
+Your formatting in would be better using . Also, use over unless you actually need the specific operator. 
+
+One conceptually easy, but extremely effective, change is to apply a heuristic to the search. This says that if we have found a triangle of cost \$k\$ and our new path could not give us a cost lower than that, do not try the path. I originally avoided this because I could not think of a strong enough heuristic. It turns out, though, that it's really simple. Consider this unfinished triangle: 
+
+Your docstring includes implementation details; typically this should be in comments instead since it's not part of the API. Doing so gives implementation flexibility, too. Instead of checking , you should do 
+
+The logic to generate a length between and 31 has nothing to do with creating a random list of a given length with a given number of set bits. Split them out into multiple functions. This highlights the usefulness of making the randomness a parameter of the function, so do that too. Use better names than and . is prettier. Your totalLength` is unneeded; the second path always works and the first isn't common enough to be worthwhile. A loop is a much better expression of intent when mutating , and you can drop a lot of silliness by doing so. By now we have 
+
+Personally the indentation of the strings is odd; I'd treat it more like a block of code and indent it singly. This is more my preference than anything. According to PEP 8, the name should be lowercase. Similarly with the name , which should be longer. However, these are hardly big deals. 
+
+seems like a really long method, so that's where improvements should be focussed. First, you have lots of code blocks that are simple duplicates of eachother; deduplicate these. I suggest using janos' techinque. This gives: 
+
+would be better as a property. I would change to be the result from after translating with . I would do a single read from in and use 's parameter to read parts. This emphasised how repetitive the unpacking is, so I'd make a local function to reduce the repetition: 
+
+One way of improving this is to early-out your s and s. I would also separate some of the longer lines. For example, I would try something like (untested): 
+
+This will require you to make or arguments to several functions that currently take it from the global scope. Your function (renamed according to jonrsharpe's advice) is badly named: the name tells you little about its functionality. You never use it, though, so just chuck it. Personally I would remove and inline . It doesn't give either clarity or succinctness. When returning a tuple from , you don't need brackets. If is now 
+
+I know you're not seeking advice about , but I feel I should point out that you don't need to inherit from in Python 3. I would remove the option; if someone wants a list they should just call . Your

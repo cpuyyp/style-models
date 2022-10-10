@@ -1,0 +1,109 @@
+Note that the operator here takes s and not s. We know what the derived type is, so we can just use it. The nonqualified call to lets us write something like: 
+
+Two numbers have the same remainder when divided by 5 iff their difference is divisible by 5. So you can save yourself one operation (which is expensive!) by simply doing: 
+
+Lastly, don't hardcode your percentages! These have well defined values. We have a pyramid (0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1) that we just multiply by 1/36. So that's: 
+
+This is the tricky part. Basically, we have a list of lists of types. If any of those typelists is empty, we're done. Otherwise, we concat all the heads with a recursive call against all the tails. We can't use here due to eager evaluation of both parts, so I'm introducing two different types: 
+
+That's it. Our now points to 's , and we cleared that one out so that it thinks it's empty. The move assignment has two big problems. Self-assignment clears the stack, and it returns a copy instead of a reference. You could just swap the pointers: 
+
+That's a lot of code for a simple operation. What are you doing here? You're counting the incidence of . But there's an app for that: : 
+
+Having a streamable class is gratuitous. NumberConverter The flow of this class doesn't make much logical sense. You have a member variable , that you're modifying as you go. It's really more like an implicit argument to . Same with all the member variables actually. Makes it very difficult to reason about the correctness of . doesn't make sense as an array. The three elements in the array have nothing to do with each other. You have the numbers under 20, you have the tens numbers (why the hyphen?) and the block identifiers. Declaring it this way means you have a bunch of cryptic or expressions. Prefer to make three different s and name them appropriately. So takes both a units and its string representation? That's not good design since you're basically passing the same/similar information twice. Prefer to restructure this call such that you're converting one "block" at a time (e.g. the millions block, then the thousands block, then the unit block). Redundant information is bad. This fragment doesn't make sense either: 
+
+The latter could be wrapped further to avoid the extra list comprehension just to move your s to s but it's overkill anyway. Similarly, your: 
+
+The standard name for a list structure that is a value and a list is a "cons" cell. As in construct. Just for consistency, you should rename your to : 
+
+Now we're safer and our is copyable! We will take advantage of this fact. Also, you rely on a lot of global variables: 
+
+That strikes me as extremely expensive to start out. Furthermore, consider all the extra work we're doing. The sequence in the problem example is: 
+
+Always Return An Answer Whenever you're writing an algorithm, it should return the answer. Not print and return, not just print. Just return. If you want to print, you can always write . is_diff_one We can write this a little cleaner. There is a function in the Python standard library that can walk multiple iterables at once. (In Python 2.7, we should use since that won't generate a whole list up front). The advantage here is that we can write: 
+
+There is no / relationship in that loop. That's confusing. Furthermore, you don't even use the part since what you're doing is just iterating over the nodes: 
+
+The former may change meaning in the future, and there's no reason to prefer it anyway. Testing Your test just outputs something to the screen. Ideally, you would write test that actually verify the behavior of your program. 
+
+That'll get us the pairs for which the first element changed from the previous one. Now we just need to make sure we're yield-ing the last element. Which will only NOT be yielded if the last group has size more than 1, hence: 
+
+I'm not sure entirely what you're asking. If you're asking for which of three is "better" code between: 
+
+You have some generic runtime error? Don't simply log an error and , that is very much non-idiomatic. The C++ standard library comes with a bunch of different exception types. If you want to add your own, that's fine, just inherit from or or whatever is appropriate, but when the occasion calls for an exception, it! One other thing worth pointing out. In , you perform two different checks. One against and one against . The latter is a good check, but the former is unnecessary. If is larger than , it's an invalid operation, full stop, and will always be at least as large as length. The code you want is: 
+
+It might be worth renaming the class to something that adds clarity to its intent. Perhaps . Lastly, I would prefer just to be able to write less code for include guards, and you are missing your for . Full solution: 
+
+This is less than ideal - we're constructing the sieve then just reconstructing it anyway. Just do it with the right values outright: 
+
+That you can call that will give you the result. All your logic for determining the solution is in . The various parts are split up into individual functions, which is good, but the whole thing needs to be separate too. Note that I'm taking the second argument by value as we're going to destroy it as we go. How many winners? You need at least half the votes + 1, so there will only ever be one winner. Rather than doing floating point arithmetic, you can check that . This works for both even/odd numbers of candidates. Finding losers Finding losers should return the losers: 
+
+Is it really reasonable to support addition but not subtraction? It may not make sense to have negative units in some cases, but doesn't it always makes sense to subtract when you can add? I'd suggest: 
+
+Although, typically with the standard library, the member functions also do range checking. So consider some other non-throwing indexing mechanism (maybe ) and have defer to that one while doing bounds checking. Note that you don't need to pass the s by reference-to-const, value is fine. Now, for the other two, prefer instead: 
+
+Arrays are 0-indexed In , arrays are 0-indexed. Not 1-indexed. So you're skipping the first element and running off the back in these loops. You want: 
+
+And our is a few lines shorter. Swapping Two unrelated comments to make about swapping. First, in your , you swap the first and last elements and then erase the last one. But you don't actually need to do that. We don't care that the last element is the first one when we erase it. Just move the last one into the first one: 
+
+No, not \$O(n)\$. Not even close. I'll get back to this later though. First, the code: It's a little difficult to tell what your loop logic is. is getting incremented each time, but isn't... whereas typically we'd use as a loop index. I'd propose using as the loop index, and then keeping a humble number count named (or or something): 
+
+and have an instance of , instead of just referencing variables. Reading further, there are other attributes that correspond to the player's character that should also get added. That's a LOT of variables At some point while declaring all your , you should pause to realize that this is excessive. You only ever need one of these at a time, and you only ever need them for a local instance. That is, all of these variables are unnecessary. You need to separate your one giant function into small pieces. Since a lot of your questions are yes/no, that strongly suggests a: 
+
+is a [correctly] private class to . All the rotation functions are super important to the internal handling of the class, but should absolutely not be visible to the user! You're basically letting me rotate your tree as I see fit. That breaks encapsulation. You want to reduce your interface down to just: 
+
+Prefer omission. Construction You are allowing your arguments to only be constructed by rvalue reference. is not a forwarding reference since is not a template argument of the function. As such, the call is really just a . Prefer: 
+
+There's no SFINAE here (but you can add it easily). But this makes both of your class templates invokable the same way, so then there's really no need from the class templates. As far as the code itself, the copy/move constructor/assignments can just be omitted since the compiler-generated ones will be correct. You can also omit the default constructor instead of making it private. The compiler will delete it for you. Better If you don't want to use , I suggest implementing your own. This will allow you to collapse both of your different function objects into one class template - which can then be agnostic to the use case. 
+
+Similarly to before, I don't see the value in . And should take the type, not just yield the metafunction: 
+
+If you want to add more SFINAE goodness here, you could additionally require that gives you something that inherits from . But this is just an overhead thing. Your implementations of , , , and all take as arguments a of some sort too. This is ok but inefficient for and , but makes and much less usable: 
+
+And is memoized already (from the 16th triangular number). So we did one division. That time difference adds up. The full solution I present later in this answer takes just under 1.0s (when run 10x) if I factor each factor independently, but 4.46s when I factor the whole number. That is a lot slower. And when you find yourself doing a counting loop, you should really use so that the main loop becomes: 
+
+That is a single atomic operation. We load the value of and if it was , we set it to and the function returns . If two threads get to that line at the same time, only one of them will succeed in flipping it to and the other will fail. This also gives us... Copyable? Movable? Dropping the means our class is tentatively copyable and movable. Do we want to support that? If so, the default behavior is bitwise copy and move which is fine for PODs but not for anything else. You would have to add those operations. 
+
+Return, don't Right now, your simply prints its result. That's all well and good, but it'd be better if you just returned the number. If you want to print it, you can always just do: 
+
+Don't need to assign in the case either. Take items by copy The idea of the algorithm suggests that given this set of items, find me a value. It doesn't suggest to me that you should reorder the items I pass in just because that happens to make it easier to solve the problem. To avoid being destructive, I'd write the signature as: 
+
+But there's no way to pass in as a template. Typically, for algorithms, strongly prefer lambda unless (1) the algorithm call is a small part of the function and (2) the functor is very long and complicated. I say both must be met because something like this is still perfectly acceptable in my opinion: 
+
+Dealer play You have a loop, but there's no . Which means the will always be run. So that's unnecessary. The recursion is unnecessarily confusing too. The structure of the loop should be: 
+
+Now we don't need that weird 7. Next, should be s. After all, we're iterating upward. We only need to convert them to floats when we do the calculation. We can also use for the loop: 
+
+There really isn't much to say here. This looks really good. Typos You have a couple typos in your code on your equality operators. You're comparing against instead of . Not restrictive enough We have this constructor: 
+
+Yeah, that's pretty obvious. Other code comments for member functions is not very common - I would strongly suggest either or . is searching for a given entity that matches a name. In other words, you're finding an entity if the name matches. Let's just use ! Also, take your argument by reference to const to avoid an unnecessary copy: 
+
+Move/Copy Assignments Self-assignment check is a pessimization. Prefer to implement copy assignment as copy-and-swap, and move assignment as simply swap. DO NOT clear our your members first in the move assignment! This leaks all those resources. Simply: 
+
+Much easier to parse. Python isn't like C/Java You don't have to predeclare variables, and you don't need to manually increment. Your main loop in is: 
+
+I like your version one better - in that you can break it up into even smaller pieces. Split out the printing of repeated characters: 
+
+Second, for , the expression is an antipattern that can be replaced with just . In this case, you don't even need that as provides . The whole thing can become: 
+
+In Racket (which I guess isn't up for discussion), you can do the latter way better since there's an procedure that gives you want you need: 
+
+Avoiding the globals and the internal memory structure would let you do later improvements to the internals. Right now we're popping off the top and pushing onto the back, that's not very efficient for list, but it's much better for . Maybe we change to that? Then we'd just have to change to be , but none of the callers of our code will have to know that. 
+
+Asserting our preconditions Your class requires to either be an integral type or a floating point type. If it's not, you'll get a compile error at point of use on instead of at point of declaration. Let's fix that: 
+
+walk I don't know what is doing. It's the bulk of your code, but I can't follow it in the slightest. Sorry. 
+
+lookup is constant time, and sticking with integers means that we can save time on the hashing too. With a few million lookups, that's going to make a big impact. 
+
+which, going back to my initial point, is exactly what I would have to write with the standard library: 
+
+Sleeping Why are you sleeping? Are you trying to make it look like your program is working harder than it is? Or are you doing the sly decrease-sleep-time-to-make-it-look-like-you-improved-performance trick? Either way, drop the s. Although, I was amused the by specificity of . 
+
+That will compute your index from an array of coordinates on the fly. It's still constant time and is guaranteed faster than your solution anyway (which still has to walk the whole array at least twice - once to do the hash and again to do equality comparison). And will use zero extra space, so everything else will perform better too. Drop the extra members. When you're writing containers, lean is king. This class should have exactly one member: . 
+
+Prefer Variadics to Recursion As the above for lists should make clear, code that relies on variadic templates is more concise and easier to follow than code that relies on recursion. So do that whenever you can. As an example, we can write like so: 
+
+Which would then be provided by either a "any functor" holder, or a "pointer-to-member" holder, or a "pointer-to-const-member" holder, or "pointer-to-rvalue-ref-qualified-member" holder, or ... Point is, lots of partial specializations. This has a use-case. Type erasure. Give me any callable that meets this signature. The original solution can't solve that problem. 
+
+Don't Reinvent The Wheel A lot of the metafunctions you wrote are unnecessary as they already exist. At best, this is just extra code you have to deal with. But also some of the choices you made make some of the code unnecessarily complicated. Take your . All of that can be replaced with . is , and is . It's just less code and easier to understand. Also exists as , and is . Hierarchy There is no reason for and there is no reason for a specialization for (which isn't a ??). Even if you don't use , there is no reason for . It's just code that doesn't add value. should just be:

@@ -1,0 +1,101 @@
+To fix existing databases that already have all their files in the mysql data root. You need to rename all the tables into a different database name. 
+
+If you need to have parallel threads then you can re-enable them once the slave has caught up or gotten past the event causing problems. I would try a different like conservative 
+
+Is there a way to get tokudb to put all the files it creates for a database into subdirectories. When I started using tokudb the most irritating thing I have found is that it puts all its files into the MySQL root database directory. This makes it difficult to see which files belong to which database and difficult to see how much space each database schema is using. 
+
+I have found in production that Parallel_Mode is the most likely cause of my problems. I recommend using a different value from 
+
+This is well documented, Please google and find instructions. 2. Stop Parallel slave threads This was part of the problem as seen in the original question. 
+
+Will run without errors, you can to close it when you are happy that your slave has caught up. This is not much different then, but it does it auto magically. 
+
+I can reverse this process to re-enable Parallel slave threads when I am done. And I know that GTID is working. 3. Enable GTID replication I can now try restarting the slave with GTID enabled. On the master 
+
+I recently broke replication and when I tried to get past the one incorrect transaction. I got the following. 
+
+I found the following worked for me. This does not restore a slave into state that is an exact replica of master. There will be data differences. I will use pt-table-sync to fix those. 1. Restart Replication without GTID method 2. Stop Parallel slave threads 3. Enable GTID replication 4. Using percona-toolkit pt-slave-restart to skip past all the errors. 1. Restart Replication without GTID method Using master binglog position 
+
+Now when I check the slave it has some events to skip to get back into the same state as the master. 
+
+I want to be able to skip events and not worry about trying to figure out or increase the GTID position for everyone. 
+
+Then rename the tables into a temp database and rename the tables back. This should take a few minutes depending on how many files need to be renamed. You should have a working database without any config changes required for your applications. 
+
+You can do this by setting the server variable "tokudb_dir_per_db" It is on by default in precona, but not in MariaDB. 
+
+I now use to restart slaves as I don't have to think about sequence number and a whole bundle of other things that take too long when I just want to get the slave started. 
+
+I understand that you want to go with single database (as it is good from management & maintenance point of view), but maybe it's too much integration. I am assuming that: 
+
+Why async? I would avoid doing this in trigger due to locking issues under high load. Also, easy to DDOS so permissions should be separate for form insert and form create. 
+
+(note: tool might be hidden in default debian/ubuntu setup. Look in to see it) When it's promoted, replication stops and slave is disconnected from primary. See relevant fragments on command in pg_ctl documentation and failover docs. Question 2 
+
+To redirect traffic from primary to standby you need some external tool which will do the failover procedure - using either dns-based or IP-based or other failover method. PostgreSQL itself does not know how to redirect traffic or do anything outside the database scope. Popular tools are pgpool (in layer 7) or Linux HA or corosync and friends (in lower layers). 
+
+In my opinion it is not related to or Windows issues. Per pg_basebackup docs, the main data directory will be placed in the target directory, but all other tablespaces will be placed in the same absolute path as they have on the server. 
+
+Yes, it makes sense to materialize. The analysis of large datasets (see: OLAP, dimensional modeling) includes the concept of aggregations - which can be implemented as materialized views. You should design what aggregates will you keep. In my opinion you need at least two: 
+
+If you really want two queries, you can use special FOUND variable to test if previous query gave any result: 
+
+notification ID will be a monotonic bigint never going down and store only one the last ID read (which means all previous notifications for given user are also read) - this will be just one field in table. 
+
+Exception blocks are meant for trapping errors, not checking conditions. In other words, if some condition can be handled at compile time, it should not be trapped as error but resolved by ordinary program logic. In Trapping Errors section of PL/PgSQL documentation you can find such tip: 
+
+I try to saturate the server using pgbouncer. I was running a Select-only test, with 1000 clients for 5 minutes. (). PgBouncer was initializet with scale=100 (but a SELECT-only test should not suffer on it). During the test: 
+
+For better effect please post results of and . Also let us know the dataset size and resource configuration parameters (, ) as well as database host parameters (OS, memory, disks). 
+
+Yes. If you cannot get rid of MandatoryData object, you should have one such object per book. Otherwise I would simplify the model and move any mandatory attributes to the Book object, which will reduce ne04j database size. Modeling relationships which are always 1:1 is a bit silly. 
+
+Note that you can also change the collation from within a query. For example, in the case-sensitive database, I can do 
+
+This question is very general and I'd suggest clarifying it with more context, but I'll give it a shot. I would look at: 
+
+Why does MySQL choose that specific execution plan for the second query? I don't understand why it can use the index for the first query but not for the second query. 
+
+My understanding of InnoDB is that the rows are stored in order according to the primary key. Thus, they're out of order for any secondary indexes. 
+
+Note the : MySQL wouldn't let me start up the server without root access to both the computer and MySQL itself (not that I'm complaining, but it was just frustrating until I figured that out). Also note that the program is mysqld, not . After running that command, everything works fine for me. 
+
+Both return 10 rows; the first takes 2.74 seconds, and the second takes 7.07 seconds. is not a part of any index. is the primary key column; has a b-tree index and a cardinality of 200 (according to MySQL). Here are the results: 
+
+This is not quite true. Whenever you in MySQL, the database/schema has a character set and a collation. Each character set has a default collation; see here for more information. The default collation for character set , which is , happens to be case-insensitive. You can choose a case-sensitive collation, for example (MySQL grammar): 
+
+I have a schema with a number of views. I need to check the execution plans to make sure the appropriate indexes are in place and being used. How do I do this? I'd rather not have to copy and paste the output from into , especially as some of the views are built on top of other views and this would be quite a pain. 
+
+It sounds like you should check out MySQL's . The docs claim that it is a very fast way to load rows. (I personally have never loaded millions of rows at once). Once the data is loaded, you may need/want to add appropriate indexes to your tables to help speed up query performance. For getting data out of MySQL, check out . 
+
+Make sure that either is specified as the storage engine, or that your version of MySQL defaults to . Other storage engines will parse and silently ignore foreign key constraints. Here's the grammar for a MySQL foreign key: 
+
+I had this exact same problem (although I'm on Mac OS X 10.5.8) with all the same error messages. It turned out the problem was that when the computer was turned on, MySQL was not started automatically. I solved it by manually starting MySQL: 
+
+Update: Konrad corrected my misunderstanding of his question. The goal was to count queries, not transactions. How to count queries? Method 1 Use pg_stat_statements contrib. Method 2 Enable full logging of queries for a representative period of time. To enable full logging, for PostgreSQL 9.0 - 9.3, change following settings in 
+
+Decide your vertexes (nodes, objects) and edges (relationships). Convert relational data to cypher, declaring all items and all relationships explicit. 
+
+Interesting question but also very open one. I'm putting a list of recommendations here - hope it helps. 
+
+RULEs or triggers are a performance overhead, and can be avoided. Consider something along these lines: 
+
+Only thing I do not understand in your question is "database agnostic" - what does it mean, precisely? 
+
+No it's not. Unless your field set is very dynamic (no single authority, people can invent fields on the fly). 
+
+Constraint-based exclusion [CBE] is performed on early stage of query planning, just after the query is parsed, mapped to actual relations and rewritten. (internals, Planner/Optimizer stage) The planner cannot assume any contents of "sensor_sample" table. So unless you have values hardcoded in the query, the planner will not exclude "partitions". I guess what happens with the CTE variant... the planner is restricted because you use TABLESAMPLE and the whole subquery may be treated as volatile even if literals in the subquery are static. (that's just my guess, I'm not expert on planner code) On the bright side, the index scan with negative result is blazingly fast. (single page scan at most!) so unless you have over 10000 partitions, I would not bother. So, to answer your question directly: 
+
+You can use string escape syntax and function like below. Please note it's heavily dependent on setting. Should be . You can find details here, here and here. 
+
+In current version (Pg 9.0-9.3) there is no fast "fail-back" mechanism. You will have to follow official guidelines which state: 
+
+To calculate TPS (transactions per second), run the query several times and calculate difference over time interval. There are ready made tools for that, one of them is $URL$ More info: $URL$ 
+
+This answer assumes that you want to connect via TCP to localhost. (for local socket connection see Erwin's answer) Two options to ease your pain: 
+
+Yes you can hide those messages in the log. In the calling session, before running the statement, issue this statement: 
+
+I'm not yet sure if this is doable in pure SQL (probably - yes), but here is the brute force solution using cursors. This is just a (working) draft, with some twiddling and dynamic SQL you could add more parameterers, like function name. 
+
+Solution 2 Using more ANSI-compatible SQL, like UNION and LIMIT. It will work on MySQL, DB2 and some others. Similar solution can be done on Oracle, just replace LIMIT with ROWNUM.

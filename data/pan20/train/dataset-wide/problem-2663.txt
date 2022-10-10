@@ -1,0 +1,81 @@
+Should be refactored into a common method. doesn't clear the . This probably won;t cause a problem but it would be more consistent to do so. It can also be condensed a bit by consolidating the checks and turning the into a loop. Resulting code: 
+
+You have code duplication in both code paths for parsing the probability and adding the new entry to the list. 
+
+is not thread safe because between the conditional check and the access something could have easily removed elements from the list. So the above code can fail even though the individual operations are thread-safe. If you check your use-case for the thread-safe list you will probably find that you won't actually need an . 
+
+Testing for a positive outcome in a condition usually makes it a little bit easier to read especially if the condition is a bit more complex. E.g. 
+
+can potentially return if the deserialized object cannot be cast to in which case will throw a which is typically not very meaningful. You should throw a more meaningful exception on deserialization (as mentioned in the comment by Roman you could use a direct cast instead of which would throw an ) It feels wrong to me that the consumer defines the job execution states. The consumer seems largely responsible for managing the job queue and it should stick to that single responsibility. Hence I think should be moved into . I'd also consider moving to so is responsible to provide the actual object instance. Then is just concerned with the state changes of the job. 
+
+Given that is a fairly light weight class I don't quite see the point of lazy initialization for the static instance. Why not simply use a static initializer and a readonly field 
+
+You can have both performance and readability using the newly-introduced (.NET 4.0) method (a reference to is required). With the stuct, you gain an additional advantage: your code will work for arbitrarily large numbers (assuming sufficient memory). 
+
+Of course, you may disagree with some of the implementation details — but this review isn't really about those. It's more of a demonstration of which questions you should be asking in order to end up with clean code. Good luck with your learning, and thanks for sharing your code. 
+
+EDIT: I understand that you can't change the format (as per your comment), so I've added the code below to allow you to stick with your current file layout. The modification required is tiny: simply skip the first line, and only look for the smallest difference in lines that have more than one number. 
+
+In other situations, working with can be a replacement for explicit pixel sizes. Remember that hard-coded sizes are an obstacle to localization (where long words in foreign languages are cropped) and less flexible. 
+
+Now, we delve a little deeper. Users aren't usually accustomed to the programming convention of counting from zero, so we'll allow them to enter their moves in familiar terms and subtract to transform them to an appropriate format for use with Java. 
+
+It's concise — a one-liner. You could even skip the extension method and use the directly. It's readable — by wrapping it in the extension method, the intent of using the is clarified. It performs well — in my crude testing, it beat your and Sandeep's versions for both small and large input sequences. (Specifically, the based approach runs twice as fast as Sandeep's version for your original input, and at least three times as fast for very large input sizes). 
+
+Now let's see if I understand your problem: Given a sorted list of unique numbers you want to find all instances where (the important part is the unique). 
+
+Either you're sure it's a then use a direct cast or you're not sure then use plus a check. The way it stands you might get a which is usually not very helpful (since technically this could be thrown in a lot of different places). With a direct cast you get at least an which tells you a lot more about what may have caused it. should not have to deal with a collection but should just deal with an individual title - it should not concern itself with the requirement that you want to do this for a whole collection of strings. It can also be condensed with the use of LINQ: 
+
+You parse the CSV fields as yet you use an - I'd go for the generic in that case. Your CSV parser is broken in the general sense - i.e. it can't deal with things like this - it would split the value in the middle. Given your data that might not matter but it's probably easier to look for a 3rd party CSV parser on NuGet to future proof it. Given that you ignore invalid lines in the CSV file anyway I'd consider changing the implementation of the CSV reading into an enumerator which avoids reading the entire file into memory. Something along these lines: 
+
+Don't throw . Be as specific as you can. You mentioned that the file might be big. I don't know what the particular requirements of your application are but be aware that should the service crash at the right moment while saving changes you'll very likely be left with a corrupt xml document because it was only partially saved. Even if it is only a one a million chance it can still be a big problem. Your service sounds like it's using an xml file as some kind of cheap db backend data store. While there might be scenarios where this is the best/only option forward you might want to consider if it's not better to use an embedded db like SqLite, Sql Server CE or similar ones and have an xml export option instead. 
+
+The difference is amplified when feeding it longer strings, as shown in this example with an input of 34 chars at one hundred thousand iterations (13.5 times faster): 
+
+Doing the same string concatenations multiple times You have used throughout your code, always passing , a message, and a thread id. You can extract this functionality into a new method: 
+
+And that's it! Well, almost. You've probably got a pretty good idea what the enum and the helper class have to look like, but I'll show them for the sake of completeness. Helper data structures Some Java experts and professionals will tell you that every field should be protected by getters and setters. I disagree (and Robert C. Martin happens to be of the same opinion): Some classes really have no significant state to protect, so they should be classified as data structures without behaviour and may have public fields. Others will disagree, and using getter-setter methods is fine too. 
+
+That way, is only called in a single place and can easily be disabled or replaced with a real logger. For instance, this: 
+
+Dreza has outlined the correct approach (the same used in ). You can make your class generic, with a type constraint: 
+
+(Note of caution: you may want to choose a different name for it since this method already exists in LINQ; technically, this is an overload, which could create problems if a future version of C# adds this signature.) This makes it possible to adapt the LINQ expression: 
+
+Know your library should immediately make you think of a . should make you think of a sorted collection. I give you: the , part of .NET since version 4.0. When LINQ is not enough, extend it LINQ uses extension methods, so if it doesn't have what you need, add your own: 
+
+This alleviates the caller from having to know the internal structure. I find it quite weird that your ctor for the only takes some very specific components of individual subsystems. From the looks of it the is composed out of and with being part of the and being part of the etc. so I'm wondering why the is not being built like that but gets some very specific subcomponents instead. I would have thought the setup should look something like this (I haven't checked the code on github so the class names are purely guesswork): 
+
+or you use the good old method of copying the reference (this is why there were usually methods to raise the event since it's a reasonable amount of logic which you don't want to sprinkle around everywhere): 
+
+I like that one better because I find block always a bit ugly . It also conveys the intend of the code better. 
+
+If the control doesn't exist then returns . Passing to should be "save" in the sense that it won't crash - it will return and will be returning an "Invalid Handle" error (or something like that) (can't find any docs for it but that's the behaviour I've seen in the past). A remark to your code: 
+
+Ideally you actually create a class which gets instantiated with the input string and where you can call on which will return the next token. The tokenizer should be passed to the parse method. I just used simple because it was quicker to show the basic concept. 
+
+As a side note (and because we are on CR): is not a really good name. I know that sometimes numbers are used to indicate newer versions of the same method but I'd suggest to rename it if you can. 
+
+This comment is probably a remnant from testing; commented-out code should be removed immediately as it adds clutter and serves only to confuse. 
+
+You are converting multiple DateTime values to strings in order to parse them again (this should immediately raise a red flag). When you use the DateTime fields like they were meant to (i.e. containing both Date and TimeOfDay), you can get rid of these redundant conversions: 
+
+Output Parameters I agree that it would make more sense to initialize the output parameters with since you made the effort of making them . But if you take a step back, you realize how ugly the use of parameters is in this situation. So I deleted them and made return an instance of a new class designed to hold two pieces of information: and . I called it , but I'm sure you can find a much better name for it. LINQ Query I rewrote your query as a because I find the syntax less convoluted. However, using a method chain is also all right if it is more readable for you. End Result method 
+
+Error messages At the beginning of , you throw an with the same message for two completely different reasons. That's not very helpful for debugging. Instead, check them separately: 
+
+So your is a lie. Rename it to and set it to false (a cleaner, completely different solution will be given below). 
+
+These concerns should be handled by collaborating objects. For instance, to track statistics, you could create a : 
+
+The following method is called when the player makes a move. It replaces your three enormous if statements where the conditions spanned multiple lines. Even in this refactored version, some complexity remains. Basically, the approach is: 
+
+So your spin lock implementation is considerably more complex and it takes twice the time. What do we learn: Do not optimize things before you have measured them. 
+
+If you have multiple threads adding to it then you need to add some locking in the - but then on the other hand itself is not thread-safe so I assume that's not the case. In .NET 4.0 and later you have which will make the code a little bit shorter. 
+
+From your code snippet I assume that it's part of a Winforms form. This indicates somewhat of a design problem as it's violating the Single Responsibility Principle and your representation of the information (winforms controls) are very tightly coupled to the serialization which in total will it make hard to unit test properly. I would therefor suggest two things: 
+
+Slightly more compact code. Your should get into the habit of creating dedicated objects for locking instead of locking on some data structure you happen to use. In your case it won't make much of a difference but you can get into deadlocks this way if you are not careful. 
+
+Your struct should be immutable - you can achieve that by making all the fields . In should be . You repeat the code for trimming and replacing characters for they key and plain text. This should be moved into a method. There is some convoluted code which iterates of the and adds stuff to a . If I read it correctly then what this is doing is: Build a list of all unique characters and remove those from the alphabet. LINQ is perfect for doing that in a concise way:

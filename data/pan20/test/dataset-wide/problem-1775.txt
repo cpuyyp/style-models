@@ -1,0 +1,59 @@
+Did you make updates without rebooting? You might want to check if you use firewalld instead of iptables and can just start that service again. 
+
+will prevent the spam on the console until the next reboot. Basically the ce_errors are short for correctable errors (aka no "defect" outside the ram). see kernel docu about edac and edac wiki for more details. While i may be totally wrong we have a server with this (ECC RAM) and as there are no uncorrectable errors and memdisk did not show any issues either i let it run with the same ram, change the outputting, started monitoring the uncorrectable errors and there was no further issue for us. 
+
+Basically you should not (at least not only) read the logs on the same host but instead use some sort of logserver which would get all the logs of the servers centralised. i used this setup to be sure the logs aren't altered after they were entered. Additionally just use logcheck and let it check the logs for you. Basically its a check for lines you find acceptable and can be ignored and only sends you the ones you did not tell logcheck to ignore beforehand. you can easy install it on every server. for a graphical version , counting how many severe log entries etc is logzilla a nice option, thought not free anymore. 
+
+However after version 2.4. does not contain anymore so you might need another tool (or it is renamed to another function which i did not find) Qoute Manual from gnu.org 
+
+This is normal behaviour for logrotate as you described it. Normally you would want to logrotate your logfiles not via script but via cronjob(s). For gzipping the files via logrotate you could not include the date and rather let logrotate handle the dateext. So for a "solution" to your issue you could use the logrotate options 
+
+what we used previously seems similiar to what you need: Openvpn Server which gets connected by a few 100 clients (they connected via GPRS, every client had its own cert, hostname and own IP. our DNS Server updated the IPs of the hostnames (custom-up.sh and custom-down.sh scripts) and you were able to f.e. ping every client on his hostname. we had a DNS zone for the link hostname-"VPN ip" 
+
+Please check the permissions of the logfiles and the logdirectory. possible snort is not able to write into that file/directory 
+
+You might want to increase your shared memory settings when starting tomcat. this can be a temp folder issue (think of no space, no permissions, as Scott did write) Additionally it is possible that this is just too much ram you use: Increase your Xmx and Xms values and you might want to update your heap settings aswell. Ceck the SF search for "OOM tomcat" and you will find the rest of the things you need to learn. 
+
+Keep in mind that this all happens without encryption aswell. so encryption just makes it more likely that you loose the whole backup (if you do not encrypt only on file level) Additional deduplication of files, depending on how you encrypt it, will not work either, making the backups larger. For HD missing: just make sure the encryption is strong enough until the data has no worth for someone else anymore. Or you need to tighten your security so this cannot happen : F.e. Access control to the server room and full video monitoring etc tl,dr: prevent bitrod by monitoring every file + container, swap hdds before they get bad, video monitor the server room and prevent access without at least one other person knowing. 
+
+additionally : what do you mean by the usage of "setup an account which works internally" your mailserver seems to not know the account, which leds me believe it is not in the virtual_mailboxes list, though i do not know if you could just access an actual "real" user with your above setup. On mine this does not work "realuser@domain.tld" does not work, where "virtual_user@domain.tld" works fine. responding to your addition of the mail log: the fix should be this (qoute from howtoforge): 
+
+basically you could do it with some sort of proxy like Squid f.e. www.tldp.org/HOWTO/TransparentProxy.html As for auditing the time, that might not be that easy reliable. You do not know if the user is still reading the page or minimized the Browser f.e. You could go with DPI and have the router(s) log http/https traffic, but that might be illegal depending in which country you do this. There are some full-service products from Juniper/Cisco etc but i doubt you want to pay 50k $ upwards for the hardware alone on this solution. Other approach would be group policies updates with a blacklist and some software you install on every pc. Sadly i do not know of one (nor had i the need to search for it yet) which does exactly what you want. 
+
+the pid you need to "kill" is (the java process) Warning : Depending on your exact setup other scripts might have a loop arround that pid. Therefor did you try to stop tomcat with the normal shutdown/startup scripts? In the tomcat folder you might have f.e. shutdown.sh and/or startup.sh This depends on the distribution ,tomcat version and how you installed tomcat though 
+
+Your first option could be done via loghost (basically your option 2) You can send your syslog message via udp to $logserver . Then you would split the logs there based on server and have the "exact" timestamps of the logs you did send. The renaming of logs would be not necessary on the nginx servers, other than the usual logrotate you most likely need with that much logging anyway. Its best not to script too much if the tools are available already, no need to reinvent the wheel here. Option 2 should be pretty close to what you want to achieve. Depending on the security of the network(s) the servers are in: either transport directly via "normal" syslog procedure or make f.e. some vpn connection to the loghost. 
+
+For having that setting stored without letting the user read the whole mysql config you can change the settings of the ~/.my.cnf file see Option Files for details In your case you would add socket=/tmp/mysql.sock to this file. 
+
+Depending on your exact setup you might want to change the location slightly. Dont forgot to logrotate them if you have a high traffic site. Normally this should be (at least in debian) the default setting for how i remember it. If you have empty logs you might want to check the permissions of the folder/files so that the user the apache2 process runs under can access and write to them. Remember a reload of the process is (for what i know) needed for rereading the configuration files. 
+
+Before the change this was set to . This did not help either. Smart Values of the HDDs/SDDs are OK, nothing too obvious. Note that the UDMA Value seems to be 33 now only. On boot of the server this were the sata link speed values: 
+
+Basically what happens is that dhclient adds a route to the routing table. It tries this while the route is already in the table. Check 
+
+While the next will not help you on memory swapping, it should help you on IO impact of your process. It seems that you should explicit set the as well. 
+
+the chrooted root directory is writeable by the user, this is not allowed anymore by the update Marek mentioned. So fixing it would require you to: Change the write permissions of the chrooted home root f.e. 
+
+check if this folder exists and has a few folder or files in it. if it does not exists your query for returning the username might be wrong: mine does /etc/postfix/mysql-virtual_mailboxes.cf) does look like this: 
+
+Download it from here: nagios exchange You can get a lot of other plugins from there aswell. Depending on your nagios setup you might need to make the file executable for the nagios daemon user. As you found out this seems be a bug: Launchpad Bugreport 
+
+Dont forgot to reload or restart the proftpd deamon. Then you would connect to your (home) router and set "port forwarding" "game application sharing" or similiar named (depending on the brand of your router) How you exactly port forward the ports to your PC is written in the manual of your router usually. 
+
+You have example.com in the resource (for example a MySQL database) referenced in the virtual_mailbox_domains directive in /etc/postfix/main.cf AND in the mydestination line (also in /etc/postfix/main.cf)! This doesn't work. You can list example.com either in virtual_mailbox_domains or in mydestination, but not in both. after the change restart Postfix 
+
+The situation might happen on high load on the HDDs only, i did not test that yet as it would impact the server performance obviously. There is no load on the SSDs, they are mounted but not used by any of the processes. The RAM is ECC as far as i can tell. 
+
+gives you the order of vhost "execution" so your example1.com is the first port :443 defined domain then this one will be used. Instead you could either make a f.e. self signed cert and inform the user that this domain does not have a https connection right now or do a rewrite_rule which redirects the traffic from $URL$ to $URL$ Note that this would need an "invalid" cert and will inform the user. If you dont use SNI, you additionally need at least 1 IP per Cert. 
+
+I might not understand your question correctly, but: If you want to to it during the "initial setup" of the server you might need some configuration management tool like chef or puppet. Otherwise to just start it after you installed the service without the need of a reboot: or will most likely start it. 
+
+Basically: every newly started process will get C2 N4 , so when you want to have the IO reduced to as low as possible, either go on idle only (C3) or C2 N7. 
+
+You might want to consider adding some sanity checks etc. Note that as you said, a solution which would actually use the dependancys of the boot process would be more elegant: So you could make your mounting a "service" and include it into the booot process, and make mysql depend on the service beeing started before. (i think you could include it in the mount service but i am not sure about this) 
+
+after the config change. This seems to be the official solution to upgrade from 12.10 to 13.04 Source: Ubuntu.com check though which version you get for completion to know which version is LTS and which is not: 
+
+See Apache 2 Manual for the meaning of the different format signs % or Apache 2 Manual ErrorlogFormat Directive for having the error log in a specific format since apache 2.4 aswell. in short : Define the output format in your main config file and the output file for example per vhost in the VirtualHost Directive. You can define the config file for all your sites in the main file aswell, if you want to. something like would be needed to add (in case its not there yet):

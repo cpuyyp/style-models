@@ -1,0 +1,123 @@
+This erases all binary logs except the ones with the last 8 hours on binary log events. This may be one or two binary logs. You must then record the list of binary logs from Give it a Try !!! 
+
+I have never seen an IP address like that before. Since 303 is an impossible number for an IP address, you should just save yourself the headache and delete both from 
+
+In your particular case, you explicitly wrote the . So, you are more responsible to optimize the subquery. Consequently, you should expect the MySQL Query Optimizer to start messing with you since it did not participate in the construction of the strategy. From the MySQL Documentation on , this is how checks on done for your : 
+
+then, mysqld blows up and crashes. OK, ENOUGH OF THE GORY STUFF. WHAT NOW ??? If you have a mysqldump of that table, you could load it into the new database we created (). If you have the original command, you can execute it in the new database. I will leave the details of reloading it s data to you. If you do not have the original command, you are going to need to do is get the table structure from the file. How ??? Run this query: Let's say, for this example, that datadir is Go to the OS and go to the database folder with the 
+
+There are two parameters you should try extended-insert Someone wrote this post in the MySQL Documentation 
+
+The key here is to disable binary logging in its session. The Slave won't know what hit the Master because the Master will execute the and not record the . Give it a Try !!! 
+
+First thing to know is what does. For a MyISAM table , traverses all the indexes in the file, reads all BTREE pages, computes statistics, and stores in them in the information_schema, specifically . You can see it when you run one of the following: 
+
+username will have table privileges on the mydb.mytable only. You cannot mix them. If you do you accidently slip privileges that should not have. If you want to see what privileges exist at the three levels run the the following queries 
+
+What I am about to say would be rather crazy but entirely possible. Here it goes... CRAZY SUGGESTION #1 
+
+FORCE INDEX should not be made to force queries to use indexes if you are trying to fit a square peg in a round hole. In other words, traversing an index only to access table data in a specific order buys you nothing. In fact, it throws query performance under the bus because of not exercising any foreknowledge about how available your data needs to be. 
+
+You could limit the number of connections per hour per user. Restarting mysql would not be necessary for this. For example, suppose all your web servers connect to mysql from the 10.1.2.% netblock. You should already have a user in mysql.user named something like 'myuser'@'10.1.2.%'. To set the maximum number of queries per hour at 1000 on a given connection do this: 
+
+STORAGE ENGINE Here is the problem with your InnoDB : You did not configure anything for it. Each storage engine caches differently. MyISAM caches index pages from the files into the key buffer. InnoDB caches data and index pages in the InnoDB Buffer Pool which you did not configure. The default is 8MB. There is a default set of innodb files located in /var/lib/mysql 
+
+This will hold the slave 24 hours behind for 23 hours 59 minutes Try running this in a crontab at midnight 
+
+you may want to refactor the query tp apply the order by against the keys only and join the keys back to the original table: 
+
+Look over the content of . If the emails in that table are to be deleted, you can now do a DELETE JOIN: 
+
+The table is a MyISAM table that contains maps global database privileges. These privileges are mapped into INFORMATION_SCHEMA.USER_PRIVILEGES when MySQL is started. WARNING !!! Be careful running UPDATE commands against . You could easily forget to run . According to the MySQL Documentation on FLUSH PRIVILEGES 
+
+I have seen your problem before Problem #1 You have and the line is not being read Problem #2 Chances are exists and has the following line 
+
+Yes, you can. You copy just the into the tar file. You will need a blank file. SUGGESTION Suppose you are moving . You will have 
+
+METHOD #2 Drop all the triggers on the Slave. No trigger present, no trigger to execute. Do not do both method. Just select one method. 
+
+Thank for posting the my.ini PROBLEM: You have the basedir and datadir under the section and are server-only options, not client program options. SOLUTION : Remove them from under the section and you are good to go !!! When done, this 
+
+Three(3) Suggestions SUGGESTION #1 You have the following clause in the SQL mainDateTime BETWEEN '2012-06-20' AND '2012-07-07' If hold s a date and a time you should change the clause to this mainDateTime BETWEEN '2012-06-20 00:00:00' AND '2012-07-07 23:59:59' SUGGESTION #2 The whole WHERE clause gives away what index both tables need: 
+
+Notice in the code the opening and closing of a cursor inside a block. You should be OK with your code. If mysql complains, place your THEN code and ELSE code within blocks. 
+
+Recursive SQL Constructs of this nature do not exist in MySQL. I know something like ths can be done in SQL Server 2005. The only WITH operator in MySQL is the WITH ROLLUP modifier clause in GROUP BY functions. 
+
+UPDATE 2012-03-19 17:06 EDT I read your comment Question 1 from your comments : What happens if two threads both create temp tables of the same name? Do the statements fall into the binlogs and conflict? Answer : Each temp table of identical names (even identical schemas) are unique to the the DB Connection that opened it. Therefore, no conflict whatsoever. In fact, since replication is single-threaded along the SQL thread, all SQL statements with temp tables of identical names are processed in a serialized manner, i.e., like a FIFO queue. Question 2 from your comments : Wouldn't this cause the changes to realtable to not be reflected in the binlogs? Answer : You are correct. Therefore, since you want the changes to the realtable replicated to the Slave, you will not need 
+
+This will disable non-unique indexes, load the data and fill the with the Primary Key and Unique Indexes. The ENABLE KEYS phase will linearly build all non-unique indexes. That should speed things up. 
+
+Giving more consideration to how you plan to retrieve data, how much data you need in a single query, and how you structure the query will become the determining factor as your seek good performance. EPILOGUE You are not going to get better performance because of the cost to make the JOIN happen. It's like trying to turn lead into gold (Theoretically possible, practically and financially impossible). Your best bet is to leave the table in its original state. 
+
+Setup MySQL Replication (if you haven't done so already) Perform all SELECTs involving against the Slave on the Slave Perform on the Master. Perform all SELECTs involving against the Master on the Slave (Replicates to the Slave) 
+
+There is the Percona Tool called pt-online-schema-change If you can tolerate downtime, you can try the following: Suppose you have the following 
+
+Here is the crontab I ran every 20 minutes (less 10 seconds) keeping the last 144 copies (which is 48 hours of profiling) 
+
+Now, perform the task you already have in place against the ImportCombined.tbname table. "You fill in these steps" Then, when the table is ready to be exported, mysqldump it and copy 2 times: 
+
+You have one of two options: OPTION # 1 You may want to experiment by adding an additional UNIQUE KEY 
+
+You will see how much wasted space disappeared when migrating the mysqldump to the new 10GB Instance. This will definitely defragment all InnoDB tables. You may need to run the above script () I gave you above to run on all the tables in the database once a week to keep the as small as possible. You can also run the Big Storage Engine Space Query to Monitor when it starts approaching 10GB. 
+
+This would automatically do all DML against that table provided you replicate to the same named table. 
+
+Give it a Try !!! I would normally recommend using InnoDB. Since you have lots of BLOB data, I'd rather not spend time trying to tune your log buffer and log files sizes. I would go with MyISAM for now. BTW I gave you the tables with Option A in mind 
+
+The option is for the sole purpose of continuing INSERTs in the event a duplicate key is encountered. In that instance, the offending INSERT's error is ignored and on to the next INSERT. 
+
+Back on , I answered MySQL error: Access denied for user 'a'@'localhost' (using password: YES) where I show two function calls: 
+
+df will represent the replication lag as a double precision floating point number. To prevent massive relay log growth on the slave, you must set max_relay_log_size to 8G on the slave. You must also carefully monitor the rate of growth for your master's binary logs. 
+
+You can perform this maintenance on the DB Server that does not have the DBVIP. First, construct the script on the Slave (the DB Server that does not have the DBVIP) that will run OPTIMIZE TABLE on all your tables. Then, run it on the Slave: 
+
+ISSUE #1 : Connection Errors Once mysql has racked up enough connection errors, the host blocks all IPs until you do one of two things: 
+
+Suppose you want to see everything executed from 10:45 AM to 2:25 PM on Aug 14th. All of Aug 14th is in . Run the following: 
+
+This creates the service called . Please make sure the is in the parent directory of the bin folder. Since you are installing different versions of MySQL, you may want to name the services to differentiate the services. For MariaDB, you probably would do 
+
+oNare's answer shows the principle way to achieve this. (He gets a +1 !!!) He set the variable as follows: 
+
+After this, you can use SL1 and SL2 for reads METHOD #2 This method requires that you shutdown mysqld on SL1 and SL2 
+
+You need to make absolutely sure the character sets of the tables are identical. Keep in mind that a unicode issues could be at play here. You could redo the query like this: 
+
+Your way would seem fine. Older versions of MySQL do not have . Here is another way that would get around that issue with older versions 
+
+and restart mysql, this causes the IO Thread to stop collecting new entries from the Master when the sum of all relay log file sizes >= 8GB.. After the SQL Thread is done processing the oldest relay log, that relay log gets rotated out and the IO Thread starts getting entries from the Master where it left off. This provides a decent throttling mechanism for relay logs. Another field you may want to look at is . Once is Yes and is No, the will be set to something nonzero. On very rare occasions, it is possible to have this: 
+
+When you use , all it does is add a row to with host set to , set to or , and the password column is filled in. All the DB privileges are defaulted to . When you connect, run this: 
+
+Then, you can walk away feeling OK (you could actually logout on purpose at this point) because process 1 () will pick up the process ID that is running the mysql session upon the SSH session termination (voluntary or involuntary) because it was suddenly orphaned (What a great dad !!!). 
+
+Finally, go start mysql with and InnoDB should start very quickly because there will be no need to perform crash recovery since everything was purged out of the InnoDB plumbing beforehand. 
+
+Off the top of my head, I would say that since InnoDB was originally built for a 32-bit OS, I can easily see computations where numbers higher that the largest 32-bit signed number (2147483647 or 2^31 - 1) can create negative results due to sign overflow. Takes add the values and their rates and divides them 
+
+I would stronly recommend that you get more memory. Why ? MyISAM caches index pages to the MyISAM key buffer. MyISAM does not cache data. The mysqld process defers all data caching to the OS. That can be a little dangerous for all open MyISAM tables in a low memory DB Server. A MyISAM table keeps a count of the number of times a file handle has been open against it. When MySQL is down, a MyISAM table with a nonzero file handle count is considered crashed. Although I provided the answer to the question in fixing a crashed a MyISAM table without mysqld running, you have a bigger problem with a 2GB VM. It should be more like 8GB. You should also run mysqltuner.pl against the VM by doing this: 
+
+I think would be a good choice. I would suggest not indexing at all. You should not index by itself because the index cardinality is 2. The Query Optimizer would never use the index. You could index as follows: 
+
+Since you are looking to INSERT an entire file into a single column. You need the LOAD_FILE function: 
+
+That way, all the data needed for the view are in the index only. The other two indexes are not enough. Why do I say that? Even though the index was used, the amount has to retrieved from the table. Essentially, the query passes through both the index and the table. 
+
+I believe from my Data Structures and Algorithms classes in College, this is called something like preorder/prefix tree traversal. Here is the code: 
+
+Did you see that? A user with privilege can create a table in a test database and fill it with data. This a clear and present danger. This is why I strongly recommend deleteing those test entries out of mysql.db to deter anonymous users from reaching test databases or accessing newly created test databases (via making a subfolder under the default ). As a reminder, this is how you do it: 
+
+OBSERVATIONS You doing an INSERT with two different account_ids: 561 and 563. They are unique and should not have issues, right ? WRONG !!! Due to InnoDB's Clustered Index, there can still be a deadlock. Why ? Look back at your two INSERTs. The on id in not specified. It must be auto generated. Any key other than the PRIMARY KEY (unique or non-unique) will have the PRIMARY KEY attached. Please note the MySQL Documentation on how a Secondary Index and a a Primary Key are intertwined: 
+
+Knowing this about MySQL Packets allows a Developer/DBA to size them up to accommodate multiple BLOBs inside one packet even if they are obnoxiously large. Definitely, a packet too small will cause problems for open connections in this respect. According to the MySQL Documentation 
+
+My initial guess would be that when the mysqldump file was being created, the option single-transaction was not used. According to MySQL Documentation on single-transaction 
+
+An example of how to do this is in check constraint does not work? () I have also explained this in my post BEFORE INSERT trigger in MySQL () In your particular case, you need to add the new row to and then abort the stored procedure. I cannot guarantee the rollback won't happen but at least no should occur. You will have to experiment with this and see. 
+
+If you have triggers and can live without it for the duration of the load, drop the trigger, do the , and recreate the trigger. CAVEAT: Make sure you are using the latest version of MySQL 5.6 (at least 5.6.23) to avoid foreign key issues with . Please note that I did not mention using third party tools. This is just straight up MySQL. GIVE IT A TRY !!! 
+
+Interesting thing that should be considered is the version of MSSQL 2000 running There are four versions of the binaries

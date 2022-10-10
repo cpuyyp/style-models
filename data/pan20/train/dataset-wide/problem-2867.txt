@@ -1,0 +1,59 @@
+As for the restriction about what their names can be, since it's not very convenient to use enum, then I'd suggest using a plain text file of comma separated values, added in the classpath. For example a file in the directory could look like: 
+
+This way, the code structure itself imposes the rule on what values are valid. In addition, by doing this, you won't have to specify the validation rules elsewhere. As for your class, I think that it should be something that captures some form of playing strategy. It can be as simple as one move player like what you have here essentially, or something more complex. The simplest modification I have for this would be to restructure it the following way: 
+
+Docstrings In Python, it is the convention to add the documentation of a method/function in a docstring. Instead of 
+
+One aspect I'd like to mention is sorting: The contain does a , which is on the filenames. In particular, out of "somefile(9).txt" and "somefile(10).txt", the max will be "somefile(9).txt". It will then choose "somefile(10).txt" as the new filename, overwriting its original content. This is because 9 is larger than 1. 
+
+Now, I see how both the branches of the end with the same: the (and a comment which I'll ignore ;) ). 
+
+Also, in Dijkstra's algorithm, the key point is not the nodes, but the edges. An edge is a tuple (source, destination, weight). But let's first see what we can clean up before tackling that. Your takes a list of things. It claims to be a list of nodes, but it's actually a list of lists: edges. So maybe it would make sense to define a namedtuple : 
+
+If we're speaking of actual efficiency (as in performance) though, I don't know how much more efficient pattern matching is compared to iteration of characters. However, this is much more readable. In any case, notice that the actual translation logic is wrapped inside the condition that the input string does not contain a number. This way, you return from the method as soon as you determine the input is unacceptable. To check whether the input string starts with a vowel, you can also use pattern matching like: 
+
+This has a single move strategy, which is what you set to it upon construction. Structuring the the way you did is, to me, a little weak because the class doesn't seem to be in charge of its own state; it seems to rely on some external component in deciding what to do next. In some way, it can be considered an anemic data model whose only purpose is to carry data instead of representing an abstraction or a concept. Going back to my point about the class representing some playing strategy, we know that, conceptually, there many ways a player can play. What I suggest here is that instead of making a Java class, declare it to be an interface instead, like the following: 
+
+It should be quite obvious that the only difference in these statements is the filename. "Easy" fix: 
+
+Again, assuming is not that large, this is unlikely to do any better, and might even do worse because of the now used. But you're welcome to benchmark it. 
+
+Which is much better. Getting the (random) element. Defaulting You already mentioned you were not sure about the defaulting. Important should be the question 'why the defaulting'? From what I can see, the only reason for the defaulting is the recursive algorithm you use, which is a recursive bisection algorithm (or binary search algorithm). It would be good to separate the bisecting from the choosing. 
+
+Now I'd like to take a look at the algorithm itself, and I see several things I'd like to suggest, but don't have time for a full refactoring: 
+
+Admittedly, I don't know much about Drools, but guessing from how the rules are defined here, using this class, rules can be defined like (this is not Drools syntax): 
+
+Normally, I do this for methods I have yet to implement while I work on specified methods one by one. 
+
+Ideally, class should be itself the , but since Drools seem to rely on POJOs and, the constructor for can't be made private, I think this is an acceptable compromise. With this, there probably won't be a need to have separate rule for validating unless there are expected, more complex checking. Also, since the application is checking an external file for values, there isn't a need to recompile or rebuild the code when a new Move like Jedi is introduced into the system. As for the rules on game proper, I'd say they should have been applied to a and not to separate players. The system doesn't even seem to be interested enough in Players to give them names like "Player 1", or "Player 2"; they merely carry a Move in them. A contains 2 objects, each from 2 opponents. The fact that there is a class seems to suggest there should have been a class to begin with. 
+
+My first suggestion would be to use some extra functions. However, let's look at it in several parts. First, the getting of the class number. You have 
+
+(Here we abuse the fact that is the same as if it is certain that is a string.) Now it is really clear that is constructed from by a sequence of simple transformations on the elements. If you want, you can define functions for all of the separate actions, given 
+
+The algorithm itself. Your algorithm is also far from optimal, calculating collatz(16) several times. First, when trying to add 3, it goes 
+
+The trick is an optimization trick preventing a lookup to the global dictionary. Using compiled regular expressions also gains a bit of speed. (On the other hand: I don't see being used, so that's probably ok). Since it's not documented, I'm going to assume the calling convention will be 
+
+I'm not really sure, but somehow I feel like this can be an instance of a refused bequest, or some sort of breach of contract. I think you have few options here: 
+
+This way, you have more control over the internal state of a given class within the context of a given method, while limiting the method's behavior to something that's more specific. It also makes the code a little more traceable in that if there is no requirement that says a completed can go back to being non-completed, you don't have to enable such state transition. I think it's also somehow more "poetic" to have an invocation like compared to . 
+
+Hopefully the class illustrates my point about classes being in charge of their own state, actions, etc. Lastly, about , I will also say that this class is weak, and overly transparent. My idea is that once a object is created, it will never change. Because of this, I think that should be defined this way: 
+
+The comments for the and are really trivial. You can easily drop them. Please do. Consider what your comments add to the code. If they detail how it's implemented, try very hard to find a way to remove them without reducing the clarity. The following is just as clear. 
+
+Why do you even have the /? It adds nothing of value. Also, the parameter is now a list of , instead of a . Another thing I'd suggest doing is using the attributes of our class we just defined. 
+
+Ideally, you'd want to just mirror the definition for , instead of re-using , as it more cleanly symbolises the symmetry 
+
+I did the hard work at looking over the rest of the code (the and ), and I feel confident that those parts won't throw a . So let's factor those out. 
+
+Each move has some seemingly intrinsic characteristics. In particular, each of their name should be lower case Strings, and their values are limited to some given set of words. My impression is that these rules aren't bound to change that much anyway, so why rely on the rules engine to impose them? For one, instead of checking if their names are lower case, why don't we just ensure that they always are? Instead of making it a rule, why not turn it into a basic assumption? 
+
+Conceptual Framework for Domain Model In your application, there's a rule imposed (via your Drools XML) that there is a fixed set of values to a 's move. My opinion here is that your domain model should reflect that requirement, and seeing as you have generics in your code, your application should also be able to support Java enum. I think it's better to capture this restriction on valid moves by creating an enum called like the following: 
+
+First of all, I noticed that is valid, but is not. I would recommend also checking the bounds in the first case. This can be done by dropping the first special case. On the other hand, the downside is that it never makes sense to call with an empty list, as no argument would be valid. I think that's ok, because the concept doesn't make sense in this case. How you determine and is quite clear, but I would propose using from for this. 
+
+Now, let's start analysing the large method . First of all, we could apply the same trick as we did for to speed up the lookup for . That's going to make your code a bit more efficient. It's a tad large, so let's first talk about the branch.

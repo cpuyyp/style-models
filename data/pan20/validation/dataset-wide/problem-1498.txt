@@ -1,0 +1,67 @@
+You really should break up your into separate input gathering, looping, and main algorithm functions. That will tame a lot of the local variables all by itself. So you get something like: 
+
+for a plain struct, this would just work as an aggregate initializer. You need a constructor that takes three arguments (with defaults) to provide the same functionality. 
+
+Why return yourself by value? You show that already knows how to assign itself. So why write this at all (and get it wrong)? Leave it off and the compiler will generate an optimal one automatically. 
+
+It looks like you know what you’re doing. One thing I spotted: Don’t write quallified like that. You have to use ADL to pick up the right version provided for the template arguments. You need the “two step”: 
+
+Note the use of non-member functions for size, begin, end — this is best practice and will make the code suitable for generic-izing. They must be unqualified so the is necessary. Sorry if that’s a bit advanced for you at the moment; just remember the rules for now. 
+
+You should provide semantics for efficient usage of the array object, and for faster insert/delete etc. when T is a complex type. 
+
+You are passing the same object as and . You are doing the same, I see, with and . I think you don’t understand how member functions work, which is a more serious problem. Anyway, ignoring from now on, This should not be a member at all, but part of the program that uses the class. It should use conditionals rather than repetitive code. E.g. 
+
+In your design (where everything is handed over as a string) you can include the quoting as part of the update callback. Use one for strings that add quotes and also escapes out needed characters, and another for numbers that does not. Then, don’t add the quotes in your outputing function. 
+
+Do you really get a warning if you write: ? The compiler should see that the literal constant 1 is within the domain of and not give a warning. 
+
+You want to accumulate the maximum incrementally. It’s probably not worth using an stl algorithm for that since you are giving it the input incrementally rather than having a prepared list. It can, however, but split into a separate function or accumulator class. The complex part here is the tie-breaking. Understand that the description is simply that of a compound key! Think of sorting names: if the last name matches, then sort by the first. Now already does this for comparison operators. So make a of the current trial, and have the max variable of the same type. Now you just need a straightforward remember the largest accumulator. 
+
+You can write this in a way to prevent defining outside the loop. More importantly, deal with errors from . It would be cleaner if it only skipped whitespace and did not also read (and return) the next char beyond that! (Hint: see the next function in your file) 
+
+I don’t see why. The normal template class takes a list of types will be found in arrays (or other contiguous sequences). Why would you ever use as one of them? You are only handling in the first position, anyway. would have problems working, too. 
+
+The and functions are nearly the same. They should share a common bottom half at the very least; and the top half is identical in both? That would be a no-brainer to move to a helper function. 
+
+Why are you making everything ? I don’t see any derived classes. How is different from ? I assume something is rather different for you to not be using standard types! Likewise, , etc. Especially since you are casting to (using C-style casts) rather than having a suitable overload. 
+
+One of those should be a . I just saw a presentation from a conference video that remarked that a major standard library implementation had a memory leak (in I think) in case an exception was thrown during construction or assignment, sometimes. So don’t revert to old-style primitive code just because you are writing a collection! 
+
+Portability of character encoding It’s been noted that the letters are not necessarily contiguous in the source character set. However, if you are writing in (original) EBCDIC you have worse problems and would not be able to type the characters into the source file. (I’ve discussed C++ on a primitive type of forum software running on an EBCDIC system that was lacking and a few others, and it is not simple. The execution character set is distinct from the source character set, and depends on the locale. More generally, you can see that it depends on the source of the strings such as a saved file — if the file uses a character set that doesn’t use the same codes for letters as we expected, then things will go bad. So, part of the specification is that the input strings will always be in UTF-8, or (sufficient for our purposes) is compatible with ASCII. What about at compile-time though? The standard says that the value of a character literal is in the execution character set, not the source character set, which is good. Except that the execution character set is not known until run time, so how can it do that? However, you can specify that a character is using UTF-8, regardless of any locale or whatnot going on in the compiler or target system. 
+
+Two return values, no problem. Don’t use an “out” parameter for the second one! (⧺F.21). However, I think you don’t have two values here, but an result. 
+
+addendum ※ A flat map wins for looking things up, which in my experience is the bulk of the run. The tree-based map will start beating flat-map for inserts and deletes at some size n and continue pulling ahead since the k1∙O(log n) is a better order than k2∙O(n) even when k2 is much smaller than k1. 
+
+Learn the canonocal way to write arithmetic operators. That is, make a member and then write in terms of it; etc. You don’t even have the parameter right: why can’t someone add a const value? 
+
+Is it necessary to add each find to the beginning of the result? It would be faster (and easier) to instead. 
+
+To generate the candidates, you intuitively knew that you only need to check the odd numbers. But you can rule out many more than that! Consider that numbers ending in 5 are also not prime. Look at a grid where you blocked out primes and you will find a simple pattern: A prime must be one less than or one greater than a multiple of 6. So, count by sixes, and try the value on either side. 
+
+Wow… Start with use auto (almost everywhere). You only need one object in the summation for it to work; then it will take a mixture of anything that can be implicitly converted to . So far, that gives us: 
+
+What use do you have for allocating more nodes in the function? This looks like the earlier case, where you allocate memory and then drop it on the floor. I wonder if you are misunderstanding how pointers work. The variable itself is a pointer; it does not need to be bound to an object which then gets assigned over. 
+
+None of the code has to be changed, but now when you call it with a lexical string literal like: it does not have to construct a temporary object and copy the literal string into it. That’s the point of , since this is a common thing. 
+
+(almost always) use . You don’t have any uses at all, so I’ll point it out with an example in your : 
+
+Remember, It’s top-down design decomposition. You are doing one thing, and it takes a bunch of lines, and all of it uses the same small subset of data. So it should be a separate function. I do think that figuring the winner enum should be able to be done in a more elegant manner, in any case. 
+
+Should that be ? I see it is used in one place, but I can’t tell if that modifies its value. If this is indeed constant, make it just to make sure it produces the table at compile time with no overhead. 
+
+and to show that the is being used to deduce the type of the variable, the way you would write it before 2011 would be 
+
+Prefer prefix over postfix — it doesn’t matter for when you don’t use the value of the expression, but more generally you will do this with iterators and “smart” objects of some kind, so don’t do things differently with just because it doesn’t matter for this one. 
+
+Make this since it never changes. You may later move it to a parameter or elsewhere… that is the kind of way real-world code evolves. Then, check your requirements. 
+
+The member function re-allocates and copies the buffer? It also appears to leave the rhs object’s buffer unchanged, rather than switching it to the other one. That is not right, and the comments “As I am assigning…” makes me think you got your wires crossed. It is important to have a function. It should just switch the pointers just like it switched the sizes and index. 
+
+The string is only gone through once. That is the key to making it (n). Instead of recursion I push a value on a stack and keep going with the first half of the next go. After reaching the end of the string, pop each value and complete the calculation. (I did FIFO not LIFO but it doesn’t matter) You can see to convert this to recursion the call will go where the is here, passing the rest of the string and n thus far. The suspended stack frame remembers the current n at that point. When the end of the string is reached and everything starts returning, it returns the total thus far and the final value of n; it adds its own term and returns to the prior. To make it faster, use static buffer sizes (since you are told the maximum size of everything) and use a faster reading function too. 
+
+Isn’t the library a map with as the key? Yes, you are comparing it with ! Why?????? Use the normal way to an item in the container, which returns an iterator, which you can then remove. For the other version, I’d suggest implementing a general-purpose find and then remove can just call that. But then I see you do have a pair of functions, the first of which should be something the container already does directly without a linear search, and the second duplicates most of the body of . You should implement that as a private helper that returns the iterator, so you can then use that to erase etc. Then the public finding function can call that and just return . That is assuming you don’t want to expose the underlying container’s iterators to the user — but earlier I suggested providing iterators to your library. So rethink the design here. In general, you are wrapping a standard container instead of just letting the user use a standard container. You just need typedef the specific form of map, and define non-member secondary finds for matching the book rather than the key. 
+
+Yes, you are reading from the Float member that is never written to, the optimizer can know that it is not the active member, and act as if the program never reaches this point. Anything is possible, including crashing. We have seen the optimizers get more and more aggressive, taking advantage of U.B., breaking “bad” code that worked historically. So, it is a real concern. In any case, the layout of the bit fields is up to the implementation; that is only an issue if you plan on saving these 16-bit values to files. See Scott Schurr’s presentation on this. Your specific case is handled toward the end, and he shows that of all the work-arounds, using intrinsic with the items known to be properly aligned will be completely optimized out by the compiler, generating the code you really intended with the union!

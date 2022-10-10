@@ -1,0 +1,69 @@
+EDITED TO ADD I've just tried the same commands with the gpio utility and it does not set the gpio as an input when doing gpio read 17. It also reads back the correct value. So either you have got an old version of the utility or something odd is going on with your relay. 
+
+It depends on how you power the Pi. If you power via the microUSB power socket then the current draw is limited by a polyfuse to 2.2 amps (at 5V). The Pi will use some of the 2.2 amps. If you power via the 5V and ground rails on the expansion header you don't have that limitation (but lose any protection afforded by the polyfuse). 
+
+The correct shutdown and power-off command is sudo shutdown -hP now The Pi will continue to draw power (I don't remember how much, perhaps 125mA) even after power-down. If you are powering from a lipo you'll need to disconnect the battery, otherwise it will drain the cells and the battery will be useless. 
+
+What do you mean by at once? You can buy two TCA9548A I2C multiplexors which will allow you to connect 16 MPU6050 on the same bus (at the same bus address). However only one MPU6050 may be addressed at any one instant in time. 
+
+Use a UBEC which will drop any voltage between 5.5V and 26V to a Pi safe 5V. You can buy a UBEC for 1GBP or so, e.g. $URL$ EDITED TO ADD I misread your question. I thought you wanted to power the Pi. As it happens you could still use a UBEC. Let the UBEC drop the voltage to 5V and then use a pair of resistors as a voltage divider to drop the 5V to a Pi GPIO safe 3V3. 
+
+I detest that style of indenting. I have used a natural style which to my mind makes the code intention clearer. 
+
+When you import a module all the code outside of classes and defs is executed. So all the print statement etc. will be executed as part of the import. I'm not sure if that is what you intend. The pricipal problem is the call to cleanup() at the end of util.py. If you comment that out your code may do what you expect. 
+
+The common hobby motor driver boards only have one supply voltage. Unless you find differently you will need one or more driver board for the 6V steppers and a separate driver board for the 9V DC motors. I suggest you look at L298N motor driver boards. If your steppers need 4 inputs you will need a motor driver board per stepper. 
+
+The pins potentially used by the LCD module are shown at the left of the following table. You should definitely connect everything which is not marked as 3.3V, 5V, or GND on a one to one basis. I.e. use a (female-male) jumper wire from the Pi pin to the corresponding LCD socket. You only need to utilise one 3.3V, one 5V, and one GND pin from the Pi. The voltage supply pins and the ground pins are often referred to as rails, e.g. the ground rail, the 5V power rail, etc. All the ground pins are connected together on the Pi. Similarly all the 5V pins are connected to the other 5V pins, and all the 3V3 pins are connected to the other 3V3 pins. There are more than one of each simply for wiring convenience. So you can choose one ground pin and connect that to each LCD socket which was connected to ground. How you do that is a wiring problem. Breadboards typically have ground and power rails so you can plug in one ground and power wire but jumper it from anywhere on the rail. Similarly choose one 3V3 pin and one 5V pin. You will probably find that you do not need both the 3V3 and 5V power connected. By the way voltages do not add up in the way you think. You can have a hundred 5V pins on the expansion header, they all add up to 5V, not 500V, they are connected in parallel. 
+
+I would power from the 5V pin to minimize the current flowing through the Pi traces. For my experiments I would actually apply power to a breadboard rail and take power from there to a Pi 5V pin. I'd also power the external devices from the breadboard rail. Of course the Pi and devices also need to be connected to a breadboard ground rail. 
+
+GPIO 14 (pin 8 on the expansion header) is the UART TXD. It will be active during boot as boot messages are sent on the serial link. After boot the UART may also be used to login to the Pi. You can disable most (but not all) of the boot messages with the raspi-config tool of Raspbian. The same tool will also disable the use of the UART for a login console. I suggest you use a different GPIO. 
+
+It's nothing to worry about. The system checks that the SD card is present once a second. It's a very brief signal, a few microseconds, not many people notice. Some background at $URL$ 
+
+The Pi's I2C and SPI peripherals both act in master only mode. This means the Pi controls the clock. Receiving synchronous serial data implies that the external device controls the clock. What sort of data rates are you talking about? You may be able to bit bang. 
+
+Impossible to say. If it puts out less than 5.5V it is unlikely to harm the Pi or attached peripherals (one of my Pi's has been powered from 5.8V for months without any obvious harm). If the voltage is too low the Pi may not boot or may reset itself. That won't harm the Pi but may corrupt the SD card you are booting from. 
+
+You can power the sensors from 5V and also power the MCP3008 from 5V. You need to use a voltage divider on the MISO (Master In Slave Out) line from the ADC to the Pi so that the 5V ADC digital signal becomes a Pi safe 3.3V signal. The MOSI, SCLK, and CE (Chip Enable, also known as Slave Selects) are outputs from the Pi to the ADC and don't need any voltage conversion. 
+
+See /boot/overlays/README for details. In addition there are plenty of software bit banging examples for Raspberry Pi I2C available by doing an internet search. Note. If you don't use the standard I2C bus (pin 3/5) you will need to add external pull-ups to 3V3 on the GPIO you choose to use. As a guide pins 3/5 have 1k8 pull-ups to 3V3. 
+
+If the GPIO column has a V it indicates the pin is connected to the power rail and not a GPIO. Where 2 figures are shown separated by a / the first figure is the GPIO number used on the first revision Pi B boards. 
+
+Raspbian has a special device which grants access to the GPIO registers to members of group . Given you are using a customized operating system you are probably on your own for the rest of the question. 
+
+If the Pi are networked you can use my pigpio for this purpose. You can control the GPIO on a Pi from a Python script running on the local Pi or a remote Pi (or both). In fact the controlling Python script does not need to be running on a Pi at all, it may run on a Windows, Mac, or Linux box as long as it has a network connections to the Pis. 
+
+Part of the metadata stored in the directory entry for a file includes its name, owner, group, creation data etc. The owner and group are numeric numbers. If your numeric owner id matches that of the file you inherit the owner permission over that file. If one of your numeric group ids matches that of the file you inherit the group permission over that file. Being root allows you to override the existing group and owner permissions. 
+
+This is probably the well known bug of the spurious character when the serial port is opened. I don't remember the details, something to do with the TX line dropping for an instant so signalling a spurious start bit. From memory it is a bug in the Raspberry Pi Linux driver. I don't know why it hasn't been fixed, it has been commented on for several years. As I say the character happens on port open, e.g. 
+
+What you are suggesting sounds fine to me (but I'm not an electronics type so treat anything I say with caution). As the Pi and LED strip will have a common ground you don't need to connect a Pi ground to the LED strip ground. If you ever use a separate power supply for the Pi and the LED strip you will have to join the grounds. 
+
+I guess the line dtparam=i2c=on1=on is a typo. It should be dtparam=i2c1=on. You don't need it and the arm line, they are synonyms. I2C is not like SPI. The devices /dev/i2c-0 and /dev/i2c-1 are not created by device tree. I don't know why not. I guess it's a bug. Add the following line to /etc/modules 
+
+Doesn't the Pi follow exactly the same pattern? All current Pis are 3V3 models so it uses 3V3 GPIO. The Pi's input voltage is set at a fixed 5V. Arduino's allow a range of input voltages, 3.3V to 12V typically for 3V3 models, 6V to 20V typically for 5V models. 
+
+You are running under the Linux operating system which will every now and then swap out your program at an inconvenient time. That will corrupt the timings if a reading has just been triggered. You could give your program real-time priority which would probably help. For details see 
+
+You can connect multiple wires to the power rail pins. The power rail pins are the 5V pins, the 3V3 pins, and the ground pins. 
+
+I don't think so. Audio through the sound jack uses the PWM peripheral (Broadcom's choice of name). This conflicts with PiFm which also uses the PWM peripheral and configures it differently. 
+
+I have no idea what you mean by pure electronics. Pins 2 and 4 are connected to the 5V power rail. Pin 6 is connected to the ground power rail. The power rail pins are NOT GPIO. They have power while the Pi itself is powered. The pins connected to GPIO are switchable between off (0V) and on (3V3). In the conventions I have seen (and use myself) a black wire is typically used for ground and a red wire for a positive supply voltage. 
+
+You have misunderstood the post which mentions 1 MHz. All that is actually said is that the Python time module can return the current time to a microsecond. It says nothing about how many gpio transitions can be detected in a second. I believe my figure of around 9 K gpio state changes per second is still accurate for Python running on the Pi. As said in the other linked post you can do a lot better (circa 100 K events per second) if you do the event captures on the Pi but off load the processing to a PC. With C on the Pi you should be able to achieve 250 K events per second or more. $URL$ shows Python using Hall sensors to count motor revolutions. The maximum RPM was about 9000. 
+
+My pigpio library supports reading and writing 9-bit serial data. It uses bit banging so you can use any available GPIO. If I remember correctly any speeds of 19.2 kbps or slower were pretty stable. What bits per second do you need? Reading (C, Python) is slightly easier than writing (C, Python). 
+
+Seems to be a lot of effort to save a ground wire. The GPIO may be toggled millions of times a second. Thinking about it the lines will be floating so you'll need to enable the internal pull-downs on each used GPIO. 
+
+There use to be an inter-byte gap of 1.5 bit times. This annoyed some people so I think a fix was found to remove it from the main SPI device. I believe the auxiliary SPI device still has the 1.5 bit time gap. If that is enough I suggest you use that device. If you need a different gap you could use pigpio waves to generate the needed SPI transaction. However that would require decent programming ability. This would allow for much less load than the 45% you mention. 
+
+Two SPI peripherals are available on the Pis with the 40 pin expansion header. The main SPI device has two dedicated chip selects. The auxiliary SPI device has three dedicated chip selects. You can use both devices at the same time (they use different GPIO). See $URL$ for the GPIO assignments. pigpio has in-built drivers for the main and auxiliary SPI device. The spi_bcm2835 Linux driver supports both the main and auxiliary SPI devices. You should use device tree to enable the SPI devices for the Linux driver. See for details. The clock divisor is forced to be even. The GPIO pads are unlikely to work very well at frequencies over 30MHz. You will have to experiment with high frequencies. 
+
+Once you depart from stable software releases all bets are off. It may require newer version of libraries which are incompatible with the rest of the installed packages. In other words you could break your system. If you are determined to carry on then download the required sources and build on the Pi. 
+
+The Raspberry Pi doesn't have the hardware needed to shut-down/start-up like a regular desktop PC. The simplest, and possibly most reliable, solution would be to use a timer switch to switch the power to the Pi on and off. If doing so I'd add a cron job on the Pi to do a software shutdown several minutes before the timer shutdown. That would leave the SD card in a safe state.

@@ -1,0 +1,67 @@
+Failure case Rather than using sentinel values, I prefer to use something like to indicate failure, so that: 
+
+In Eric Niebler's range library, he introduced a way to make an istream range to solve the same problem, but actually introduces different types for the iterator and the sentinel. There, you could also do: 
+
+I would be quite surprised when was still at the end. I'd also be surprised that this doesn't compile: 
+
+There are a few serious things that haven't been brought up by the other two answers yet. Dereferencing issues Let's say I am zipping a and a . Your iterator's member will have type and its will be and its type will be . First of all, the latter makes no sense. There is no for you to give a to, so you should change that particular typedef to refer to (simply provide all the types for instead of using defaults). Secondly, take a look at this: 
+
+Class I/O in C++ The way you make classes streamable in C++ is with , not a function named . The reason for this is so you can write: 
+
+The consistency helps understanding too. The dummy pointer argument is a confusing hack leftover from C++03. There's no need for it anymore. Especially when you need two dummy pointers: 
+
+I find that a ton easier to read. The reason I wrote the second filter with is that it naturally lends itself to adding a custom comparator: 
+
+You misspelled optimal. Also, this whole loop could use some work. You made a that you're constantly popping and pushing. This is unnecessary extra work. The recursive approach makes sense, but rather than use a container to recurse, let's use iterators: 
+
+Other utility functions Once we approach things from this perspective, all the other functions just sort of fall into place and are all just a couple lines: 
+
+If is sufficiently large, this could reduce how much you have to jump around in memory, since you're only ever looking ahead 2, instead of potentially . 
+
+Global variables in the best of cases are questionable, but in this case especially you have as a global variable. is only used in so should be a local variable there. You can also take advantage of the fact that has another overload that takes a predicate to replace: 
+
+If you memoize , then you're only doing a little bit of work each iteration. Let's consider just going from the 49th triangular number to the 50th and assume we have a very good memoized prime factorization (more on this later). Factoring the full number: 
+
+Better way of counting Rather than manually counting each divisor, remember the number of factors formula. If \$n = \prod_p p^i\$, then the sum of the factors is \$\prod_p (i+1)\$, so the number of odd factors if \$\prod_{p \neq 2} (i+1)\$. So let's find the prime factorization first. We'll just yield pairs of prime numbers and their exponents: 
+
+I don't see the advantage in the lambda. Avoid the copy Once you advance an input iterator, all earlier iterators are invalidated. But you can dereference the same one multiple times. In this case, you're incurring an unnecessary copy of , you can just write: 
+
+Polymorphism Having virtual polymorphism isn't useful here, since then the user has to keep track of allocated memory. I'd want to be able to write something like: 
+
+Also, this already sets everything to , so you don't have to manually. Though your original implementation did as well. What does BFS do? This is a function, that does something with local variables and - and then what? What as the outside observer do I get? This function needs to return... something of value to the caller. Otherwise, it's just spending time doing nothing. Also, again, prefer range-based-for for the push: 
+
+The Player Loop What we have here is an operation that we want to run once, and then repeat as necessary. That calls for a loop rather than a normal loop. This will avoid you having to retype your prompt: 
+
+Iterator Interface Even though it won't be fully utilized in the simple example of , you should prefer to provide a complete interface for . You're missing and postfix-increment. Prefix-increment (and postfix-increment) should return references to this. Additionally, you should inherit from just in case somebody wants to use as a normal container somewhere else. For example, it'd be nice to support the following: 
+
+The first one is simply wrong. You're using this metafunction to check if a type is move constructible (in )... but you're doing this by just checking if it's neither an lvalue reference nor . You're not actually checking anything relating to move construction. Just because something is an rvalue reference does not mean that you can move from it. And just because something is an lvalue reference does not mean that you cannot. Consider two simple classes: 
+
+isVertex() What you wrote is an antipattern. Anytime you want to check if an expression is true or false, you want to simply do: 
+
+We will never return in that loop. If a number is not prime, it is going to be divisible by a prime less than it. We would have already found all of those... so there is simply no extra divisor we have yet to find. You can delete it without loss of functionality. Also, typically we pass in the length of the array and name is as such: 
+
+Avoid single-letter variables What is ? What is ? Move the into the branch We have two cases per item: either we can fit the whole item and have room to spare, or we can't. If we can't, then we break. So that can become: 
+
+Since that is tedious, error-prone, and unmaintanable. You want to make the compiler do this for you.You can start with reading about automatic prerequisites, but rather than follow the guidelines there, note that gcc can both build the files and generate the files concurrently with (check out all the arguments). Targets and should be targets. I also like to get in the habit of setting instead of just making sure that is at the top. You never know. Comments Very helpful for the most part. But I would omit these: 
+
+People who don't know what those mean likely won't understand anything about the makefile anyway, not sure the comments will help. Those are very commonly used. 
+
+That adds to two different type vectors internally. Is that intended by the user? Does it make sense? I don't know. Perhaps consider requiring the user to write: 
+
+You should add support for that. Missing Type Check type checks it's input. For instance, if I tried to do , it throws a . You may or may not want to add this, due to all the issues of floating point comparisons that supporting floating point ranges brings up. Testing You have tests for values of step that are 0, 1, and -1. You should probably have at least one test for a step value of like 5. Stopping Iteration This is minor, but you have: 
+
+Has too much going on, and the double- doesn't help. Don't Be Afraid of Overloading Your code is reliant on various substitution failures to get it to do what you want to do. That makes it brittle and hard to read. Just use overloading. It's muuuch easier. For instance: 
+
+You are mixing up lots of different responsibilities in your classes. For instance, has to handle both the part and all the pin input parts. It is weird that an doesn't actually take references to its input pins. Furthermore, how in this model do we connect gates to each other? By your design, a "pin" is a value comparable to an integer. What if I wanted to model something like (picking a random circuit from google): 
+
+Avoid , especially in headers. Take your arguments by reference to const to avoid having to deal with copies. You should support erasing elements. You should look into various balancing algorithms for you tree so that if I insert 1 then 2 then 3 then 4 then 5, I don't end up with linear-time search. from is implied, you don't need to explicitly provide it. 
+
+This calls with , which calls with , which sets to then calls ! This makes think that you actually have a value, and so destroys it. But we didn't have a value originally - so undefined behavior. You have similar bugs in other places. is responsible for setting to true, nothing else. In a similar vein, should set to , so that you don't have to manually do it in other places. 
+
+Note that I'm changing your return type from list to list of lists. Now this will return a list of all the possible transformation lists. Of course, we'd need a sensible default . Let's avoid the user having to come up with one: 
+
+Iterator comparison Your makes lots of intermediate objects. This is totally unnecessary. Rather than making a whole new pair of tuples for each element, just chop off the next index: 
+
+It doesn't set the parameter, it sets the object's member. Although the comment itself is unnecessary. If doesn't set something related to the hourly pay, it's the function's name that's the problem, not the lack of comment. 
+
+Unique or Shared Why as a design choice over ? The latter would let you be able to take shallow copies to your lists without having to have references everywhere. I'm not saying that is strictly better, more than it's something worth considering if you have not already. Either way, both are strictly better than raw pointers, so you're already on the right track.

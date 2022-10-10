@@ -1,0 +1,67 @@
+It has been commented that when working in C++ you should use . Assuming you want to stay with C style strings (or at least understand how you ought to work with them, in case you ever have to), I have the following suggestions: 
+
+Then after this block, you can in any place you like, success or failure, even throw exceptions, and COM will still get uninitialized. (Notice I didn't initialize COM in a constructor. This allows us to inspect the on failure without wrapping it in an exception. I'm sure many would suggest wrapping s in exceptions. This is not personally my taste. YMMV.) 
+
+I am not an expert in the source tree nor am I familiar with the coding style of its authors, but I found this to be an interesting question. I'd say it looks safe and my guess is the original authors are expecting to be initialized to zero. Update: OK, I misread an statement; looking at it again it looks like it might be unsafe without a custom allocator, so we'd have to look at et al. and the actual inflate logic to know for sure. Explanation follows: It looks like is allocated with the macro. That macro resolves to: 
+
+If multiple processes perform steps 1/2/3 in lockstep, and the initial value is 0, they will both store 1 back. You could use a GCC extension for compare and swap to make an increment safe: 
+
+See how much simpler the function is for an array? You could also replace the loop with a here. I only stuck with the as it was what you had. The loop can be easier to read though. The spreads the loop definition across multiple lines. Some compilers can do faster than , so it can be advantageous to get in the habit of writing unless you need the behavior of . This won't affect performance much generally, but it also doesn't hurt anything to prefer . The is equivalent to . Use whichever you find easier to understand. 
+
+That always returns a dummy reference. Of course, if you do that, you may block some assignments that you would want to allow. Perhaps there is some way to return a special that will trigger the proper behavior on assignment or update. 
+
+You are calling the function with parameters but you never use the parameters in the function. Instead, you use again. Better would be to use the function parameters: 
+
+I do not understand these names. I would have expected to see something database related. Neither nor says database to me. 
+
+You have a field, so you should update it in this function. Actually though, you can write this function more simply: 
+
+You can put that code at the beginning of the function. You should also consider what should happen if and are called in the wrong order. I don't see how your code would even notice. Perhaps open tags and elements should share the same stack rather than having two different stacks. Rather than storing them as strings, you could store them as objects of classes which extend the same class. That way you could know what is supposed to come next. What would happen if were called twice in a row? Consider adding logic to auto-close the element only if one is open rather than every time is called. It should also check if it is currently in a context where a string can exist. Check if an element tag is open before adding an attribute to it. 
+
+This is weird. Maybe instead of returning a magic value, your pop function should have a different interface. For example, maybe your pop function has an output parameter (pointer) which receives the popped value, and returns a boolean indicating whether or not a value was popped. 
+
+While I'm all in favor of the crazy C style pointer arithmetic loops when they make sense, I don't think it really gains you much to reinvert . And doing the compare backwards is kind of weird, especially where is perfectly reasonable. I mean, you can deduce the lengths from the previous pass... No need to be all macho. Also, this is subjective, but I don't think it makes sense to return if NULL is passed. Especially since the function lends itself towards use in a boolean expression; will be true, which is weird. Maybe you should let the program crash in that point. (Since dereferencing NULL is a bug.) Or if that scares you, you could return . (A NULL pointer can't be said to have a suffix or be a suffix, right?) I might also consider changing the name. Something like maybe? 
+
+Which brings me to the next point. I don't see any calls to . For a structure like this I think it's good practice to have a single alloc function (which is good, you already have that) and a single free function. So let's write the latter: 
+
+I don't think that will work. The function returns by reference, but is a value. I think that you have to do something like 
+
+You shouldn't have this kind of debugging code if you are sending your code out for review. By the time that you get a review, you should have removed this. Consider writing unit tests to handle this kind of debugging. Then it isn't cluttering your code when you run it for real. I'd consider moving some of your logic to your class. For example, you could replace the variable with a method call: . You could replace your manual decrement of with or . Later you could have a method. Doing this not only simplifies , it reduces repeated code. Assuming you pass the armies as a named , you could say: 
+
+Now there may be a reason why the no-op right shift is better than an explicit cast, but if so, tell me. Also, this would be a great time to define a unit test that shows me what can go wrong. That way if someone optimizes the right shift out of the code, then at least it will fail unit testing immediately. 
+
+The standard is to capitalize names of user defined types, so should be . I may have misled you in my other review, so I edited it for clarity. 
+
+This also brings to mind... Why a vague name like ? C does not have namespaces and this is a name that could clash with others. Maybe it should be . Also more consistent with some of your other function names. 
+
+If you hit that you will leak the allocation of . Now, you could introduce a inside the block... But many C programmers (myself included) prefer to avoid early statements, because what happens is you end up with repetitive "free all the buffers" cleanup blocks. Instead of doing an early , I like to let the scope own the allocation, meaning I insert the whenever something like goes out of scope, having the same cleanup block run in a success or failure case. (This sort of imitates C++'s RAII pattern, but with C and more manual.) 
+
+Technically the C standard says you can't name things with leading underscores. In practice your compiler will let you get away with it anyway. But personally I think it looks weird. If your intention is to hide internal functions from the outside would I suggest you declare them with and/or add some prefix to their names. Speaking of names, this brings me to another point... I would work on better and consistent naming conventions. Overall I would strive to have someone be able to read the header, as well as code that calls your library, and have some clue what the functions do. In C it's common to prefix functions from a given library or module with some common name, i.e. having to do with the type. 
+
+If you in a or clause, you don't have to do an . You can rewrite things so that it just does a . That happens twice in your original code. You make a special case for when the right subtree is empty, but you don't have to do so. The loop is capable of processing that case. So rolled it in. You also do the first calculations for the loop before the loop. This is unnecessary. You can just do the calculations in the loop if you use a / rather than a straight . This also moves the decrement of / to the end of the loop, which is a more typical place to put it than the beginning. I refactored your code and removed all the duplicate code. This is the same algorithm with a shorter implementation. I also gave the local variables more descriptive names and added comments to explain what was happening. This code will not work when is less than or equal to zero (except if is zero or one, when can be zero). This is problematic because should be able to be zero. Unfortunately, trees that don't have one fewer than a power of two nodes can't be 0-balanced. The function has no way of communicating that it is impossible to balance. 
+
+Note: I did not find any functional problems with your original code. However, I think that my version is shorter and more robust. 
+
+If you are not religiously opposed to (this probably makes more sense in C than C++), this approach is also common: 
+
+You leak if any of the lines between the and the fail. There are several ways around this. In C (which does not have exceptions or RAII), the best way around this is to avoid early statements when there's something to clean up. (Allocation, file handle, lock being held, etc.) For example you could do (just meant as a quick sketch): 
+
+Not to mention, these rules could potentially be subject to change. Note that Win9X had different rules than NT. What if such a change occurs again and breaks your logic? Don't bother duplicating these rules in your code; don't second-guess the filesystem either. Just pass the name to . (Aside: If your filename happens to come from an untrusted source, then it probably is fair to be overly restrictive...) 
+
+Seems like you missed a potential here. If the buffer is exactly full when you hit that line, you'll write past the allocation. 
+
+Note the only weird thing here is the ownership of 's allocation. If we succeeded in creating the thread, the thread routine deletes it, otherwise will. To make this sort of thing exception safe it might be advisable to wrap that allocation in RAII, but for this example it is not needed. Then notice with a quick rewrite of you can actually avoid the method pointer call entirely while still maintaining a lot of source code flexibility to change or re-use the thread creation routine: 
+
+The will reverse the arrows from the way that they are in . So where you had , you will now have . Using the ensures that you will have parallel matches in both. You could declare a second constant, but then that would be fragile in the face of changes. This way you can make changes in a single place. Then replace the as follows: 
+
+This would match 15, 51, etc. as well as 5. You don't need to use here. You can just say something like 
+
+You can only have one tree in your program because your variable is static across all nodes. This is problematic because you have no way of ensuring that all the nodes will be in a tree. You can create nodes outside the class. If you really want to enforce the one tree policy, you should make the constructor private. You also have a function that can take you out of synch with the actual number of nodes in the tree. That probably isn't needed but should be private if it exists. Unless your tree can only have ten nodes, is a bad name for the variable that matches in and . Something like or would be a more common choice. In , the variable is not needed: 
+
+Now we iterate plus times. This sum should be smaller than the product in most cases. The exceptions would be single element cases (only one product or one category or both). This will use more memory (for the array), but hopefully you aren't right up against the memory limit anyway. Final Version 
+
+Interface critique: You should have the caller specify a maximum size for the destination buffer, and error out when there is not enough space. The mark of a good C programmer is to create interfaces which make this sort of condition unambiguous, rather than blasting away on the buffer, potentially past the allocation size. 
+
+Why do you need this? Your loop termination condition is already , so the check almost seems redundant... Now, it does seem like the upcoming and will create problems omitting this, but I would rather re-arrange those than make this loop look overly complicated. Just my opinion. YMMV. 
+
+You can imagine a compiler generating better code when using this launcher. (Eg. the method call might be inlined into the thread creation routine. Also, function pointer calls are typically not as efficient on modern CPUs as simply calling a function.) In most cases this won't really make a difference, but if you had very frequent calls to something like this, it's a good thing to be aware of generally, and one of C++'s real strengths. You can also imagine additional launchers which carry parameters for the callee, cleanly releasing any acquired resources they get deleted. Also: for your scoped locks... It's rare, but can fail. I'm not sure off the top of my head what those failure conditions may be, but you might want to do something for that case, like throw an error. Lastly... I would re-iterate the earlier comment that maybe the C++0x thread support is right for you. (To be honest I haven't looked into it all that much, so I don't know much about it myself.) Failing that, maybe Boost.

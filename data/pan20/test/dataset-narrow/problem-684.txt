@@ -1,0 +1,47 @@
+The enter, update and exit selections The biggest problem with the enter/update/exit pattern in your code is that, when you create the stacked chart, you append elements, but you don't remove them when creating the bar chart. So, you actually don't need the exit selection for them. The same way, since this is D3 v3, you don't need the update selection for the bars. It's a good idea keeping this selection, though: this is an incorrect pattern in v3, which was corrected in v4. This use of elements in the stack chart and just elements in the bar chart is not the best option. You should deal with groups in both of them, or just rects in both of them. That way, you could create more constant transitions, which would have the same behaviour in bot layouts. However, this would be a major refactor, which is out of the scope of this answer. Also, since your bar chart right now has less bars than the stacked chart, the bars naturally expand to the right hand side. So, to give the transition more fluidity, I'd set the exit to the right hand side... 
+
+And again this is subjective, but I see these as a (common) anti-pattern. It's code, not a painting or a poem ;) We've got version control systems for that. 
+
+without the constants and the converting them to their respective classes? What value do you feel this additional abstraction layer adds to the code? (If you got rid of it, you'd only need implemented as follows: 
+
+Thanks to this pattern any new formats can be added as separate classes (supporting the interface), so the system is open for extension, and they can be registered within the factory. The base routine () is closed, which is what we want. The factory only carries one responsibility, which is to match any given file type to respective behavior, or file processing strategy. This means there is only one ever one reason to modify the factory: when this logic needs to be enhanced, or modified. 
+
+Here comes the important part. We'll create everything in a single enter selection, getting rid of and . 
+
+If you want to print the regions' names, just use the same logic. Here is your code with those changes: 
+
+... is probably a remnant of or other dsv function, which always return a string, even if the original value is a number. Just get rid of it. You cannot transition to... 
+
+PS: as I cant' use in the Code Review snippet, I'm using instead, with the CSV content in a template literal. For completeness, here is the updated Plunker with the pattern I suggested: $URL$ 
+
+Which you actually use in other parts of the code. Since you don't use and outside , you don't need to declare them outside . 
+
+doesn't make sense to me. When your code is conditional, DRY (Don't Repeat Yourself) and try to extract whatever is common for all execution paths. Eg. 
+
+be it a constant, or a collection computed in run-time, doesn't really matter. And then it gets as simple as that: 
+
+Error handling or the lack thereof. Sending an email can fail for a variety of reasons, and you don't handle exceptions or failures. In you're sending emails in a loop - what if there's 10 managers, and sending it to the second one fails badly, shouldn't we try to ensure that the remaining eight would still receive their notifications? You don't handle edge cases either (such as an inexistent recipient: it would result in a once you tried to retrieve from a null , if didn't contain any entity under a given id). 
+
+Yes, there is a simpler way to achieve this: just use and , holding their values in the bound data. Thus, your drag function can be reduced to only this: 
+
+You can simplify your area generators, as well as your code to append the paths, using an to append the paths or an object to define the and methods in the area generator. However, there is an simpler alternative: you are facing all those difficulties because of the structure of your data. If you change your data's structure for a more adequate one you can create a code which is way more idiomatic, therefore easier to read and, the most important, easier to maintain. Right now, this is your data structure: 
+
+Indeed, did you test how it behaves for very large (or very small) values, nevermind the performance? What will happen if I multiply by another one? What is supposed to happen? 
+
+So how on earth is it able to correctly detect whether is present in the collection? Standardization Custom collections should support standard .NET interfaces such as IList. Otherwise other code can't really use it (other than as an ) unless specifically refactored to do so. Besides, your implementation doesn't allow inserting an element in between pre-existing elements, which pretty much defeats any major benefits of implementing a collection as a linked list. Generics As @MatsMug remarked already, it's supposed to be generic, yet - same as your previous implementation - it doesn't support , only its non-generic, legacy version. Documentation It's good that you now use documentation comments (at least for a class that's supposed to be of general use). But this "this is" (as in "this is a singly linked list data structure" or "this is the Node class") is unnecessary. It's just fluff. We understand that it's a class, and that the comment must refer to this class, not some other class elsewhere. Typos don't make great impression either ("Implementatoin"). If your class is opinionated about nullability (which is an improvement over your previous submission), this should be described in documentation comments. As of now, your comments are stating the obvious, for example: 
+
+Now we have just one dataset () with all the relevant information, which we'll use in our enter selection further down. If you can guarantee that both arrays have the same years and are always in the same order, the function above can be substantially simplified. 
+
+Back to your question: Indeed, you don't need to reference the array by the indices, which forces you to sort the data array and then to sort the resulting array... that's not only confusing and error-prone, but also very computer-intensive for the browser: sorting big arrays of objects can take quite some time. It's a good idea avoiding sorting, specially because, as we'll see, you don't need it. There is a way to omit that step, making it automatic. Better than that, you can make the whole thing automatic! In my proposed solution, you don't even need to set the keys, as you do right now... 
+
+Apart from using upper case for method names (as pointed out by @paritosh), I think it's a reasonable convention to use prefix for methods returning a boolean representing some state that may or may not be. Case in point: $URL$ Note this is a property, meaning you could indeed replace with a read-only property. Not that there's anything bad with leaving it like it is - properties are just more idiomatic in C#. Using a property kind of puts more emphasis on the fact that we're only checking on some state, and there's no side effects to that. (You can still implement a property in such a way that it causes side effects, it's just blatantly against the semantics of it). Last but not least, variables should be named with lower case in C#: 
+
+Back to your main issue: Using a stack generator is "messy", according to you. However, "messy" is quite opinion based: for instance, I don't see anything messy here (except for those classes, which you don't need if you follow my advice about the color scale). But if you still feel that using a stack generator creates a messy code here is my solution, using your non-stacked data array. First, pass your data array directly to the elements as the data: 
+
+The colors are different from your snippet because, in your snippet, you're creating the array first and sorting later. But this is easy to change, if you want: 
+
+Because the last two lines of code are the same for both cases. Then there's the loop iterating over the nodes sort of repeats in and . It's a bit of an awkward construct... which you already implemented once as . Why not reuse it? The class can just iterate over itself: . The clunkiness of traversing the list node by node gets abstracted away. The main takeaway in my opinion is that you should start writing unit tests for your code. It not only helps to catch out bugs, but also implementation inconsistencies, as it forces you to think about the contract and all the edge cases. I'd also put more emphasis on making code documentation actually useful for a hypothetical developer who'd want to use your code. Try to put yourself in their shoes: would you be happy having these comments to figure out how to use the class? 
+
+The above code will work for any number of different types you have, and since you already have the dates in the chronological order, you don't need any . This, in short, is what the function does: 
+
+Therefore, your conditions have a little problem ( will never be ), but it's easy to fix. Back to your question: There are several ways to simplify your code. The one I'm proposing here coincidentally uses your suggested approach (an array with all the speakers). Your code, the way it is right now, simply divides the day into 48 buckets, and assigns a speaker to each one of then. That being the case, here is a simpler way to do the same:

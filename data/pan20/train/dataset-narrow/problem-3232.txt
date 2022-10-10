@@ -1,0 +1,87 @@
+Jessie Lite does not contain the GUI packages just the command line. If you want a GUI you will need to install the packages to your existing SD card or reflash the card with the full Raspbian Jessie. The latter is probably the better approach. Note though that this may require a bigger SD card than you are currently using. 
+
+You get the warning because you changed the IP address. This is security issue as it could mean you are the subject of a man in the middle attack. To fix the problem you can edit the old entry from the known_hosts file. The file is located in the /home/pi/.ssh directory. You can open it in the editor of your choice and delete its contents. As for your router seeing the old address that will eventual be removed automatically. 
+
+You definitely have a model with 256mb if it has been laying around for a few months. The model B's with 512mb of memory have only been shipping for a week or so. It is only showing the memory available to the CPU and not the total memory installed. Raspbmc runs a 50/50 memory split between the CPU and GPU. ref: $URL$ 
+
+You may be confused about what the Pi is and isn't. While the Pi3 has a 4 core chip, it is an ARM chip designed for cellphones. It also only has 1GB of Memory, and 100Mbps Ethernet. While there are many things that the Pi does well memory intensive and number crunching workloads are not one of them. Could a Pi run Hadoop probably, but the performance is likely to be unacceptable. In fact, if you can run it satisfactorily on a PI, I would argue that you don't really need Hadoop for your workload (i.e. you don't really have big data). You would be far better off, even if only as a learning exercise, running Hadoop in the cloud (e.g. AWS or Hadoop as a service). IoT applications are a common use of the Raspberry Pi, However, you will need to better define that term. All IoT workloads are not created equal. A dryer that tweets when it is finished requires far less in terms of spec than a project designed to automate an entire house (security, HVAC, lights etc.). 
+
+If you have physical access to the Pi you could use a console cable connected to the Pi and a laptop. Adafruit has a very good tutorial on using a console cable with the Raspberry Pi, and sells the cable as well. If you won't have physical access to the Pi you could leave SSH enabled, but secure it. You can read how to do this on our blog (note: there are still at least two additional posts in the series covering the crypto and port knocking). 
+
+Instead of using paper have you thought about a label maker or cutting up a postal/return address label that you can stick directly to the card? They are too small to make a full label but you could number them and keep a log that matches number to what is installed on the card. They also make card wallets and holders or you can 3D print an SD card holder that will help organize your cards. Another thing you can do is add a file that describes the contents to the boot partition of the card. By adding it to the boot partition it will be visible to your PC. You can even make it an empty file and use the filename to describe the disk contents. 
+
+You don't specify what version of Raspbian you are running, however, Raspbian Jessie shows PHP 5.6.14 available via apt-get. I used the following command to determine this: 
+
+By using sudo you are executing the command as root. So, in this case you changed the password for the root account. 
+
+While not foolproof (as IP addresses can be spoofed), you could setup a firewall. Install uncomplicated firewall (UFW): 
+
+I do think you are correct and your memory split experiment points to that. Think about how much memory it takes to represent a single frame (width * height * color depth). Now consider doing that 8 times a second, it appears eventually the Pi can no longer keep up. Another quick experiment will confirm this try reducing the image size or color depth and see how many frames you can get. If your supposition is correct you should at least get more frames before it fails. 
+
+Hat compatible refers to the standard developed by the Pi Foundation for add on boards, and yes HAT it is an acronym for Hardware Attached on Top. You can read more about it here. The release coincided with the move to 40 pin boards B+. Quoting from the page linked above: 
+
+The difference between the two (remove and purge) is that remove leaves behind the configuration files. Running autoremove will also remove any dependencies that are no longer needed. 
+
+The problem is that your keyboard is using the default UK mapping. Assuming you are using Raspbian you can use the raspi-config utility to change the keyboard layout. From the command line type . From the menu: 
+
+You are using a non ascii quote symbol. One indication of this is the difference in syntax highlighting between your line and the corrected line below. If you change it like so: 
+
+The newest version of Raspbian ships with RealVNC installed and only needs to be enabled via raspi-config or the graphical menu. If you are not seeing this option it is clear you have an older version of Raspbian. To install RealVNC use the following command: Note the use of sudo which will give you temporary root permission to install the software. 
+
+You could probably use this cable (in reverse). The extra 14 pins on the cobbler wont work but it will breakout the first 26 pins. alternatively, you could buy this cobbler model which is designed for the 26 pin Pi's 
+
+You may not blow anything up, but it is still not a good idea. The Pi-3 has a 2.5 amp polyfuse which means that those 2.5 amps would need to be shared between the 2 Pi's. A quick look around this site will turn up dozens if not hundreds of questions related to under powering the Pi and the hard to troubleshoot issues that result (e.g WiFi not working, SD card corruption etc.). 
+
+The if family of tools including ifconfig are being deprecated and replaced by the newer ip commands so you can use any one of the following from the command line to determine your IP address: 
+
+You are correct that the Pi need not be connected to the internet to be useful, however, that does not mean it can't be useful nor does it prevent it being connected to the internet. There is even a company in Europe (Germany if IIRC) that will host your Pi in their data center and make it accessible via the internet. Use cases include: 
+
+Your static IP and the rest of your config are on two different networks. You need to change the static IP assigned to your Pi to put it in the 192.168.88.0/24 subnet. Change this line: 
+
+This will change to your home directory (assuming the default Raspbian install - this will be /home/pi) next rename the .Xauthority file: 
+
+depending on the version of Raspbian you are running this may already be installed. You will then want to set some basic configuration values by entering the following at the command line: 
+
+You can switch which mode your Pi boots into GUI or terminal by using the raspi-config script. You can run it with the following command: 
+
+First, an unknown repository is a major security risk. There have been several recent cases where the software was corrupted at the repository level. Second, the safest way would be to back up your SD card first so that if needed you could revert, or even better use a new card with the new repository so that if the worst does happen you can limit the scope of any damage. 
+
+You could use a terminal block and connect one side (each pair of screws - 1-6 in the image below - ae joined together) to the 5 Volt pin on the Pi and the sensors VCC pin to the other side (you can attach more than one wire to each screw). 
+
+If that does not work you can add a switch between the battery and Pi to prevent restarting. You need to be careful with this because it introduces a race condition. You don't want to kill the power until it halts to avoid corruption to the SD Card. But also want to do it before the Pi restarts. Basically you will have a very small window to actually switch the power off after the system halts and before it restarts. Most of the solutions to this problem (sensing power on the 5 volt rail and disconnecting the power when it is absent) are probably impractical for a portable device (which I am assuming you are building based on the use of the battery pack). 
+
+the component marked L2 is not an L2 cache, that is a CPU specific concept; rather it is an inductor. I am unable to locate the schematic for the camera board to identify a specific part number. However, even if you can find the correct part, you would still need to have the skill and tools needed to solder a very small SMD component. I think you may have to pronounce your camera dead and purchase a replacement. I would suggest getting a case that would help prevent a repeat accident. 
+
+is the result of the GPIO library needing root access to control the GPIO pins. to run your script either: prepend the filename with e.g. sudo mypythonscript.py, or sudo python filename e.g sudo python mypythonscript.py. You will want to invest a little time here to learn about sudo because it is a common need (not just when accessing hardware, but for updating your system etc.). You can start by either doing a google search or by running the following command and . These commands will load the manual pages (help file) for the sudo command and the file which controls it sudoers. Most Linux commands have at least one man page, and should often be the first resource you consult. I have been using Linux/Unix since the mid 90's and still refer to the man pages regularly, to check an option for a command that I don't use regularly - especially since I often run from the command line and don't have browser access. 
+
+As Patrick pointed out they have identical functionality to the Pi 2. The only difference is that the headers are not populated. This does have a few advantages, it allows you to choose the header style, in addition to the male headers which have come on all previous Pi's, 
+
+Note: the lowercase i in RPi You also don't need to run Python with sudo as in your first screenshot. just will work. As for using apt, you will definitely need a network connection to install or update packages. 
+
+In particular, I draw your attention to the last sentence. So no the tutorial has not been updated and is not expected to work on a Pi 2. 
+
+Your approach will work (it is commonly referred to as a golden image). You may want to forgo Raspbian Lite and go for the full Raspbian which already includes the GUI. If you are planning to use this image on multiple Pi's there are a few things to note. The SSH keys and base hostname will all be the same (the hostnames may have a digit added after raspberrypi) - this can make it difficult to identify the machine on your network, and in the case of SSH keys is a security issue. If you want to take a too the next level, or plan to setup several Pi's with the same default setup check out config management software like puppet, chef or ansible. 
+
+To make an LED light up when you pull pin 17 low use the following circuit: 3.3 volt -> resistor -> LED -> pin 17 alternatively, you could place the resistor after the LED: 3.3 volt -> LED -> resistor ->pin 17 As to why the LED was so dim, I can only guess but the most likely explanation is that you used a resistor with a value much greater than the stated 200 Ohms. You can confirm this by swapping out the 200 Ohm resistor for larger and larger values and you will see it get dimmer and dimmer (though this will likely not be visible at values close to your 200 Ohm starting point. Do not use a resistor rated less than your 200 Ohm starting point as this may destroy the LED and potentially damage your Pi. 
+
+Yes, it will work. The only exceptions are as you already noted that you won't have the extra 14 pins. Adafruit even sells a cable that does this without any modifications. Adafruit included this: "Even though the 'top 26 pins' are still compatible pinouts, IDC cables have a bit of a thicker part and the ends, so it will bump into the #27 and #28'th pins when you try to plug it in. If you're desperate, you can cut those two pins with diagonal cutters." in their "Introducing the Raspberry Pi Model B+ post." Though I would not suggest cutting the pins no matter how desperate. Some other options: 
+
+For a more permanent installation I might use a ribbon cable and etch a custom PCB. In the end which method you choose comes down to price, convenience, and how much you will be modifying your circuit. 
+
+A USB battery pack like this one from Adafruit. Others have used powerbanks like this one these allow charging the battery and powering the Pi simultaneously (more info on using these can be found here). You could use 6 AA rechargeables (this may require additional components). A desktop UPS (this will be significantly bigger than the other options - and hence a not ideal solution). 
+
+The short answer is no. They don't have the same type of chip and would require different kernels and GPU code. Since you can run Debian on a BBB and Raspbian is Debian based there is not much to be gained. 
+
+This may clear up the confusion, go to the root directory (in the terminal) and type , then type . Note you will not see the pi directory at the same level as the root directory. Now go to the pi directory () and rerun . Note this is as expected under the /home directory. The GUI file manager may appear to show the pi directory as a peer, but as the above experiment shows they are not. They are more like the shortcuts in the windows explorer or file open dialog boxes, and are there to make life easier. 
+
+For hostname put localhost. The ipaddress would have worked but it doesn't want the name of a file or directory just the hostname (e.g. 192.168.0.101 not 192.168.0.101/phpmyadmin). 
+
+I have a first generation model B (256MB ram) that I watch YouTube videos on all the time. From my experience there are a couple of things that will effect playback: 
+
+It may work but is not recommended. The USB 3.0 specifies 0.9 Amp per port. This may result in undervolting or power issues, as the minimum recommended power supply for any Pi is 1 Amp. 
+
+Connect the common anode pin to 3.3 volt and each of the other pins to a GPIO (add a current limiting resistor between the LED and the GPIO pin. To Light one of the colors set the corresponding GPIO pin low. 
+
+The first problem is that you have the wrong package name, it should be ephem not pyephem. You need to make sure the python3-dev package is installed first. You can do this with the following command: 
+
+Since you are already running a LAMP server, I would write the data to your MySQL database, where it can be read via PHP and displayed. The MySQL website has example code for writing to a MySQL database from C++. This has one big advantage over a RAM disk or tmpfs it persists the data across restarts, allowing for long term storage and analysis.

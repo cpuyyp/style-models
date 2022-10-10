@@ -1,0 +1,75 @@
+* Hopefully without introducing errors. ** This is a little bit nicer in C# since we have the overload of that takes an parameter: 
+
+This code doesn't rotate the image 90 degrees clockwise. We can see this by making each entry in the matrix distinct (the important part is moving inside the inner loop) 
+
+I would recommend making a set containing the paths in . Then instead of adding and removing , just add them instead. 
+
+could be written using . Again, not a big difference but it makes the code a bit more re-usable, since client code can use , , etc without having to have generate every word in the string. 
+
+But I'm guessing you're asking more about the repetition. Here's one way to get around it -- create an association between the booleans and the values. Here I've used a dictionary; it's possibly a bit of overkill but it does give us the nice initialiser syntax: 
+
+For convenience, you may also want to provide a method. If possible, making implement will make using the class easier for any .NET developer. 
+
+Great. One method to go. Finding the most frequently occurring whatever has popped up on Code Review a few times, and you have the basic solution, but I'll add this here for completeness' sake. 
+
+Ahhhh... integer overflow in our counter? Not good. So what can we do? Let's look at the problem statement again. 
+
+The implementations of and have so much in common that you could write the former in terms of the latter. 
+
+Now we need the down-left neighbours: $$ \begin{pmatrix} 0 & & 3 & & 6 & & 9 \\ & \swarrow & & \swarrow & & \swarrow \\ 1 & & 4 & & 7 & & 10 \\ & \swarrow & & \swarrow & & \swarrow \\ 2 & & 5 & & 8 & & 11 \end{pmatrix} $$ Handily, we can get down-left neighbours by adding one line 
+
+The versions posted must process every element of the sequence before they return, which isn't possible for infinite sequences. 
+
+There is no need to constrain the type of . Doing so removes the benefits of declaring the functions . 
+
+Let's start off simple and work our way up. Suppose our string \$s = s_0 s_1 \ldots s_{n - 1}\$ is of length \$n\$. We define a function \$f\$ such that \$f(i)\$ is the number of ways to interpret the suffix of \$s\$ starting at position \$i\$: \$s_i s_{i + 1} \ldots s_{n - 1}\$. In this way, our final solution will be the value of \$f(0)\$. How many ways are there to interpret the empty string? Just one, so we can write \begin{align} f(n) &= 1. \end{align} Now how about the string \$s_{n - 1}\$? Well if it's \$0\$, that's invalid; otherwise there's just one way to interpret it. \begin{align} f(n - 1) &= \begin{cases} 0 &\mbox{if } s_{n - 1} = 0, \\ 1 & \mbox{otherwise}. \end{cases} \end{align} Now for the general case, the string \$s_i s_{i + 1} \ldots s_{n - 1}\$. If \$s_i = 0\$, there are no interpretations. Otherwise, we have two cases to deal with. If \$10 \leq s_i s_{i + 1} \leq 26\$, we can interpret the string as \begin{align} (s_i s_{i + 1}) \underbrace{s_{i + 2} \ldots s_{n - 1}}_{f(i + 2) \text{ interpretations}} \quad \mbox{ or } \quad (s_i) \underbrace{s_{i + 1} s_{i + 2} \ldots s_{n - 1}}_{f(i + 1) \text{ interpretations}}. \end{align} Otherwise, we can only interpret the string as \begin{align} &(s_i) \underbrace{s_{i + 1} s_{i + 2} \ldots s_{n - 1}}_{f(i + 1) \text{ interpretations}}. \end{align} Putting that all together, we get \begin{align} f(i) &= \begin{cases} 0 &\mbox{if } s_{i} = 0, \\ f(i + 1) + f(i + 2) & \mbox{if } s_i = 1 \mbox{ or } (s_i = 2 \mbox{ and } s_{i + 1} \leq 6), \\ f(i + 1) & \mbox{otherwise.} \end{cases} \end{align} So we have our solution in terms of a recurrence relation that uses the previous two terms. That reminds me of... the Fibonacci sequence! \begin{align} F_1 &= 1 \\ F_2 &= 1 \\ F_n &= F_{n - 1} + F_{n - 2} \end{align} Now we know not to use the naive recursive method 
+
+I wouldn't go so far as to call this a bug, but it's good to be aware of. I consider the current behaviour to be surprising just because no other whitespace is allowed. 
+
+In the original code, the block will never run. Consider what happens when throws a : will throw an wrapping the . It's poor practice to throw an as it means client code cannot be specific about the exceptions it catches. I would suggest changing to a method that constructs the exception message you want, then calling it like this: 
+
+The third case of each function definition seems to be there just to get rid of the warning about incomplete pattern matches. Since the second case of the match is incorrect, and the third case should never run, we can do away with the pattern matching. 
+
+First of all, you have one too many parentheses and are missing some variable declarations, so let's fix that up. 
+
+Also, it seems that elements of and are only assigned the values 0 and 1, in which case I would recommend changing from to . 
+
+There are other possible choices for , but let's stick with this for now. The original definition of looks a bit off: 
+
+Edit From your comment, you don't want to use an to sum the bits. In that case, let's look at the addition table 
+
+Semi-perfection (is that a word?) is defined only for positive integers; infinity is not an integer. Now as for the code. Deleting from and inserting into a is terribly inefficient. What we want is a way to enumerate the \$2^k\$ different sums of the proper divisors, where \$k\$ is the number of proper divisors. Here's a way to do it that uses as a counter. We let the counter range over \$[0, 2^k)\$, and at each step add the \$j\$th divisor to the sum if the \$j\$th bit of the counter is set. 
+
+These steps have a fairly direct translation into code: whenever a step says we wait for something to happen, in the code we an observable: 
+
+would be , while your code gives the answer . Also a window size of 0 throws a . While there are minor stylistic complaints I would focus on in a normal code review, I believe the bigger picture is that you are using the wrong data structures for this problem. You are duplicating the information stored in , an array, in a linked list. You don't need this duplication, you can just index into the array. Second, to find the maximum in a range in the array, you are iterating through the entire range. Using a skip list would change this from an \$O(n)\$ operation to an \$O(1)\$ operation, with adding and removing elements being \$O(\log n)\$. Assuming an implementation of a class, the algorithm would look like this: 
+
+Now we need to get the down-neighbours for the right column, and the right-neighbours for the bottom row $$ \begin{pmatrix} 0 & & 3 & & 6 & & 9 \\ & & & & & & \downarrow \\ 1 & & 4 & & 7 & & 10 \\ & & & & & & \downarrow \\ 2 & \rightarrow & 5 & \rightarrow & 8 & \rightarrow & 11 \end{pmatrix} $$ which gives us our final code: 
+
+I think it's counting the number of connections, when it should be counting bridges. Assuming the logic of the original is correct, we can rewrite it as 
+
+Why is this a class? It contains no data and has no methods; the only thing it has is a constructor. This would be more suitable as a method. Let's step back and look at the desired behaviour: 
+
+I don't understand why is a class. It's got one method, no fields, no properties. Its one method, at 103 lines, is almost certainly doing too much and should be split up into smaller methods. 
+
+My goal is to create a memory-efficient (immutable) collection of strings. The imagined use-case is checking for valid words in a Scrabble-like game. Wikimedia Commons has a pretty good summary of the data structure (author: Chkno): 
+
+Let's take a step back and consider the API. Suppose I want to test the BFS traversal on different graphs. To call I need to first create a object. But the constructor creates its own graph and runs on that. There is no clean way for me to just test it on my own graph. So let's say that's fixed. Now I want to write some unit tests for . I can't currently do this without redirecting where the output messages are written to, and then parsing the output. This is more work than I want to do. Ideally I would be able to write something like 
+
+As it's possible that all masks in are in , but contains a mask not in (i.e. \$\subsetneq\$ ). For example, the following code will print . 
+
+s are probably the wrong choice to represent roles. You lose the power of the type system -- the compiler won't pick up on typos, e.g. "Amdin". Consider using an instead. Be consistent with your naming. Why is it and (not )? Stick to the standard naming conventions, e.g. write instead of . Does the calling code really need an array returned? It would probably be fine with an . If we change the return type to , we can write 
+
+Because the parameterless constructor uses a time-dependent seed, you can get effectively identical objects when they are created soon after each other. This is likely to cause some confusion if the user of the API tries to create e.g. six dice for the user to roll. I wrote the following code to get a rough idea of how likely this is to happen 
+
+I would recommending getting rid of the property entirely. Instead, provide one or more constructors like 
+
+The logic is confusing. A direct translation of the problem specification is possible, and clearer. Let's deal with the first half of the problem: 
+
+Now let's define a method on to remove the repetition. I called it , but there's probably a better name. 
+
+I'm sure that someone who knows more Python than me will be able to provide more feedback, but I see a couple of issues. The first is that the core of this functionality is implemented by . We can just write this: 
+
+Edit: there's a better solution with \$O(n)\$ complexity. I had great fun thinking about this problem, and would recommend anyone reading this post to think it through further before clicking that link. 
+
+is misspelled. and are not great names. We don't need to test if is empty. I think there is a simpler approach:

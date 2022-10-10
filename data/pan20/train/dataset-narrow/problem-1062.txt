@@ -1,0 +1,99 @@
+It's best to set everything in the initializer list (good habit when things could be arbitrary objects). 
+
+Dictionary is a very common word. I am thinking that there may be high possibility of clashing with existing software. I tend to try an make my include guards unique by including the namespace as part of the guard (My base namespace is also my website name so it is unique). 
+
+Then why have a return value. One thing about code it should be obvious what the code is doing with the need for extra comments. Comments mean the code is complex and needs additional explanation. But to make the code easy to read you should also use identifiers that convey some meaning. 
+
+The problem with the printf style is that it is not type safe. The main advantage C++ has over C is the exceptional type safety of the language. Use this to your advantage. This is so bad I nearly swallowed my tounge.: 
+
+This will cause very inefficient use of the underlying buffer. Let the stream flush itself. It is much better at the job then you are. Better Soltion This is how I would expect the code to be written. 
+
+Otherwise you need to cast the object to const to get accesses to the const version of and . I don't see the need for this: 
+
+Placement New Your main problem (as described by Jerry Coffin in the comments) is that you are creating objects when you should not be. If we look at your copy constructor: 
+
+Hashing Not sure I would require two functions for hashing. If its a good hash you should just be able to do the modulus of the number of slots. You should also provide a default hash function. Most people don't know how to write hash function and making them do so will cause lots of problems. Using C function pointers for the functions is also a bit old school (and prevents optimization). Use functors (or lambdas (fancy functors)). Always use the initializer list rather than setting the values in the body of the constructor. 
+
+Also by doing this you need to search through all the source to find any current usage of abort. As this may clash with the new usage (or will the pre-processor be intelligent about it. The fact that I ask the question should make you worry let alone the answer). Why not define your own function with a slightly different name (this will also allow you to call the system abort). 
+
+Modify your standard methods to use these types. This allows the standard library to produce optimal code when using algorithms. 
+
+You are defining the less than operator in term of pointer arithmetic. Unless the object are allocated by the same allocators from a known block this is actually undefined behavior. For pointer comparison to be valid they need to be in the same allocated block. Is this a good ordering? Youre ordering is based on their address (not the position in the container). So things may be in a jumbled up state in relation to everything else. This may be perfectly fine but something you should keep in mind. 
+
+Then you don't need to search for the tail every time you add a new element. Const correctness. In a lot of code we pass variables by reference and const reference. If you pass an object by const reference you can only call const members on it. So you should take care to mark functions that don't mutate the object as const. This will allow you to call the methods from a const reference. Also it enables some compiler optimizations when it knows you are not mutating the object. So the following functions should probably be const. 
+
+As shown above I would set a default type of . The behavior of this is to use the classes built in (if it does not have one you need to explicitly provide a comparator type). Ownership: 
+
+When testing a stream state best to use rather than any of the other states (as this catches all failures). Also note that when a stream is used in a boolean context (ie in an condition) it converts itself into a value compatible with the context using the method as a test. 
+
+Both trees are a mirror of each other. Adding nodes to one also adds nodes to the other. Also if you add the appropriate clean up code this will cause a break. This is all caused because the compiler generates a couple of methods automatically. These methods work perfectly most of the time. But if your class contains an "Owned" RAW pointer then it does not work like you would expect. So the simplest solution is to disable these auto-generated methods. You can then fix them later when you understand what is going on (look up rule of three). 
+
+is and is the loop variable constrained to be less then length. While we are here you should not use as a variable name. It conveys no meaning (this is not fortran). Name your variables. Also think about the maintainer searching for all uses of i is a real pain as the letter i is used everywhere. Name your variables so it can be easily found. Prefer to use pre-increment. 
+
+The issue with is that it does not universally provide that guarantee that updates are visible to all threads (which std::atomic does). Could simplify the call. 
+
+This is because pointers do not have an indication of ownership. Ownership is the concept of who is responsible for deleting the object. So from your interface I can not tell if the pointer I am passing you means you are taking ownership or not. I have to open your class and look at the destructor to see that you are expecting to take ownership of the object. 
+
+First off streams and specifically the stream operators >> and << are designed for robustness not speed. They make the code harder to write incorrectly (and provide some local specific conversions) that make expensive in terms of using (consider changing to C fscanf() if speed is paramount). So if speed is you objective streams is not the best choice. Assuming we are staying with streams (Ask another question about how to write this in C for speed): Dead Code Second delete dead code (it confuses a review) and costs in creation. 
+
+OK your shuffle algorithm is ok (better than most people I see try this). But again there is one in the standard 
+
+We are assuming this is a multi threaded environemnt. Thus all methods need to guard against access by a different thread and lock access to members. 
+
+In main() you get a dynamically allocated string from a function. Documentation is scetchy but it looks like you should be taking ownership. Which means you are also responsable for clean up (ie freeing the string). 
+
+The approach you use makes it hard to verify. In my opinion the better approach to this problem is to use an epoch and calculate a day number for both start and end then simply subtract the day numbers to get the days between them. The following use the "Gregorian" Calander which was valid from 1752 (In Great Britain and its colonies including the US). Other parts of the world switch at other times. So I have written this to work with dates from 1/Jan 1753. 
+
+This only needs to be done once in the application. So you can move this out of the function. Don't need to close a connection that was never opened. 
+
+Also note this function (and height/size) etc don't modify the internal structure of the tree. As a result they should be marked . 
+
+So now both object are sharing the same pointer. So far this is not a problem (though probably not what the user expected). But when and go out of scope at the end of the function they will both call delete on the member (double delete is undefined behavior). The same rule applies for assignment operator. 
+
+If you are using then is not the correct type (should be ). You would need to make that a wide character. So you are probably looking at another macro to create the correct type. Also the function is for use with char (not wide char). There is a wide character variant called so you may need to use another macro for that. Most functions are in 
+
+Not sure what the operator does :-( Your code could really do with a lot more white space between operators to make it readable. To be honest I can not follow the logic of this function. Especially since I have not idea what the input parameters are supposed to represent: 
+
+Getting close to a release of generic server. So a couple of reviews will be coming this way over the next few weeks. Stating with the lowest levels and working up to the main server. The result is nodejs like (but not quite as good yet). My main function for the server now looks like this: 
+
+Most standard C libraries have a C++ version. The main difference is that the code is guaranteed to be placed in the standard namespace rather than the global namespace. Prefer to pass by const reference If you are not mutating your parameters ( and ) then pass by const reference this will prevent you objects from being copied. Currently you will be making a copy of which if it is 200K in size is a serious performance issue. 
+
+I am fine with for iterators. As there creation is obvious and I don't need to know the exact type. Just the fact that it is an iterator. 
+
+Making the size smaller is easier. You don't need to re-allocate. You can just reduce the size value and manually call the destructor on all the objects that don't exist anymore. Same but slightly different in reserve() 
+
+Sure you can print the list. But print it to where? Why not pass the stream you want to print on as a parameter. You can default the stream to . 
+
+Explicit construction with With the introduction of we have an object that can be used for the value. But I see no constructor that covers an explicit construction with a . 
+
+General comments The algorithm you are using is too complex. Some of the answers on SO show you how to simplify the algorithm so I will not repeat that here (they are all good). Code comments Don't put two variables on a line: 
+
+That's a bad comment as I can read the code and see that it loops over the array I don't need the comment to tell me that. Bad comments are worse than no comments. So best to write (this just means your variables and function names should be descriptive so I can read the code and understand what is happening). Code Review. Don't need the {} to default construct an empty table. 
+
+OK. I can see why you may want to get the value. But return by reference. Also you need to provide a const version that returns a const reference to the value. Unless you wanted to use the value as part of a copy constructor in which case you should implement the copy constructor. 
+
+Here is another attempt. In this case I pre-allocate all the temporary buffer once and then re-use. The problem with this version is that it assumes that the value type is default constructable. Also if it is expensive to construct the object that may be an issue. But I get a 6x performace boost over the original. 
+
+Prefer to use local variables and pass the board as parameter to your functions. A tiny bit of extra work (but by using encapsulation this work is removed see next comment). Encapsulation This is indicative of not encapsulating your code into a class. 
+
+Or even better create items and push them into the vector: Since the only thing that seems to be in the file "digraph.data" seem to be GraphNodes then you could do something like this: 
+
+One of the issues you can get into with doing your own memory management is called the double free. Usually debug version of the standard library detects double free so you can catch it during testing. But by setting the value to in the destructor prevents that check. The other thing you need to note is that by default the compiler will generate four methods for a class if you don't define them. 
+
+You provide the timing of the 4 different versions. But that is useless without the code (if you wrote the perl version as badly as the C++ version then its not surprising you get bad results). Before times are usefull for a comparison we need to make sure that the tests are comparable. So we really need the code for all four versions. Then we can get criticism of all four code bases and work to get them aligned to the best implementation of the appropriate languages. Once we have done that then we can do realistic timings. Note 1: Stop using 
+
+Use an exception derived from a When you throw an exception you should throw an exception derived from . If you don't throw a specialized exception your default should probably be . 
+
+It may be included indirectly via or . BUT you should still include the header file because these dependencies may not always hold (on different platforms or different versions of the compiler it may including things differently). So do not assume because it worked on this platform it will always work. Think worst case and explicitly include The include guard seems a bit too generic: 
+
+That depends entirely on the user base who will be using this class. If they are mathematicians who are used to 1 based array then fine. But think that most people who use C like languages are already used to using 0 based arrays so have this may confuse people. Some Thoughts A lot of Matrix libraries actually delay the multiplication (and other operations) until the value inside the matrix is required. That way you don't pay for operations that you don't need. Also by deferring operations you can potentially eliminate null operations or simplify operations that are cumulative. Example: 
+
+I think you can make the maintenance of the list a lot easier if the list is circular. With a circular list there are no test for NULL when inserting or removing an element (you just need a fake head node so that an empty list points back at itself). Also you are not using encapsulation enough, this makes your methods a little more complex than they need to be. For example the cache_entry should be able to add and move itself around in the list. Here is a simplified example of what I mean to try and show what I mean. Unfortunately there is no way I can implement the full template thing you have (way beyond me skill level). The only worry I have for this technique is exception safety. There are no problems with this simplified version but I can quite convince myself this is true for your more complex cache. I would need to write the unit tests to make myself convinced. 
+
+Please don't upvote this answer. I may have written it like this for an OO program. I have basically just wrapped your code with objects (very little other work has been done). You will notice that the game object is self contained and thus you don't actually need to pass parameters around. This also makes the game easy to reset. Just let the game object go out of scope then create a new one for the next game. The game object set's itself up and thus all the values are reset correctly. 
+
+Since you are returning a result. Pass the parameter by const reference so that you don't accidentally modify it: 
+
+You can simplify this and just look for the value by checking the value of the next node. Note: The same code works for NULL terminate list (just change begin into NULL). 
+
+I prefer the second one as it is easier to see what is actually happening. C++ Old School This was how you removed the copy constructor and copy assignment operator in C++03 (but you did it wrong). You are not supposed to have just put the . In your technique you can actually still use them in some contexts that the compiler can't catch. If you don't provide definitions (by using the ) then it still compiles fine if you don't use these operators but if you accidentally do use them in contexts where they are allowed you get linker errors.

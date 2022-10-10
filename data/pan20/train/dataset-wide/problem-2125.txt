@@ -1,0 +1,87 @@
+If this is for SQL Server 2012 or later version, you could use the LAG analytic function to produce the required result: 
+
+Once the results are stored, you can retrieve whatever column value you need from the table variable into your ordinary, scalar, variable: 
+
+It is possible to specify your joins in such a way that logically the join between and happens first. Performing that join first will let you outer-join the resulting set to matching the latter's against either or , so that rows are always populated in the output. There are two ways to implement that. The first option uses the nested join syntax: 
+
+– All right, prepared statements can be used in stored procedures. Can we create a stored procedure that would use a prepared statement to do the job, and call the procedure from the trigger? Nope. A stored procedure cannot reference NEW and OLD columns – those namespaces are available only in triggers. The only option appears to be an statement comparing against a fixed set of names and assigning values to corresponding columns. 
+
+The query additionally shows each table' schema name, because sometimes systems are built using more than just the default dbo schema. I have also included the filter in the query because I am assuming you want to exclude predefined/system tables from the search. 
+
+For switching between just two values, you could also try this trick, which does not use a expression (assuming Transact-SQL here): 
+
+So much for the current time in milliseconds. As for adding 5 minutes to it, you can add 300,000 to the last result: 
+
+Since you want product names to be unique in the output, group this table by , and for select e.g. the minimum value per product: 
+
+The task is quite a challenge because of the way your subquery appears to be correlated with the main query. If I understand it correctly, the logic goes like this: 
+
+One obvious solution is to get all the counts, sort them in the descending order and retrieve just the topmost row: 
+
+This would be similar to LAG() but more flexible (and likely less efficient) – a LAG() with a tweak, if you like. 
+
+Next, join the aggregated result set back to the original table on and on (separately) to access the corresponding s: 
+
+Agree with Scott Hodgin, you essentially want to consider MAX(FormIdNb) instead of just FormIdNb, and count the results based on whether the MAX result is greater than, equal to or less than 3. Adding a correlated subquery to the joining condition, as Scott is suggesting, would be one way. Another would be to use a derived table to first get the max FormIdNb per NumCavalier and range: 
+
+If a hotel can never have overlapping seasonal periods, then it is possible to obtain the result as a list of intervals by direct matching of intervals using the method below. First you need to invert the seasonal period list, which means getting the list of gaps between the items of the list complementing it with two more intervals representing the period before the first item and the period after the last item. In other words, a list like this: 
+
+Instead of issuing those checks as separate SELECT statements, make them part of the INSERT statement. You will need to replace the INSERT...VALUES syntax with the INSERT...SELECT one to be able to use a WHERE clause: 
+
+Based on your current code, it appears that a product can have at most one match in either or . With that fact in mind, I would probably try a different approach. First, I would rewrite the base query returning all the prices like this: 
+
+That is, it returns details per date and student along with totals per student. Using that source, the PIVOT clause provides the expected result: 
+
+As can be seen, the final touch would need to go to the SELECT part, where the simple of the new query would be replaced with 
+
+The above produces a row set containing employee IDs and corresponding row numbers. Store the resulting set as a temporary mapping table and do the same for the PINs table, unless its column already is a row number column. Based on your comment to Thronk's answer that the PINs table is imported from Excel, I am going to assume that the values in have indeed been generated in Excel as row numbers essentially. So, after you save the mapping set like this: 
+
+The result set will not have the column – I thought it unnecessary since you know beforehand it would only contain NULLs. However, if that column is needed in the output, you can add it as an explicit NULL: 
+
+You can separately count items with and without discount per SKU, then compare the two results and return the rows where the counts are greater than zero. If you wanted just the SKUs and their prices (provided that the price is the same for the same SKU in this table), you could do all the job in one go like this: 
+
+If I understand this correctly, what you want to do is successively subtract the value of from for each row where is 1, until is exhausted; once the result drops to zero or below, it should show just . Since the subtracted value is the same, you could just enumerate all rows and subtract for each row, like this: 
+
+If it is safe to assume that a single order can have only one distinct , you could resolve your issue by generating the set of distinct pairs from and join that set instead of the table itself. That way you will not need to use DISTINCT with aggregation: 
+
+The clause in the main query does both grouping and pivoting of the above result set. Grouping is implicit: all columns in the dataset except one () are the (implicit) GROUP BY columns, that's just how works. (The column, in addition to being a GROUP BY column, is specified to be the one that the result set is pivoted on.) So, essentially, the results are being grouped by . Not all months may be present for every buyer. That means some month columns might contain NULLs in the final result set. That is the reason why the final SELECT uses : to default those NULLs to 0's. 
+
+In the latter case the derived table can be avoided. Instead you would just need to use the FROM clause and, if necessary, the WHERE clause from either unpivoting method. That is, the final conditional aggregation query would look either like this: 
+
+This has nothing to do with pivoting, you simply want to replicate your three columns conditionally three times, according to the number of groups. A series of CASE expressions would do the job perfectly: 
+
+You are selecting in that query but the column is not in GROUP BY. It is true that MySQL allows you to do that but the manual also discourages that you do that in cases where the non-aggregated non-GROUP BY column has multiple values per group. If you want predictable results, use an aggregate function, for instance MIN(): 
+
+You could try adapting Aaron's SP by getting rid of its dynamic part. The dynamic part is supposed to build a query reading just the database names from based on the arguments supplied. The dynamic SQL is chosen to make the query most efficient – as well as maintainable. Taking into account your specific needs, some sacrifices might be in order. I would argue, though, that the performance might not suffer much from the rewriting I am offering below, as the system view usually does not have very many rows, but in any event you could add at the end. However slow it may be, though, it is likely to end up rather ugly, that I can promise. The method of rewriting is as follows. Aaron's procedure is building the query using a repeating pattern where a parameter value is checked and, based on the result, an additional query is added to the dynamic query, i.e. like this: 
+
+These five correlated subqueries in the SELECT clause are retrieving data from the same table based on the same condition: 
+
+My range, therefore, took the form of , i.e. it included four characters: , , , . I also specified that the pattern use a Binary collation, to match the ASCII range exactly. The resulting expression ended up looking like this: 
+
+However, you want in each case the entire row where is last. That is a classic "greatest N per group" problem. One way to solve it is in two steps: first get the last values themselves, then join them back to the original table and get the corresponding complete rows. The query above, therefore, is the first step. Use it as a derived table and join it back to to get the final output: 
+
+The obvious problem with this approach is that the range at the beginning of the pattern includes two unwanted characters, and . The solution worked for me simply because the extra characters could never occur in the specific JSON strings I needed to parse. Naturally, this cannot be true in general, so I am still interested in other methods, hopefully more universal than mine. 
+
+Note the in this case. Now that the AC_MONTH_ column holds formatted values, it can no longer be used for consistent sorting. But the grouping criterion can, so the above query is using it in ORDER BY. 
+
+Basically, take the date and subtract its DAYOFYEAR value and add one day. Now here is a query that is using Max Vernon's set of CTEs, the above two formulae and another one to get the actual week number: 
+
+For every row of the source dataset, CROSS APPLY produces three, using the VALUES row constructor, explicitly specifying which column of the original set goes into which new column. Now, the above will return duplicates if some pairs in your source repeat. You can suppress them with DISTINCT: 
+
+As you can see, I have also removed other elements from the query, like most of the columns returned by the nested SELECT (, , , – they neither participate in the output nor affect the count result) and the nested (there is no need to sort rows before counting them). 
+
+may still hold the old value. So, even if you decide to keep the order of assignments, I would still recommend that you use an expression rather than a column reference there if you want to use an updated value in that assignment. See a live demo of this syntax at dbfiddle.uk. 
+
+And since you have also specified that you want only the final , you probably need this additional condition in the main WHERE: 
+
+For each row the OUTER APPLY subquery returns from the preceding row (or NULL if it is the first row). The WHERE clause simply filters out the rows where the match has a different name or is a NULL. 
+
+As you can see, the query is calculating both the COUNTs and the GROUP_CONCATs both at the client level and at the whole set level. But each pair of the results is put inside an IF function, so that ultimately only one or the other result is returned in each column. The condition to check is . If happens to be null, that means that the current group represents the entire set and in that case each IF function chooses the COUNT result. When value is not null, that means we are at the client level and each group of rows represents a specific client. In that case the GROUP_CONCAT result is returned, which is according to requirements, because for clients we must show concatenated strings. Both solutions can be found at dbfiddle.uk. Additional remarks In my explanation above I tried to focus on the solutions and how they work. To avoid distractions, I allowed certain anti-patterns in my code that are worth mentioning. 
+
+Notes on formatting Of course, if you want the date values in the output to look like , you will need to format them accordingly. Conventionally, formatting should be done at the presentation level, not in the database, so that the application could take advantage of the client-side locale settings. If you insist on doing it in Transact-SQL, though, you can certainly have some options. Just make sure you apply the formatting to the already transformed value (the expression) rather than the source column. Use of the DATENAME function is one of the options: 
+
+Yes, a bridge table (also known as junction table, mapping table etc.) is a perfectly sensible solution in this case, and it is common for a bridge table to have other attributes beside the references to the tables being connected. As a stationary object, a stop is just a place, which has coordinates and may also have a fixed name as well as some other properties. As a part of a route, though, it can be assigned the additional attributes you have mentioned that would depend on the route, i.e. on the specific bus number. Those would need to be stored in a different table, the one that would link the stop and the route. So, if by "bus" you mean "bus number" (or "bus route", "bus line"), then by all means create a dedicated table with references to and and with whatever additional attributes you deem necessary. Note, though, that if is meant to store information about specific buses (vehicles), then I would consider creating another entity (called perhaps) that I would link to in the bridge table. would then probably reference that new entity, either directly or, again, through another bridge table (in case vehicles were allowed to work alternately on different lines). 
+
+The column helps you to distinguish between different islands of rows that have the same value (like, for instance, between the rows before and those genco` in your data sample). It is used as an additional grouping criterion in the main query. If the values are already row numbers essentially (i.e. they have no gaps or duplicates), you can use instead of the first ROW_NUMBER call in the above query: 
+
+I would try grouping by the year of decreased by 3 months. The final formatting of could be done on the grouped result set:

@@ -1,0 +1,45 @@
+Not really an explanation to your answer, but as a user of this system this information you provided: 
+
+Also, you did not setup any routing relationship between the child namespace and the parent namespace so it wouldnt even work pinging the host directly. In general, using the generic broadcast address for anything aside from provision of fundamental network services is not a good practice. You should use the broadcast address of the subnet you are aiming for. I got all of what you mentioned working doing the following for the network namespace to prepare. 
+
+This is less to do with mysql and more to do with python. When you start a process, it inherits a lot of information from the process that created it, including its file descriptors. What your finding is that mysql inherits the listening socket your process created when it spawned. To resolve this, you need to change your python code to not use and instead use Alternatively, setting the CLOEXEC flag on your socket will prevent it ever being inherited at all -- albeit you need to test this behaviour works throughout all your code paths and nothing strange occurs because of it. The following is the basis for doing this. 
+
+What you need to take more notice of here is your actual activity. In the snapshot you have provided, the number of running tasks is 7, with a load of 4. So, at this point in time the number of people needing serving was 7 (probably -- I can only see 6 attributed to httpd though). The remainder are sleeping processes that wont wake up unless some event happens. The reason you have a high percentage of CPU on some processes are a lower on the other is because only so many of them have something to do within the given second period measured in . 
+
+You can do this in realtime by using "ip monitor". This will output any events such as the ip address being removed or added the link state changing from operational to disconnected, or a route changing in some way. 
+
+@poige is right, your loading the wrong kernel module version. I added as a seperate answer since there wasnt really enough room in comments. In libkmod/libkmod-index.h 
+
+You need to actually know if you are running out of files. Run your process. Then check cat and see what its limits say. Then, you can get a file descriptor count by running . Note that each process has its own limits (children of the parent for example). However, threads distinctly share the file descriptor table of the invoking process and as such do share the file limit between threads and the invoking process. Whilst you cannot create threads in bash, this program can be used to demonstrate the effect. 
+
+They run as now because sudo has transitioned the original user to . Get the starting time of the process by (for example) doing and cross check the start time with the sudo log for it in the security log. Oh and your free memory is still pretty good. The and value can be discounted when checking real memory usage by applications. 
+
+Then, in the access file (default is ) add the three following lines (providing no other lines offer any other security setup). 
+
+As your varnish cache size is 10G it will never fit completely in memory, thus the following formula is relatively representative 
+
+Instead its declared should be passed to the gateway which technically according to the rest of the routing table does not appear to be a neighbour (the kernel has no idea how to get to ). There should be no gateway assigned for because according to your IP address it is probably meant to be a a link-local range (neighbours directly responsive via ARP). You should have an entry such as this instead: 
+
+Looks like a buggy kernel module as slabtop uses up a lot of memory. Something is probably leaking memory in the kernel. is a radix tree implementation for the kernel, basically it could be being used by anything in the kernel. Googling is suggestive that this is something normally to do with storage, and being that other slabs in your system are also relatively heavily used for storage, you can see if this works:- 
+
+To determine a proceses utilization during its lifetime as a percentage you could perform the following calculation (there I'm using firefox): 
+
+The issue here is that you accept one packet (which implicitly is state NEW and then attempt to apply a limit rule. The limit probably does work however the rule later down the line will probably mess things up for you. You have two options: 
+
+The login programs set these variables. You can of course override HOME if you must, or even unset it -- but unless you went to effort to modify the source of each program you can not ever get rid of it. Note even if you alter HOME to be something else the authoritative source of your home directory will always be present in or the derivative. If you login via a real TTY, login will set it. From util-linux in login-utils/login.c 
+
+Yes, at the cost of maintaining more file descriptors which is probably a very cheap cost in practical terms. Setting up a connection and closing it incurs 5 system calls (open and connect on client, accept on server, close on client/server) which with maintaining the connection is avoided until necessary. 
+
+Note its a 1900 sized byte length with a dont fragment option set on the packet. Typical MTUs tend to be between 1400-1500 bytes. Your probably getting packet too big ICMP messages back but your dropping all ICMP traffic inbound at the site A firewall. To test for this you'd have to do the packet trace on your firewall for icmp and tcp 22. Make sure you permit ICMP packet too big messages inbound at site A. Alternatively you could try setting the MTU on your Linux boxes at Site A to something under the size of your network MTU. I am hazarding a guess that on Fedora you have jumbo packets enabled but on Windows you do not. 
+
+I will mention again, this does nothing at all to fix any underlying issues caused by the state of the server which is likely where most problems' root cause occurs. This in addition does nothing to help you fix existing kit that is not LVM enabled. Just stuff you would send out now. If you want to offer a highly available solution design one in the first place. Build a redundant NAS. You can use drbd to do this. Then you can safely failover to do as much offline work on the problem box as you want. 
+
+To give you some idea here of what is going on, memory is broken up into zones, this is specifically useful on NUMA systems which RAM is tied to specific CPUs. In these hosts memory locality can be an important factor in performance. If for example memory banks 1 and 2 are assigned to physical CPU 0, CPU 1 can access this but at the cost of locking that RAM from CPU 0, which causes a performance degradation. On linux, the zoning reflects the NUMA layout of the physical machine. Each zone is 16GB in size. What is happening at the moment with zone reclaim on is the kernel is opting to reclaim (write dirty pages to disk, evict file cache, swap out memory) in a full zone (16 GB) rather than permit the process to allocate memory in another zone (which will impact performance on that CPU. This is why you notice swapping after 16GB. If you switch off this value this should alter the behaviour of the kernel not aggressively reclaim zone data and instead allocate from another node. Try switching off by running on your system and then re-running your test. Note, long running high memory processes running on a configuration like this with off will become increasingly expensive over time. If you allow lots of disparate processes running on many different CPUs all using lots of memory to use any node with free pages, you can effectively render the performance of the host to something akin to it only having 1 physical CPU. 
+
+So, he who has the biggest IP address will win. In keepalived, the way this is done is basically wrong. Endianness is not considered properly when doing this comparison. Lets imagine we have two routers, (A)10.1.1.200 and (B)10.1.1.201. The code should perform the following comparison. On A: 
+
+This works as an event based mechanism. I've not ran it for long periods so wont guarantee its stability. This uses a very recent system call API called fanotify. Probably need a 2.6.37 kernel or greater to run it (so EL5 is out of the question, for example). If you get complaints it wont compile, its probably too old a kernel. It compiles with: 
+
+This can actually be caused a bug. I know because I've had to fix it myself. According to the RFC, when priorities are equal on both nodes; 
+
+This is because by default, child processes inherit file descriptors of their parent. Since your web app has this port open, it trickles down for the request to the running apache web server. You need to alter your python code to do the following.

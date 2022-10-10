@@ -1,0 +1,67 @@
+One thing to note is that this turns many of the algorithms into recursive methods which requires more stack space (memory) since Java doesn't have tail recursion. 
+
+If you can assume that every index in the encrypted message is included in the key, You can loop over the key and encrypted message together, placing each letter into the correct decrypted message slot directly: 
+
+My first thought is to use the Factory Pattern and supply a to the which would cease to be abstract. 
+
+we can make some minor optimizations by skipping the comparison for , , and since we know into which partition they should land. The first two are already in their correct partitions, so we start by shifting in the looping terminals one slot. By performing a swap to place into the second-to-last slot, we can skip comparing it as well. Here it must be placed at the far right end of the partition, next to . 
+
+Wow, that's a lot of work--too much for a single function. Let's simplify it by extracting functions for emitting the help text and formatting the message. 
+
+Overall Design For such a small amount of code, I find the logic extremely difficult to follow. I understand what is happening at a high level, but it seems every function is responsible for managing everything, and program control bounces around a lot. As an example, the final function assigned to has several responsibilities: 
+
+Blech! :) You could solve the problem and expose a cleaner API by providing type-specific accessors. 
+
+Note that this assumes a single-character directory separator. My only quibble with the class, and I understand you want something lightweight, is that there's no checking of the array passed to . This shouldn't be too much of a problem since it will fail pretty quick if the parameter isn't an array or contains non-strings, but if that comes later during the execution the error will be harder to spot. I think you'll get a simple "class not found" error. Oh, and the method should be named since it removes any existing directories, or it should append them to the existing array. 
+
+Return a String instead of printing Instead of your method being make it return a and remove all the from it. Then from where you call instead do . This limits the side-effects of the method. For tiny programs this is not a big deal but in larger projects knowing exactly what a method will do is very handy -- especially if the method is what is known as a "pure function" which means it literally has no side effects and its output is directly dependent on its output. Consistent formatting In some places you have spaces before braces () and in others you don't (). It's less important whether or not you use them than how important it is to be consistent. Personally I put spaces before them. 
+
+This is worse. This is like saying . If you're set on leaving some comments it'd be more beneficial to leave some in the other methods with more logic involved like the method. 
+
+It's unlike Java where single quotes are for characters. One exception to this is when using the in Strings, you have to use double quotes for this. 
+
+Everyone has commented about how to better replace the spaces, I will answer how to better test. I suggest making a proper unit test with Junit. This way you do not need to manually look at your output, you can simply run the test and it will tell you if it failed or passed. Unit testing is extremely crucial in a professional environment and is a very important skill to pick up early. (The below assumes your class is named .) 
+
+Update: Since you're storing the certificate (or not) so you can check its validity, I assumed you were checking it at a later time and ideally multiple times. If this is the case, extract the logic into a hierarchy using the Strategy pattern. If the certificate is checked once in isolation of any other data, this isn't necessary and I see no reason to store the certificate in an instance field. 
+
+I hope this gives you enough to go on. The idea is to move the scene-specific logic into the model so that you can continue the story without writing more code. 
+
+should not be static. It's one thing to maintain a static instance to implement a singleton, but that object should interact with its state using normal instance variables. And you may as well initialize it in its declaration instead of the constructor. The service should create the thread itself instead of creating it in to make it self-contained. This allows another implementation to use a thread pool for parallel directory creation and easier testing. is not thread-safe and could allow two or more instances to be created. Use a blocking queue, so you don't have to poll and sleep. The thread will be put to sleep if the queue is empty and be awoken once a new directory is added to the queue. This will shrink your run loop to a few lines and allow you to rely on the well-tested thread-management in . 
+
+If you don't mind modifying the original array, you can shorten the (perfectly adequate code you have) with this: 
+
+Scope and `translated are only ever used in your for loop. It's important to limit the scope of variables as much as possible. So it's probably better to declare them in the loop like so 
+
+Method signature This may be an unpopular opinion, but I like not using in method signatures and instead using explicit types. It makes IDE suggestions and readability a lot better. 
+
+Specifics The below code is a little odd to me, it's saying in the th word in the th character, find each in the th character that is any of the vowels. 
+
+My reasoning against returning is this: It is never 100% clear if a method will return or not in Java and maybe someone will think this won't so they won't guard against the null condition with . If you return an , it's an extremely clear signal that the content of the result may or may not be present. They still may handle it wrong but at least you can be more certain they know what's going on. My reasoning against throwing some exception when the book is not present is this: 
+
+If you throw a checked exception every single call of this method will need to be wrapped with . Checked exceptions are a pain to deal. If you throw an unchecked exception then you have the same problem of , maybe people don't realize it could happen. So they don't wrap it in a try-block. 
+
+Note: I don't have much experience with the operator, if or something similar is valid I would prefer that instead of making the variable. DRY is still relevant though! While writing tests like this takes up more space I think it's more important that the test be clear. All that said I don't think DRY is completely useless in unit tests. Suppose you were doing more checks on , like making sure it's not , contains a specified number of elements, etc. I would put all those assertions in a separate method. Basically the assertions that are tangential to what you are testing. For example, you're not specifically testing the list has one element above, the assertion you care most about is that the only element is . You can't really do something like that so you have to assert that the first element is . Anyways, I tend to put these tangential assertions in methods like this: 
+
+Without seeing how the numbers and styles are used, I may have gotten the above wrong. What exactly does hold? What is in each ? 
+
+Solving the first problem is simple enough: use a to cause all incoming threads to block until the first list of objects is set. Ideally the system would start another thread to specifically load the data rather than letting the first random thread to come along and do it. This isn't necessary (see below), but it's much cleaner. For the second problem, wrap the list of objects in an to supply a correct memory barrier. You might be thinking, "Oh no! Not two synchronizers for each access!" but Java's synchronization primitives have improved greatly over the years, and the atomic value holders are even cheaper than full synchronization. 
+
+Without the real code to be tested, I can only provide an example of how I've tested something similar with QUnit and Sinon.JS, though you don't even need the latter. You can either use Sinon.JS to mock a response to the AJAX call or substitute your own manual mock for or . I find the former preferable as it documents the AJAX call and tests the full front-end code, but it's beyond the scope of this question. You could argue that you're needlessly testing jQuery itself, and you'd be right. YMMV :) Mocking JQuery Let's assume this click event handler that uses the AJAX call to acquire a JSON string. I've omitted the extra deferred for simplicity as your current test of the promise attached to the element is fine. 
+
+The commented out line is basically the same as the but it throws which to me is just more informative in this case than , but it's up to you which you prefer. 
+
+I recommend this, but it's ugly. I'd like it better if the throwing was at the top, but it's a trivial change you can figure on your own (It makes sense for all preconditions to be at the top). 
+
+The idea is simple, most people have some one directory containing all their projects as subdirectories. When you are in the top directory and you run this script like so it will run the command in each of the folders. I have another script called that fetches all remotes and fast forward updates them which I usually run each morning with this script. 
+
+The only reason I even include the manual throwing of is because I assume you do more stuff in the part, if you don't, remove it because it will do that on its own without you writing it in. 
+
+I am only going to talk about the sports method, from there you should be able to get the info you need for the others as they are all basically the same. DRY isn't a big priority As I said in my earlier comment, DRY (don't repeat yourself) principle applies to production code more than unit test code. I think even in general it's easy to take this too far, readability is important, but that's off-topic. Your code however is tough to grasp. To me, something like the below is more clear. I like to specify "given/when/then" in comments (although usually I do nothing more than , etc.) but it's not necessary. 
+
+Another option is to forego separate classes altogether and check for a special value in and to signify a missing ZIP code. 
+
+Also, you load the list of directories twice--once to get a random key and again to pull its value. Since you don't expose you may as well move it inside . 
+
+Obviously, this won't work if you're using Sinon's fake timers, so disable them for this test if enabled globally. Also, you'll need to figure out if a slow AJAX call will interfere with later tests when it finally completes and puts into the body. Maybe you want to put it into the fixture itself instead of polluting the global body. 
+
+Style Variables and functions (except constructors) in JavaScript are normally written in with a leading lowercase letter. It's not mandatory, but you'll find it easier to work with others if you follow a language's conventions. There are many guides out there, but I mostly follow Google's JavaScript Style Guide. Some of the variables do not change once set. These should use to denote that they are constants and probably assigned at the top. Another point in the guide is to surround all operators and keywords with a space. Omitting the space between , , etc. and the opening parenthesis makes it harder to skim without syntax highlighting. You can omit comments that merely restate the code in prose. At best they waste the readers time, and at worst they become misleading or incorrect when they aren't changed with the code. Good comments state programmer intent or clarify tricky algorithms. This comment adds no value.

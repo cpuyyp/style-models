@@ -1,0 +1,83 @@
+I agree with OldTroll's answer as the most probable cause for your "missing" space. On Linux you can easily remount the whole root partition (or any other partition for that matter) to another place in you filesystem say /mnt for example, just issue a 
+
+make sure you allow "GatewayPorts" and "AllowTcpForwarding" in /etc/ssh/sshd_config on LocalTest and sshd is restarted. Explanation this opens up a connection from localtest to it self and at the same time creates a tunnel listening on port 10000 on all interfaces of localtest redirecting traffic to webserviceserver port 443 Problem 2: redirecting traffic to test workstations with ssh this is actually the same as Problem 1 
+
+the guess work If I understand you correctly you want to connect from your client with a browser to server2, which then tunnels the connection to server1 and thus allows you to access the office net via the squid-proxy installed on server1. just to get the guess work complete I think you used something like 
+
+I never had Ubuntu behave like this, so this is just a wild guess: It could have something to do with 'network-manager'. As to the removal of dhcp-client: You are trying to remove a virtual package. Virtual packages don't really exist they are just provided by some packages to declare they provide a similar service/function (see also Debian Policy Manual). IIRC the default dhcp-client package installed by ubuntu is 'isc-dhcp-client', but no mater which one is installed on your system you probably will have a rather hard time removing it cleanly as quite some other packages depend on it being installed. 
+
+you'll need a connect module for ssh which is able to connect through SOCKS. We use it in our Lab all the time, here's our documentation on how to get it: $URL$ In Ubuntu (and I believe so in Debian too) it's available as package, just install with 
+
+I'm trying to setup a Kerberos KDC on a Solaris zone but ran into a bit of a problem with the Cryptographic Framework on Solaris 10 even though the packages for strong encryption (SUNWcry & SUNWcryr) are installed the stronger keys seem only to be available in the global zone: Global-Zone: 
+
+AFAIK using PasswordAuthentication the client prompts for your username and password and then sends both to the server. In keyboard-interactive the client asks for your username, sends it to the server and then the server responds back with a password prompt which is in turn relayed back via the client to you. The whole thing has been done to be able to implement further security measures to make sure you (the user) actually interactively types the password and it is not stored in some way and then only entered. 
+
+I'm not quite sure anymore how matching works between location and proxy directives. But when it comes to proxy directives only they work in a in-order,first-match principle. 
+
+NOTE: If the second command failed with an error no such file or directory, then you can do the alternate procedure: (within the zone) 
+
+Explanation as it is basically the same solution as with problem 1 it has also the same explanation (just different hosts and ports :-) ) some thoughts Keep in mind that both of the previous solutions open up the target systems (webserviceserver, somestationX) to anyone with access to LocalTest And as I mentioned in the beginning I don't think ssh is the right tool to do this for a few reasons. Some of them being: 
+
+you'll also need a wildcard DNS entry (*.example.com) pointing to your server IP (or a static dns entry for each and every user which gets a subdomain). 
+
+also make sure that no blocking iptables rules are in place for the ports you want to use. then instead of your existing tunnel you could use: 
+
+then in your firefox add localhost and port 3128 as proxy config. like this you don't need the configuration of GatewayPorts and only people with a login on server2 can use the tunnel to server1 
+
+some side notes If you do it in the way explained above everyone who can reach server2 (no login required) can use port 3128 as proxy port and thus access your office net (if no other measures are in place) I don't know what kind of policies exist in your company but before attempting such tunnels make sure you don't break any. another solution change your existing tunnel to 
+
+which would register ssh on a nonstandard port (222). $URL$ shows the list of available parameters and further pointers to other documentation. 
+
+I used XFS for a mail server setup (has been ext3 before) and definitely noticed an improvement with all the small files but it has been a while back and IIRC there are/were some "issues" with XFS and power-cuts (or any abrupt disruption to disk access for that matter) leaving all opened files filled with "0" and similar. But as mention by others: testing is in order, the same FS can behave quite differently on different hardware and as I said in the beginning it has been a while since I setup that server.... (I guess about 4 years) and the available FS and also their performance might have changed quite a bit. all in all this is just my 2¢ 
+
+OLD Response Probably mod_proxy_html could do what you want but as far as I know it's never the best solution.... I don't know Monit but isn't there an option in it to make it only use relative paths? 
+
+this is a modified version of what you can find in the apache httpd rewrite documentation: $URL$ You'll have to put the following statements in your httpd.conf (or where ever your custom configuration options for apache are to be set, this varies from distro to distro) and make sure mod_rewrite is enabled. 
+
+will halt the system - meaning the system will shutdown and at the end stop at a screen with the last message beeing something like "System halted". 
+
+if you dont use named vhosts then anything served on a particular IP will come from the same virtual host configuration. you might also want to have a look at the apache vhost documentation ($URL$ to get more familiar with the different concepts of name based vs. IP based vhosts and their respective advantages and drawbacks. 
+
+I'm no Apache httpd expert but I did setup a similar thing and the syntax of your configuration looks kind of strange to me. first of all ProxyRequests should probably not be on. "ProxyRequests On" allows for forwarding redirects and not reverse proxying see: $URL$ 
+
+Guessing here: Are there any "forced-commands" in your ~/.ssh/authorized_keys on the server or for that matter any other restrictions? If the lines there just start with "ssh-rsa AAAAB3Nz" then everything in that direction should be ok. 
+
+IIRC it could also be an issue that ssh hashes the hostnames in ~/.ssh/known_hosts most installations I know use ~/.ssh/known_hosts as source for the list of available hosts for completion but some systems also started to set "HashKnownHosts yes", which prohibits using known_hosts as a source.... if your known hosts lines start with something like 
+
+I'd personally setup a simple script for the second problem which allows you to reset the iptables rules for each test system you want to use, something like 
+
+I second sciurus' answer but if for some reason you need to use nginx... my guess is that your upstream definition is broken. The way you create your ssh reverse tunnel it only listens on localhost (127.0.0.1 and ::1), so you might want to try to give the following upstream definition a go: 
+
+i haven't used a cache when setting up a proxy but I guess that part should look something like this 
+
+and see what uses up your space. Ps: sorry for adding a new answer and not a comment but I needed some formatting for this post to be readable. 
+
+I got a solution: (provided by Oracle Support) This is apparently a bug in the packaging of SUNWcry/SUNWcryr, which can not be fixed during the Solaris 10 release cycle (as said before it is fixed for me on Solaris 11). Bug report examples: 6534506, 6759852 Workaround: replace pkcs11_softtoken with pkcs11_softtoken_extra in cryptoadm (within the zone) 
+
+will power off the system - meaning the system will shutdown and at the end power off (only possible if the system actually supports it but most systems I know have for quite a while now) 
+
+such a script would have to delete an old redirect (to another test workstation) in iptables and then setup the new one. I'm not quite fluent with the iptables syntax at the moment and so I can't provide such a script right away but I'm sure somebody here could help you out with something like that if needed. 
+
+"cryptoadm list" gives the same list of providers on the global and non-global zone. Has anyone an Idea how I can enable the stronger keys on the non-global zone? Or maybe if this is actually by design? I've seen the issue on Solaris 10 Updates 8,9 and 10. Only on Solaris 11 11/11 it seems to be gone, but Solaris 11 is not yet an option in this setup. 
+
+Edit: I just had a look at your httpd.conf as I think you want to use named virtual hosts (multiple host configurations on the same IP) you'll have to explicitly enable 
+
+IIRC as soon as you enable virtual hosts, the first virtual host takes over the configuration of some of the defaults. For example ServerName and DocumentRoot get overwritten. Just add another vhost to the beginning of your config and set the same properties as you had before: 
+
+I would not call it fault because there are reasons for one or the other behavior. In your case you should be able to adapt the dhclient config (IIRC /etc/dhcp/dhclient.conf) on your Debian machine. You'll have to add a line like the one below 
+
+It probably would be best if you post your apache config and maybe some of the apache logs. one other thought: Have you tested if you are able to reach $URL$ without the redirect? 
+
+if you want to connect to another Test Workstation simply quit the first connection and use something like 
+
+will only halt or power off the system depending on what's the default on that system (can sometimes be changed in BIOS) 
+
+Both of your problems don't sound to me like ssh tunnelling would be the best solution. but still here are some of the ideas I came up with to achieve these goals: Problem 1: using LocalTest as a reverse proxy for WebserviceServer 
+
+to setup the first tunnel. a solution attempt if you really want to be able to enter server2 as a proxy in your client's firefox settings make sure that in server2's sshd_config (/etc/ssh/sshd_config) GatewayPorts is enabled: 
+
+Make sure all folders "behind" your mountpoints are empty. Out of experience i'd say most probably you hide some data behind a mountpoint. you can check what is in the folder behind the mountpoint without having to unmount the disk/partitions (which can be nice if for example you would have to unmount /usr). Just do a 
+
+I'm looking for an (easy) way to have a http/s proxy server configured to proxy all traffic directed at the internet (speak not at a host in our subnet) to another proxy server. A short explanation of our setup: In our lab network all hosts use a proxy server (Squid) for any internet access, now there is an additional network within our lab environment that is almost totally isolated but we would like to allow it's hosts http/s (and maybe ftp) access to the internet. It is a requirement that this access is also done via a proxy server. I can't give this second proxy direct internet access so the traffic will have to be redirected via the existing proxy server. I do have full control over both servers though and some liberty to make changes. Any ideas on if or how this is feasible? 
+
+As SvenW already pointed out, it really depends on what kind of error you're running into... if you could be more specific with what you mean with "logical errors" and what kind of ReadyNAS (NV, NV+, NVX, DUO, Pro, etc....) you have maybe some help would be possible. X-raid is basically an extended version of LVM2 so usually you can just insert the disks in any Linux system with the necessary packages installed but depending on what kind of ReadyNAS you own you might run into problems with blocksizes (NV+ can use blocksizes of up to 16k, FS drivers in Linux kernels on x86/AMD64 machines only support blocksizes up to 4k). The ReadyNAS forums ($URL$ might also be a good source for information as many people there already asked similar questions.

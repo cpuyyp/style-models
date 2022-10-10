@@ -1,0 +1,79 @@
+This is why errors out with database temp does not exist You should add a step in your restore procedure since you want to create a specific database name anyway, not one that comes from the backup. For the second problem, it's a completely different question, hard to guess why it happens without complete error messages. Also note that is not followed by a password but by a port number. 
+
+Crosstab queries with a large or unknown (dynamic) number of columns have the issue that you need to enumerate these columns in the query. There are some ways to avoid that: 
+
+From a design perspective, why would the table be needed at all? The information that a specific student follows a certain type of education is implied by the existence of the corresponding row in the table. If 's reason for being is for SQL joins, it could be a view returning the union of all the tables. As for the foreign keys to , to be sure that each entry in can only refer to its corresponding type, I can see two options: 
+
+is a pseudo-column indicating the physical location of a row in the form of , so this will dump the contents in their order in data files. This COPY command should error out when it reaches the offending row, but at this point it should have streamed some output (to be confirmed in practice). The end of this output should indicate the up to which the data is not corrupted. Starting from this , it should be possible to pinpoint the offending row with a dichotomic approach, running queries such as 
+
+The attempt is: host = “[local]” (meaning through a Unix domain socket) user = “pgadmin” database = “postgres” SSL = off Now your lines: 
+
+To find the query bound to this statement, look upper in the log for the corresponding entry. If it doesn't exist, you might have to increase the logging level to through , or set to 0. 
+
+The clause in is not meant for seamless parallel execution, it's meant to avoid dropping the function when we just want to update the body. From the doc: 
+
+it means: this function name, with an empty list of arguments, does not exist. The presence of parentheses around nothing is relevant, because in postgresql, functions always go with their argument types: is not the same function than , or or . 
+
+This was before Postgres 9.x and its default hex format for bytea textual representation, but still the size multiplier is 2x for PG 9.1 With only 4Gb of RAM and 1.5Gb of it taken for shared_buffers, it's plausible to end up in a legit out-of-memory condition. But see the result of: 
+
+Concerning the second issue, a DBA can create a symlink from inside the directory to any directory, and will follow it, so the real upload directory can be anywhere on the file system. If the system admin agrees to this setup, as a non-priviledged user you could eventually run a simple plpgsql function matching the functionality of the shell script: 
+
+Note that SQL being strongly and statically typed, the pseudo-type is hard to work with. Often it's less cumbersome to use right from the start a composite type with a full definition of names and type for each column, either with the syntax for an anonymous type or with for a persistent named type. 
+
+...or use the -d,-h,... and other options of to have it connect to the database and skip the invocation. See manpage for 9.3 for details. 
+
+No mention of hashing. intarray provides other operators but does not replace the equality operator between . The closest function _int_same() that it exposes is semantically different (the order of elements does not matter) and is implemented as sorting+sequential comparison, not hashing. 
+
+If you frame this as a presentation problem, you might consider a post-query presentation feature. Newer versions of (9.6) come with , showing a result in crosstab representation without SQL support (since SQL can't produce this directly , as mentioned in @Erwin's answer: SQL demands to know number, names and types of resulting columns at call time) For instance, your first query gives: 
+
+It could be normal if there are newlines in certain text fields. Newlines are allowed when the value in the field is enclosed by double quotes. And obviously that makes the number of lines in the file greater than the number of records. Example : 
+
+So does not exist as such, rather it's with an implicit cast of the argument, and can't return only integers, for instance has a fractional part. In addition to that, doesn't fit in a postgres integer for dates beyond the (see The Year 2038 problem), which will be become a real problem as we progress towards that date. 
+
+It is necessary to keep the error messages in durable storage so that they can be analyzed later. When no error at all occurs, the file for errors should be there but empty, unless the option is used but it's intentionally not in the above script. About the message: saving database definition It is displayed along with lots of other informational messages only when using the verbose () option. The problem is that in case of error, these messages will be mixed with error messages, and it requires some level of expertise to distinguish what's normal from what's not. 
+
+Assuming the locale of the database is both in Ubuntu (master) and FreeBSD (slave), I believe the differences in sort semantics alone may account for the fact that the index is unusable on the slave. Here's an example of how they sort differently: On Ubuntu 12.04: 
+
+Instead of using the time zone 'UTC-7' it's using 'UTC+7', which is 14 hours different. It depends whether +/- means east or west of Greenwich, and it turns out both conventions exist. PostgreSQL doc warns about that: $URL$ Excerpt from 8.5.3. Time Zones (but you really want to read the whole paragraph): 
+
+There is no per-connection pre-allocated memory that a DBA would define. A session will allocate dynamically what is needed, or use the shared memory pre-allocated at server start depending on the kind of usage. See Resource consumption in the doc about what can be defined. 
+
+knowing that is the system pseudo-column that indicates the physical location of the row version within its table. Alternatively, the primary key can be used if there is one. In your case, the transformation is not obvious because your subquery is meant to produce only one row with its at the end. It should be redesigned to produce all the target rows in a single resultset, presumably where and are determined per . 
+
+This bug has been seen to set password expiry dates far in the past, such as 1/1/1970. In this case the error message when trying to connect is no different than with a wrong password. You can check these expiry dates with: 
+
+I think that extensions don't do this by default in general to avoid having the number of operators growing quadratically with the number of types. See the installed in your extension directory for the operators and implicit casts defined with . 
+
+it does not appear in , but in the current schema ( by default). This is made apparent by the command in psql: 
+
+I'd suspect you have set to OFF on the 9.1 instance (meaning it was changed explicitly, since the default is ON since 9.1), and the opposite in 9.2. Demo: 
+
+Starting with PostgreSQL 10, there's a built-in system view that provides this information. From $URL$ : 
+
+The simplest way in SQL is to query the view with a WHERE clause on and matching yours. All the properties you want (and more) are in the output columns of this single view. This view is part of the Information Schema whose purpose is to provide standard ways to do database introspection. 
+
+The SELECT permission allows for opening the object in read-only mode, and for UPDATE, the doc says: 
+
+When a cursor is defined at the SQL level with DECLARE, there is an option that makes it continue to exist after commiting the current transaction. Quoting the doc: 
+
+Or set it right at connection time with which would normally support it in the conninfo string (see Connection Strings in the manual) In your trigger, use to retrieve this information, instead of which doesn't do what you want, as already answered. There should also be a check in the trigger that this value is what you expect before storing it, since the trigger may be fired in any session, not just the ones initiated by PHP. 
+
+A large object cannot exceed 4TB for PostgreSQL 9.3 or newer, or 2GB for older versions. This is based on the release notes: 
+
+Just call to know the size of the database. (without the clause) does not free any space, it only marks it as reusable, and thus will not change the database's size (except in a rare boundary case, see Routine Vacuuming). does statistical sampling and would be useful if you needed the row counts, but for the global db size, it's not necessary. 
+
+To remove duplicate combinations of adjacent columns, the structure of the resultset should be changed so that each output row has only one couple of adjacent columns along with their corresponding dimensions in the parallel coordinates graph. Well, except that the dimension for the 2nd column is not necessary since it's always the dimension for the other column plus one. In one single query, this could be written like this: 
+
+On Windows, it's likely that the needed locale is already installed, it's just named differently than on Unix. As an example, the following database creation appears to works fine for me with PG9.1 on my Windows XP, with its default locale and no additional language pack installed that I'd recall. 
+
+The "Cannot assign requested address" part in the error message comes from the kernel TCP stack. When encountered intermittently, this typically means that the space of available sockets is exhausted because of too much sockets in wait state (, or less probably or ) The range of socket ports can be output by . The default value on a stock Linux kernel is generally . You may check the result of on the client(s) and on the pgBouncer's host when the system is busy. The flag will show the timeout counters related to wait states. If the total number of TCP sockets is close to then exhaustion of this range is likely your problem. Since a closed socket spends 60 seconds in state in normal condition, if a client host connects more than 28232 times in one minute, new connections will fail with the mentioned error until ports are freed. As a first workaround, the TCP ports range may be extended: 
+
+For the 2nd comparison, it's evaluated to false because some of the rules explained in 3. Look for the best match lead apparently to a cast to . But you may convince PostgreSQL to evaluate the way you want by adding a function/operator couple with an exact type match: 
+
+Maybe it's just index bloat. does not help with index bloat, on the contrary, as said in the doc for 8.4: 
+
+The way works, the time starts counting when the server receives a new command from the client. Queries launches inside server-side functions are not commands from a client, they don't reset that timer or push a new one onto a stack of timers. This is why has no effect. And if a function does it will have an effect only starting at the next command from the client. I don't see any way to control the execution time of individual queries inside a function. 
+
+If AND must be present simultaneously in the same "task" (including joined tables) but not necessarily in the same field, it should be workable by adding a GROUP BY step on top of the above, filtering out the results that don't have exactly N hits when N words are searched for. The query becomes: 
+
+The tasks initiated by must be able to connect with the parameters mentioned in , without a password. If steps have not been taken in or through a file in the server's environment to allow for that, the task won't be able to run. Concerning the log file, error reports would be expected there, but logs at the level. Maybe it's below your current level (see ) or there's another problem.

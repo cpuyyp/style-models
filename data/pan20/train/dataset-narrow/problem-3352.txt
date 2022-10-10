@@ -1,0 +1,69 @@
+The HDMI signal's duplicated to the interface's output port for the display. A copy is compressed to H.264 and output to the interface's USB socket. The interface appears to the Pi as a video device (), meaning that you should then be able to use a streaming package (VLC/FFmpeg/gstreamer/netcat/etc.) to transmit the stream to the network. For the IR signals I'd suggest you look into lirc, and perhaps the python-lirc library. It should be entirely achievable to set up some infrared receivers and transmitters and shuttle the signals around your network. 
+
+In either of these cases, if it were me, I wouldn't test any of it without having the battery in a reasonably solid flameproof container with a nice big bucket of sand nearby. Screwing around with batteries can get somewhat explosive when you get near the edge values, particularly if they're old. 
+
+I did some more reading, and don't think your approach will ever function as desired. Miguel Grinberg's article here outlines how to achieve Raspberry Pi camera streaming to Flask, and provides several useful examples. A simple, complete (non-Pi camera) program is provided which shows the use of a generator function and a multi-part response type to achieve animated streaming: 
+
+Unfortunately I have neither a USB mic or soundcard to hand that I can test this with. Lots of confirmed reports of everything working well though, so this should at least point the way. This post describes using VLC to capture an incoming USB mic signal on interface hw(0,0), transcode it to mpeg2 and stream it to an rtp client: 
+
+which should leave you with a script to run again if you update the kernel and need to rebuild the kernel module. 
+
+Also Vcc should probably be connected to 3.3v, otherwise D0 may push 5v into the GPIO, which is not 5v tollerant! 
+
+If you have a Rev 2 Raspberry Pi you should have a P6 header, which is intended for a reset switch. I would imagine if you held the board in reset from before powering up (the pins shorted) it should prevent it from booting up until you release it from reset (disconnect the pins). This will require a small amount of electronics, I assume this is not a problem if it is for an embedded application. eLinux - P6 header 
+
+Save the file and exit the text editor. cron should now run the command line once at reboot as root. Note you may need to use an absolute path to , e.g. 
+
+The Raspberry Pi uses 3.3v GPIO. Whilst the resistor will probably not get damaged, it is likely to be too large depending on what it is actually doing. For example if trying to reduce power to an LED nothing will go wrong, but it is unlikely the LED will light. See the eLinux - Raspberry Pi low-level peripherals page for more information on the GPIO pins. 
+
+It depends what you want to do with them, both should be capable of using GPIO to talk using I2C, SPI or UART (serial). If you are intending to transfer large volumes of data then Ethernet may be the best option, if you really care about latency then maybe just raw GPIO bit-bashing (manual software control) would be best, for most things either I2C or SPI would seem most appropriate (SPI is faster but uses more GPIO pins). If you provide an idea of what you would like to actually have them do then we can probably give you a more specific answer. 
+
+Sadly, I don't think this is going to work the way you think it's going to work. Balanced cabling is effective at minimising noise induced along the length of the cable. If there's an almighty tsunami of white noise produced by the source (here, a Pi's 3.5mm audio output), a balanced cable will endeavour to transmit that noise faithfully from source to destination without introducing further noise itself. Balanced cabling isn't a noise removal strategy, it's a noise prevention strategy. The Pi's 3.5mm audio output is an abomination, and appears to reproduce every glitch, crackle and hum possible. It should be avoided if there's any other feasible option. Whenever I've had to get audio out of a Pi in the past I've ended up using a cheap adapter into its HDMI output. This still isn't perfect, but it's a lot cleaner than the 3.5mm jack. 
+
+No. HDMI to Ethernet adapters are used to send HDMI display data over an Ethernet cable, rather than network data over HDMI. This won't work. 
+
+This thread on the raspberrypi.org forums suggests that pads PP1/PP2 (5V) and PP3 (ground) can be used to safely apply 5V to the Pi. This doesn't require removing the USB socket or using a micro USB plug, and retains all of the Pi's protection capabilities. 
+
+The discussion there leads to this example, again on Github, which seems to work around the problem through appending the option to the camera.capture() command. 
+
+Alternative: If you want to get actual latencies as well, probably the simplest method is to actually call the program and parse the results: 
+
+This has the added advantage of avoiding the command as well as not waiting for the command to finish. I have to agree with Lenik though, it is really better to ensure the script does not fail, is there a problem there which you require help with? Finally I am a little confused why you are opening the log file in append mode but immediately moving the write position to the start of the file, did you want an appending log or a single last message log? 
+
+Yes you can, any of the GPIO pins except the 5v, 3v3 and Ground (GND) can be used as general purpose I/O pins in software. The only thing to be aware of is any expansion boards that need the SPI / I2C / UART will need those particular pins to be set to the correct mode. 
+
+Since the board provides four bridges, it should be capable of driving two DC motors and a stepper motor from the other two bridges perfectly fine. With regards to using the board from a Raspberry Pi it all depends what you want it to do. Basically their board uses the PWMs on the Arduino to control speed, if you do not want speed control on the DC motors then this will not be a problem, if you do the Raspberry Pi only has one PWM capable pin on the GPIO header, so you would have to use a software based PWM for one or both of them, which is likely to be less precise. 
+
+The Raspberry Pi Foundation blog currently lists two alternatives to port forwarding for communicating with a Pi over the internet: 
+
+The RCA inputs accept standard analogue signals (white/red for L/R audio, yellow for video), and the device should register as a standard webcam when plugged into the Pi. There are many devices which do the same job (analogue to digital USB video converters) and I suspect they won't all use the same chipset. You may have to experiment a little to get everything working as it should. There are reports from several years ago of issues getting certain chipsets to work properly with the Pi, but Google hits on the topic seem to have dried up a little in the last year or two. You can read over some of the issues you might face in this post on raspberry-at-home.com. Having gotten the video signal from your nest box into the Pi, all you need to do is stream it. We have literally hundreds of questions on video streaming already. It's a fairly large topic, but I would recommend starting with some of the suggestions against the question 'How can I stream H.264 video from the Raspberry Pi camera module via a web server?'. You'll need to modify some of the commands to work with a USB camera device rather than the Pi camera module. 
+
+excuse my javascript, I do not use it so I am guessing syntax, but it should help you understand what is happening a bit better. 
+
+This should add a 128 MB swap file, make sure to exclude it from the backup (change to be somewhere else if need be, e.g. ). 
+
+Both the UU and "Device or resource busy" are trying to tell you the same thing, that I2C address is already being used by some other bit of software. Having had a quick look at the RasClock page, it asks you to add to during the setup. I imagine that is a driver for the clock, and is probably using that address on a regular interval. If you want to play with the clock yourself I would suspect if you comment out the line (add a to the start of the line) and reboot the Raspberry Pi then that address will be available to talk to. 
+
+/etc/wpa_supplicant/wpa_supplicant.conf only differs in the network setup, this is probably due to different WiFi setups 
+
+Looking at the AdaFruit code and yours, it would seem the step sequence is wrong, in particular it seems you need to drive two pins at the same time not just one. I think the following sequence should work based on the AdaFruit code: 
+
+It does sound like the most likely explanation is indeed that the L293D overheated when trying to drive the larger stepper. We make a small control board called PicoBorg which is rated for 2A and is capable of driving a single 5-wire or 6-wire stepper motor, perfectly suited for driving your larger stepper motor. The specification, FETs used and circuit diagram can be found here. The example software provided here includes code for driving stepper motors, with a short explanation here, and even a practical use example called FedPet. 
+
+Looking at your m3u8 file, all of the entries are local files. They're pointers to files that exist at the addresses: 
+
+I missed the all-important , which provided the firmware upgrade that I needed to run the camera. Everything's now up and running. 
+
+Kodi implements Consumer Electronics Control (CEC), which sends control signals between the Pi and the TV. It's pretty handy on the whole, allowing you to shuttle around menus using your infrared TV remote, and switch the TV on by tapping a menu key on a remote app like Yatse. You can take a look over the docs on Kodi's wiki page here. The exact feature set varies a little between TVs, and it sounds like yours is responding (as it should be) to a CEC request from Kodi to shut down. You can turn that feature off by going through the menus to: 
+
+I get expected responses from all the buttons on my remote that already worked, but no responses whatsoever from the buttons that didn't. What this means is that those buttons do not cause the TV to transmit an HDMI CEC signal to the Pi, which means that they're forever useless for the purposes of controlling Kodi. The only way to add them would be to reprogram the TV's firmware, which is only realistically achievable by the manufacturer. 
+
+It's possible, but it's probably a bad idea. The reason that Raspberry Pis aren't more prevalent as CNC controllers is that they're full Linux PCs. The operating system's doing many different things, and doesn't necessarily do all of them in a rigidly timed fashion. Arduinos, on the other hand, are widely used as CNC controllers, because it's much easier to get them to spit out precisely timed signals to your axis motors. I've got a Shapeoko gathering dust in my basement, and I can well imagine the truly horrific mayhem that would ensue if the controller decided to run a background daemon for a minute or two and slowed the spindle by a few percent. 
+
+line. Save the file and reboot, I had a similar problem (could not edit bad settings) and it allowed me to edit the settings again after the reboot. In my case though the problem was an incorrectly configured wireless, it seemed to get stuck in a dead loop of trying to connect and would not let me use the GUI to correct the problem! 
+
+If you are fairly sure the pins are not working then try to use them as simple GPIO pins (0 & 1 for rev 1, 2 & 3 for rev 2) and manually drive them high, check they are high (3.3v) using a multimeter, then drive them low and check they are low (0v). If you do not know how to drive the GPIO pins manually then see here for a Python example and here for a BASH example. If they do not go high and low on command then there is something wrong with the pins, if they do but you still cannot get I2C to work then your problem will need further investigation. 
+
+/etc/network/interfaces is somewhat different for the wlan0 section. In particular it is set to manual rather than dhcp, and uses wpa-roam rather than wpa-conf. 
+
+Your total virtual memory seems large for the RPi, 100,565 kB = 98.2 MB, which sounds like there might be a 100 MB cap. Try running , if there is a limit on the virtual memory you could raise it using (200 MB) and see if that gets around the problem. See here for more details Update Since it does not appear to be a system limit, I can only imagine that something (maybe xz, maybe something else) is trying to reserve a large amount of memory briefly, and therefore tipping things over the edge. Could you try adding a swap file and see what happens:

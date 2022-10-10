@@ -1,0 +1,65 @@
+I usually use mysqlcheck with --optimize and --databases combination. mysqlcheck is a command-line interface for administrators to check, optimize and repair tables. 
+
+To switch of MySQL engine you could : 1 Make a ALTER TABLE myTable ENGINE=InnoDB 2 Make a mysqldump of your table, then edit the CREATE TABLE statement to replace MyISAM by InnoDB and restore the dump in the new table (i called it myTable_InnoDB): 
+
+I do not use phpMyAdmin so maybe i'm out but take a look on a potential autocommit option in the UI... Maybe your PMA's session isn't in autocommit (test with : SHOW VARIABLES LIKE "autocommit"). Other thing, do you have filtered replication ? (do-replicate, do-ignore...) Max. Best regards. 
+
+--replicate-ignore-db applies only to the default database (determined by the USE statement). Because the database was specified explicitly in the statement, the statement has not been replicated. My advice is to change the context with a instead of explicitly specify the database in the statement. Max EDIT (for questions) 1. 
+
+WARNING NOTICE If you enable the audit_plugin (it's right with all logging processes like SLOW LOW, GENERAL LOG...) be careful to not saturate your disks in term of I/O. Depends of your workload, prefer write these types of logs on dedicated disks to minimize the impact on your MySQL instances. You can also throw them to syslog but you should have the architecture to handle them (ELK for instance). Max. 
+
+Not sure if the question title describes perfectly what I am trying to achieve. I am looking for better way of doing what someone else implemented and I am trying to simplify it, secure it and make it easier to manage. Developer has built a website for displaying information to end customer, part of this information is presented internally through SSRS report. Since the site usually resides on DMZ there is no direct connection to SSRS report, therefore developer wrote CLR procedure that calls SSRS server to generate PDF file of SSRS report that he stored in the table temporarily, then just to return that binary to site which in turns displays that report. This process is extremely complicated to debug and maintain as new reports require new CLR procedures which creates problems when trying to distribute CLR to different clients that are using the product. In conclusion, if I want to present SSRS report outside of the network in a secure manner, what is the best route to go about doing that on a webpage? 
+
+When I look at messages, the command does not return row every loop but shows up as multiple rows at ones. I have added one line and now it shows up 1 line at the time and the the whole process is much faster. 
+
+Note regarding log-slave-updates: by default if you enable Binary Logs on Slave, the Slave will only writes events executed on the Slave directly, none of the events coming from its Master will be written in the Slave's Binary Logs. If you want to setup a chained replication (M -> S/M -> S), you need to tell the Slave to logs the Master events on its Binary Logs to replicate them on its own Slaves. This options is log-slave-updates. If you need to enable Binary Logs on Slave the command to see the curent position of the Slave´s Binary Logs is you will see the position coresponding to your files on your directory (on slave). Note on Binary Logs managment: Do not forget to set a "purge strategy" for your Binary Logs if you don't want to saturate your disks. The simplest way is to use the expire_logs_days variable which tell to MySQL to purge its Binary Logs older than this variable. I hope I was clear... Best Regards 
+
+MySQL allows you to create a temp table with a existing name because they don't have the same "scope". A temporary table is visible in the session only, and it is dropped at session ending. If you have the same name, MySQL "hide" the original table until you drop your temp table. You can refer to the Temporary Tables section in the MySQL documentation Max. 
+
+Now just place logic between and keywords. Just like Aaron pointed out in the comments, a job still has to be created on all servers with the same logic to ensure that it only runs on primary replica and not on the secondaries. There are scripts and tools that can be used to copy jobs from primary replica to the secondary replicas. 
+
+I see you were playing around with join hints. Those are very last resort anyone should do when comes to query optimization. keyword forces a physical operation on logical operation. I would recommend running query in PlanExplorer completely free tool (no contact information required) and looking at index analysis that gets information on statistics. 
+
+which made no sense as it is self-join back to the table. After carefully looking at your plan I realized that you are bringing back data from a view and then joining it back to the base tables that are present in the view. It is a known issue that nested views will always produce estimated row count of 1 no matter how much you update statistics. My recommendation is to rewrite query without use of which just hinders performance. Remember: Views are not for performance, they are for simplicity and easy of access of information. 
+
+Know that if you want to use the same MySQL instance, you "can't chose" file location. In MySQL we don't have this flexibility because we don't have the "notion" of "Tablespaces" in oracle or "File Groups" in SQL Server. You just choose a location for all your datafiles in the my.cnf file, you can use the parameter file_per_table when you want to split your data in different files (one per table) but all these files will in datadir. One solution is to use symlinks in UNIX if you want to "load balanced" your disk usages (The solution that Rolando explain) 
+
+Your index is obsolete. It's a duplicate index as the PK starts by sorting so the queries on this field will use the PK. Note that I always create a ID field of type INT (or BIGINT for big tables, storing logs for instance) for the PK, then you can add a UNIQUE KEY of the field(s) you want but the PK should be simple as possible. It facilitates consistency checks and deployment on cluster solution as Galera. Second note, you should always set the option on your PK field, you will never need negative values in them (even more because you use AUTO_INCREMENT) and you double the capacity of your datatype. For me the table creation statement will be: 
+
+I saw it once during a presentation when someone showed a query to get a count of how many times views have queried in a SQL server. I don't remember if it was from DMV or a combination of some other statistics, but I clearly remember when they ran a query that selects from a view and after it would show that count going up by one. Another interesting fact that I recall about the presentation was selecting from a CTE increased the count by two because SQL Server has to create a "temporary view" and later select from it. Does anyone know how this can be demonstrated? 
+
+I used the following query that I got from EXCHANGE SPILL, but slightly modified it to convert time from UTC to local. 
+
+In SQL Server it is best to store DataTime as one field. If you create an index on DataTime column it can be used as Date search and as DateTime search. Therefore if you need to limit all records that exist for the specific date, you can still use the index without having to do anything special. If you need to query for time portion you will not be able to use the same index and therefore if you have a business case where you care more about the time of the day than DateTime, you should store it separately as you will need to create an index on it and improve performance. 
+
+Standard method to extract some field(s) from denormalized data to separate table with the aim of normalization looks like: 
+
+No in practice. Because in the second approach the operations execution is one-by-one, not parallel. Cause of this is simple - in theory the next step can be dependent by previous one and so impossible until next step fully performed. 
+
+I think You can perform update You need using 2 statements. 1) Update all records in decreasing order. Single-table UPDATE allows ordering. 
+
+In practice this procedure is performed as described in answer 2 + exclusive lock on the table modified. 
+
+Prepared statement is stored in memory till explicit statement or connection termination and can be reused in the same connection if it was not destroyed - including from within another simple or compound statement. Query result obtained by SELECT type prepared statement is stored in query cache on a universal basis independent of the source type of query and can be reused both by another execution of this or another prepared statement and by direct query when its text is identical to the SQL text of the first prepared statement. 
+
+To ensure max performance (assuming is primary/unique) I'll recommend to move LIMITation into subquery: 
+
+Operations and issues on slaves will not impact the Master. I dont't understand your concept of "the master -> slave replication running every 5 minutes". All transactions on Master will immediatelty be replicate on slaves. If your tables are InnoDB, your dump will not lock any tables (with the option --single-transaction) so you can have normal activity on master and slave too. To backup your slave you can also stop the replication, shutdown your MySQL (Slave) and copy your datafiles or use a hot backup solution like Percona XtraBackup. Max. 
+
+In the table in . Use the field for reads and sum the fields , , , for writes. These values are cumulativ counters, you should subtract values between an interval: if t1=t0+60seconds, Com_select at t1 - Com_select at t0 = reads in 1 minute 
+
+Now with my query you can retrieve one line in your dataset. This query will split the result and return one line, you just have to modify the @i variable to choose your line (0 is the first line) : 
+
+Now, if you don't use the Binary Logs on Slaves (for point in time recovery or chained replication) you can disable it and remove them: 
+
+I'm trying to understand what effect database mirroring can have on replication in SQL Server 2008. Here is current environment: (don't ask me why it was done this way or to change it) Server A: SQL Server 2008 (Publisher) Server B: SQL Server 2008 R2 (Distributor) Server C: SQL Server 2008 (Asynchronous Mirror) Server A is setup for SQL Replication and for Database Mirroring. Mirror is going to DR site and replication is used for different purpose at local site. When database mirroring fails (Server C goes off-line or network issue or anything else) and I can see state on Server A (principal, disconnected). At that time replication failed until mirroring was turned off. My understanding was that High performance (asynchronous) database mirroring, should not prevent transaction from being committed on source. The only time transaction should not be committed to the source is when High Safety (synchronous) mode is on. Which would explain that replication not being able to pick up the changes as nothing is being committed on the source. Is there any scenarios in which High-Performance (asynchronous) database mirroring can break database replication? 
+
+but it only shows statistics for the whole file and not sure how to split into individual tables. Trying to do this in order to identify tables that should be places in their own files on different disk. 
+
+Error 150 is a FOREIGN KEY related error so I bet that you didn't create the table . before . (which is mandatory). Otherwise, you have some bad practices in your query: 
+
+MySQL calls these section "Groups". The [mysqld] group contains the variables apply to the MySQL Server (the mysqld process). The [mysql] group contains the variables for the client program (mysql). The [client] option group is read by all client programs (but not by mysqld), so "mysql", "mysqldump" etc... None of these groups are mandatory but usually we set at least the [mysqld] because it's where we configure the server. About how MySQL interprets these variables, MySQL Documentation says: 
+
+You're right it's a little bit confusing but it's not a bug. See MySQL Documentation for the TRUNCATE command: 
+
+3. ALTER TABLE (ONLINE) The problem of and that it locks table during operation. You can use the Percona tool : pt-online-schema-change (from Percona Toolkit : link ). pt-online-schema... will construct a mecanism with triggers and temp table that you permit original table to be available for read and writes during the operation. I use this tool in production for the big it's pretty cool. Note that you should have referenced to your table, FK and triggers risk to produce a mess. To check this prereqs, query:

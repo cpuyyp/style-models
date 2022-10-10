@@ -1,0 +1,81 @@
+The border for each series is set to a solid line style with 2pt line width, no shadow. I don't see why I don't get a pretty line versus this. Is there some format setting I am missing? It has been sometime since I have tried setting up graphs in BIDS. 
+
+It is generally confused with remote access to the instance itself, over TCPIP, but that is controlled at the service level. This option is used to control execution of procedures from remote instance/servers. What you would do through a linked servers. It is actually ignored as of 2008 R2, I believe. This is now controlled when you configure the linked server. Reference: 
+
+You can also take a look at this whitepaper written by the SQL CAT team. Take note of who all reviewed that document too, it is very well written. The whitepaper will explain that since we are talking about data compression there is some data that will compress better than other. I believe the section on Application Workload has information for some of your questions, is goes over the performance implications found when using data compression. My advice is going to be to test it. That is really the only way you will find out for sure if it will benefit or hurt your application/system. A snippet from the whitepaper points out some data that does not benefit from data compression: 
+
+You can do this without using the command and having the table locked or generating WAL for the whole table. The cost is that you need to full-scan the table regularly. The basic idea is: 
+
+The above is workable now, but is a bit quirky (needing to turn off auto-vacuum for the table) and requires regular full-scanning the table. I think something similar without the disadvantages could built into postgres. You'd need: 
+
+You will probably need to get in touch with Oracle support. Making sure you have the latest patch set applied for your version may help - or finding the exact SQL executing when the server process crashed and working around the Oracle bug causing the crash is often possible. 
+
+When vacuum runs, does it efficiently free the space occupied by the deleted rows by rewriting the entire block, or does block fragmentation occur with new rows fitting into available 'holes' only if they are smaller than the deleted row that has made way for them? 
+
+SQL Server 2000, 2005: You can take advantage of the fact that only one null is allowed in a unique index: 
+
+I'm going to say you are getting all the extra fields because you picked a template when you built your event session (or used the wizard). If you only want certain fields then go uncheck what you don't want. However, there will be some event level info that will always be there, what is shown under the "Event Fields" for each event are their by default and cannot be removed. Default event for "sql_statement_completed" only captures this, after I checked the global field for client application name: 
+
+Running DBCC CHECKDB via a SQL Agent job and it will fail when it returns errors in the integrity of the database that was checked. It will do this when you run it via SSMS query as well. You should set an output file to that job and then you can review the output more easily in Notepad. The job history output will be truncated and is not going to be able to hold all the output that CHECKDB spits out. You can prevent a lot of that output by adding to the command, but still a good idea to have the output go into an output file on the job. 
+
+This probably doesn't matter if "less than 3% of the rows are canceled." - let them be scanned anyway? Oracle: For the unique constraint, if you include (from a sequence) in the index then cancelled rows will never cause the constraint to fail 
+
+I can connect to my postgres instance from pgAdmin III without a password for any user including superusers such as . Because you are connecting ok from another client, there is no reason you should not be able to connect from pgAdmin if they are on the same workstation - unless some firewall rule on the client itself is allowing one program but not another. If the problem is specific to this client, you may need to change one or more of: 
+
+So both relations are 'many:many'. As gbn also said, adding "comma separated ids" would be something of a disaster in database design: you would regret it many times over. 
+
+dbfiddle here If there are multiple columns and you want them all to be default, you can still use a CTE: 
+
+It needs to be calculated based on how quickly you are generating UNDO (with DML), and how long the export takes — you'll need to find a size that works for you or try and do the export when less UNDO is being generated, or speed up the export. If you have the space available, increasing the size of your UNDO is the easy solution. 
+
+Since you are doing a cluster install it differs a bit from a normal installation, and how you might go about troubleshooting it. SQL Server 2012 provides two options for doing a cluster install, which one did you pick?. Is the installation failure you are referring to ocurring on your first node install or are you working on adding the second node? Also if you have a successful install on the first node, and everything is online, when you try to connect you will need to use the cluster name that you configured for SQL Server, not the physical name of the node (SQL-1 or SQL-2). From your screenshot it appears you might want to use the Windows Cluster name "sqlcluster.mytrend.us" since I see "MSSQLSERVER" under the cluster service tree. I have not done a full cluster install with SQL 2012 but you will need to verify that the TCP/IP protocol is configured properly. This may have occured during the cluster installation but you will want to verify it is enabled for the IP used by the SQL cluster resource. 
+
+The easiest way to setup an alert is to base it off the error number that occurs for failed backups. That would be error 3041. To setup the Alert 
+
+You need to use the command in RMAN to make the file known to the database (don't worry, this does not depend on a recovery catalog!) 
+
+On most platforms your would throw an error if your subselect returns more than one row, rather than just insert the 'first' returned row (and 'first' is undefined without an clause). What you are probably after is an like this: 
+
+If you are open to a different approach, Have you considered adding a 'deleted' Boolean flag to the table, or a 'deleted_at' timestamp instead. Or better still, deny CRUD access to your database tables and handle the audit trail in your transactional API :) 
+
+This function will do it, but 1Gb will take a long time because it does not scale linearly with output length: 
+
+I don't know of any changes that break backwards-compatibility - see here for some general upgrade hints as you can't use pg_upgrade You will of course want to test the upgrade away from your production environment first 
+
+I think you mean you want to avoid a full scan of the table. It is possible to extract an estimate from the planner (credit to Michael Fuhr): 
+
+The is to use an unattended installation script that simply is called from each server, where the media for the installation is on a central directory on your network, that is accessible from each server. You will have to run the script in an elevated mode, which this is fairly easy in PowerShell. You will need to use the CLI to extract the hotfix, I found that here. Then the CLI options for the SQL Server patch can be found here. The following commands are what I used to apply the CU6 patch to the local SQL Server 2012 SP2 instance on my laptop. I changed to the directory I downloaded the hotfix to: 
+
+An actual backdoor into SQL Server does exist that does not require restarting and/or rebooting anything into single-user mode. I have done this on systems where I did not have access but needed to check stuff. Download PSexec tools from here. Place this on the server and then in a command prompt execute this command:, or sqlwb.exe 
+
+You can find the logins on an instance by querying and checking the column to know if they are still useable. 
+
+and the reason I'd like a single statement solution is to prevent a race condition where another transaction inserts/commits data between the and in the primary transaction. 
+
+If you plan on porting integer data back to SQL Server from Oracle from those fields at some point: if integers out of the range -2,147,483,648 to 2,147,483,647 have been inserted on the Oracle side, these values will overflow on the return journey If some part of an application is relying on integers being in the aforementioned range. Values outside this range might therefore cause an error 
+
+My function is called several times per second (but only once per session) by a web application. The very first thing it does is lock the table (to do an 'insert if not exists'—a simple variant of an ). My understanding of the docs is that other calls to should simply queue until all previous calls have finished: 
+
+There is no way of knowing that a table in A has changed except by polling. You could consider Materialized Views, refreshing periodically, which can work over a dblink - but only a complete refresh is possible so this may only be practical if the tables are small. 
+
+You can also access this by using the search function of the start menu, by just typing you should get similar results: 
+
+This is dictated by your documentation of your process. If your process is written to a 3rd grade level then any adult is assumed to be able to perform that process strictly by following your documentation. 
+
+Since your thumbprint is being returned as a you actually cannot easily convert it to a . I have not gotten a full example that you are doing to work completely but will show you how I convert the thumbprint, and it seems to work: 
+
+To properly remove any program from Windows you should be going through Add/Remove programs feature under the control panel. You locate the SQL Server Version you want to remove and uninstalled it. Optionally you could also run the original installation media for the version of SQL Server and select to remove an instance. 
+
+If you are using a database you created via Options and Tools it could be the database is not at a compatibility version that ClearTrace needs. I would suggest letting it create a new database, as doing this I generally never experience issues. 
+
+Have you considered Robocopy? It is able to copy NTFS ACLs. I guess you might need to have postgres running under the same Domain Account on source and target if possible but I'm probably out of my depth talking about such things. 
+
+All the examples you give perform a checkpoint as part of the or so explicit checkpointing is presumably to reduce the time required for recovery. general advice: 
+
+--edit this is not a good solution after all since on MySQL, is a synonym for , and so allows non-null values than 0 or 1. It is possible that would be a better choice 
+
+@kevinsky is correct, you cannot use as a variable name in PL/SQL, however that is not the only issue. You also cannot assign values to IN variables like , , and . My best guess is that you meant those to be local variables seeing as the first thing you do with then is SELECT INTO them. test table: 
+
+If you have an index on then the planner will need to choose between an using that index or the PK (or a full table scan) - it will not benefit from both at the same time. --EDIT As pointed out by @jug in the comments below, this is not accurate at least since 8.1: the planner may choose to build two in-memory bitmaps and combine them to get the result set. This gets more expensive as the tables get bigger, so the planner may choose not to do this depending on the size of the table and the estimated cost of using one index and then filtering. --END EDIT The new index will only be helpful if in some cases using it is more efficient than access via the PK. The kind of things that could make this likely include: 
+
+EDIT, from your update As you have said that you can loose 1 days worth of data then I would just put the databases in SIMPLE recovery mode. You could then do a FULL each morning and/or evening. If you wanted to cover yourself during the day you might through in a differential backup of the database, one of those just in case situations. This will capture any changes made since the full backup. If I know a time frame where a lot of input is happening I might throw this type of backup in there after it is completed. It can save folks time in recoverying so they don't have to do extra data entry. Since this is your only server I would make sure you are running DBCC CHECKDB against the databases. Backups don't do any good when you find out they are corrupt (I think someone mentioned this too). You can probalby find a few scripts out there to setup a scheduled task to check the SQL ERRORLOG for the DBCC message to catch any errors. SQL Server will not natively warn you of errors returned from DBCC messages, so unless you manually check each time a script that does it can help. The differential backup command:

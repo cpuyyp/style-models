@@ -1,0 +1,87 @@
+A) Oracle replied to my SR that it is not supported run the SQLs manually. This is not entirely correct but I expected something like that. B) The second command can be queried with SQL. The result is even more accurate than from RMAN. 
+
+I do not want to parse the output of RMAN. So here is my question: Does anyone know a method to monitor these two commands using SQL and/or PL/SQL? I know that RMAN just uses SQL and PL/SQL to get the result but an sqltrace just lead me into non-documented pl/sql funtions with encrypted code. 
+
+I would suspect that these files vanished from your repo because the following conditions were met: The files where not needed anymore to meet your recovery policy (rman policy) and they also exceeded the parameter controlfile_record_keep_time. At this point Oracle would overwrite the records in your controlfile. If you backup and delete archivelogs on daily terms, you should not have any "dead" archivelogs. EdStevens already answered the other two questions... 
+
+This can have several reasons but in your case it means that the database found redologs which do not fit the controlfile/datafiles. This probably happened like this: 
+
+I think the article Raj quoted ($URL$ describes this pretty well. "clustering factor" was also my first guess while reading the description of your problem. I also prefer to use RMAN to check for corruption. 
+
+Write your own Agent Plugin. I never did that because after some testing I considered it to be to much work. Use "Metric Extensions" available with "Diagnostic Pack". 
+
+This problem is related to timezone stuff. Did you execute the pre-upgrade (utlu112i.sql) scripts? And did you follow the instructions? 
+
+Well, I guess the database is expendable since there is no proper backup. So just drop and recreate the database. OK, seriously there are not many options left. Before you do anything shutdown the database and copy all files which belong to the database somewhere else! Because everything you do can make it worse. Once you did that you have 2 options: 
+
+RMAN's will only report files which contain content which are unrecoveryble after the latest backup. This SQL reports unrecoverable things in general. Normally we do not try to make the database only recoverable after the latest backup. C) For both commands I wrote a "screen reader". Here are some code snippets: 
+
+Why is clustering bad for performance? When Oracle reads data from disk or cache it always reads in block. If the block is half empty you loose 50% of your reading performance. In case you do a full table or full index scan Oracle scans all blocks belonging to the segment (index or table). It does not check if a block is empty or not. Oracle reads from the first block to the last (HWM). If your index has 10mil blocks but it only needs 1mil blocks Oracle reads 9mil trash blocks. ASSM (Automatic Segment Space Management) helps a lot to reduce/prevent clustering. If possible you should migrate Manual Segment Space Managed Tbs to ASSM Tbs. 
+
+No you cannot. To restore a table from the recycle bin use is the original table name and not the object_name from the recycle bin. Do not rename the table to restore it from the recycle bin! 
+
+To archive an entire partition you best exchange it with an empty table of the same structure. Afterwards you can export/backup the table and then drop it. If your partition is in a dedicated tablespace you can also mark it as read only and skip it in the daily backup (enable backup optimization in RMAN). 
+
+The user you are logged on has to be a member of the ora_dba operating system group. The parameter must be set correctly. It can include more options but "NTS" is required. You have to connect to the database correctly which is: . You can also add these quotes but that was Oracle 9i style. But you need a space betweed "/" and "as". 
+
+get a SPFILE startup the database in nomount mode restore the controlfile with make sure the controlfile knows all available backups. If not run a to search for backups. restore the database with In case of an online backup you would run a recovery now. But not with a cold backup. Open the database with resetlogs. 
+
+You tried to restore the old backup without deleting original files / moving original files somewhere else. (I prefer option 2) You come to the point where you should open the database with resetlogs option but you don't do it. You try to open the database normal and the database finds the redologs of the previous database which have the correct DBID but a different incarnation. Luckily the database realizes the fault and does not continue otherwise you would crash your fresh restored database. 
+
+Source Database Oracle Additionally to the options mentioned in "Source Database MSSQL or other" you can do: 
+
+This may help you to determine if the clustering_factor is high. You can also query to determine the clustering_factor. 
+
+The auxiliary database uses the TNSalias "prod" to connect to the target database. The prod database uses the TNSalias "dev" to connect to the auxiliary database. This means you have to configure the tnsnames.ora on both sides to be able to connect to the other database. Since the rman session is on dev in this example you have to configure the TNSalias "dev" on dev as well. Back to the example with , it is obvious now why it cannot work. Then there are additional stuff to keep in mind. The auxiliary database needs to be restarted several times. In some cases you loose the connection to the auxiliary database when it shuts down. This means you have to configure the dev database in the SID_LIST of the listener on the dev server. And take care that the password file is present. Well, this sounds like a lot configuration overhead. If you have to refresh your dev database frequently this is not a big deal. But I personally prefer to clone from because this is much more simple. You can also skip the clause when you create it manually. In my experience you need 2 or 3 attempts to work out the correct parameter conversion. If some parameters change on your prod database you might have to adjust this clause again. 
+
+The easiest way to register your listener at Oracle Grid Infrastructure is to run . If you want to configure the listener "LISTENER" you have to make sure that it does not exist in the listener.ora yet. One more thing: You should always configure your own host in the file. 
+
+First you have to find out what the current sequence value is and then reset it. I would write a script which does the following tasks: 
+
+Did I understand this correctly that your customer has MSSQL Server? Source Database MSSQL or other You have two options: 
+
+You can use both, Nagios and Oracle Cloud Control 12c (also applies for Grid Control 10g and 11g). I used Nagios about 8 years ago to run custom SQLs but I guess there is much changed since then. Maybe someone else has recent experiences with that. In Oracle Cloud Control you have 2 options: 
+
+You could try the Schema Comparison Tool from dbsolo. I don't know if you can compare different databases with one another. You have to keep in mind that Oracle and PostgreSQL have quite different table definition clauses which make it difficult to compare them accurately. 
+
+It depends on the activity on the table. It there is no activity then there should be no difference. 
+
+Hello Oracle Database Admins! In the last few months I came across that it would be a good idea to monitor rman backups and check if any file needs backup. 
+
+b) You issued : After this command finished your database was open but your application still had problems. Well, first let's make this clear: At this point your database had the exact same data as before. Each block, each byte, each bit is now in the same place as before when you issued the backup. So the errors are not related to the database. 
+
+0> "and set 5500 was impossible due to the error - 5500 seemed busy" This means that the port 5500 is already "in use". Well, I bet it is not in use but Oracle thinks that. There are a lot of ports reserved in . Open the file and change the following lines: 
+
+Just from Oracle side there is nothing to worry about. You could even do this operation during normal business hours. BUT! most Applications are not cluster ready. They cannot deal with this situation and will crash. All services are still available since they are migrated to the second node. But the session does not get migrated that's why the client will loose the connection. An application which supports RAC would then reopen the connection and just continue to work. I would plan a downtime for this operation. For the future you could bond two network ports for the public interface in failover mode. With that setup you could do the operation without downtime. Note that bonding in load balance mode does not work so well -- at least this is my experience. 
+
+EDIT 1: Your listener shows that it's listening on port 5500 for https requests. So maybe you already did what I just posted. Could you please share the output of the following command? 
+
+Like I said, it's tricky and you have to script the process yourself. But once you did that one time you can use it for the next refresh of the test/dev database. 
+
+The only correct way to back up an Oracle database is to use RMAN. There are alternatives but they are not as reliable as RMAN. RMAN has a ton of features and this might make it look complicated. But in fact it's not difficult and should always be the choice to back up a database. RMAN does not do logical backups like tables, indexes, procedures. RMAN does physical backups which means that it backs up the datafiles block wise. It does not care what is inside this block. I think there are a lot of beginner tutorials on the internet. I personally like the descriptions on $URL$ To automatically back up a database use the operating system scheduler and run a shell or batch script. This script should do the following tasks: 
+
+Afterwards the listener shows that I's listening on these ports (before the 5500 record was there already but it was not working) 
+
+If you want to insert data into a different table instead of the original table from the INSERT/UPDATE statement, you need an "Instead Of" trigger. You find examples on how to handle Instead Of triggers here: $URL$ and $URL$ In the body of your trigger you first need to get the additional information like fname, lname, etc. With a query like this one: 
+
+The is designed to work without any existing backup. I would expect Oracle to clean up the archivelogs which were used during the clone process. So I would say this is an unexpected behavior. Try to log a Service Request at Oracle. I cannot recall if I had to clean up archivelogs after a clone processes. Well, I can say that I never did delete archivelogs after a db clone because I did not check for any. I rarely clone . I normally clone from backup location without a connection to the primary database. I somehow prefer that. As workaround I would delete them with a script afterwards. 
+
+First of all do not use database links for larger transactions. This can cause too many problems with blocking sessions. Another hint is to keep transactions in a good size (not to small, not to big). If your table is not partitioned then write a piece of code to remove just 1000 rows, commit and delete the next 1000 rows. 
+
+c) This is the procedure you have to follow. (I would not recommend offline backups but this is a different story.) RMAN cold backup just works the way you did it. Here is my guide I wrote some time ago: Cold Backup 
+
+I suspect that you did not execute this command with sqlplus. Not every sql program can handle the command. You can either use sqlplus or get the table definition with the following SQL command: 
+
+Even though this solution might work, it is actually not correct. You better create the table grade_table as follows. According to the database normalization form 4 you should not store detailed data multiple times. 
+
+This database is not in archivelog mode so there is no option to restore the block from a backup. If you still have an rman backup of datafile 1 you might be able to restore this file and then open the database with (Don't use this option on your own!). Because you cannot fully recover the block, you have to tell Oracle that you don't care that the datafile do not have the same SCN. See details here: $URL$ If this is a block which contains standard objects you might be able to extract the block from a healthy database and inject it on this block. Good luck! 
+
+Why checking for corruption? I always start analyzing a database by gathering ASM or statspack reports from the production database (not a test/dev db). This does not hurt anyone and will give you a lot of details on the database and it's little secrets. Corruption does usually not affect performance since the database does not try to repair it -- it just crashes the current query. 
+
+Some people additionally run an export with datapump after the daily RMAN backup. This can be useful sometimes. But I never use this option. And it should never replace an RMAN backup! 
+
+Open an Oracle Service Request. With their help try to restore the block with lots of tricks and magic. Call the Oracle Consulting Team, they have unpublished/internal tools which might be helpful. 
+
+I'm pretty sure there are better scripts but if you have to do this task frequently this might do the job without much development time. 
+
+Could you explain the context a bit more, please? Do you mean the average number of rows a SQL query returns? This helps you to find out if an SQL query was executed well. An SQL query that returns 50 rows but does a full table scan over 10mil rows is not good. An SQL query that returns 8mil rows with a index access is not good either. So this helps you to find queries which can be optimized. Do you mean generated amount of undo? I think Mindaugas Riauba answered that already. Where else did you get this information from? Did you find it in an AWR or Statspack report?

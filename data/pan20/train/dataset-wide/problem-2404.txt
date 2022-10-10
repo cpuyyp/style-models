@@ -1,0 +1,87 @@
+myisam_recover_options is not a dynamic variable. It is among the startup options for MyISAM. If you have set this option in , mysqld must be restarted Please restart mysqld with 
+
+Realistically, there is no online method for table repait. There are two techniques to repair TECHNIQUE #1 : Repair Online 
+
+This will not save the dump to a file. This send the commands straight to the target server STEP 3 : Restart mysqld on the target server (restore original options) 
+
+All of these approaches show that you gave these things a lot of thought. You are worried about any pending changes when running . Think about this: When you issue , how is replication affected? Recall that replication has two threads 
+
+They are gone. You cannot do a sync with that gap. However, it should not matter. You need to setup replication from scratch on DB1. During off-hours, run this on DB2 
+
+produces a checkpoint that allows the dump to capture all data prior to the checkpoint while receiving incoming changes. Those incoming changes do not become part of the dump. That ensures the same point-in-time for all tables. dumps all stored procedures and stored functions dumps all triggers for each table that has them All Data is MyISAM or Mix of InnoDB/MyISAM You will have to impose a global read lock, perform the mysqldump, and release the global lock 
+
+You should download and install MySQL MSI on the Windows machine By default, root@localhost has no password Once mysqld.exe appears in the Taks Manager's process list, run the following 
+
+You have a trade-off you need to be aware of. Granted, it is true that a log flush happens with each involved with autocommit=1. Nevertheless, are there any consequences of setting autocommit=0 ? Think about the redo logs (ib_logfile0,ib_logfile1) and the undo tablespace (inside ibdata1). Change information must be stored somewhere in case the INSERTs need to be rolled back or recovery is initiated after a crash. Either way, there will be some disk I/O to contend with. Additionally, consider innodb_log_buffer_size 
+
+Once you get your access rights back, don't forget to run mysql_install_db. It will create the schema and place it in Please comment out your if you do not want the data in Also, run this 
+
+This is for all intents and purposes, a Cartesian Join. It is definitely out of the question to join every row and pass through the data a single time since you do not know the running time or the amount of temp table space needed. Perhaps you could do the following: 
+
+After running this all your tables will be smaller. To answer your actual question, no, you are not doing anything wrong. Views take up no actual diskspace except for the View Definition. 
+
+FINAL NOTES Use Technique #1 is there is no diskspace to save a SQL File. Use Technique #2 if you want to dump the file and load it at a later time. 
+
+The cardinality of 2 (male,female) is way too low. Although you are using InnoDB and could have foreign keys, the parent table would have only two rows. It's not worth the processing power. Therefore, do not add another table. Indexing it is not worth it because a cardinality of 2 simply screams at the Query Optimizer "DO NOT USE THE INDEXES". Foreign Keys to a table with two values is not worth it. Do not add a VARCHAR(1) because that is really two bytes. There are four(4) options to use one byte 
+
+It allows for point-in-time snapshot of data. Once mysqldump starts, all the InnoDB tables will be frozen in time. Suppose you start the mysqldump at 2:30 PM and it finishes at 3:00 PM. All the InnoDB tables dumped will be from 2:30 PM. All other changes (INSERTs, UPDATEs, DELETEs) will continue with interruption and will not be included in the dump. MyISAM would interfere with the point-in-time backup if the MyISAM tables were being updated by INSERTs, UPDATEs, or DELETEs. If the MyISAM tables were just for reads, --single-transaction would still be fine. SUGGESTION If you have MySQL Replication set up, you could go the Slave and run this 
+
+I see something interesting in the table layout that cries out 'I don't feel like counting'. What I am about to say is only a hunch. You ran this query before 
+
+When the prompt comes back, MySQL is down. If you shutdown Windows, the only evidence for MySQL's shutdown would be in the error log. EXAMPLE On my laptop 
+
+In the context of your query, helps satisfy a so long as the two tables involved in the have the same column names to join with. It is like doing a . Your query 
+
+This is still in the MySQL 5.7 Docs on Deadlock Detection and Rollback (paragraph 3) You stated in the question 
+
+This will create a table of pop quizzes for teachers. I also created five sequence emulators, one for each day of the school week. Each sequence emulator works by inserting the value 0 in the val column. If the sequence emulator is empty, it starts with val 0, nextval 1. If not, the nextval column is incremented. You can then fetch the nextval column from the sequence emulator. Here are the sample results from the example: 
+
+PROBLEM In the EXPLAIN plan, is . That's a full index scan and range scan on . SUGGESTION #1 You need to reorder the columns in the PRIMARY KEY of 
+
+PROLOGUE Someone asked the same thing of me in my organization because everyone was using MySQL 5.5. All DB servers was upgraded over the past 8 months to MySQL 5.6. Some client applications were being affected by change as well. ROOT CAUSE I just found out why what you did does not work and the workaround is very simple. According to MySQL 5.5 Documentation, sql_mode default is a blank sting. According to MySQL 5.6 Documentation, sql_mode is default is 
+
+I have an interesting idea. How about letting mysql decide the best datatype ??? Here is an example using PROCEDURE ANALYSE() Also, I have some sample data of lengths 0,10, and 16 
+
+This may sound twisted but here it goes.... DON'T USE If you login as root and you do the following: 
+
+Using to_days to Partition The to_days function yields a 6 digit number in the 700,000's (in the MEDUIMINT range). Using DATE or DATETIME to Partition DATE takes up 3 bytes. DATETIME takes up 8 bytes. Conjecture UNIX_TIMESTAMP of today's date exceeds 1.37 billion. It takes 4 bytes to store that. Range partitioning allows for range values that high. Here is an example of that from the MySQL Documentation: 
+
+You need to examine the cardinality of the columns individually and collectively by running these queries: 
+
+This is probably your only recourse. The only other recourse is to simply wait out the . This situation requires some intervention in the application. Within your application, you would have to create a Write DBVIP on the Master and use the Read DBVIP with one of the following three(3) options: OPTION #1 
+
+You will find the physical file That file is the home of all data and index pages in InnoDB. The pre-compiled size of a page is 16K. There is room inside that page for more data, but 16K is the fixed allocation for data and index. When you ran , MySQL simply reported the most granular space InnoDB is using. 
+
+Give it a Try !!! Caveat : I tried at least 7 ways to make timestamp work like this. NO GO !!! So, you must use DATETIME. 
+
+Setting does disable the InnoDB Storage Engine, but that does not convert the tables. You need to script the conversion of all the tables. STEP #1 Comment out the 
+
+If you have any tables with FULLTEXT indexes already in place, you must drop those FULLTEXT indexes and create them again. QUERY Here is a little known fact about MySQL queries using a Full Table Index: There are occasions when the MySQL Query Optimizer stops using FULLTEXT indexes altogether and perform full table scans. Here is an example: 
+
+Each of those versions have limits in terms of RAM and CPU. It is worth exploring the possibility that the amount of data currently stored has simply outgrown the capabilities of the version of MSSQL 2000 due to queries needing more RAM to fulfuill queries/subqueries or inadequate CPU utilization. You may require upgrading the binary version to the MSSQL 2000 Entrprise version (probably a long shot becasue of how old your version of MSSQL is) or the best version your budget can afford. You may even want to get out of MSSQL 2000 since 2008 is the latest and has current support available. Again, this could be a budget issue. If you are already using Enterprise, or your budget cannot allow for any major upgrade, now you can explore DB Statistics or DB Design. Disclaimer : I'm not a SQL Server DBA 
+
+It appears that you are looking for counts for just today. In that instance, why use at all ? You should run 
+
+DISCLAIMER : Not xtrabackup expert Your situation is quite similar to a post on the Percona Forums. The poster, dbaffaleuf, was running percona server 5.6.24-72.2-log, innobackupex 2.3.3 Linux (x86_64). After encountering your same message, dbaffaleuf wrote 
+
+If any of the Indexes have one or more columns that are unique, those rows may have vanished upon import. You may need to either remove all indexes (do not touch the PrimaryKey) or Change the Unique Property on all Indexes from to . Then, just reimport the data. If all 235 rows are in the table already, go to your form's Property sheet. Click the Data Tab. Look at the Record Source and see if it is a table name or query. You need to also go back to the Property Sheet, Click the Format Tab. Look over the Default View and set it to Single Form. This will view the table rows one row at a time. Click the Last Record Navigation Button. It had better say . 
+
+Run this against all tables that have differences and redirect output to a text file. This will show what SQL has to be executed on the Slave to sync its contents with that of the Master. If any output is generated, it will be an entire row replacement (using REPLACE (SQL)) rather than showing the specific columns that are different. 
+
+Failed Connection Attempts will still increment the Process ID next to be assigned Here is an example: I will restart mysql on my PC (MySQL 5.5.12) and connect for the first time 
+
+That way all deleted keys are grouped together. Likewise, all non-deleted rows are grouped together. Try altering the table design like this 
+
+The Documentation says nothing about a zero(0) timeout value. Thus, that behavior, in itself, is simplified. If it acquires the lock, it immediately returns 1. If it does not acquire the lock, it immediately returns zero(0). You said has a 10-second timeout (because you said you are using ). If you are expecting to pause execution, using a non-positive will not accomplish this. SUGGESTION You may want to execute a loop in your Stored Procedure to attempt to acquire the lock with some arbitrary number of seconds to pause between lock attempts: 
+
+What you need is a query that generates the first day of every quarter and left join it to a summary. QUARTER NAME QUERY For this example, let's start from 2011. Here is that query 
+
+This is quite useful for tables that experience a high volume of UPDATEs and DELETEs Performing this can accomplish two things 
+
+QUERY #1 Generate all dates from Jan 1st last year to 1000 days later, extracting all dates spanning 2 weeks before this past Monday 
+
+Yes, but you have give MySQL a really dumb query. would revert to the Clustered Index. Notwithstanding, there is still another way, but it requires being a little malicious to the Optimizer. 
+
+You'll see all the status variables for the Buffer Pool. ou can apply the same queries against whatever you need to examine. 
+
+The command erases all relay logs and starts downloading from scratch. Once you , if you get the corrupt error log message again, then network transmission was not the issue. The binary log on M1 may just be corrupt after all. You must go to M1, make copy of the the suspected log, run against that copied binary log and redirect to a text file. Read the text file. If the text files contains gibberish or indiscernable characters, then you must perform a full sync of the slave.

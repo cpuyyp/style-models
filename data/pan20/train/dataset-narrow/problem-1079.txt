@@ -1,0 +1,57 @@
+There's no real way to speed up the brute-force enumeration of all possible 3-letter passwords. Perhaps you could use the dictionary. There's a finite list of 3-letter English words. They may be slightly more common. Also, if you google for "most common passwords", some kind of 3-letter version of that list could be tried before anything else. 
+
+A few. Sorry it seems boring, but there's not much better you can do. The biggest change might be to make this into a generator function, which may be a tiny bit neater. 
+
+You still have the calculations. You're just giving them names and keeping them separate. Giving them separate names makes them more reusable, easier to test and easier to find. The most important thing here is to avoid creating a (nearly) useless class who's only job is to contain a bunch of functions. Your code uses no instance variables and simply uses another function that happens to be in the class. Both of these could be method functions. There's no reason -- in Python -- to create a class unless you have instance variables and a change in state of some kind. [In Java, you must often create "all-static" classes because there's no other place to put stateless math like this.] You can simply put these functions into a simple module and avoid the class definitions. 
+
+Your use of the dictionary seems to be a way to allow the numbers to arrive out-of-order. Rather than sort them, you seem to be trying to use a dictionary (and associated hashing) to maximize efficiency. This doesn't really work out perfectly, since you wind up doing sequential searches for a given value. Hashing a low:high range (a dictionary key:value pair) to avoid a search doesn't help much. Only they key gets hashed. It does help in the case where you're extending a range at the low end. But for extending a range at the high end, you have to resort to searches of the dictionary values. What you're really creating is a collection of "partitions". Each partition is bounded by a low and high value. Rather than a dictionary, you can also use a trivial tuple of (low, high). To be most Pythonic, the (low,high) pair includes the low, but does not include the high. It's a "half-open interval". Here's a version using a simple of tuples, relying on hashes instead of bisection. A binary search (using the module) may perform well, also. It would slightly simplify adjacent range merging, since the two ranges would actually be adjacent. However, this leads to a cost in restructuring the sequence. You start with an empty set of partitions, the first number creates a trivial partition of just that number. Each next number can lead to one of three things. 
+
+In this example, I've shown the format as an in-line . It can be done as an expression, also. Given your ranges, the overall function is this. 
+
+Do not use a database for this. Use files. A single file with one tweet per line showing User Name, Tweet Text and whatever other information you have. You need to sort the file by user. Use the OS-level program, don't write your own. Once the tweets are sorted by user, you simply read and count. 
+
+It's (often) slightly faster in Python to avoid the statement. After measuring that with , you should rename the variable . That's a poor name. 
+
+These aren't "utility" functions. They appear to be central to your app. There are rarely "utility" functions in any app. What we used to call "utility" functions are almost always part of a standard library. 
+
+Don't reuse to be the index of the loop. It's confusing. It violates the meaning of start. The lengthy parameter parsing is good, but can be made more clear. Don't waste time on checking for or . Just use the statement. 
+
+It extends an existing partition on the low end or high end. The number is adjacent to exactly one range. It creates a new partition. The number is not adjacent to any range. It "bridges" two adjacent partitions, combining them into one. The number is adjacent to two ranges. 
+
+Once you have that, you're simply making a sequence of details. In this case, each detail is either "x-y" or "x" as the two forms that a range can take. So it has to be something like 
+
+This is a pretty radical rethinking of your algorithm, so it's not a proper code review. Assembling a string with separators is simpler in Python. For your example of ","-separated strings, always think of doing it this way. 
+
+This can't work unless you stipulate a specific size for the partition and do not grow it. You can't discard any value from the input sequence or you won't get the actual maximum. The fact that you're popping a value means that you may be discarding a proper part of the solution subset. Consider a slightly contrived example where X = 0.25. The initial state is to process 1/X items (4 in this case) of which 1 is maximum and 3 are discarded. The values were 100, 99, 98 and 97. You keep 100 as the 25% maximum and discard 99, 98, 97. (You could try to keep all 4 or even the first 25 values. It doesn't matter how many you keep initially, the logic problem will still arise as soon as you pop a value. I think the contrived example makes the logic flaw easier to see.) At some point, you've seen 7 values. The maxima subset has 1 value (100); the remaining values (99, 98, 96, 95, 94 and 93) have been discarded as not part of the maxima set. You get value 8, it's 92. You need to append this to the top set. Yet, sadly, you discarded a value larger than this. When you get to value 12, you again need to expand the maxima subset. However, you will have discarded values that may be larger than the 12th value in the sequence. You cannot do a from the maxima subset unless you can prove the value being popped must be less than all future values which may arrive. 
+
+As you can see, that's as subjective a review as you will get. If I try to comment further, I will talk more and more about style (and there is nothing wrong with your style, so that would be pointless) or about C++14 but your code seems to explicitly target C++11 so that would be pointless too. 
+
+I know that enough memory has been reserved for 8 elements, but I would expect the size to be 0. Moreover, if I write this: 
+
+I have not much to say. Your code reads quite good, which is rather pleasant. Here are a few tidbits though: 
+
+Generally speaking, it is really well done, for several reasons: often takes advantage of the empty base class optimization, which means that since you feed it lambdas, your class will often weight almost nothing, and everything is correctly forwarded. The only things I see that could be improved are the following ones: 
+
+That said, I don't really like the case of the name . If you want your naming to be consistent, you should change it to . And the same applies to . 
+
+Rule of zero Addressing your first question about destructors: the general rule to follow is that you hardly ever need to hand-code copy/move constructors, copy/move assignment operators and destructors, unless your class manages resources. That's called the Rule of Zero and it helps to easily write classes. Basically, there are two kinds of classes: the ones that manage resources and only do that (a class shouldn't try to do too many things, it should focus on doing one thing, that's the single responsibility principle) and the ones that don't. Most of the classes we write don't manage resources and in this case, it's better to let the compiler generate the special functions. Design I have the feeling that your class will be hard to use and maintain in a project: you are storing three different representations for a temperature and the user has to know which was used before using any the methods. That's some strong cognitive burden for users. Ideally, you should have had a class which does not expose its representation. You should be able to tell to the class which degrees you are storing and which you want to retrieve. Basically, it would be something like that: 
+
+You may want to use calls and internally. If needed, it also calls if is an array type and calls if is a function type. In short: 
+
+Today, I will require your help to improve an iterator adapter. The goal of the adapter (I called it ) is to adapt iterators for example: map iterators return instances, a will provide an iterator which iterates through the keys while a will provide an iterator which iterates through the values. Here is my implementation: Here is the header file: 
+
+That's kind of trivial, but you can also use curly braces instead of parenthesis in your constructor initialization list: 
+
+Moreover, if you also make your , you won't have to update it every time you call , but only once in each thread. That said, you can't initialize it with its "range" anymore, you have to pass it when you call it: 
+
+CRTP helpers When using CRTP, it is common to write methods in the base class to avoid having to deal with the pointer and to use reference semantics instead: 
+
+This answer is mostly about design and good practice, and not so much about the algorithms themselves. Therefore, I will mostly use in the examples. For the sake of completeness: a sorting algorithm with an array + size interface is really C-ish. A proper C++ algorithm would take a pair of iterators and would be templated: 
+
+Specialized algorithms Calling a generic algorithm with a constant value in a formula can sometimes be considered to be a special algorithm. In your case, \$2^n\$ and \$-1^n\$ may be considered special. Their respective implementations can easily be made \$O(1)\$, which is always something you might want at some point: 
+
+That way, your code and the client's one do no rely on a particular container type, but work with any compatible range. That's how genericity is achieved in the standard library. 
+
+You may also want to find a suitable name for the expression \$ ((x-1)/2)*2+1 \$. Currently, it is not really readable, but it feels like an operation common enough in the wild to need a proper name. Instead of having a special case for exponent, wouldn't it be better to have a as well? It would be a first step to some more generic handling of operators. Also, it would be more generic if operators could be instances instead of instances to handle multi-character operators. To answer your question: while I don't have a full understanding of lexers and parsers, what your code does is clear to me. The only thing I had a problem with at first was the / whose naming can be a little bit ambiguous. But once you know visitors, regex and lambdas, you quickly have a good understanding of what is happening. 
+
+What strikes me most is your variables names: they are cryptic. Having short name for loop indices is ok, but you should at least name your function parameters so that anybody using your function knows what they are supposed to pass to it. When I read , I know that I will have to pass a collection; here we have which without a doubt the array parameter. However, an array parameter decays to a pointer, so I also know that I will probably have to pass a size, but then we have two parameters and and I have no idea what they mean (from your main, we can infer their meaning, but a potential user doesn't always have a friendly main to explain how it works). There is a famous quote concerning computer programming:

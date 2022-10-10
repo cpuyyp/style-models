@@ -1,0 +1,69 @@
+sys.dm_db_index_physical_stats shows the non clustered index has 248 leaf pages and a single root page. A typical row in an index leaf page looks like 
+
+The main difference here is that the predicate can now match multiple different colours. This means the matching index rows for that predicate are no longer guaranteed to be sorted in order of . For example the index seek on might return the following rows 
+
+I found that it was possible to reduce the time discrepancy somewhat by enabling trace flag 610. This had the effect of reducing the quantity of logging substantially for the subsequent inserts (down from 350 MB to 103 MB as it no longer logs the individual inserted row values) but this had only a minor improvement in timings for the 2nd and subsequent , cases and the gap still remains. The trace flag improved the general performance of inserts to the other two table types significantly. 
+
+Showing the plans for both versions of the query were able to be re-used between users. Finally running the four statements again under a third login with default schema "guest" gives. 
+
+You might see an improvement from an index with only 10 rows. In the following test on my machine the version without an index completed in seconds and the version with an index in seconds (consistent over 3 runs). The index in this case only consists of 1 leaf page but as the slot array is ordered in index key order it's presence allows SQL Server to just return the single row of interest rather than perform an aggregation on all 10. 
+
+If an alias is used in an it must be used on its own, not inside an expression. If inside any kind of expression it tries to resolve it to a column in the base table sources not as an alias. So for example 
+
+The additional page shown in use by is an IAM page. This is not used for storing data but just for tracking the pages and extents comprising the index. 
+
+Generally your current code shouldn't allow two concurrent transactions to process the same simultaneously. Two concurrent threads can't both acquire locks on the rows matching . If two threads simultaneously call with the same when there are no matching rows whilst meanwhile a third transaction inserts a row for that I can see how this would fail however. One or both of the calls would need to get past the statement before the insert and thus fail to lock anything that would block the other one. A better way of doing this anyway would be with the clause. 
+
+In previous versions there is no setting to suppress this warning. A connect item was raised about this by Erland Sommarskog and closed as won't fix with the explanation. 
+
+If you want something to run on server startup you can create a stored procedure in the master database and mark it as a startup stored procedure as long as the configuration option is set. No need for powershell or batch files. 
+
+As far as I understand it you are not actually talking about an here just combining two different CRUD operations in one stored procedure. 
+
+See Dynamic Seeks and Hidden Implicit Conversions for more about this. Check that the index is indeed covering and that the datatype of the parameter is correct for the column definition (i.e. if the column is and the parameter is this can cause a scan). 
+
+But I don't see any benefit of doing so. The original query is clearer and likely to be equally or more efficient. The execution plan I see is 
+
+In the one that succeeds is first joined to on then the virtual table resulting from that join is joined to on which all works fine. For the one that fails is first attempted to be joined to on which is invalid as that references table . The clause can only refer to the table immediately preceding it or one already brought in by a previous clause. From the conditions and then so you could change the join condition to that and it would work or you could of course also use a derived table or view to alter the precedence and ensure were treated as a logically joined unit before joining onto 
+
+Showing in that case the uniqueifier did not reuse the values from the deleted rows. However then running 
+
+For each student it checks with whether there are any courses that student_id = 1 has failed that are not in the set of failed courses for the student under focus. If there are no such courses then the evaluates to true and the student is returned. student_id = 1 will be returned as they have obviously failed at least as many courses as themselves so you may want to filter that out. 
+
+The literal then gets parameterised and it is no longer guaranteed that the filtered index will match 
+
+Alternatively you could request a new plan compilation every time, taking into account that execution's parameterised values, with 
+
+There are two basic approaches that SQL Server can use. A stream aggregate requires the data to be sorted by the group by keys. This can be either supplied by an index or might need an explicit sort. A stream aggregate is order preserving in that the rows output from that operator are in the same order as the input. This does not imply any guarantee about the eventual output from the query as a whole however. You only get that if you add an . For a the input stream can be ordered by either or to be acceptable for the stream aggregate in this case. The addition of an index might change the decision of the optimiser as to which one to use. The other basic approach is that of a hash aggregate. In which the grouping keys are hashed. This is not at all order preserving and will likely output rows in seemingly random orders. Additionally for parallel plans there might be hybrid approaches, e.g. Each thread could have a local stream aggregate with the thread results then aggregated at global level with a hash aggregate. Adding means that SQL Server will ensure that the rows are delivered in the desired order. If you are currently observing an output order of then likely you are getting a stream aggregate ordered by those two columns. The addition of an explicit order by won't change the execution plan to add any additional sort as SQL Server will recognize that the output of this aggregate is already in the desired order. 
+
+The estimation method changes to and the estimated rows become accurate. It is able to convert that into a range 
+
+It isn't always bad. Of course it allows you to read uncommitted values (that may be rolled back and hence never logically existed) as well as allowing phenomena such as reading values multiple times or not at all. The only isolation levels that guarantee that you won't encounter any such anomalies are serializable/snapshot. Under repeatable read values can be missed if a row is moved (due to a key update) before the scan reaches this row, under read committed values can be read twice if a key update causes a previously read row to move forward. These issues are more likely to arise under however because, by default, at this isolation level it will use an allocation ordered scan when it estimates there is more than 64 pages to be read. As well as the category of issues that arise when rows move between pages due to index key updates these allocation ordered scans are also vulnerable to issues with page splits (where rows can be missed if the newly allocated page is earlier in the file than the point already scanned or read twice if an already scanned page is split to a later page in the file). At least for simple (single table) queries it is possible to discourage the use of these scans and get a key ordered scan at by simply adding an to the query so that the property of the is . But if your reporting application doesn't need absolutely precise figures and can tolerate the greater probability of such inconsistencies it might be acceptable. But certainly you should not be chucking it on all queries in the hope that is a magic "turbo" button. As well as the greater probability of encountering anomalous results at that isolation level or no results at all ("Could not continue scan with NOLOCK due to data movement" error) there are even cases where the performance with can be much worse. 
+
+The values of variables aren't generally sniffed so it will just assume a flat 30% of the table will be returned for that greater than predicate against an unknown value (cf. Selectivity Guesses in absence of Statistics). When you use the literal it can look up the known value in the column statistics to get a much more accurate estimate. If it estimates such a high percentage of the table will match it is exceedingly unlikely to give you a plan with lookups (the exact tipping point depends on how wide the table and index is). If you use the variable value is able to be sniffed however... 
+
+Somewhat surprisingly no one has mentioned that this is built into SQL Server Data Tools yet. Though the functionality is basic when compared with Redgate for example. Some details in Compare and Synchronize Data in One or More Tables with Data in a Reference Database 
+
+Probably you weren't lucky though and it did return at least one row. In this case you ran the equivalent of the following 
+
+The information about files has somehow got out of synch between the database and the database. So I suppose there are two possibilities. 
+
+Either way it looks as though there is some meaning buried in that might be best storing in a separate column. 
+
+Your query is looking for values between AND . Of which it looks like you have about 30 million. Unfortunately there is a bug with the cardinality estimations where is involved where the components get reversed. 
+
+Easier and more efficient to add items to the list. Easier to get a distinct list of allowable colours (e.g. to display in a listbox in your application) Using a fixed length integer surrogate key can have performance advantages compared to a variable length string both in terms of reducing row size and avoiding fragmentation on updates. 
+
+I let it run for a minute before killing it. By that time it had output 40,380 rows so I guess it would take 25 mins to output the full million. The only thing that changed is that I added some additional rows not matching the predicate. However the plan has now changed. It uses nested loops instead and whilst the number of rows coming out from is still correctly estimated at 1,000 (①) the estimate of the number of joined rows has now dropped from 1 million to a thousand (②). 
+
+I'm not sure what you mean by "ignoring nulls" here. It returns the number of rows irrespective of any s 
+
+Showing that the plan for the qualified query was successfully shared between the users with different default schemas but the non schema qualified query needed a new plan compiled. If you don't see this sharing happening ensure that all logins you are testing have the same ,, , as these are among the cache keys listed at the beginning and any differences in those will prevent the plans being reused between sessions. 
+
+This is an index union plan. The concatenation operator implements . The Distinct Sort changes the semantics to a operation to prevent the same row being returned multiple times. (In the event the table had no index key to act as a unique row identifier the physical rid would have been used here to avoid incorrectly de-duping different rows that happen to have the same column values) An example of where this might be needed is in the query below. (note the two parameters are set to the same value so an index union plan there would seek the same rows twice) 
+
+Nonclustered indexes always include a row locator. For a heap this will be an 8 byte RID (File:Page:Slot). On a table with a clustered index it will be the clustered index key column(s). And it will always be the copied values not a pointer to the values. This duplication of CI key values into all non clustered indexes is why it is often recommended that the CI key be narrow and not frequently updated. In the table shown in the question the Clustered index key is a 4 byte integer and potentially may also include a 4 byte uniqueifier for any duplicate key values. In your case as the NCIs are not declared as unique the CI key will be appended to the NCI key. For unique non clustered indexes the CI key would be added as included column(s) in the leaf pages unless explicitly made part of the key. See Kalen Delaney: More About Nonclustered Index Keys for some additional information about how you can see this for yourself. With these 4 rows of data all three indexes only consume a single 8KB data page. 
+
+You can do this with find and replace but be warned that if you have string literals with embedded line breaks these will be altered too. The following finds all instances of consecutive line breaks and replaces them with a single one. 
+
+BTW: Just in case you were not aware the shown here refers to the number of times a plan was executed containing the lookup operator not the number of lookups that actually occurred. e.g. Both of the following increment the counter by 1 despite performing 0 and 2,161 lookups in reality

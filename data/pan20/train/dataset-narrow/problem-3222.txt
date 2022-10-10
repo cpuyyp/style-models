@@ -1,0 +1,57 @@
+First enable persistent logging in journald for messages from systemd [1]. It is not needed for networkd but its messages. 
+
+You can fiddle with the netmask to reduce the size of the different networks. Better is to use a bridge on every raspi so all of them have the same broadcast domain. 
+
+OK, with we know wifi is working. Seems there is only a problem with associating. Try to use minimal entries in wpa_supplicant. I'm not familiar with . I use but when I use a fresh flashed Raspbian Stretch Lite 2018-04-18 and connect to wifi, there are no entries in . You may have a look at How do I set up networking/WiFi/static IP address?. 
+
+As you can see there is a pause of 18 seconds in the ethernet connection. To avoid this connection interrupts I have to eliminate the effect of sending to multicast. I can do: 
+
+I cannot test it because I have no RFID reader. You are alone with this. Here are some commands that may help: 
+
+I guess you are using which comes with . You can try to use so the connection is made when it is really used, e.g. when clicking on a link or so. With my it works flawlessly. I do not know your settings with WebDAV, so for example I will give you here my entry in for . I think you can adopt it to your needs. 
+
+By definition devices do not assign itself a link-local address if there is a DHCP server on the subnet but the addresses they are offered from the DHCP server are link-local addresses ... That conflicts. This may be the reason why the raspi only uses IPv6 addresses. So we have a mixed IPv4 / IPv6 communication. We have to decide what to use. This setup is for IPv4. There must be entries in the routing table. After clean up the configuration check with . You should delete the entry in for a DNS server and reconfigure your complete local network with a subnet reserved for private networks. These are , and . I suggest to use so your network will look similar to this: 
+
+On an internet router with static routes you have to set one destination subnet to or and the gateway to . Names vary from model to model. The router will then send all packets for to the raspi (). The raspi knows where to forward them. Don't set a NAT if you have a static route. Other clients connected to your internet router can then connect to your phone and other clients on that subnet. That isn't possible with NAT. Now you should be able to ping the internet router from the phone: 
+
+Or with you can add to the section in your file. Then you have to set a static route in your internet router so it can find the route over the raspi to your pc. On most internet router you can set a static route but how to do that varies from model to model. It's up to you to find it out. On a Raspberry Pi it would look like this (don't set it on your Raspi router!) 
+
+It is difficult to give concrete advices with your only general information. The way to solve your problem is . The old style init system with is only emulated by systemd and it seems with higher versions of systemd the developer take less care of backward compatibility. I can understand this. Polling for services isn't the right way to think. As already said systemd is working parallel. The order of execution of services at boot time is not defined! You only have to think in dependencies. A good entry to this issue is systemd bootup. For your problem with is not available it may be good to start your program or . is always a good general dependency. or are also possibilities (see man systemd.unit). Look at the references for some examples. 
+
+Your internet router isn't capable of static routing. So we have to fake it that all packets are comming from the raspi even that from your phone. We do this with NAT: 
+
+Or with you can add to the section in one of your files. Your internet router does not know where to send packets from network . We have to tell it with a . On most internet router I know you can set a but how to do that varies from model to model. It's up to you to find it out. On a Raspberry Pi it would look like this (don't set it on your Raspi router!) 
+
+But before doing it read $URL$ Seems there is a reason it isn't in the repository because it's a little bit out dated with errors and warnings reported. 
+
+is a derivate of and this isn't designed to work without a clean shutdown by default. May work with journaling on the root partition with file system but it is only designed for disaster recovery one time. The boot partition has a simple file system and do not have disaster recovery so it may be easy corrupted. Using it for years is your risk. We cannot help you to harden for unclean shutdown. It isn't for this. In a Raspbian image, e.g. Raspbian Stretch Lite 2018-03-13 the has this contents: 
+
+I think this is how ifupdown handles the default route. You are using as nameserver 8.8.8.8 and 8.8.4.4. These are outside of your local network 192.168.2.0/24 so ip request for name have to follow the default route (to the internet). If you an interface and ifupdown does not set the default route properly because there is another interface up, then your request does not find the route to the nameservers. The response is . Check the situation with command . With it you can see the kernels current routing table. Have a look at the default route and its interface . Try to ping with interface eth0 or wlan0 e.g.: 
+
+Of course you have to know the ip address range of your network and use that. With the ip address of the raspi you can connect with VNC. If you have access to the dhcp server you can look there, what ip address it has given to the raspi. 
+
+Raspbian comes with . I prefer to use this progressive system. has a consistent journaling with with no need to know where log files are stored. But to answer your question if you also like to use , this is stored in . For enabling persistent logging in and get access to it you have [1]: 
+
+Result: Avahi-daemon is a problem. It makes the ethernet connection unstable and together with ipv6 unusable. But it seems it is not the cause. Thought I've found it I deinstalled and installed gmediarender. Now the ethernet connection is unstable again, no matter if ipv6 is enabled or disabled. also uses like . Seems with ethernet device is the problem. What to do next There are some major questions: 
+
+I guess you are using . This comes with so you should start your qt project as service. First create a new service: 
+
+I guess you have your connected to your android phone with and your phone is connected through wifi to your router and the internet. So it is member of your local network and can see your pc. With this over tethering your pi can also get to the internet and to your pc. But is a generic connection to the internet. It can also use your mobile phone connection to your phone provider without using wifi. So it is very likely that it has a NAT connection for security reasons. With this you can go out to the internet but not from internet to your phone. That is why your pc cannot reach your pi. To solve this you have to connect direct to your router with the pi e.g. with a USB to ethernet or USB to wifi dongle. 
+
+and then you can route to the like with normal interfaces. Look at my routing table. That's how routing to VLANs work. For showing the routing table with old style it isn't possible to add a column labeled "VLAN" but it isn't needed. The is shown in column "Iface". have normal (virtual) interfaces: 
+
+This seems to be a classical unix rights problem. Let's have a look on it. To avoid confusion I set user of to and then check where is the problem: 
+
+You should never change permissions on system directories like . For copying you can use the command and maybe you have to make the copied files executable with and/or add the user to a proper group with . And I think your executable should be copied to . But in general I don't understand why do you take so much effort to compile from source and install all by hand. You can simply install the libraries from default repositories with e.g.: 
+
+but is not supported by . There are workarounds on OSI layer 3 with and . Further information you can find at Raspberry Pi WiFi to Ethernet Bridge. 
+
+Now it's everything as it should be. For persistent settings of the you will find some information in : 
+
+What you want is called : switch over to another connection if one is broken but use a primary interface if both available. You can use to achieve this but I haven't seen a solution with default network setup of Raspbian. With a little effort you can switch over to to do this. Look at Howto migrate from networking to systemd-networkd with dynamic failover. 
+
+The question is for but I've tested it with . But started with so it should work. There are two wifi connections at the same time. I can't test it because I have only one wifi. The configuration suggestion for this here is theoretical. 
+
+Testing different operating systems Here I found first hints on different behavior. Linux From Scratch Linux From Scratch on the Raspberry Pi and a bootstraped raspbian stretch worked without packet loss (5000 packets transmitted, 5000 received). Debian Buster Next I will try Debian Buster for Raspberry Pi. wheezy @Fran Marzoa commented in question Why the Raspberry PI loses the ethernet connection?: 
+
+That means it is not intended to be used in a non interactive environment. We not even have a login at boot. Only services with root rights are running. It may be possible to force to run as a service at boot time but for me it isn't worth its effort because it isn't for this and may be error prone. As you see it is not easy. We have the native job control from the operating system and we can send jobs to the background and still running there, e.g. with and that is easy. Specific to your example. If you execute:

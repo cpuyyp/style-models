@@ -1,0 +1,73 @@
+Behold, a thing of beauty. One should never underestimate the value of self-explanatory code (if only the constants here). The Main Application All that remains to be done is the demo application itself. It sets up some factories, and starts an input event loop to receive keyboard shortcuts. Handling them is pretty straightforward. The stopwatch-specific operations ( and ) are the only mildly complicated ones because they will have to filter for any running tasks that might be stopwatch tasks. Launching a task without selecting one or more views to connect up will result in a and nothing happening. Note how clearing the or automatically destroys the right subscriptions (due to the use of ). 
+
+- Bonus To complete the picture, here's how a uni-directional BFS looks based on the same building blocks (, ): 
+
+That's because, as mentioned above, the digits know where they are. The constructor actually initializes their positions, as well as the location of the dots for the colons: 
+
+A little bit of Boost to aid in the publish/subscribe mechanism. It facilitates multi-cast subscription and automatic (RAII) disconnection. 
+
+While cleaning up the code (remove globals, duplication, unused code, bad naming) and running some benchmarks using the supplied input file, I found: 
+
+Use If you go with this option, you could use @Heslacher's equality comparer as the parameter for the call. 
+
+Otherwise, like Nate mentions, I think the test is pretty good. I noticed you mentioned in comments that you need to test the null value, but this can be done by tweaking the first parameter to a nullable boolean: 
+
+You could simply make GameState a Flags enum, which is merely a more compact version of the decision table palacsint proposed. 
+
+Before I get started, I would suggest using an ORM for database access whenever possible. However, the remainder of this answer will assume that is not an option (for whatever reason). Use the MySQL ADO connector library You are currently using OleDB to access your MySql database (indicated by tag), but there is actually a MySql-specific library you can use. It uses the ADO.NET interfaces, so your code will have few changes aside from which objects you work with (e.g., instead of ). It appears that the MySql team also maintains a MySql.Data nuget package as well, making this even easier: 
+
+The second one depends largely on how the WinSCP class is written. You may need to ensure that the session is closed even if is never called, though you only need to worry about actually disposing of it when is called. For the last one, I would just mark the class as , since you have neither nor members. Otherwise, you should provide a virtual method. Generally, when doing so, your empty remains non-virtual, and you would provide an additional protected overload which takes in a boolean. For more information, see: Code analysis rule CA1063 and the MSDN page on Implementing a Dispose Method. 
+
+Post Scriptum These are random notes. Specifically, I didn't mention important things (like brace style, const-correctness, use of raw arrays etc.) 
+
+What happened here? I extracted the logic that was in the loop. I will admit I only did this after implementing a non-bidirectional version of the BF search. The looks like your original code: 
+
+Big ideas I noticed that "Stopwatch" was a bit of a "God Object" antipattern. It does too many things (you can't really usefully do a countdown and a lap time simultaneously).¹ I reckoned it would be nice to simply have tasks (without any UI) that expose duration measurements, and views that can display them as they update. This is akin to a publish/subscribe pattern. To demonstrate this, I made not only the views generic, but also the tasks. The UI will be an interactive terminal application that supports the following short cut keys: 
+
+The remainder is the setup for the DemoApp, which includes rather boring stuff like generating random view positions. 
+
+The foundation of our task class hierarchy. Note that the most generic base class doesn't even presuppose any published events, which makes the framework extensible to tasks other than time measurement. Our time-related tasks share the following abstract base: 
+
+You could use labels for your radio inputs and use the actual class names for the values. Then on change, you'd just remove all the option classes and pass in your inputVal for the class to add. See the snippet below (colors added to the classes via CSS and text added in .img-wrapper to show it working). 
+
+The possibleColors property belongs to the class only and will not be a part of new instances. I've also taken measures to ensure that its value is always an array. It defaults to red, green, & yellow, but you can view/change possible colors using the regular getter/setter: 
+
+In this example, the whole point of having the possibleColors static property is to have a definitive list of valid colors stored in the main class and prevent any Apple instances from being set to a color not in the array. Of course, I can think of other use cases for this kind of technique. For example, I'm currently trying to write my own basic component system that uses templates to draw/render each component as HTML on the page. The main class (Component or similar) would have a static property for storing the templates in an array, and you'd choose a template from this array when instantiating a component (or it would choose a default if none specified). What I'd like to know: 
+
+(Given how your code looks and the fact you are talking about database searches, I will assume oDrc[y] is a DataRow object) If you are using .NET 4, you can use LINQ and : Using the following helper methods: 
+
+That consistently took around 21 seconds to populate the grid. To eliminate the possibility that the largest slowdown factor was loading from the file one line at a time, I produced a similar method which loads the entire file up front, then used a StringReader in place of the StreamReader inside the loop: 
+
+There's a happy coincidence that you wanted to return DateTime.MinValue when there is no nth weekday, which happens to be the default for DateTime. 
+
+Next, for readability, I would instead use . If you check the .NET source, calls internally with an Ordinal check, so it is effectively the same thing, but it declares your intent far better: 
+
+An alternative to @svick's answer is to use an extension method which only takes in two functions, and then chain them together, as follows: 
+
+If possible, though, an even better way of doing it would be to extract your telemetry names to some numerical ID and use enums or ints. Number comparison will be far quicker than string comparison. However, you state that your input names are superstrings of those appearing in your lists, so I don't know if that is feasible. 
+
+The isn't actually much more complicated. I dropped the in favour of more obviously readable code. It has the added benefit of making the code short (except for the constants of course). Functionally, we show 
+
+Okay, after I worked my way through the original code, a few things have become clearer. Since I have never done programming with I was eager to try my hand at a better design. Here it comes. It's a sketch only in the sense that I didn't create separate translation units. That is basically a tedious exercise and left for the reader. However, it does implement stopwatch (including lap times and reset), countdown and a bonus "random timer" task. 
+
+The BFS State I've defined this as simply the "grouping" of things you have prefixed in and flavours. 
+
+Exposition Of Cleaned Up Code Taking the above suggestions to heart, I'd start by cutting unneeded headers: 
+
+Using Memory Mapped Files And Spirit Taking the approach from my answer over at [SO]: $URL$ I changed the implementation of into the equivalent: 
+
+Note this is still basically exactly the same algorithm (modulo the bug you had in the condition), but it is now much clearer what is happening, and why. Note that I moved the logic to check for previously-visited actors inside to avoid duplicating that logic: when reviewing your code I had to think really hard whether this block of code was actually necessary/correct: 
+
+(It was thrown together quick just for quick turn-around sake.) I then provided 3 ways of loading. One loads the data much like you did above: 
+
+Additionally, since there is no requirement that an area code is used for local numbers, so you may want to make it optional as well: 
+
+Adding more test cases is just a matter of adding elements with new data and re-building/re-running. The How-To MSDN page can be found here, and some examples of DataSource configuration strings can be found here. Just to give you a taste of this in other frameworks: NUnit TestCase 
+
+As far as testing the method itself: In most testing frameworks, you would create parameterized tests that provide the inputs and expected outputs. NUnit example below (omitting setup code to build ObjectUnderTest): 
+
+Pay Calculation The calculation step is now a simple matter of enumerating your providers and calling : 
+
+Given your requirements, it seems you would be best using String.StartsWith and a value which ignores case (i.e., , , or ). This should be a little cleaner and faster than doing case conversions. 
+
+It is then up to MainPresenter (or more appropriately, other classes MainPresenter uses) to figure out how to handle threading. MainForm itself never has to know or care that you are using separate threads.

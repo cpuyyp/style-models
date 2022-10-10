@@ -1,0 +1,65 @@
+In your case, you can reduce it to a "simple" lookaround regular expression. What you are looking for, is the gap between two digits... in a regular expression, the gap can have no width. So, look for a place that follows a digit, and is also followed by a digit. Then, replace that place with a separator. Then, compile and save that expression away, and reuse it: 
+
+Whenever you find you have a situation where you are tring to match values to numbers, especically sequential numbers, the trick is to use an array. This makes the whole thing simpler, and centralizes the logic in one place, and the data in another. Before we go there, though, some other things are: 
+
+No need to "type" variable names ... (hungarian notation). We know that is a list, so there's no need for the suffix on , it should just be (good thing we renamed the class to to avoid confusion...). 1-liners are a maintenance problem. Sure, they look smart, and take less space, but the person maintaining your code in the furture will dislike you. This: 
+
+Your code is buggy in the range it pulls from the method. The easiest way to describe this bug is with the code: . For example, if I run: 
+
+In the Swing API, it is common to have support for multiple listeners. You have just one. That is OK. 
+
+Why all the redundancy? That method name duplicates all the signature components. It is tautology. Also, why does it take a collection, and return a List? It should return a Collection too, or it should be parameterized too.... at minimum, just rename the method to something like (I like the word ): 
+
+Is it thread-safe? Yes Is it going to do what you expect? Probably not Is there a better way? Yes. Safe Your code will correctly lock, and access the value each time, and this makes it thread safe.... but, you will not get the results you expect. Expectations I suspect that your plan is to start, say, 10 threads, each of them incrementing from 0 through 9, adding 1 each time. You would expect the end result for the to be 100. It may not be. This is because, while your code is thread-safe, it is not atomic. Atomic means that an operation starts and completes as a single logical step. You have the code: 
+
+Creating a stack trace is expensive. More expensive than you may realize. It also has synchronization impacts, so it may affect more than you realize. Consider this code in Throwable. It shows that, if the trace is already populated, it will not be populated again (it is in a synchronized method): 
+
+That is a system for recursively calculating the value at a given row/column (assuming valid input). It does a fair number or recalculations, but the point is that it solves the problem as stated. 
+
+The HTML Parser OK, so you have a Factory class to implement which will access your web-page for the data you need. What will this look like? For this, I strongly recommend a multi-level approach. You do not want to be changing the code every time the web-page changes... so, create a 'dictionary' for your web-page. It is a 'resource locator'. Using JSoup you have a query language () so I recommend creating a property file that identifies data points, and the select statement required to get them. In this way you can abstract the actual location data from the code, and have 'simple' methods that return simple abstractions like , or for JSoup queries like and As an aside (and this is not a recommendation, necessarily....): 
+
+Now, about your algorithm... Really, there's nothing wrong with it, but I believe you can simplify the logic a bit if you treat the mid-point only when needed. Consider the following helper function: 
+
+CSV is a text format - leave it that way. RFC4180 makes no mention of numeric data either. You specifically ask: 
+
+First up, let's reduce "concrete" collections to their interfaces. The return and variable declarations should be just . There's no need to specify the generic type of an object on the right-side of an assignment if the type can be inferred - you can use the "diamond operator" instead. Note, you can also use an "enhanced for loop" instead of the iteration. The should be a parameter too: 
+
+In all, I would also wonder whether it is an option to keep things at the XML level, and use something like Saxon, or JDOM (which I maintain) as a mechanism for running XPath expressions on. Saxon has the ability to index the documents, and XPath expressions end up being very efficient if the document is big, and static... which this may be. The Saxon index will be more efficient than what you have (or it should be). 
+
+There are a few things you should consider changing in your code. Most of them are trivial, but there's also an alternative algorithm you should consider too. The easy stuff first: 
+
+SuggestedEdits requires a special section.... You have three sections for SuggestedEdits. One uses the Creation date, the others use the Approved and Rejected dates. The approval and rejection are not activities by the Owner of the suggested edit, but you are counting them as such.... Only the CreationDate indicates activity by the OwnerUserId in the SuggestedEdit. The approval and rejection activity are recorded in the SuggestedEditVotes table (which you process from a different section). Note, you are missing 'accepts an answer' which can be calculated from the Post/Votes combination. As for your 'additional questions'.... Without the temp table Yes, this can be done without the temp table, and without the loop. You can do it all as a single query, if you use CTE expressions to hold the data. With a CTE containing the 'activity' data, you can find the first day in a streak (Using a self-join, does the user have activity on the previous day, if they do not, then it's the first day of a streak) Once you have identified the first day, you can also identify which activity belongs in which streak (the most recent start before the current activity must be the start...) Finally, the streak is as long as the furthest date that belongs to each streak.... As it happens, this is efficient enough to be run for all users on the whole of Code Review.... the query is (Here in SEDE): 
+
+There are few small things that stick out to me... starting with the least significant, and moving up... Constants Why are your error message text values public? If it is to satisfy the Unit testing, then the common solution is to make them package-private, and put the unit tests in the same package as the code. Most common build tools (ant, maven, etc.) have separate folders for the tests and the source, and you can have the same package structures in each. If you really want to test the actual exception text, then the better solution would be to have separate specific exception types for each problem type, or to reuse different existing exceptions. For example - it is quite OK to throw a if one of the input strings are null when they should not be. An for empty-strings is OK. Or, create the if you need it. vs. In your validation streams, you have code like: 
+
+Hmmm, maybe it still adds up to... \$O(n*m*log(n))\$ I think a better solution would be a recursive merge of the individual arrays, without the Queue.... I'll think about it some more, maybe benchmark it. 
+
+I think you may have a problem with initial state, and spurious wake-ups.... Consider the following You have multiple instances of a Runnable ( and for thread A and thread B), each of them does . The expectation is that they will be woken up in turn when the queue's method is called (wake up both and by calling twice). So, both threads are asleep, the queue contains and the atomic boolean is false (the 
+
+The answer to the second question is 'yes', but we'll have to explore your current code to understand why.... Current code, is it good? Your code, for the most part, is neat, well-named, and generally understandable. Great. But, there are some significant problems too: 
+
+This will produce a floating point result that is accurate (no integer division). Now, if you want to display that as a rounded string with no decimal places, I would cast it to a Decimal(5,0), and then a varchar. 
+
+Now, if the size of the is the same as the , you're good. The Map is an IdentityHashMap where the key values are all identical instances (using ). It supports a null key/value so that should be fine too. 
+
+Ouch. That's a lot of code to do things that are already available in the native Java libraries. Also, while the usage code "looks" neat, writing it is a PITA because it returns a different object at each step, and is not really a fluent API at all because the order of method calls is pre-defined. is an example where returns the same instance so you can keep appending and so on.... that's "fluent". Regardless, your code is complicated to write, it's inconvenient to use because you need to write a lot of code to link a number of highly structured method calls that are in an inflexible call order. 
+
+About Exceptions In general, exceptions should never be part of the anticipated program flow. Using exceptions to test conditions in the data, is wrong. On the other hand, that is not what you are doing. You are taking an anchor/link from an HTML document, and I would expect that to always be a well-formed URL. Additionally, a poorly-formed URL in the supplied context is not a program fault either, so propagating an exception is not useful. You will need to handle it somewhere else if you do. My only suggestion is that you should be logging it somewhere... don't you need to know that you have HTML pages with broken links? Concerns You have some programming problems.... I am unable to tell if it is serious, it may be fine depending on your circumstances... consider: 
+
+You need to have a fresh array instance for each row. Even though it is mundane, the logical way to do it is: 
+
+Where is the Head pointer, and is the previous. We add the value to the HashMap, and advance our pointers: 
+
+If the method does not need to construct a new instance, then it makes sense to me that the semantics should return , since that allows skipping new instances for and . 
+
+Set up a 'region counter', starting at 2 Scan the matrix for a 1 When you find a 1, recursively join it to all of it's 1-value neighbours, setting them all to the region-counter. You only need to look at 1-value'd neighbours. When you have completed the recursive join, increment the region-counter, and continue scanning for 1's. 
+
+In general, with the name-pollution of having a class with 'Link' in the name (probably because it's not a horrible name', but it conflicts with LinkedList, so try to avoid Objects with Link as the name. Additionally, note that your variable was not an index in to the source data, but an index of the output segment. Including it as part of the original 'for' loop implied that it was used as an index in to that. The reality is that it is independent. I have edited it to make that clear. 
+
+Sorting Your sorting algorithm is simplistic, but effective. A bubble-sort, of sorts. The major drawback I see is the many comparisons, especially given that each comparison is performed from first-principles... calculating the lexographical value each time, instead of memoizing it. All told, though, I really would have preferred to see a standard-library sort using a Comparator for the comparisons.... The comparator would look something like: 
+
+This has a much better performance characteristic than checking every combination. You can also add some tricks / optimizations to the loops to quit when impossible combinations present themselves, like: 
+
+File Extensions You pull the extension off the file with: . This replaces the dots in the filename, with spaces, then loads that space-separated list in to an array (which considers the spaces to be item-separators). Then, you pull the extension from the array with .... Ouch. This works only if there's only one in the file name, and the file has no spaces in the name. There's a much simpler pattern-match you can do to alleviate this problem: 
+
+I recently ran in to a problem with the presentation of data related to a graph. Each series of data has values that define the 'curve'. There can be a lot of these values, and I decided that there was not enough space in the 'legend' to include all the details for the curve. I decided to have a 'details' area, and users could select a curve/series, and the details would be displayed in an area under the graph. This is because there would otherwise be too much data to show in the legend. The details consist of 4 items, a colour "patch", a series name, the series accuracy, and the data points in the series. A table is what I chose to display these values in. I want the details area to occupy the base of the screen underneath the graph, and to grow/shrink as the chart grows/shrinks. The last column in the table, the data points, are the largest part of the data, and would 'flood' the area. I want to make it possible to select all the data, but not necessarily make it all visible, a scrolling system would be fine. In essence, I have this:

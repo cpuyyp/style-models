@@ -1,0 +1,51 @@
+The second in ends the function, so we don't need the operator. Instead, we could use to replace the data in the variant while keeping the the same, and then just return the result of . 
+
+Unfortunately, the way you've written , that's not true. The following test compiles fine, but invokes undefined behavior (which happens to manifest as the test passing on the Rust Playground): 
+
+If you want to combine the result of with the range checking in a single operation, that's possible too. First, let's look at the "lazy" way, where both error situations will produce the same error message: 
+
+The following is my attempt in Haskell. I made comments which probably state the obvious for Haskell experts but it should make my reasoning clear. 
+
+Compared to the slice-to-slice variant, we are only taking every second (every block size in general) element from the iteration. In the current state of the code, this is done with a lot of nested loops and a lot of repeated index calculations. Despite being repetition of code and mixing of different tasks in the same function, it is also inflexible. We want to support a second scheme, the interlace one: 
+
+The data that we work with has the property that we can re-use intermediate results as long as we have the same source and sink block. Therefore this scheme wastes opportunities to re-use data. We cannot fit all the data into the RAM, so we want to iterate through this more intelligently. This is the iteration scheme that we want: 
+
+Instead of having a mutable variable, I'd factor out the code that decides if a number is prime in a separate function. We can use early returns to avoid defining a mutable variable. 
+
+The parameter doesn't have to be a , it could be a slice instead (). However, if you had used a non- item type ( is ), then in order to return individual items from the input , you'd either have to the items or move them out of the (using ). You've implemented binary search by hand, but the Rust standard library provides a very flexible implementation via . 
+
+If enforcing the same interface for all the repositories is not what you´d like to choose, you could also introduce another layer of abstraction through some kind of mediator object that decides the repository for you and does the work to provide a consistent output for the controller. Instead of returning an array from your repositories, you could instead return objects relevant to your domain. E.g. an object, that knows nothing of databases and the sort. Each of the repositories can then populate such an object, and the controller can use another layer of abstraction to turn the array ob s into arrays/json. Update The package is implementing the ActiveRecord pattern which is certainly useful. However it means that you comes with a lot of stuff that is not relevant to an per se. It inherits all the Active Record methods provided by Eloquent. I find when I have the need to swap backends, the ActiveRecord pattern is less useful. The object relevant to you domain could simply look like 
+
+Strings in Rust are encoded in UTF-8. Standard library functions operate on Unicode code points, so both the string and the separator can contain fancy characters. 
+
+You don't need to do that, since returns a , and is the maximum value. A condition such as would always be false. 
+
+You use an implicit and an explicit return, but both could be expressed as implicit returns. Alternatively, change the path to use , then you don't need an block and you can reduce indentation: 
+
+Note that the function plays a very important role that would be lost if it was inlined (by hand): the lifetime of the returned byte slice is tied to the lifetime of the input parameter. It's as if it was written thus: 
+
+Not knowing anything about any datastore. Your different Repositories / backends would then simply populate this entity. Compare to the Doctrine Project which is more of a Data Mapper pattern implementation. Update 2 As posted above, "pluggin in" a different backend is as simple as getting the relevant repository from the service locator. You can do this by either aliasing the "selected" one to , or by selecting it on the fly in the controller 
+
+This is currently not the case and it looks like something you could improve on. If it were the case, you could then decide in your controller which of those Repositories to choose. This might either be an option in your api, or something you can do in a service container before the request is handled. I dont know your requirements here. (See $URL$ for service container, dependency injection ...) So e.g. 
+
+When you move a value from one binding to another, the two bindings don't have to agree on mutability. It may sound strange, but it's valid to move from an immutable binding to a mutable binding. It's perfectly safe because in order to be able to move a value, there must not be any pointers to it, which ensures that you have exclusive access to the value. Therefore, you could write here instead of . The pattern is so frequent that Rust has a shorthand for it: the operator (and its predecessor, the macro). We could rewrite your program using the operator like this: 
+
+We go through the blocks, and within each block combination, we take all slice combinations. The block combination with switched sink and source blocks is to be done right after because we can re-use a bit of data with that as well. For the functions of type , we want to iterate from slices to blocks, like this: 
+
+On this side, I am quite happy. I can just iterate through the slices with the given block or interlace scheme. On the other hand, I have 298 lines of code which does this: 
+
+The outer loop does not use range-based- because we want to parallelize that part with OpenMP and that needs to see the range explicitly. With this, we can just change the value of the in the constructor and get a different iteration pattern. Also it allows me to iterate other the slice combinations in the current block combination . The output would be the following for our example: 
+
+Now what is ? This could either be the ElasticSearch or the relational DB oder the NoSql version of a MusicRepository. To do that you would have all those Repositories implement the same interface e.g. 
+
+I have a fairly ugly controller method I would like to refactor / extract. I can only test this in a integration type test which kind of signals a code smell. The method processes the form and needs to do one of 5 things, depending on which button was pressed 
+
+I think your current solution is already right on track, you just need to take it further along. To combine the currently two controllers into one, lets write the code we wish we had. You want your controller to know almost nothing about the source the data comes from. Since your two actions are similar in interface already, lets start with this: 
+
+You don't need to define the variable as mutable if you move it inside the loop and take advantage of the fact that and are expressions. 
+
+On the first match, when is a , will contain a reference to the . When we get to the loop, is now a reference too. Generally, when we iterate on a reference to a collection, the iterator emits references too. Indeed, is now a reference to a . Here, I wrote to match the dereferenced value (note that this doesn't necessarily copy or clone the whole ) because we bind values, which are cheap to copy, so we bind them by value, not by reference. Finally, let's simplify these nested matches. Let's look at first: 
+
+This doesn´t look all too repetitive to me, I see no obvious duplication. You could extract a local variable or two to make the naming more explicit and to not query for the same element twice. That would however be a tradeoff between function size and readability. Also you see a few references to the variable in one place, this indicates that this could be pulled into its own function. 
+
+So you don´t have to query the dom again when appending the list items. Also it is better to build the list items in memory and only append the complete list to the dom. This way you only trigger one reflow. So in the $.each loop I would

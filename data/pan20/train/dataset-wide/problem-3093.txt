@@ -1,0 +1,67 @@
+It's actually a bit faster, since sorting the inner list takes longer than just getting the minimum value. 
+
+How can I clean up the process for formatting the arguments string? It seems pretty ugly at the moment, and if I have to add any more parameters, it's just going to get uglier. Is there an easy way to convert a list of parameters to a string that's suitable for invoking another function? Note: Simply passing in the parameters as a single string (e.g. ) doesn't really solve my issue, it just moves it back one step. I'd like to create the string within itself. 
+
+You really need to use arrays for this. and are identical so I don't see any need for the condition. Use methods instead of , as they've been deprecated. Use prepared statements to guard against sql injection. 
+
+The one thing that really stands out to me: you don't need to convert the boolean result of to a human-readable string, then test the string. Just test the result directly, then convert it to a human-readable string. 
+
+I need to get the nested type name of without the namespace, i.e. in a generic method. Unfortunately, will just return and will give me the namespace as well. Right now I'm using this: 
+
+One more thing in addition to the other answers: nowadays I'd leave the construction of buffered readers and writers to the appropriate utility class, ie. instead of 
+
+Parameter checks First of all, I'd be very strict about the check of the parameters: I do not see any use in gracefully trying to work around unset or illegal parameters instead of throwing an exception. Thus, I recommend you start out with: 
+
+Reading the file: you declare the BufferedReader as an instance variable while it is only used locally. Don't do that: variables should always have the smallest scope possible. In addition, resources should normally be closed in the same scope that opens them (which brings me to the point that you never close the buffered reader.) Furthermore, you put the opening and reading in two different try-catch constructs. That makes no sense. If the first fails, you cannot expect the second to work. Thus, using "classic" code, you should put it together as a try-with-resources block, which automatically closes the opened resource, something like this: 
+
+Regardless of the java version you use, the business logic, which decides whether the object should be added and in which way, is placed in a non-OO programming paradigm. Instead of walking through other objects private parts, just add an appropriate method in the object itself and call that method: 
+
+Well there's not much code to review here, but for what's here, I'd say it looks okay. I would only make one suggestion. If all you're going to do in your controller action is return single string wrapped up in a JSON object, why not dispose of the JSON and just return the HTML as content? Ajax call: 
+
+However, it's not clear that you need to be creating the in the first place. You can just use Linq to generate your from scratch: 
+
+This is exactly how I would write it if I had to use C# (with the exception of the in-line if / else), but after I wrote it F#, it seems clumsy and a little messy. I suspect there is a much more elegant, idiomatic way of writing this in F#. Perhaps using a match expression? 
+
+If you want to reduce the lines of code (with a slight negative impact to performance if this function gets called a lot), you could do this: 
+
+My PowerShell scripting skills are pretty poor, but I've managed to hobble together got this script: 
+
+If you want to verify that either value is in the , may not be the best option. It will continue to test for collisions even after it finds a match. For two search strings you can just do: 
+
+This way, you can do this once in the beginning, and in all further processing methods operate on sanitized input and be sure that there are no null pointers included. 
+
+And try to come up with code that operates on such a list. Note: Function is the standard function type with an integer as an input and a string as the output. No need to define your own interface. If you have achieved this, you can easily add another function to the list to check another value, and then you have achived something that might be considered dynamic. 
+
+Edit: As an afterthought: why do you waste so much code with null-checks anyway? This is a technical interface, so whoever calls this, should simply not send you invalid requests. Therefore, in real life, I'd simply add the condition "values must not be null" to the interface contract (if possible), then do a single validity check at the beginning of the method, and reject with status code "bad request" if there are nulls in the data. 
+
+In addition to the answers already given, there's another problem with the Game class design. First of all, the constructor creates the Player and NPC by itself, which leads to tight coupling: you could not replace any of the parameters used in creation of the Beings without changing the game class. Better: let the Game take its participants from the outside: 
+
+NOTE: as far as I can tell, there's nothing limiting (or ) to be the same in all grouped dramas; each drama could have a different . Here's an alternative that includes the teacher in the grouping: 
+
+But this just looks ugly. Is there a more standard method for getting just in this situation? To clarify what's going on inside this method, this is part of a unit test for an XML serialization class. will load an XML file, wrap it in a little more XML to create an 'envelope', attempt to parse it, and return the result if it succeeds. The problem is that the 'envelope' that the XML serialization class expects the XML to specify the type name in a particular format. For example: 
+
+I honestly don't see anything particularly wrong with that Linq query, but there are a number of other things you should consider: 
+
+1: Of course, in these examples, the values are still hard coded in one place, but precisely how you generate the list is unimportant. 
+
+Both of these look better than my original code, though I'm not sure that the match has added any expressiveness to the code, so for now I'm keeping the plain old / statement. This is mostly just taking advantage of the built-in behavior of dictionaries in .NET ( returns the default value if the key is not found, and the property's setter will perform an insert if necessary), but I'm still open to any suggestions on improving this more. 
+
+... if you need to pass a local tmp-map, this will be more BiConsumer-ish in your case, but the idea should be clear. 
+
+Search method: Search needs to loop to topPointer, not to size. As topPointer is already smaller than a starting i = 0 for an empty stack, you can leave out the precheck for emptyness: 
+
+Data structure: First of all, choosing an ArrayList as the data structure for a queue is suboptimal to say the least. A remove(0) on an ArrayList always copies the remaining elements to the beginning of the list (see remove implementation in ArrayList - sources are available). Use a LinkedList instead, which has constant removal time. New Files-API: Usage of try-with-resources is good, but manually creating a FileReader and a BufferedReader is quite old-fashioned. Simply use java.nio.Files.newBufferedReader instead. Method signature: Your LimitedLengthQueue.add method has a boolean return which is always true and never queried. What for? If you don't care, simply make the method void. 
+
+First of all, splitting the spliterator only makes sense, if both the remainder of the current spliterator and the returned spliterator still have work pending. In your case, this is (almost) not true, as you operate on the complete batches and the current spliterator at most returns its current batch after split. Thus, I'd replace the trySplit() with a simple return null. This also addresses any potential concurrency issues (which I have not looked into in depth.) Characteristics basically tell the caller the - for lack of a better word - characteristics of your spliterator. :-) I think for the batch approach you take, ORDERED, NONNULL, IMMUTABLE should be OK. Apart from that, for more direct utility, I'd rather take the approach not to iterate over the batches, but over their contents, i.e. create a Spliterator which gets initialized with the first ObjectListing batch and then transparently goes through the underlying collections element-wise and fetches the next batch as needed. This would eliminate the need to flatMap on the result stream and feel more natural for a streaming approach. (In fact, this sounds so useful that I'd like to have it :-)) 
+
+You can also use a binary search (since this data is sorted) to speed up the search. My PHP is a bit rusty, so some one else might be able to improve this further, but I think it would look like this: 
+
+You should probably get into the habit of using format strings rather than string concatenation. It's generally better practice. This next bit is more a matter of style, but if you don't need to keep as a state variable, I wouldn't keep it as a class member. You can define it as a variable within the method and pass it in to instead, like this: 
+
+For something this simple, I think using the is fine, however, if you need to use the list of acceptable integers more generally or avoid hard-coding the set in a single expression1, you can use something like this: 
+
+Once you've gotten your code into a you can just call property (which in C# is called with ) to get all values with a given key. So the can be entirely replaced by using the like this: 
+
+You can use or to exclude the empty string in the results. If you write your own function using 's, like this: 
+
+Start from the end and work your way back, that way once you've found one palindrome you're done! You only have to check half of the digits for equality. We can shave off some time by avoiding /

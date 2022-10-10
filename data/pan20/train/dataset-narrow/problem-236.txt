@@ -1,0 +1,89 @@
+The command is to summarize the more specific routes/prefixes within this range, and it should be used only on ABRs. To fix this issue, you can enable OSPFv2 and/or OSPFv3 on R1's interface g0/0 like you did on interface s0/0/0: 
+
+I believe you are not using Cisco/Juniper devices. They do NOT support the command but Datacom does. To asnwer your question, as you have AS_PATH:65002 333, with the command you will get AS_PATH:65002 65002 333, that means the result = number_of_times*Local_AS. You can check the sample configuration on Datacom device at here 
+
+Let's say you have a public IP address (11.22.33.44) which is used for NAT/PAT, below are commands you can use to get what you want (please try with other options and check the outputs): 
+
+As I see, you were trying to apply the information from your traffic capture to test with packet-tracer. ONLY IF your current connection/traffic flow is still ACTIVE, the packet-tracer will show at the end with something like and , otherwise it will drop. What packet-tracer does is to make up (fake) traffic and verify against your rules/NAT... If there is already an active connection, then it will what I wrote above. # To test/check your ISP connection, try to check your Firewall's outside/inside interface counter errors, then you can try to bypass Firewall and connect your laptop directly to ISP device (with public IP address setting on Laptop) or put a switch in between your Firewall and ISP device, and connect a laptop on that switch (again, with public IP address setting on it) Updated answer Okay, now we know that packet-tracer data was from . As I mentioned earlier, if the packet is not a part of currently active flow/connection, firewall will drop it (acl-drop reason). That packet could be a delayed one hitting firewall after the flow/connection completely closed, thus got denied. To verify that, you can create two other captures: 
+
+In this situation, you should put your PBX device in DMZ zone, assign a private IP address for it, then create an Inbound access rule and an Inbound One-to-One NAT policy for public/Internet traffic hitting your public IP address gets translated/forwarded to PBX device. 
+
+Yes, you need to update your ACL to allow more UDP ports covering the traceroute packets from Unix-like Operating system. According to the Wikipedia Page for Traceroute: 
+
+You need to configure the port f0/21 of another Switch to be the same as port f0/22 of this switch and make sure number of VLANs and VLAN IDs are identical on both devices. 
+
+On the other hand, by using , you will get exact informaion and verify which public IP address is being used as NATted IP address for your local/internal private IP (let's say 192.168.100.80): 
+
+Normally, we build up a VPN tunnel between two sites so that they could privately and securely reach each other. In this case, the Encryption Domains (local and remote subnets) are limited to the subnets we have at each site. Now, we want internet traffic for Site-B to pass through Site-A (Site-B_internet traffic runs over the VPN tunnel between Site-A and Site-B), you would need to modify the Encryptions Domains at both ends to cover all Internet hosts/IPs - or . At this time, when Site-B wants to access the Internet, traffic is encrypted and sent over the VPN tunnel to Site-A. At Site-A this "Internet traffic" is decrypted and forwarded out to the Internet. I wrote an answer for a similar question in our Networking SE site but on Cisco devices at here. I hope it would give you more ideas. 
+
+1. I could not use your packet-tracer file because it is not compatible with my 7.0 version. Most of your configuration looks fine (except on MDF_Core_2, and on each access port for end devices. You should remove them) and I could apply them into the following case and all PCs could get IP addresses from Router. 
+
+Now, the configuration of already-removed switch (1st switch) is still alive on this 2nd switch. You need to unprovision 1st switch, renumber the 2nd switch and reload the switch so it would remove the configuration of already-removed switch and become 1st switch (choose 'Yes' for all questions and save the configuration before reloading it). 
+
+Yes, you can do that. Cisco RV340 router supports WAN failover and load balancing features under Multi-WAN setting. Please follow the RV340 Administration Guide for further details. 
+
+In my opinion, it could be a IOS bug - a "comestic" issue. There is a similar issue reported though not on C3560X but on Nexus model at here. You can issue and other vlans across your network to verify their spanning-tree state, then contact Cisco TAC for further advice. An IOS upgrade may solve this. 
+
+This setup requires you to configure NAT twice (on ASA and on ISP router), meaning traffic is NATted twice when you access the Web_Server from public network. Another approach is to NOT doing NAT at all on ASA. As I mentioned earlier, your ASA uses all private IPs, you can configure ISP router to handle all NATs (PAT for internal network to access the Internet - as it is doing; and static NAT for Web_Server). In this case, ASA acts like an internal router with ACL rules on it (no NAT statements at all). From the public network, you can access the Web_Server through , this traffic then is forwarded directly to your Web_Server real IP address - 172.16.16.2. 
+
+It is because R3 does not know how to return the traffic back to R10. In routing table of R3, it does not have any routes/prefixes located on R10. R10 learned the prefix 3.3.3.3/32 from R3 via BGP (iBGP session with R8). On R10, you need to advertise your local networks/prefixes into BGP, so that R3 can learn and know how to return the traffic back to R10. 
+
+If it still does not, please update your question with the output of following packet-tracer command. I will update my answer accordingly: 
+
+To solve this issue, you need at least a L2 switch in between. If you would like to run dual ISPs, you can use another main/physical interface and terminate it on that L2 switch too, then separate L2 traffic between ISPs with different VLANs on L2 switch (ports on L2 switch connecting to Firewalls are access ports). Another way to run dual ISPs is to create two sub-interfaces under main interface G0/0. Ports on L2 switch connecting to Firewalls now are trunk ports (with VLANs to separate L2 traffic between two ISPs). 
+
+1. The first issue is that you configured same Router-ID (RID) for R1 and R2 in area 45. All OSPF router should have different RIDs across the OSPF network domain. 2. And the reason PC1 cannot reach ABR (and other OSPF routers in the network also cannot reach the IPv4 and IPv6 addresses of R1's g0/0 interface) is that you did not enable either OSPFv2 or OSPFv3 on interface g0/0 of R1, thus the IPv4 subnet 10.45.65.0/24 and IPv6 network 2001:DB8:18:4565::/64 are unknown to other OSPF routers in the network: 
+
+I do not see it mentioned in the provided document. And according to it, the setup for OOB management on Mellanox seems straightforward. We need to configure an IP address on mgmt0 (or mgmt1) and put it in OOB Management network. There is no reason to put it in a VRF instance. This document would give you more information. Updated answer: Looks like you misunderstood the point here. OBB Management traffic should hit Mgmt Interface over L2 network/segment, not by routing through the device itself. 
+
+Looks like it is a pre-shared key mismatch. You should compare your pre-shared key with the other end. The below information is applicable for IKEv1: 
+
+2 As I earlier wrote in the comment, you should NOT test with packet-tracer in this case or in VPN case with outside interface and source IP from the Remote network. It will always result in "Drop" at VPN Phase. Given that I was able to access R2 with real traffic from R3, I faced a "Drop" with the following packet-tracer: 
+
+In this scenario, you do not need to use dot1q Trunking connections between R1/R5 and L3 SW1. Fix your configuration again and ensure that you can reach the other end of connection before turn on EIGRP (or any routing protocol). And you should remove 'auto-summary' under EIGRP configuration. 
+
+If you see , then it is the issue. You can turn it off by issuing under R1's s2/0 configuration and check again. 
+
+I wonder what the IP is. Is it a typo or what? Because as you configure your Site-A ASA with public IP address, then this IP should be the IP address of your ISP device (default gateway for your Internet traffic) 
+
+When you configure a port into sub-interface, you should not leave any configuration on its main interface. It would not make any sense if you want to configure the interface on switch as a sub-interface (encapsulation dot1q) as well, because it would give you the same result with the first setup. 
+
+Then test the real Internet traffic from 10.111.22.5, and while testing this, please frequently check the connections and NAT information on ASA by using the following commands: 
+
+This is a big question with a lot of information. You can read my blog post at the following link for sample configuration. You should try to configure the tunnel yourselves and share your configuration if it still does not work. $URL$ 
+
+No, that is not a requirement. You have to ensure that they have same configuration (for instance: speed/duplex and other information). 
+
+You can try to disable on a specific interface under interface configuration mode using form command of 
+
+I do not think they are supporting this feature at the moment. And you can always check this with local Huawei Support/Sales team. 
+
+Notice that the rule is for hosts in VLAN 62 to reach this Router (as DHCP server) to get DHCP IP addresses. In this setup, we do not need to mirror this rule in . Last but not least, the best practice is: always put an explicit rule with option at the end of your ACL to verify what is blocked/denied. You then can modify the ACL accordingly. I hope it is helpful and you can solve this problem. 
+
+What was it with the old box before? Looks like SonicWall is not configured with static IP address. It used to receive dynamic IP address from old box as well. In my opinion, you should use static IP address (for interface connecting to modem) on SonicWall to make port-forwarding work properly. I hope it is helpful and you can fix this. 
+
+No. In this case, all traffic matching the 'access-list 100' is policy routed. Therefore, the issue is at your PBR . You need to DENY the traffic between VLAN 1 and VLAN 2, so that the traffic from VLAN 1 to VLAN 2 will be NOT policy routed, but follows the normal routing table: 
+
+As I understand that you are trying to ping ASA outside interface IP address - 125.20.160.154 from inside network and it failed. This is normal behavior of ASA as it does not allow cross-inteface-IP_address pinging. 
+
+Be aware that, with EEM on Nexus, in regular command expressions, only the asterisk (*) symbol can be used for replace the arguments (Cisco doc here). We cannot use other characters (such as ^, $, ., [ ], *, ... ) as we normally use for regular expressions. That is why I think we cannot use one applet in this case. I hope it is helpful. 
+
+First of all, you need to enable on your Lan-Switch1, which I do not see in your configuration, then verify the following points: 
+
+According to Cisco guide, the switch with higher priority value should become the stack master, but looks like it does not work in this case. You can try (check if it works after each step, make sure you save the configuration before reloading the stack): 
+
+There is a nice post about these two options from Routing-Bits. However, I would suggest you not to do that if you do not clearly understand how it works and what you want to achieve. This would result in issues while you set it up and troubleshoot them later. 
+
+Show CDP neighbors: At first, the Router could see the switch MDF_Core_1, but later it does not. I think it is the problem with packet-tracer application. The rest of devices are fine. On Router: 
+
+This command was introduced in IOS Release 15.1(3)S and 15.2(1)T and later releases. You can check the command history at IPv6 Commands. 
+
+You only configured F0/0 subinterfaces (on R1) and F0/1 subinterface (on R5) for connections up to L3 SW1, and this is wrong. 
+
+As Vlan 212 is network management Vlan, you should have it configured across your network and tagged on uplink (switch-switch links) ports, then it would be up and you could ping/reach it from other subnets. According to HP document 
+
+I believe your problem statement is not quite correct. I used your configuration to setup a similar case at my end. With this kind of setup (Static-Site-A and Dynamic-Site-B), the IPSec VPN tunnel CANNOT be established/initiated from Site A. Indeed, the tunnel is up when it is established from Site-B only. Site-A cannot do this because of dynamic IPSec configuration and the ASA's public IP address of Site-B is unknown. And while the tunnel is up (with initiated traffic from Site-B), Site-A can access the Site-B without any issue. However, if the tunnel turns down (due to long period of inactivity), Site-A is not able to reach Site-B again. We need to bring the tunnel back up from Site-B. 2 
+
+ISP --- Router (yours) --- Firewall --- Inside network I often see this kind of setup in large networks who have their own public IP block and AS number. The main purposes could be: 
+
+When we use (outgoing-) exit-interface for a static route, R3 router "thinks" that it is directly connecting to destination network (here is 0.0.0.0/0 including the IP 200.100.30.252 in 200.100.30.248/29), thus the router sends the ARP request for that destination IP (src: 172.16.1.1 and des: 200.100.30.252) out of that exit-interface after the first ping. When the ARP request reaches R1, R1 has no idea about the destination IP 202.100.30.252. Therefore it does not do anything. The ARP entry for the destination 202.100.30.252 cannot be created on R3, all ICMP packets failed at encapsulation and are not sent out. When we use next-hop IP address for a static route, R3 router knows that it has to route traffic to R1's IP address 172.16.1.2 and it needs an ARP entry for this IP address. Therefore the router sends only the ARP request for that next-hop IP (src: 172.16.1.1 and des: 172.16.1.2) out of directly connected interface after the first ping. When the ARP request reaches R1, R1 replies because the IP address 172.16.1.2 is on its directly connected interface. The ARP entry for next-hop IP address 172.16.1.2 is created on R3, the second and rest of ICMP packets are sent out. These ICMP packets are verifed against PBR on R1.

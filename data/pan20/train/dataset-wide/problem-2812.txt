@@ -1,0 +1,73 @@
+Also, if you put the drawing functions inside , you don't even need to pass the to them (since the data never changes). Here is the updated Plunker: $URL$ 
+
+It has 260 lines compared to the original 330. But reducing the number of lines is not the most important thing here: the most important thing is having just 1 dataset, and just 1 enter selection based on that dataset. 
+
+Before dealing with the "enter", "update" and "exit" pattern, which is specific to D3, I'd like to address some general issues first. 
+
+You can simplify your area generators, as well as your code to append the paths, using an to append the paths or an object to define the and methods in the area generator. However, there is an simpler alternative: you are facing all those difficulties because of the structure of your data. If you change your data's structure for a more adequate one you can create a code which is way more idiomatic, therefore easier to read and, the most important, easier to maintain. Right now, this is your data structure: 
+
+It gets even more simple: no sort Using can greatly increase the time complexity. The good news is that there is a solution without . It's based on this simple logic, as described in this other answer: 
+
+You define as array of anonymous functions, which is a bad practice in itself. You can't reliably test these functions as your index will change any time you update your array. A better way would be something like: 
+
+Since you are loading before , your Angular will have all properties provided by , so this is perfect way to use on top of Angular. This is also how you would wrap a plugin inside an directive, but see also the jQuery Passthrough directive that does exactly that. What would be a bad use of jQuery is using (as you mention) to refer to a DOM element. That would break the encapsulation provided by directive, since the inside of the directive should not know anything about the DOM structure, beyong what is provided by Angulars API. However, your event listener inside the directive does break this encapsulation! The event is not provided by the directive's API! (Which also makes your directive less re-usable.) Instead it is sent via another channel that is not visible from your template: 
+
+The latter creates a global variable that I have to remember and maintain and carefully watch not to misprint. 
+
+I get no clue what the function does from its name. So I am forced to scan the rest of your code for its definition, which costs time. You could help me by giving it a name that would give me a rough idea without the need to go elsewhere. Another thing I see is the use of inside controller, which is an anti-pattern. It sadly appears in many tutorials, yet it breaks one of the most fundamental principles of clean code - the single responsiblity principle. Your controller is responsible for gluing your scope (ViewModel layer) with your View, but not for pulling data from your Model layer. That is the job of a dedicated . 
+
+Which you actually use in other parts of the code. Since you don't use and outside , you don't need to declare them outside . 
+
+And, since you don't use them, just drop your and listeners. Here is the demo (click and drag the group around): 
+
+PS: setting a to run every second seems a bit resource-intensive to me (browsers are insanely fast today, though...). Therefore, you could use my and the fact that half-hour has seconds to easily schedule the to run the exact moment the speaker changes. 
+
+is asynchronous. That means that, every time you call it, it will load the CSV, parse it and run the code inside the callback (while the code outside it keeps running as the CSV is being loaded/parsed). You really should not use inside a function called by a change in a dropdown menu. Right now you're not seeing any performance issue because your CSV is not that big. However, if you had a big CSV, or a slow connection, the difference is noticeable. This is the most important reason: that CSV is the same! Why are you loading it again and again when the user changes the dropdown? It's just an unnecessary waste of resources, which can in certain situations cause a bad user experience. 
+
+Here is a simple reusable I came up with to initialize Google Maps Asynchronously, which somehow does not seem to be supported by major libraries (see below): Following Google's guidelines I am using global callback function (which seems to be unavoidable harm), that resolves a dummy , which is the only API returned. Then maps can be loaded anywhere by simply calling 
+
+because right now your method runs on every iteration. Even better to use more compact functional way like 
+
+I am puzzled by how you use both inside and outside . Each iteration of has its own scope, so its own . For instance, if , which item do you mean to use inside ? The way it is used now, the seen by that function will be another on the outside scope. If this is the intention, this variable should be named differently: 
+
+I suspect is not specific to Job Applications, so a more generic name could be more helpful. Why ??? is prob better to name 
+
+Again, pure functions without side-effects are easier to test in isolation. Use the and methods on arrays for shorter and simpler code and libraries such as Ramda (my favourite) or Lodash. 
+
+This prevents the indexing from going beyond automatically (no bounds checking required). The downside is it will cause more collisions on average compared to , but its something to think about given that you're already handling collisions. 
+
+This heap will be used for A* search pathfinding in my 2D isometric game engine. It uses lambda functions (instead of or ) to allow me to dictate min-heap or max-heap more dynamically. It also uses lambda functions for , , and so that the search key can differ from the compare key (for example: sorting by priority, but searching by name). Typical use: 
+
+The dark side of copy-paste is the potential bugs it introduces. The variable gets redefined halfway into your copy operation. That will confuse the compiler and throws a monkey wrench into your copy-probing. Namely, which should the compiler use use here? 
+
+The first parameter indicates the starting address of the memory block you want to assign values to. The second parameter indicates the value each byte of the memory block will be filled with. The third parameter indicates the number of bytes forward of the starting address to affect. For example, if then all your s will be thanks to twos-complement. Beyond there are functions that allow values longer than one byte to be assigned to each index of an array, as other answers have mentioned. Copy-Pasta Bugs Copy-paste is a useful tool for repeated segments of code. However, I always ask myself if the code I'm about to copy-paste would be better off in its own function. One of the goals of writing efficient code is to reduce the amount of repeated code. The copy operation in : 
+
+Naming something "current" makes me wonder what it is. From your code, I have no idea, so it forces me to spend time on looking around and getting clues, for what should be made clear right up front. 
+
+If the only reason is to avoid a few more DOM elements, this sounds like an overkill to me. It is so much easier to use or hiding/showing depending on the class like it is done in TodoMVC: 
+
+Also it does not feel right to do DOM manipulation with jQuery-style, maybe use dynamic property instead. If having additional elements in DOM is really a concern, there are also and . Though I personally prefer exactly because this way I don't have to rebuild the DOM. To put this into perspective, I have tried using on my site 33hotels.com, which does rebuild the view every time the route is changed. That felt in considerable delay. Instead I have all my Views inside my DOM at all times and only them depending on the route. The performance difference is dramatic - it now feels instant. Finally, both templates have common fragment, which does not make code feel DRY. Upon any change you'll have to edit each of them. I would simply keep the common part outside any directive, and put the dynamic part inside whatever. Also note that the HTML tag has semantic meaning, not presentational. That is, it marks your main header. Any presentation adjustment should be done via CSS. 
+
+Do not mix jQuery and D3: this mix is normally unnecessary. Not only that, it can make things fail silently. So, instead of: 
+
+That way, you can be sure about the value of inside the function. The properties and in are already numbers. This... 
+
+Overall your code seems good, it's an idiomatic D3 and it doesn't have any major problem (like appending elements in a loop). I would put the two charts in a single SVG with different elements, but that's a matter of personal choice (having two SVGs can be an advantage if you want, for instance, rearrange them in the HTML). I'd suggest 3 changes, though: 
+
+While you can do it using d3.dispatch, as you just found out, it doesn't seem to be a good practice: 
+
+Back to your main issue: Using a stack generator is "messy", according to you. However, "messy" is quite opinion based: for instance, I don't see anything messy here (except for those classes, which you don't need if you follow my advice about the color scale). But if you still feel that using a stack generator creates a messy code here is my solution, using your non-stacked data array. First, pass your data array directly to the elements as the data: 
+
+To solve the excessive collision issue just ensure is always a power of two by using the bitshift-left bitwise operator and bitshift-right bitwise operator : 
+
+Made me wonder if your function could be called instead of copy-pasting its loop. In this case you made the right choice to just inline the loop, but it's something to keep in mind. 
+
+Be sure to assign after everything is done copying, otherwise indexing through the changed will be troublesome, and won't actually grow the array the second time its called. Re-inventing the wheel If your variable is one-byte in length (EG: or ), then the loop where the array of integers is set to a specific value: 
+
+Performance Bitwise operators are significantly more efficient compared to modulo and other binary/unary operations. For example, since is -scoped a second variable could be declared as part of . So when a is constructed, and after in just set 
+
+The one defined at or the one defined just before the ? The quick-fix is to rename one of the variables, however another thing I ask myself when I'm about to copy-paste is if there are variables I'd have to hunt down and rename like that. If so the code is better off typed from scratch, plus you get to think about your logic a bit more as you type it out. Indexing The difference between and is significant, but the data in that gap is not. Also, going past will give an index-out-of-bounds/read-access error on , so: 
+
+Now you will catch all errors. Finally, I find your too small and too big with too many dependencies. It plays a role of a "Manager" that has many responsibilities. You can't always avoid it but you want to keep Manager's jobs at high level and as simple as possible. Imagine a stupid manager that knows nothing other than how to give basic commands :) 
+
+First of all, for a better user experience, I would avoid pagination in favour of infinite scroll. Here is a simple Angular infinite scroll implementation I presume you are aware of minification-proof technique , so won't go into that. Next, I see many fields like , , ..., mixed with , which can lead to namespace conflicts as the app grows. Hence I would gather all data-related fields into one object like . Then you can simply pass the whole object from your service instead of assigning one-by-one. The hard-coded declation is mixed with others provided by the service. Perhaps it belongs to a Config service together with other hard-coded properties. Also I presume you are aware of the difference between using vs in terms of their interactions with parent and child scopes. EDIT. Unless you know what you are doing, a recommended practice is to use . That way, in a child controller, you have both read and write access to it. If instead you use , then changing it from a child controller will add a variable on the local scope but won't change the parent scope as you likely intend, see here. EDIT. See also Misko's video on best practices, including putting the dot inside your property. suggests that you are using service just for one function. I would gather those functions into one bigger service like . You already have lots of dependencies for your controller, so lowering that number can be a good thing. Similar for . I am not sure why you define filters inside a controller, rather than with as common. Usually filters declared via update themselves, so no need for watchers.

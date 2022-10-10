@@ -1,0 +1,67 @@
+802.1x works fine on a single vendor LAN (my experience has been with Cisco ones) - and in fact has less challenges from a management perspective than IPSec in an Enterprise environment. If you use Cisco for your LAN I'd probably suggest this as it is straightforward to implement. 
+
+Of course psexec is no longer an external tool - SysInternals is now part of Microsoft (since 2006, I believe) From Mark Russinovitch: 
+
+The the way TrueCrypt and similar full disk encryption applications work hides the encryption layer from the operating system/applications etc. There is a slight performance hit, as every disk access requires an encrypt or decrypt, but for a low load application it will just work. The slight caveat would be around unattended reboots - I am guessing you only use this server when you are on site, but if you needed to use it remotely, and a power cut had caused it to power down, you would need a physical presence to get it started up again. 
+
+Configure the switch so it is not accessible from the public-facing network, and ideally from a specific management LAN connection. Then connect using a VPN - configure it to use certificate authentication in addition to your logon. If you absolutely cannot do this, configure the firewall between this switch and the internet to only accept management connections from your IP address. This isn't perfect security, but it limits visibility of the logon screen so will increase security. 
+
+You could do something simple as a first check: go to one of the internet speed check websites - these let you determine upload and download speeds, and often the latency as well. You run it, and let the client run it - compare times. 
+
+If you have admin access to the ASDM it's dead easy. Your best bet is to read the Cisco docs here first as you will want to understand what you are doing before you touch it - messing this up could break all comms through that firewall! Also, going one level further up - check you really want to allow file and printer sharing between these two network segments - from a security perspective, the firewall is doing what it is supposed to at the moment, blocking risks - so you will be raising the level of risk (probably only incrementally, but check) More generally - if there is an IT team or IT Security team, make the request to open 445 on that firewall between the 4 servers, giving reasons, and let them deal with it - as I mentioned: you could cause major problems if you have not configured a firewall before! 
+
+Under most VM platforms you can do something very close to what you describe. Have Win XP, Linux and Win7 as VMs. Treat the Win7 VM as a normal PC. Log in and out of it as you like and have it maximised on your screen. Not exactly what you have asked for, but it will look exactly like what you want. I have used VMWare and VirtualBox like this and the docs imply the others will work similarly. Same as all platforms you want to run multiple VMs on, go for large memory and fast CPU, more is better here. 
+
+Locking down by IP will help reduce the risk, but if the service is critical and you must strongly authenticate the two servers to each other you could also look at setting up an SSL/TLS tunnel between the two machines, authenticated by a certificate. 
+
+One of the very interesting points talked about by one of the Cisco network leads at the Qualys stand at RSA was that the major difference is one of scale. I'll have to update this post when I get home and can source my notes, but he basically said the problem is that now the number of IP addresses he is responsible for is over 1 nonillion. That's a 1 with 30 zeros after it. Scanning a host for ports 1024-65535 can take some time, but assuming 1 minute per host, 1 nonillion hosts would take 1900 sextillion years. So the real change in security scanning between IPv4 and IPv6 is around how you target hosts or subnets; no more blanket scanning of a range! 
+
+Publishing configurations can help an attacker a little - in that it reduces the time they would usually spend in scanning/information gathering, but if you are a target then they would be carrying out these tasks anyway. Having directory or server names that indicate their function also speeds up an attack (eg FinanceServer01) so you are better off having a naming convention which doesn't give away free info like this. Realistically, if it makes your life easier to publish the config, then do so, but remove unnecessary info (passwords, certs, keys, hostnames) - focus your security efforts instead on making sure your patches are current, your config secures you against attack, and you monitor your most sensitive data (if appropriate) for intrusion. 
+
+I can't think of any reasonable solutions that will prevent theft of the media, so the best you can hope for is to render the data useless: Place the subversion repository on an encrypted partition. This way the filesystem is unreadable without the (lengthy) pass phrase. 
+
+I don't think you're seeing a vulnerability scan. The log entries you've pasted are not typical of any types of vulnerability probes I've ever encountered. It may be worth putting some extra time into trying to figure out what's actually going on (take a look at the user-agent and referrer strings). Probably the easiest thing would be a quick script that watches the log file and keeps count of how many times it's seen the same IP address in the last n seconds. Once it passes an arbitrarily selected threshole, it triggers adding an iptables rule. 
+
+I'm trying to set up a couple of simple rules that rewrite URLs from an old version of a site based on bits of the path and the query string. First whack at it looked like this: 
+
+Something is connecting to the port and then never sending data. HTTP 408 is a "timeout" error. There's a good writeup here: $URL$ 
+
+If that all looks good, it's time to check out your config. Start be moving your directory out of the way, like so: 
+
+Create a single DRBD device mark it as a PV for LVM. Create Pacemaker resources for the DRBD volume and each of the LVM logical volumes, with the logical volumes depending on the DRBD volume. Your pv filter looks correct. Have you verified that the DRBD device is correctly marked as a PV? If it doesn't have metadata on it, it won't show up. Try using the command to verify this: 
+
+The initial filesystem was 1TB. The new disk is 800GB. You added that disk to the VG, then used 800MB of that disk to extend the LV, then grow the filesystem on the LV, leaving you with 1.0008TB in the LV. Then you grew the filesystem to fill the LV. If you want to end up with a 1.8TB filesystem, do this: 
+
+I had the same question a few weeks ago. The Dell support person I talked to claimed you could not just swap the drives, but had no explanation for the fact that there was not a separate part number for a SAS backplane. My own research on the PERC part, the backplane, and the SATA/SAS specs would seem to indicate that they are completely interchangable. 
+
+LDAP users will not be present in . In a Unix system, is only one of a number of places it can look for directory information, including users and groups. Where it looks is controlled by . To see if you actually have successfully imported your users in a way Ubuntu understands, use the command to retrieve the current list of accounts: 
+
+I would wager that is not being set properly in your script. If any of the mysql command-line tools receive a that is not immediately followed by a password, they assume they should prompt for the password. If, on the other hand, you supplied an incorrect password (or the wrong username or similar) it would just fail to connect. So, I suggest placing an command at the start of that line and re-running your script, like so: 
+
+(Assuming that the GTLD server listed those servers.) They should both return the same results, differing only in minor details like . 
+
+You don't have flagged as "auto" in . This means restarting networking is going to ignore that interface and it will just keep whatever config it already had (apparently a DHCP assigned address). Try this: 
+
+You didn't say what distribution you're using, but on Debian derivatives (Ubuntu, etc.) you can specify scripts to be called at various points in the setup/teardown of an interface in its config stanza in . You can specify scripts to be called at each of these points: 
+
+Adding as a new answer, since the topic of the question has changed from Postfix to a general networking problem. I suspect it's the clause on the interface in . If that script () fails, aborts processing the interface. Try commenting it out and running . 
+
+If you didn't save the log file and position when you took the snapshot, I don't believe there's a way to figure that out. Some of the snapshot tools, however, do save that data. How did you take the snapshot? For example, if it's a filesystem snapshot taken after flushing / locking all tables, the correct data should be in in the slaves data dir. 
+
+I can see one major flaw with this - all an attacker has to do is hijack one communication and the app will then only talk to their computer. Realistically, it wouldn't be too hard to watch the traffic to see what would be required. Of course you could use encryption using a public/private key pair to avoid this issue, then you are authenticating - which seems like a much better idea. 
+
+As someone who has managed many hundreds of penetration tests for organisations in the Fortune and FTSE 100 as well as very small local companies I have the following for you: Broadly speaking you are doing the right thing with regards pen testing in terms of using well known external companies to see what they can get access to, however the most appropriate way to do this is: 
+
+It is a control that could have been added by the admins on that server - concurrent logins (except where this expected) are a simple flag to alert of possible malicious behaviour. However, it is not something we see that often, and very rarely at system level - this is usually an application based control - so I would be more inclined to think that somewhere along the line something has just got broken, whether this is a password expiry, account disabling for some other reason, incorrect keypairs being used, or even configuration settings being set up incorrectly when your friend did that. There are a lot of good reasons to avoid sharing accounts, and not just for the sysadmins - you might need to go through the history file on your friend's machine to see exactly what happened at his end. 
+
+The fact you are using IIS is irrelevant - you just have a memory hungry config, so want a big chunk of RAM. Your best bet is to pop over to somewhere like crucial.com, and input your server type - it will then spit out various memory options which are compatible with your server and you can pick and choose your price point. The problem is that pricing varies dramatically so any single answer here will be dated far too rapidly for it to be useful. 
+
+Security angle: The best assumption is that attackers could spoof any address, so you should blanket filter all the ones that should never come in through your perimeter. This would include the ones in James and Steve's answers, plus any others you can guarantee should never hit your outside interface. Don't just assume they would require a valid address so they can receive response packets - they may not need to, depending on the type of attack. 
+
+This will help to minimise your attack surface. Then you'll want a locked down browser (ie whitelist the websites you want them to be able to access) or you'll find it being used as an attack tool or for surfing pr0n before you know it! Oh, and lock it down with a Kensington - as you'll be not too far away and that will put off the casual laptop thief. 
+
+I'd be tempted to time it- if it comes back quickly assume refused, otherwise timed out. You may get some edge cases where it is refused just before time out period, but at least you should get reasonable results. Using bash's time command will give you what you need. You'll need to figure out what the thresholds should be for a refused and a timeout, maybe through trial and error. 
+
+To update files in the ecryptfs filesystem you need to update them in the mount point - in the encrypted filesystem you would need to update the entire thing at once, as it has no concept of files or directories - it is just a large chunk of data. Yes, you can use rsync to back that data up somewhere, but in order to read or write a particular file you need to mount it. You can mount it from various different places (probably best not to try this simultaneously :-) so why not use a shell script which mounts, rsync's the relevant files and unmounts whenever relevant files are updated? useful info here 
+
+Vulnerability scans suffer from a couple of problems: false positives and false negatives. Which is why you always need to check the results, and why there is a thriving industry in proper penetration testing, in addition to vulnerability scanning. Generally, MBSA is pretty good at sorting out dependencies, so perhaps you have parts of .NET installed as part of one of your applications.

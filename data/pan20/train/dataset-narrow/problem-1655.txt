@@ -1,0 +1,91 @@
+I'm not sure why you keep mentioning EPEL when you've made it clear the repo at issue is the remi repository. In this case, the problem is that you got PHP from remi, but you disabled the repository. You will need to re-enable it to install additional packages from it. Edit the . 
+
+Like its upstream RHEL, CentOS 7 is only supported for installation on 64-bit x86_64 systems. RHEL is no longer built or supported for 32-bit systems. So there's no question; you will be installing 64-bit CentOS....if you keep that antique processor to begin with. 
+
+t1lib was removed from Ubuntu 14.10 because it was removed from Debian, which is upstream of Ubuntu. And it was removed from Debian because it appears to have been abandoned by its upstream maintainers, and has years worth of security issues. It is probably not coming back. The t1lib web site hasn't been updated in so long that its download links are dead, and have been dead for almost a decade. You should plan now to move to alternative libraries, if you even need Type 1 support at all (which is unlikely). Modern systems generally use freetype2. 
+
+This happens when OpenVPN is configured to tell the client to automatically route all traffic through the VPN. You will need to disable this. Look for a option in your OpenVPN server configuration and remove it. For instance it might look like one of the following: 
+
+You are trying to install the package, containing version 2.2 of Apache, but you already have , containing version 2.4 of Apache, installed. Before doing anything else, first decide which version you actually want. 
+
+The Apache Software Foundation publishes many bits of software, one of which is a web server named . The httpd project sources include among other things an sample configuration file, which is installed by default in or . You will find httpd named as such on most systems. However, long ago and far away, someone in the Debian GNU/Linux distribution decided to change the name of the software within that distribution from to . Thus on a Debian system you will find a configuration file named in a directory named . I don't know who did this or why, but it's a perennial source of confusion on par with calling Windows "Microsoft" or ESXi "VMware". Distributions based on Debian, such as Ubuntu, inherit this strangeness. Even stranger, they then include a file which is d from into which users can place custom configuration. So the answer is, if you're on a Debian-based system, you bend your brain into doing things the way Debian wants you to do it. Otherwise you generally do things the normal way as the upstream httpd project does it. 
+
+You encountered the error installing lame when running . This happened because the tried to create the file and could not do so, as shown in your error message. 
+
+First, you'll need to accept mail for the nonexistent domain, e.g. by adding it to . Then you'll need to make a catchall address in that delivers it locally, for example: 
+
+and should be exactly the same file, with one symlinked to the other (for backward compatibility). You seem to have two different files. From a live CentOS system as seen after installation: 
+
+This looks like a classic case of interrupted updates. An update is done in two stages: the new files are installed and the new packages added to the database, then any old files are removed and the old package removed from the database. If the update is interrupted between these two steps, you get this sort of inconsistency. What I would do with this situation is (this will require a brief maintenance window): 
+
+Rather than trying to put them all in one line, you should have one line per IP address range. Unfortunately this seems to be what CloudFlare is recommending. So the complete list would look like: 
+
+Now the problem is apparent. Your network interface has the wrong prefix set. It is set to /8 (or in the old netmask notation, 255.0.0.0), which tells your operating system that every address in the 104.0.0.0 through 104.255.255.255 inclusive is on the same LAN as your VPS. This obviously is not the case. Most of this range is subdivided into very small networks scattered all over the Americas. Because of this, your computer does not know it is meant to route the packets, and tries to contact any address beginning with 104. on the same LAN, where it cannot be found. To fix the problem, you need to reconfigure your network for the correct netmask or CIDR range. You can obtain this information from your VPS provider. 
+
+Since you are bridging, you need to set the IP addresses in the container only, and not on the host. The host should only have its own IP address(es). 
+
+If you've already joined the server to the domain, then you'll need to reconfigure it to update DNS. Edit and enable dynamic DNS updates. You may also need to specify the NIC for which DNS updates will be sent. For example: 
+
+How did you manage to do that? I can't reproduce this on CentOS 6; the following error occurs (after several seconds of listing all the packages it's going to remove, which should have been a clue): 
+
+You have multiple issues here: First, the repo is not compatible with repositories. Since you are using PHP from remi, you should disable and remove the IUS repo(s) (and find other sources for any other packages you might have from IUS). Second, it looks like your system somehow got connected to an out of date mirror. I would clear the yum caches with and try again. Third, you should persistently enable repos you are actually using such as remi and remi-php72 etc. These ship disabled, but if you forget to enable them with each command, you will run into dependency issues. Finally, you enabled remi-test, the contents of which may be unstable or change at any time. It's likely you've got some bad packages from there, in which case disable it and see: If this still persists, I would run to ensure that all the installed packages match what is actually available in the repositories. 
+
+The official statement regarding the plans to obsolete net-tools was made on the debian-devel mailing list in early 2009 by one of the net-tools maintainers. True to their statement, net-tools has been hardly maintained at all since that time. 
+
+That has all the hallmarks of defective RAM. If the server really was fine before, then perhaps one of the new sticks of RAM is defective. Test the memory and replace any defective ones you find. One of the RAM slots on the motherboard could also be defective, but it's easy to test for this simply by rotating the sticks around and retesting. 
+
+This means you probably forgot to set up a section in Postfix's configuration file. It should look something like: 
+
+Unfortunately it's not possible to be 100% sure of the exact temperature that it reached, only that it was quite a bit beyond the vendor's defined threshold. Though it's most likely that the normalized values are simply 100 minus the raw value, making the threshold 55°C and the maximum temperature reached 62°C. (And the current temperature 39°C.) You cannot "clear" this; it is permanent and will remain visible on the drive throughout the remainder of its life. It also might not be covered under warranty, though you'll have to check with the manufacturer to be sure. If it was the only drive in the box that overheated, and it's also running at a much higher temperature than the other drives, then you might be able to make the case that something's wrong with the drive. 
+
+Have your Heroku-hosted site indexed by Google (and other major search engines). A Heroku app I uploaded a few months ago for internal use, but which has to be accessible to clients, has somehow been found by Google and the (very small) public section of the site indexed. Nevertheless, a few months after first putting it up, Google is making about one request every 70 seconds, more than enough to keep the dyno active continuously. 
+
+You mistyped the old password. doesn't have the proper permissions; it must be setuid root. Your local PAM setup is horribly broken; if this were the case, nobody would be able to log in. 
+
+The number of file descriptors is set in the systemd unit file. By default this is 16384, as you can see in . To override this, create a locally overriding which changes the amount of file descriptors. It should look something like this: 
+
+You can use fail2ban to do this. You will probably have to write a custom jail for it, to read your server log and determine how many attempts is too many. Be careful that you don't ban legitimate users. 
+
+(P.S. I expect you were downvoted because the original question wasn't clear enough to answer; you should expect some of those to go away as the people who downvoted notice the clarified question.) 
+
+Only the private key that you originally created will ever match the certificate. If it were possible to recreate it, then it would not be secure! If you lose the private key, then the only thing you can do is to have your existing certificate revoked, and a new certificate issued with a new private key. 
+
+Your routing table looks reasonable (aside from a strange route to a /96 but that probably isn't causing you any issues). At this point it's time to look at the Brocade router that's serving as your default gateway and make sure that it's behaving properly. 
+
+In short, there are multiple network issues here which will cause the site to be unreachable for many or most Internet users. 
+
+The missing dependency is provided by the package. It appears that this missing package is in the RHEL optional channel. Try enabling this channel. It's very often necessary to use this channel when adding packages from third party repositories. 
+
+Kids, don't try this at home: Libvirt should have rejected the creation of a domain with a space in its name, so someone did something strange to create the domain to begin with. To recover from this is going to require some hand-editing of files you aren't normally supposed to touch manually. So this is what I would do: 
+
+We can see in your question that you are running SELinux and have attempted to have Apache read web content from a CIFS share. By default this is not permitted by SELinux, but you can enable it by setting the appropriate boolean. 
+
+Simple and probably not scalable solution: Assuming you've already set up your Linux box to authenticate to Active Directory, then you just add each user who should be in the group to the group on the UNIX Attributes tab in Active Directory Users and Groups. If you don't see the UNIX Attributes tab, see this Microsoft KB article. 
+
+(Note that I use the same document root for every virtual host, which is outside the normal document root, so certbot is never writing anything to the web sites' actual directories.) 
+
+Nothing is blocking port 80. You just have firewall NAT rules which are redirecting connections to that port to other ports, which aren't open. 
+
+Everything on all of the remaining disks has to be read in order to reconstruct the data on the replacement drive. So you are reading 5x2TB=10TB. 10^14 is 100 trillion bits, or 12.5 trillion bytes. 10/12.5, then, seems to be correct. You have approximately an 80% chance of having a URE occur during the rebuild. (For statistical reasons I don't quite fully understand, this is a bit wrong, but it's close enough to illustrate the risk. I welcome a good explanation of how the math really works.) 
+
+For bonus points, you are getting the message about the host greeting me with your own hostname, because the server is behind a NAT of some kind, and thus does not know it is reachable on its global IP address. This also will go away once the mail server knows it is authoritative for mail for the domain. 
+
+Clear your browser cache. 304 means "Not Modified" and instructs the browser to serve its cached copy. 
+
+All but one of them are not even from this year. I would consider them safe to delete, except possibly for the last one which has today's date. 
+
+That "works" for nginx not because you created the repository, but because nginx did. In the case of Node.js, they also have created repositories and posted instructions on their web site. 
+
+In RHEL 6, the package is included with the distribution, but in RHEL 5 it is not. For RHEL 5 you can get it from the EPEL repository, which you don't seem to have installed. 
+
+Since your block is listening on port 88 and you used a relative URL in your rewrite, nginx uses port 88 in the resulting URL. To fix this, specify the complete URL. For example: 
+
+If at all possible, make your build server EL6. This will save you a lot of hassle later... For a simple build box where only the occasional RPM package will be built, have your users use . You'll find it in the EPEL repository. Using to build an RPM ensures that all of the correct build dependencies have been specified by building it in a chroot environment. Add users who should be able to access to the group. Then these users can build an RPM with a command like: 
+
+Your DNAT rule is not specific enough. It is applying to all traffic being forwarded through the host to port 443, regardless of origin or destination. To resolve the problem, make the rule more specific, such as by specifying that it applies only to inbound traffic from the outside world. If this arrives on the interface, then you would add to the rule: 
+
+Anycast means you are announcing a route to your assigned /24 via BGP from multiple physical networks on the Internet. In general, the closest (on the network, not necessarily physical distance) one to any given user's ISP gets used for any given connection. Because the entire /24 is announced, every usable address in the block is anycast. 
+
+Create a new virtual network in virsh or virt-manager as an isolated network with the private IP range you wish. 
+
+The variable must be set on both the client and the server. If the server's value is lower than the client's value, this error occurs. You will need to set in the section of to complete the operation. For more information, see the MySQL documentation.

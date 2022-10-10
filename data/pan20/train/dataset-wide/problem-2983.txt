@@ -1,0 +1,57 @@
+Sanitizing (or more accurately named, Escaping), contrary to popular belief should not be done when you receive your input. It should be done right before you output it. Because at the time you receive your input, you have no idea where it's going to be used. It could be outputted to HTML (in which case it needs ), it could be outputted to JSON for an AJAX response (in which case it needs ), it could be stored in the database (in which case it needs prepared statements). The general rule is: You escape as late as possible. HTML strings should be escaped right before they get echoed onto an HTML page. 
+
+Coding-wise it looks pretty good. Consistent naming convention and code style, no apparent security vulnerabilities (assuming your Rule classes do what I expect them to do). Let's talk about approach and scale. Scale It doesn't really make sense for you to write a validator for each Domain Object you create! What if you have 50 Domain Objects, will you write an extra 50 classes just for validation? Approach As a result of the above, your class is very highly tightly coupled with the object, it knows about the structure of the object, making it useless for reuse (Unless, of course, you find another project with the exact same object). A better approach? For starters, you should ask yourself what are you validating? Let's differentiate between two possible "validations": 
+
+Better approach Your User shouldn't be responsible to save/fetch itself. In fact, if you have a User which doesn't care where it came from, you have a perfectly reusable object, a User that can come from a database, a file, a session, a form, whatever, and work the same. You should have two objects: the and the , the is responsible for fetching information about users and fill them into objects, as well as saving information from the object back into the database. The idea of OOP is separation of responsibilities. 
+
+It looks good to me, but I do have one thing to say. If I want to access , and get a 503 error, I want to be able to refresh the page in a little while, to see if the 503 error is lifted. What you do is redirect the user to the 503 page, which means that the address I'll get now if I refresh is , this is not optimal. Instead of redirecting, include the 503 error page. 
+
+Also, what's the need for here? How does it do things better than just making a new object and working with that? A few WTFs when going over your code: 
+
+With an insert, the entire string will be inserted. Sometime in the future (when you try to fetch the font from the database), and before you output it into CSS, you'll want to escape the string for this new context. CSS escaping is something that hasn't a native PHP API, but there are probably libraries around. 
+
+There are several advantages to writing proper HTML and using semantic tags. Instead of asking yourself "How should this look?" Ask yourself "What does this mean?". What does it mean for a text to be red? Does it mean phasized text? Maybe text? You can always apply the on top of that (or even better, with a classname). What are the advantages? 
+
+Your solution works, and is perfectly functional, but it's bad practice. What you're describing is the service locator anti-pattern, it means that instead of passing what you need to a function, you pass a magic box that holds what you need and many other things, and it's the responsibility of your consuming class to know this magic box (called a service locator), and be tightly coupled with it, to get the object it really needs. It's a redundant layer of abstraction that only makes things harder instead of easier. Do you have a class? Pass it a with a method. Have a class? Pass it a with a method. This way, your actual classes don't need to know anything about their validators, they only see an object with a method, and the method gets implemented differently for each validator. That's called polymorphism, and it's a powerful tool in your OO arsenal. Additionally, dynamically adding methods to constructors (a.k.a. classes) is frowned upon, because it makes it hard to read. With the polymorphism method, all of your methods are known at write time, and nothing is added in runtime, which is good for both readability and performance. Now, you might ask, "who will determine which Validator instance to inject to each of my classes", that would be "the entity that creates your instances", normally, that would be a factory of some sort, otherwise, look up Dependency Injection for a good pattern to follow. 
+
+Bonus we can make it more general by passing the key generation function as a second parameter to , then it can work with every array, even if they aren't functions: 
+
+According to your definition file, I'm assuming there's a global class called If that's the case, I have the following improvements: 
+
+I wouldn't name my classes like that for anything that goes out in the open. While it sounds cool and is a nice inside joke, the class names are not semantic, hard to remember and not very helpful in general (What's this I see on the source? Where's the actual belt on the page?) Other than that, CSS3s has some very good browser support, I suggest you try it out instead of doing manual and imperfect accuracy calculation. Alternatively, you can use LESS or SASS like the other answer states. 
+
+An even better option would be to use Promises. I use bluebird in my projects, but we'll soon have native Promise support (bluebird will probably still be better). 
+
+A better approach? A better approach would be a PHP file which is capable of serving files. That PHP file needs to make sure that the file being requested is found in a very specific list of allowed directories (i.e. I allow from and from but not from anywhere else. Then, when you download a file, all you need to do is to link (With an ) to 
+
+Your approach is completely wrong. There is a difference between escaping and validation Validation is the act of making sure a piece of input conforms to certain rules (be it logical, or business rules). It should not be used for security. You can't catch all possible edge cases with a blacklist, don't try. Escaping (or Sanitization) is the act of escaping characters with special meaning and replacing them with another character or a string that will have the meaning of the literal character in the target context (for example, replacing with in HTML). Escaping can and should be used for making sure nothing with special meaning enters the target context (HTML, MySQL query, JavaScript, etc). 
+
+Why does the method do more work? It's the problem of the object constructing your Rules, which is not necessarily the . Isn't that already a part of the entity? Why do you need to inject yet another dependency. If the server's address isn't in the entity, why the hell the server's address isn't in the entity?! Your architecture is fine. Easily separated, don't know about the . Yes. Since querying all the servers to get their downloads count, it makes sense to remember the best server in the the first time is called, and then just reference it from the cache. 
+
+Yes, it is safe. No, it is not a good idea. Don't mix application logic and configuration with the database, the database is used for permanent storage of data. Use a file (json, ini, xml, whatever) which is named the same but has different contents in production/dev environments. Then, it's as simple as: 
+
+Better approach It isn't the Router's job to dispatch your request, or initialize the controller. So we will make a total of 2 classes: 
+
+A prepared statement costs about 50 times a normal statement. However, that cost is on the database server's side (i.e. on MySQL's side), preparing a statement A, then clearing the statement object on PHP, then preparing the same statement A (with different parameters) will not incur a penalty, because the query is cached by mysql. A dependency injection container has advantages and disadvantages. It simplifies the dependency wiring process at the cost of magic. A dependency injection container is completely optional, don't sweat about it (especially in small projects). What are you abstracting? That's a question that you should ask yourself every time you create a class or a layer (which is a bunch of classes that have the same purpose). You seem to trying to abstract the PDO object, hiding it from the user. But why? PDO is an abstraction on its own, you don't really need to abstract it. What you should abstract is either 
+
+As for drawbacks, the only one I can think of is having to do it yourself instead of having the language do it for you (Like, in example, in Java, which is where I guess this is coming from). So you'll need to remember to do it every time you have a rethrown exception. Personally, I wouldn't find this acceptable, as I would surely forget. 
+
+You would want to use PHP however, if you need extra functionality like "Apply on the country the user is GeoIP detected from". That is best handled with PHP. 
+
+Where each has its own job and responsibilities, its own set of objects, and its own role in the application. I propose you start with learning about OOP, avoid PHP frameworks, and once you grasp OOP, start looking at MVC. 
+
+The class in on itself seems fine to me, but the question you should be asking is what problem am I solving here?. OOP design works well on the big picture. Let's say you have a simple application where you want to CRUD a user's contacts. And let's say that you decided for some reason not to use a database but to use plain 'ol files. In that case, it makes sense for your application to work with and objects, where each object contains a bunch of objects. Have you noticed what the application doesn't know? That's right, the application has no idea where the data came from, and that's part of SOLID. In that sense, you would have and to connect the User and Contact respectively to the files. Note that even the User or Contact objects don't know where the data they hold came from. Example: 
+
+This code can be improved even further with functions that return functions and whatnot, but take the first example as reference to learn from. 
+
+where is a key delimited by dots, and returns an object in the form of a tree, where you can access the value by traversing the parts of the complex keys as keys in the object (see examples below). The function 
+
+This looks straightforward and solid under ES5. I have no comments or criticism for that. However, under ES6, there's the spread operator (which is relatively well supported in most modern browsers, and in Babel), with which you can effectively oneline the whole thing like so: 
+
+The reason it seems messy is because you have one function doing multiple things. So what does your function do? 
+
+If it doesn't match, prompt the user with an error message and tell him to try again. Your job isn't to try to extract a good category from a bad one. At most you could just correct the case with if you want. 
+
+Also, please don't globalize configuration. Pass whichever config option you need (just that config option, not the whole configuration array) into whatever function/object that needs it. 
+
+The previous value, as returned by the previous iteration of the reduction function The current value, changes with each iteration to reflect the current element Note: The reduction function also takes two more, optional parameters. The index of the current element in the original array, and the array itself.

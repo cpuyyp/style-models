@@ -1,0 +1,75 @@
+What type is , and why does it return a value that isn't an ? Seems odd to me that a control that returns a value from 1 to 8 would return this in a non-numeric format. 
+
+does this method need to be public? Does this even need to be a method? I'd be inclined to make it a property: 
+
+Aren't there batch methods available? Can't you cache data for movies in a local db or an XML file so you only need to look up movies that aren't stored in that db or file? Also: are you seriously retrieving "image-unavailable.jpg" every time? Why? Do you expect it to change form one second to the other? Why not get it once and store it on your HD and retrieve it from there? 
+
+But all that output related logic should really move to a separate class. Suppose you don't want to write to the console anymore but instead want to log to a file or to a DB: this should really involve only changing the "Output" class without any need to touch the class. (Quite frankly, at this point the calls to Console look like a quick & dirty debug solution.) 
+
+But now I've obviously copy-pasted methods and simply renamed items, so we need to extract that into a method of its own: 
+
+Any solution satisfying the above requirement would consist of sets of elements that each have the same binary string label used in this algorithm. Since each set in this solution is maximal in regards to its binary string label, the resulting solution is minimal. 
+
+(I've been a bit fast and loose with this, there might be bugs present.) With all that in place, we can rewrite to delegate to 
+
+There's a problem with the original method, which is the interaction of and using a buffered writer. Let's try to write up to 400 bytes: 
+
+I think you will see a performance improvement by using . Let's start by calculating the earliest year we're interested in: 
+
+I don't see the need to check that each ancestor is of type here. If we remove that check, I would write 
+
+Welcome to the world of F#! Your code is looking good, and thanks for posting the LinqPad file. Here are a couple of pointers: 
+
+It might also be more performant since we avoid string comparisons and array allocations in the lambda (though of course you should measure this yourself). Heap Allocations Viewer also warns that in the original code is boxed. I noticed that structs are missing from both the naming conventions table and the code. 
+
+There's a typo in the setter, it should be . As it stands, calling the setter will cause the program to crash. You can avoid typos like this by using auto-implemented properties, e.g. 
+
+I can't say much about the code, since there's so little of it. It doesn't look that good, to be honest, and I'd certainly move it to a specific method since both blocks seems to be part of a much longer method. 
+
+Things like belong in a separate class IMHO, or perhaps in a config file. Why do you name your parameter and then assign it to the variable ? Plus in your test method you call it . 
+
+The column names you use in are also appearing in . These are "magic strings" and should be constants, stored in a static class. 
+
+does a lot of things. Consider splitting it up into smaller methods, each handling a specific task. Of course, first you need to convert to a class of its own before you can do so. 
+
+Why don't you simply use from_ etc. in the rest of your code? In fact, some of these variables aren't used at all! 
+
+IMHO class names rarely should be plural. But then most of what does shouldn't be there anyway, it belongs in a service. This goes back to my first point: you should restructure your project and separate the various layers. In your current code you're talking to SharePoint from what is basically the code-behind of a UI object. As it happens I'm currently working on a project where I'm extracting data from SharePoint. Here's my current structure: 
+
+The line in the first file means that ruby runs the second file before the first file, which is before the method is declared... Doing it the other way around will work, since only when is called is the module is required. dialect/dialect.rb: 
+
+I believe the easiest way to avoid duplication each time you read from the database is to create a which receives a as a parameter, and does the heavy lifting: 
+
+We'll also prefer to more succinct range syntax , which is simply shorter... So now, our method could be reduced to a one-liner: 
+
+My observations: Use properties - do not expose raw members - your implementation exposes raw members. You should use getters and setters instead. Unused parameters - in your constructor you declare 4 parameters, but you always pass only one which is not (the ), the other parameters are unnecessary. 
+
+Regarding and , @BroiStatse suggested caching , and I'll say - you don't need to cache ! Once you have used it, you don't need it, so if you load the XML on initialization - you don't need to save at all: 
+
+If you want to add the column index from an outside source, you can use it as overrides to the code, so you can still count on the class to tell you which properties it externalizes, and validate the override mapping to see there are no typos there. 
+
+My first reaction is: don't do this. By creating your own encoding for an array of strings, your XML is not going to be (easily) consumable by other programs. By Base64 encoding your strings, your XML is not going to be human-readable. These are two major benefits of XML, and if you're willing to sacrifice them, maybe XML is not the right format. If the serialized data is only going to be consumed by the same program, binary serialization would be a better option. That said, if you want to serialize a list of strings to XML, this is what I would recommend: 
+
+is possibly not the correct encoding for the file (and may change over time). The parameter you pass to the constructor only helps if the file start with byte-order marks. You should know how your files are encoded, and pass the appropriate encoding, e.g. . A more concise way to read the lines of a file is , though it doesn't specify share access (which is something I'm not sure you want, either). As for timing, I generated a test file of 7,000 lines, 25 entries per line, and your code runs in < 0.02s (not including ). So my guess is that it's that is taking most of your time. Try it without and see if that improves performance. 
+
+You are interested in how to use classes properly, so let's talk about it. Design your classes Why did you choose to split the functionality as you did? Does you have any stand alone value? Does it have any re-use value? In ruby it is very easy to arbitrarily break functionality into different classes, because you can call methods and members which are not there, and only in runtime they are checked. This does not mean you should arbitrarily break functionality into different classes - quite the opposite! It is the developers responsibility to design his classes well. How should you design this? What are the actors in this exercise? 
+
+I suggest that you call your class , and your methods , since you actually wrap a (not ), and (not which does something completely different in ). Also, if performance is not an issue, you can use , and implement the whole thing in a single method: 
+
+What are nested classes? What are subclasses? You ask whether you should use of , but your example shows neither. A is a class which inherits from another class, and then looks and behaves just like it, plus some other functionality, which makes it a special case of its parent: 
+
+Make your structs immutable is a helper structure, with public members, which is fine, but you better make them , so you know they won't be changed after the object is created. Choose your validations Don't throw on your own. It may confuse a future debugger. Either throw an or let the runtime throw the for you. Choose your comments Most of your comments do not add much to the methods, and are therefore redundant. Let the names of the method and variables do the work for you. If you feel the name is not clear enough on its own, it is better to rename it (maybe to ) and then you can safely remove your comments. Being nice is better than being strict Unless there is some requirement restriction, I don't think you need to throw an exception if is - why not simply call instead of telling the developer he should? Since there is no meaning for calling twice ( is ...), you might as well hide it altogether, and call it when needed. Use the power of String Use to make more succinct: 
+
+I would make it clear that is modifying the array by changing its return type to . This could go either way, as it is nice to be able to chain method calls, but here I would err on the side of . 
+
+Consider breaking it up into two methods: one, , that represents the infinite* Fibonacci sequence, and another, , that just returns . This removes the branching. An implementation might look like this: 
+
+Graham Hutton wrote a paper on solving this problem in Haskell, which is a great read. You can find it here. It would be a good exercise to port the solution to F#. 
+
+to calculate Fibonacci numbers, as it takes exponential time. Instead, we can calculate Fibonacci numbers in an iterative way 
+
+Let's explore what this would look like with an adjacency-list representation of the graph. Apologies for any errors I introduce along the way. One motivating factor is that a lot of operations that we do are local, not global -- we're often just interested in the neighbours of a particular island. First let's change the data types: 
+
+Which should look familiar to you by now -- we can write this in terms of ! As Petr pointed out, we can just define as 
+
+This takes about 5.2s. You might want to try some of the overloads to see if you can get any further improvements, and remember to take these results with a grain of salt.

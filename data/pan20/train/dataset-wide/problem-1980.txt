@@ -1,0 +1,43 @@
+Replication may fail because of different factors. You don't want to shot down the site each time replication fails. Instead, you should think of a solution for this situation: when replication fails, how to keep the site up. It seems that you have master-master setup for the replication. I suggest to let users (application) connect to the closer server when they are reading, and perform all writing operations on one master, call it "active master". This way, you gain the speed of reading, and you know that the replication is going in one direction. If the replication fails, you fix it while the site is still up. On the other hand, if the master fails, you switch masters: becomes the , and you fix the failed one, then resume the replication. Having said that, there are some situations where you may want to shut down the site. HTH 
+
+However, this might be logically wrong, as you cannot guarantee what info from other fields/tables would show from the fields that are not in the part of the query. 
+
+Make a full backup using mysqldump, or other "logical" backup tools (as opposed to physical copy of the files) restore this backup on your destination server 
+
+The first query will filter out the the rows with user_id=6, although the value of package_id is 14, (and will filter out all reos with package ID <> 14), so the returned values will be: 
+
+From your result, it looks like you don't have the index on (name, type), so for each row in , it will do a full scan to BB. This is one enough reason to make the query slow. 
+
+It is kind of creating an artificial lock. Notice that any other transaction (or user) won't be able to pick up the same voucher ID due to the Atomicity and Isolation in ACID properties of the database systems. 
+
+It is essential not to close terminal 1 before you are done with step #2. Notice please that there is no need to stop the slave. This link would be very helpful. It explains with more details, using LVM. HTH 
+
+You may use REPLACE INTO. The disadvantage of it is that it creats high IO, as each existing record will be deleted and then inserted (as opposed to being updated). Try loading the new rows' IDs into a separate table on the destination server, then run a delete on the destination joining this new table with the existing table using the ID. After that you run your ETL with s only 
+
+Then run the query without On a side note, your index is better to be switched to have city before state, because cities have higher cardinality [more different values]. 
+
+It is more than 6-8G. To ba safe you need ~30G. Single MyISAM table can handle that. I don't recommend it though. MyISAM is not as safe as InnoDB for example. MySQL is not wrong solution, but I think there are better solution. Since it is kind of look up table, key-value store would do better job. For example, memcache, Redis. You can improve the structure by making . In fact, this article has even more efficient solution. Also, use the smallest integer type that fits your maximum value of You may want to load the data first to the table without its indexes, then create the required index. 
+
+If we're talking performance, first approach is better. Here is why: Whenever new data is inserted into a table, the indexes will also be updated, and physically reordered. In the case on InnoDB, not only are the index files updated, but the data file itself could be reordered, it is clustered based on the primary key. So, re-ordering/updating is an expensive operation, and you want to minimize it. When you do bulk insert, the indexes are updated at when the statement is finished. i.e. after inserting all rows. On the other hand, when you do individual inserting, physical files are updated after each insert. The overhead of the last statement in the first approach is negligible. 
+
+Create a table with all the fields that exist in the csv file. Create a trigger (After insert on the table created in step 1) that calls your procedure that you already have, or let the trigger itself insert values to the corresponding tables. Load the CSV file to the table you created in step 1 The other tables will be populated automatically (Nothing to do here) Drop the table that you created in step 1 
+
+The composite index on (state, city) will not be used if you use the function in your query. You may want to update both field in both tables first: 
+
+Terminal 1: It is important to keep this session/terminal open till the end of the process. Wait till you get the message the tables are now locked. Terminal 2: Create the snapshot. Depending on what technology you use, this may vary. LVM snapshot is a common one. Terminal 1: Copy the files from the snapshot location 
+
+Collation names that are case insensitive end with "_ci". Click here for more info about Collations. 
+
+One possible way of doing this is to add a text field for non-shared properties, and them is a serialized array format, or a JSON string [Possibly in a separate table]. This comes with a problem though that you cannot index the "keys", so the search will be slow if the table grows big. For example: 
+
+InnoDB tables tend to occupy more space than MyISAM tables do. While converting, new physical files are being created, so you have to have free space on the disk (Hard to estimate, but to be safe I would say 120G) If you use Percona tools to make the change online, all modifications on the original table will be stored in a temporary table using triggers. So depending on the DML operations,i.e. inserts/updates/deletes, you may need more space. Be careful that on high traffic tables, triggers may affect the performance. It could be that some InnoDB related configuration should be tuned. 
+
+Make sure that exists only in table1, or add [] It could be normal that the index on is not used, specially if the majority or rows have the same value of the key. From the profiling, is the longest status. This means that the amount of data the query returns is huge (You mentioned 'long list of fields..'). Try to execute the query by selecting one field only, or be select and see if there is a significant change Note that 400*270=108000, which is not a tiny number of scanned rows :) 
+
+Therefore, for replication purposes, slave's binary files are not needed. And, yes, you can disable binary logging or purge these files if not needed for other purposes like "backup". 
+
+It is the big number of indexed fields in each index. Remember that the update will update the table and also the index tables that hold affected rows, and in your case, all indexes will be affected. As a side note, your indexes are 'bad'. 
+
+I have the following way to get the IDs of the rows that have at least two not null values; however, I am afraid this is not efficient when it comes to few million rows per table. I'd like to share it anyway: 
+
+InnoDB tables are physically ordered by the primary key. However, with any engine, to guarantee the order, you have to use clause.

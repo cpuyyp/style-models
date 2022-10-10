@@ -1,0 +1,53 @@
+Code Review is for reviewing existing code and not to discuss what additional features to add so I'm going to focus on reviewing what is there. This should reduce the amount of existing code somewhat and make it less daunting to add new functionality. 
+
+In the comments to you state: which is not immediately visible that this means the binomic formula. The text representation for power of is typically which would mean the comment should look like this: While the binary search in is in production code I'd consider using the same solution as for . While this is it has some advantages 
+
+This clearly limits the scope of the loop counter to the loop so anyone reading the code doesn't have to check if the variables might be used further down. It also states the invariants of the loop all in one place. I choose and because using and to denote coordinates in a 2d structure is fairly common in the programming world. For other loops different names will make more sense. Same goes for the outer loop which loops over all words. The inner loops are ok since you are skipping some parts but still the loop counters should be renamed to something more suitable. Also your other variables could use more descriptive names. For example 
+
+a factory method on (passing in the dimensions of the cell array) as it will probably be a common thing to create. Call chains like these are a code smell. You could model your nervous system as some kind of repository where you can query the individual components like this: 
+
+When i first read this question I assumed the intend was to only wait a maximum time for an item to arrive (i.e. input sequence is possibly blocking). Reading the code however seems that you just want to consume as many items as you can in a given time span (specifically it doesn't deal with blocking input sequences). Assuming the latter is what you wanted then I'd change the code to not use the enumerator interface but stick on a slightly higher level: 
+
+The method modifies the parameter while it is processing input. It should store the processing result locally and then assign it once it is finished. It is unclear what the return value of the method means just by reading the code. If it is supposed to indicate success (return is not 0) or failure (return value is 0) then I think you have subtle bug in there in the case when the last character read from input is '\0' - in which case you return 0 even though you potentially have parsed a number. You should simply to indicate the success case. 
+
+can be improved by consolidating the function into a single return statement and turning the into a loop. Resulting code: 
+
+If you don't do that then you have a pointing to a string literal which the compiler will probably put in a read only data segment. Should you ever try to modify it (via the non-const pointer) you'll run into undefined behaviour (most likely it will crash your program). Your helper methods should in general not terminate the program (you call in quite a few places). Their return value should indicate that they could not perform the operation they were supposed to leaving it to the caller (in your case ) to take appropriate action (like terminating early). You should alway places braces around blocks, even one-liners. Things like this: 
+
+You have probably taken the name from the C function but is actually not really a good name. or similar might be better. You could write it as an extensions method to which would result in a nicer calling syntax. It would look like this then: 
+
+Note that with the tagging approach you can't have multiple traversals running in parallel (although you could parallelize the tagging traversal itself) 
+
+The structure of the resulting string is much easier to see with (and it's also less code). You do something like this fairly often: 
+
+The already gives you all objects with matching so you will only have one resulting group. You may as well take the first element after the and not bother grouping. 
+
+In general you should try to not expose how stuff is stored internally in a class directly (e.g. don't make your list a public property). If you ever consider changing the internal implementation then this could mean a lot of work to change existing code. You could make either or simply not give public access to the underlying sprite collection at all. 
+
+You read the input character by character which isn't really that efficient. You could use although it's a bit more complicated to use. You store the current user input character in a variable called - it would be better named . You could split the code into methods like , , . I leave that one for you to figure out :) is not terminated and as such the instruction at the end may result in undefined behaviour due to the way strings work in C - essentially will simply go on and print characters until it has reached a which may cross the end of the buffer in your case since there is no guarantee that the last byte in the buffer is 0. The easy way to fix this is to make larger by 1 byte (but still keep the maximum of 10 bytes for the input) and initialize the contents of it with . So this: 
+
+should be generic as well. Seems odd that the serialization method works on while the deserialization method is generic. I'd consider adding methods which de/serialize from/to streams. While you have effectively applied YAGNI, writing/reading to/from stream is something I encounter quite often once the projects grow beyond basic experimentation. 
+
+The correct way would be to make a local copy of the queue (inside the lock) and return the enumerator to that. The other option is to iterate over the queue inside the lock and yield the items which effectively locks the queue for the entire duration of the enumeration. However this is probably a bad idea since a caller which is not aware of this can easily lock out all access to the queue for a long period of time. 
+
+If you don't want to think about or deal with negative numbers you should either change the signature to accept only parameters (which would require the caller to think about what to do in case he's got an ) or you check and throw an exception Just considering positive numbers could be changed to 
+
+I would not make a static class. There is no real value in doing so and it has a good chance of long term pain. Static classes create implicit dependencies which have the tendency to nip you in the butt sooner or later. As such you should make it non-static and pass the encryption key as a constructor parameter. Now you can actually use it with different keys without having to change the code all the time. You could argue YAGNI but static classes pretty much always violate the D part of SOLID and usually end up violating the O part as well as a consequence of how they are being used. Following SOLID engineering principles usually ends up creating more robust and maintainable code. I usually avoid modifying the method arguments. It can make debugging annoying. You won't lose anything by storing the array copy in a local variable instead. 
+
+Of course of you would make your matrix an actual 2d array then you could skip the whole shebang and just pick the cell by the index which should speed up things a bit. 
+
+Alternatively to the you can use and ignore the line if it returns for any of the 3 entries. Update: Version with . 
+
+In it is apparently illegal to pass an object with a non-existent depth. Printing an error message to stdout is not the best way to handle an error like that. You should throw an appropriate exception (fail early is a valuable debugging tool) or allow it by ignoring invalid depths. It is not imminently clear what exactly does based on its name and the names of its parameters. It looks like it moves an object to a different depth. So a better name and signature might be: 
+
+In accordance with the rules of code review I'll ignore your request and just concentrate on the review of the code. 
+
+You definitely want to document those interfaces. should probably not be a static class. The name of the event in doesn't really mean anything to me. Just from reading the interface I don't really know when this event would be raised. Maybe or ? would be a better name instead of . Also it is not clear if the can get opened and closed multiple times. If a session can't be opened and closed multiple time then maybe use and instead? Those imply (at least to me) more of a once only action. In : should be I'm not 100% sure about the and relation. The way I read is that a client can deposit an object into a terminal which will then give him some kind of reference to that transaction in form of an . Now also has a method but it's not clear what the semantics of that is. Can the client who deposited the item basically withdraw that deposit? Or is it mean to be withdrawn by someone else - if yes then shouldn't there be a method on the terminal rather than on the deposit? It's probably not clear to me because I don't know what the workflow is supposed to be but it's hard to deduce from just the interfaces alone. 
+
+From "one of my servers" I conclude that you control exactly what responses the server can send and how they are composed. In which case a simple: 
+
+Standard naming convention in C# for property names is . Why are you using to format the file name when the parts are all static strings? Unless I'm missing something then this: 
+
+This can't be guaranteed because the passed in is not aligned at all as it is purely dependent on what was allocated by the user. However I suspect it "simply works" because the first call to unmaps the entire space mapped in originally with because that's what the first of is. Nevertheless the implementation is incorrect and works by pure coincidence. You should check the return values of and as well. Multiple calls to will leak memory. While it would certainly count as user error detecting this and notifying the user is good defensive programming. 
+
+As you are writing C++ there is no need to declare all local variables at the beginning of a block. Declare them where they are needed. Give your loop counters sensible names. Single letter loop counters are accepted practice but sometimes it makes it easier to read to provide some more descriptive name. There is no value in using loops everywhere. In some places loops would be much cleaner to read, especially since they allow you to declare the loop counter in place. I found it very hard to discern all the loop variables to see if they are being used later on for some reason. So your first loop in could be rewritten as:

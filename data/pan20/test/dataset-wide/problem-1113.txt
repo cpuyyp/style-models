@@ -1,0 +1,83 @@
+Yes, this is possible, and probably makes sense. See e.g. Replicating from MySQL Master to MariaDB Slave. So with MySQL 5.5 as the master, you can use MariaDB 5.5 or later as the slave. 
+
+EDIT 2: We don't want to accidentally remove helpful/important modes from the system variable, so ideally we should only remove specific modes, in this case NO_ZERO_DATE and NO_ZERO_IN_DATE. This can be done this way: 
+
+Note that of course not all system variables can be modified per session, and some are not even dynamic. 
+
+You can manipulate system variables like innodb_old_blocks_time (increase this - 1000 = 1 second) and innodb_old_blocks_pct (default is 37 - allowed range is from 5 to 95, set a smaller value to evict data from and similar faster). Both these variables are dynamic, so they can be given special values just before you run mysqldump, and then restored to the original values once it has completed. For details, see Making the Buffer Pool Scan Resistant. With MySQL 5.6+ (or MariaDB 10.0+) it's also possible to run a special command to dump the buffer pool contents to disk, and to load the contents back from disk into the buffer pool again later. (See MySQL Dumping and Reloading the InnoDB Buffer Pool | mysqlserverteam.com.) This way you can still use or other tools that "pollute" the buffer pool and then restore it afterwards. A way to prevent that running backup is unintentionally evicting your working set data at all would be to replace your backup method with Percona Xtrabackup or another physical backup tool that doesn't access the InnoDB buffer pool as such. Physical backup methods are also faster, and can be less disruptive than mysqldump. The disadvantage is that you'll need the exact same MySQL version and configuration on the system where the backup is restored. 
+
+Right click on the database, go to Tasks and then Generate Scripts. That will give you the option to script it as one file or one file per object. You can also look into SQL Source Control from Red Gate. I haven't used it but I've heard good things from those that have and it does link with SVN. 
+
+My reading of Books Online made me think that what you're doing is right since AdminSapr is in the db_owner role but in testing I had to do something like the above to get this to work. 
+
+If you wrap the statements in dynamic SQL the error isn't returned to Profiler and the transaction is rolled back 
+
+You can create a temp table and use it inside the dynamic SQL. I didn't go based off your code but this shows the concept: 
+
+This is happening because the principal in the AS clause needs to have the permission with the "GRANT OPTION". Running this will allow you to run your original code: 
+
+The only way to restore a single file group is to run in all the logs so it's up to date with the rest of the files. This would of course run in the bad data modification you're trying to prevent but it's necessary to ensure consistency throughout the database. You'll need to restore it to another location and move the data over. $URL$ 
+
+... so you may not need a specialized DBMS for this sort of thing. This type of statement is known as 'merge' (as in the SQL standard) or 'upsert'. See this Wikipedia article for more info, including details about the implementation in other relational database systems. 
+
+I would expect a connection to show as coming from localhost if a remote user was querying a table that has the federated, federatedX, connect or spider storage engines (or possible other similar storage engines), and the table was configured to connect as the root user to the local MariaDB instance rather than a remote one. You can find the storage engine used for a particular table with: 
+
+Unfortunately, there is no equivalent for . You can do (which first deletes the existing row if one exists and then inserts a new row), but that's probably not useful to you. A few other maybe useful optimizations: 
+
+This is probably not a good idea as there is nothing to prevent over-zealous employees from creating so many records that they end up in someone else's range. (Though I suppose you could build a constraint into your application to avoid such collisions.) 
+
+and in your case its the opposite, so Performance decreases if you are using 1 backup device to restore 2 different databases for more on Backup and Restore Performance in SQL Server check section Using Multiple Media or Devices So i guess the answer to your question, is Its possible to restore 2 databases from same file but not Wise 
+
+in the BIDS, open your project and double click on your DSV file, you can right click any where and add a table and then do the rest of steps like adding a relation look at images Step 1 Step 2 Is that what you meant 
+
+after that create a job that runs the stored procedure once a day or depending on the schedule you need. 
+
+you wont find the exact scripts that were executed on sql.(in the transaction log) A transaction log is a file that contains information regarding every change that has been made to the database. This includes data modifications (transactions), database modifications, and backup/restore events. The primary purpose the transaction log is to provide a method to be able to restore a database to a point-in-time when necessary. This can include rolling back transactions to a certain time, or to roll forward transactions from a full backup restoration. to know more about Transaction log $URL$ here is a script to show you recent ran delete queries 
+
+You could deny access to each individual view. The downside here is that any new views would allow alter unless you had a mechanism to deny permission such as a DDL trigger. Alternatively, you can revoke the alter command at the schema or DB level (this may require removing a DB role) and then grant access individually to tables via some mechanism. Another option would be to create a DDL trigger on all alter events. That trigger would check to see if the object being altered is a view via EVENTDATA and if it is make sure the logged in individual is someone with access either by a list of names or using sys.login_token to check for a domain group. If they're not then an error can be raised. 
+
+SQL Server 2008 always supports Windows authentication, either local or domain. However, individual users need to be granted access. In SSMS connect to the instance and expect Security then Logins. If the user or a group that they're in is listed they they already have access to the server and there's another issue. A more detailed error message with a state code will be found in the SQL log. The following page lists out the different states for login failed errors and what they mean: $URL$ If the user needs to be granted access right click on "Logins" then fill out the dialog that pops up. Make sure to grant them access to the objects they need via a server role, a db role under "User Mapping", or to specific objects after the login has been created. 
+
+This code below adds a trigger to your table that works after insert, it updates the name added and replaces the with 
+
+you can use the DateID as a foreign key in your main table This way you have day, month and year seperate and you also have the Date in dateformat for any date related functions for reference the script to generate a date dimension i used this site $URL$ 
+
+from simple-talk Section 13. When is the Auto-Update to Statistics Triggered? support.microsoft Section: Automating Autostats determination msdn.microsoft section: Maintaining Statistics in SQL Server 2008 
+
+Last part of your questions Please let me know this is good practice to move transaction log to some other drive. If not please suggest some other solution to recover from shrinking database log. Detaching & Attaching is good method if you can stop the the application that is in your case stop users from using sharepoint.. 
+
+the Overwrite the existing database, do it only if you are sure you want to override your existing database as you mentioned you dont care to delete it RESTORE WITH RECOVERY is the default behavior which leaves the database ready for use by rolling back the uncommitted transactions. Additional transaction logs cannot be restored. That should bring the database online. Then you can delete it & try again. 
+
+The error is happening because the error being thrown part of a recompile error due to deferred name resolution. Looking at SQL BOL those aren't trapped when they happen at the same level as the try...catch. However, if it's happening at a different level, either as dynamic SQL or a SP call, then it will get caught and rolled back. Using Profiler you can see that the "alter table foo add x dog" statement recompiles before executing and then errors and bypasses the catch block. 
+
+You can put the users in the db_ddladmin, db_datawriter, and db_datareader roles. This would prevent them from modifying permissions on the DB but either the db_securityadmin or db_accessadmin roles could be granted as appropriate keeping in mind that it's possible for db_securityadmin to be used for privilege escalation but db_accessadmin may not meet your needs. As always, test the setup before deploying it to production to make sure it restricts what you want it to while allowing what you want it to. If the goal is to prevent DB growth make sure autogrow is disabled on these databases. 
+
+Document the details of how to reproduce the bug and submit it on connect.microsoft.com. I checked and couldn't see anything out there already that would be related to this. 
+
+These might be the reasons and i suggest using a product like sqlping to discover your sql on the network, because if it doesnt show up it doesnt mean its not there, its just the way its broadcasting is the problem 
+
+I have a job in my SQL 2000 server, this job is used to execute a DTS, i want to change the schedule of this job. but every time i try to change of delete or stop this job i get the error message 
+
+a table in sql server 2008 can handle large number of records and as @usr mentioned it depends on disk space but its recommended that if your table has many rows and it keeps on growing that you use Partitioned Table $URL$ When a database table grows in size to the hundreds of gigabytes or more, it can become more difficult to load new data, remove old data, and maintain indexes more info about it $URL$ and how to implement it $URL$ 
+
+i wont repeat what @Trisped said, that if you convert to simple recovery what will be the consequences and also the need to back up your database before doing the steps below Code below will convert your database recovery to simple and will shrink the transaction log file to its minimum and will set the recovery to full again incase you want it 
+
+This is going to be one of those things you need to try for yourself to find what works best. Replication can be tricky so while there may not be a direct monetary cost there will be administrative overhead maintaining it. To expand on Log Shipping, you don't need to restore the logs every 15-30 minutes. If you choose, you can do it every four hours or once a day. A solution similar to this that I've implemented is doing a weekly full backup and restore to a reporting DB (which can take a while and happens on the weekend). During the week differential backups are taken and those are restored to the reporting database nightly. Users need to get booted before the restore but since the reporting DB is a business hours application there isn't an issue with that. Data is a day old which shouldn't be a problem based on your requirements. To use database mirroring for this you would need to purchase Enterprise to be able to use snapshots if you're not already running Enterprise. It also wouldn't keep the data 100% up to date since the snapshot needs to be dropped (meaning all users need to be out) and then recreated to get the new data. However, this would be less time than either log restores or the method I explained above. If upgrading to SQL 2012 is an option it's possible to set up a read-only secondary that will be kept up to date with the primary database. I only mention this because it's likely to be the smoothest solution. 
+
+wsrep_sst_donor should have the node name, not the IP address. A similar case was reported in the MariaDB Jira as MDEV-13687. 
+
+These modes are enabled by default in MySQL 5.7 (but not in MariaDB 10.2). So, after removing these from the sql_mode system variable, we get the desired result: 
+
+Yes, selecting from the table is interesting, but not surprising given the warning. (I don't have a MariaDB 10.2 instance at the moment, but testing on dbfiddle.uk indicates it too fails, though again not silently.) MariaDB 10.3.6, default sql_mode (strict) No warnings. select * from g; Gives: 
+
+If you execute an statement against this table, then the column will increase every time since it attempts to first, then if that fails it does the . To avoid this you can do a against the table first to see if the exists, then do an or an depending on the result. However, if you instead had a table like this: 
+
+I see in the comments to the MariaDB tutorial page you linked to that you have set plugin_dir in you my.ini file. However, I think this will only work if it's in a section of my.ini that the mysql client can/will read, such as the section (not ). Assuming us1 was created as and everything else is correctly configured: Have you tried connecting just with the mysql client? 
+
+While trying to Process a cube i go this error "Error 133 The following system error occurred: No mapping between account names and security IDs was done. 0 0" i know its some user which is available in the roles have been removed from active directory. the annoying part in this is the error doesn't indicate which user has been removed from active directory, our SQL is setup as windows authentication. and i have to go and check one by one. is there a way to identify the user, so i remove it and continue with the processing 
+
+The UDP communications gets "lost" on the way. UDP port 1434 are blocked on the network with firewall or windows firewall or IPSEC policy 
+
+i suggest if you have an ID in the table to use it in the joins to find the exact record inserted to make it accurate like below 
+
+if your windows user has sysadmin privilege> login to your server as you do and after you login to your sql server using SSMS, go to security>logins>sa double click on sa and reset your password

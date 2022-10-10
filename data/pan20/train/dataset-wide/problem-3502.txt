@@ -1,0 +1,85 @@
+Just a guess, but: Does php have access rights to ? PS. You also can try php-fpm instead of spawn_fcgi 
+
+Another thing you can try that may help increase TCP throughput is to increase the size of the interface queue. To do this, do the following: 
+
+I suggest using HAProxy. It's extremely fast. And you can also evade Single Point of Failure by using two loadbalancers with CARP(*BSD) or UCARP/LVS(Linux) 
+
+Setup switches to generate snmp traps on port down. On trap server catch them and call omshell script that deletes old lease. 
+
+Yet again nobody mentioned php-fpm. It's now bundled with php itself so you should read docs about php-fpm in PHP manual. 
+
+L7 solution: You can use nginx as a reverse proxy and redirect all requests from old IP to new with simple config like this: 
+
+What you are doing is pretty strange: 1) You have same subnet reachable from different interfaces which will make your life a bit difficult for some types of server software 2) When you put 's interface down you should mangle routes: 
+
+Also backtraces in says about , so as @Jim have already mentioned, you should probably check your ram. 
+
+Basically most are related to physical memory failure. But in presence of virtualization it may also be a hypervizor bug. But I would suggest you first check . [1] $URL$ 
+
+If you have a boot loader problem it's essential to provide full information about system's internals: 
+
+You didn't specified what kernel are you talking about. From BSD's point of view it's all explained in TCP/IP Illustrated, Volume 2: The Implementation By Gary R. Wright, W. Richard Stevens Short version follows: 
+
+Aside from lager address space, absence of broadcast, IPSec and simpler auto-configuration there are some "not so known" advantages of IPv6: 
+
+Solution 1: Hide untrusted PC under another router. This will solve arp-spoofing/mitm problem. Solution 2: Use any router with DD-WRT firmware. There you can setup different Wireless LANs and even put them in different VLANs. Too bad that ADSL modems aren't supported by it. 
+
+Bigger address space means that address has more bits that can be used as data storage. For example hop-count between two nodes then can be a function of their IPv6 addresses e.g.: IPv6 address can be in format so closer nodes will have more Most-Significant-Bits same. This is just an example, of course "closeness" metrics could be stored in some kind of external database like DNS records. There are some techniques of using address space of IPv6 for cryptographic purposes such as Cryptographically Generated Addresses (CGA) and SEND (SEcure Neighbor Discovery) When IPv6 is enabled all nodes in network have link-local IPv6 address(if not configured otherwise). So there is a chance that you can access even mis-configured node. You can get nodes' MAC addresses directly from link-local IPv6 address (if IPv6 privacy extensions are not configured) There is no way you can possibly use IPv4 in subnets with thousands of nodes - your network will be overloaded with broadcast traffic (e.g. ARP). You can query node for additional information using node information, e.g. in BSD you can query host for ICMPv6 Node Information Node Addresses: 
+
+Platform (i386, ia64, powerpc etc) Hardware, especially motherboard BIOS/EFI version GPT/MBR? Filesystem in use (Of cause one can google about "pfsense image", download it and search for ufs/zfs, but it would be easier if you just provided this information) 
+
+Strange that nobody mentioned ejabberd. I've been using ejabberd under FreeBSD as inter-company messaging system for years. Written in erlang it's adopted for very highloads, don't require JVM (as Openfire do), has integration with LDAP, provides http-bind and http-pool methods for web-based comet/ajax clients and much more. You can install in FreeBSD from ports via Also you can watch screencast: Setting up a Enterprise Instant Messaging server in 180 seconds 
+
+Looks like a race in Linux kernel between timeout and with : $URL$ Ubuntu Kernel git says that fix was merged in on 5 Mar 2012. Upgrading your kernel to (at least) (or moving to release on your production servers) should fix your problem. 
+
+Probably you can install DD-WRT firmware on your router. It has 2 types of QoS: HFSC and HTB DD-wrt QoS $URL$ It also has: 
+
+I'm backing it up at night with If I restore backup using on the same server then I'm getting not quite the same data, for example: 
+
+Yeah, CD/DVD has all sources of FreeBSD and you don't need to download them all from internet. Insert FreeBSD CD, run go to configure -> Distributions -> check Then use instruction from FreeBSD handbook. PS. for minor upgrades I use this script 
+
+If crashdumps were enabled you can also see timestamps of files in directory. Also you can see recent panics using command: 
+
+If you have fully backed up system and it has mirror - you can break the mirror, upgrade, test, re-add devices to mirror. It can be risky, but IMHO ability to rollback any mess worth it. Also to minimize risk of breaking some packages dependencies you should add option to your kernel and install port Newer versions of FreeBSD have , so you can create a clone before an update. 
+
+Not an answer, but suggestion - replace spawn-fcgi with php-fpm it's more customizable. PS. maybe you have special 50x error page redirect in nginx.conf UPD: today i've ran into similar problem when nginx+php started to serve blank pages. My research showed that it sended blank page whatever php threw an exception. May be it's some kind of php.ini directive to serve blank instead of an error. I should examine logs and etc... wip. UPD2: Look at your php.ini there is 2 parameters in it that you need to change in order to see php errors: 
+
+So actually workaround for your problem is to reduce amount of memory server has (physically or possibly via boot param but I have not checked). Also you can change kernel/userspace split via kernel config option. But really, switch to x86_64 is just easier, isn't it? =] PS. You can actually use x86 userland with x86_64 kernel. 
+
+In your case your main problem is interrupt distribution across the cores, so fixing it will be your best corse of action. PS. Do not forget that in those kinds of benchmarks kernel and driver/firmware versions play a significant role. PPS. You probably want to install the newest driver from Intel[4]. Do not forget to read README there and examine scripts directory. It has lots of performance-related tips. [0] Intel also has nice docs about scaling network performance $URL$ [1] You can pin your processor to a specific C-state: $URL$ [2] You can analyze that data with: $URL$ [3] You can set affinity with: $URL$ [4] $URL$ 
+
+Look at column. Lack of hardware descriptors can be observed only via driver-specific interface e.g for Intel e1000 cards via: 
+
+Caching is pretty new function in nginx (and not so well documented for now), but stable enough to be used in production. 
+
+8CB0701A0C8B7D97653888E8B959A6420AEC7679 becomes 8CB0701A0C8B7D9765383FE8B959A6420AEC7679 after restore A9986D2E961E1F407E74E9D18D811DDB702924F5 becomes A93F6D2E961E1F407E74E9D18D811DDB702924F5 after restore and so on... i've noticed only 88h and 98h characters corrupts, but there can be more. Is there a way to backup-restore data without corruption? 
+
+Bittorent tracker is pretty easy to setup, I know couple of PHP-based, but they are mostly in Russian (TorrentPier - phpbb2 interface, TBDev). You also can also look at XBTT - written in C++ - it can manage millions of peers on single box, but web interface for it is kinda hard to find. UPD: I've found this project xbtit they offer it for free under BSD license. You can try demo here. I think Direct Connect with simple web interface for exchanging magnet links can be more suitable for you. There are plenty of hubs that you can choose, from windows 1-clicks to *nix-only with lua and python scripting support. Just most popular ones: PtokaX, YnHUB, VerliHub). And of course FTP is still alive! You can easily combine FTP storage with HTTP and easy to install&manage hand made site 
+
+Setting to higher values is only needed on highloaded servers where new connection rate is so high/bursty that having 128 (50% more in BSD's: 128 + 64 ) not-yet-accepted connections is considered normal. Or when you need to delegate definition of "normal" to an applications itself. Some administrators use high to hide problems with their services, so from user's point of view process it'll look like a latency spike instead of connection interrupted/timeout (controlled by in Linux). manual says - acts only upper boundary for an application which is free to choose something smaller (usually set in app's config). Though some apps just use which means set backlog to the max value allowed by system. Real cause is either slow processing rate (e.g. a single threaded blocking server) or insufficient number of worker threads/processes (e.g. multi- process/threaded blocking software like /) PS. Sometimes it's preferable to fail fast and let the load-balancer to do it's job(retry) than to make user wait - for that purpose we set any value, and limit application backlog to e.g. and set to 1. PPS. Old versions of Linux kernel have nasty bug of truncating value to it's 16 lower bits (i.e. casting value to ), so raising that value to more than can even be dangerous. For more information see: $URL$ If you want to go into more details about all backlog internals in Linux, feel free to read: How TCP backlog works in Linux. 
+
+First, nginx enables gzip only for text/html by default so there is no compression when serving PDFs You can setup types you want to gzip (remember that for text/html is on always) by: 
+
+BSDs are using structures called / for network data. They used everywhere from driver code to socket layer. Even if packet had 1 byte of payload it will consume 256 () bytes in mbuf. If packet size (with all frame/packet headers) >= 256 it will consume 256 () + 2048 () bytes. Hence the difference between and . To answer your question: is more correct value to use. PS. For more information consult to TCP/IP Illustrated Volume 2 - W. Richard Stevens and Garry R. Wright, Chapter 16 - Socket I/O, Section 16.3 - Socket Buffers, p.476 
+
+There is DHCP server in network (isc-dhcpd-server-3.0 on FreeBSD 7.2) than gives one IP per switch port to every user via Option 82 The problem appears when user disconnects one of his computers and connects another(i.e notebook with different MAC address) then DHCPD puts to log "...network net1: no free leases", because there is record in leases file that this IP is already owned by another MAC. That second computer will have his IP only after default-lease-time (that is IIRC minimum 10min, and after 3min he usually calling support) or after deletion of dhcpd.leases file and restart of dhcpd. Is there a way to turn leases off at all, because we have strict binding between switch-port-ip? 
+
+Your question is already answered, so just little performance tip: If you have a lot of small files you should increase vfs.ufs.dirhash_maxmem, default 2MB is too small for thousands of files. I have such line in my /etc/sysctl.conf 
+
+PS. Are you using apache? Check it's stats PPS. Try putting nginx before it. PPPS. Are you using accf_http kernel module? 
+
+So for 16GB you should have no more than 4GB of swap. PS. Also it's worth to note that invoked is almost always better than unusable swapped out process using whole I/O bandwidth. 
+
+Depends on your Linux kernel vendor(Linux distribution). But most likely it has one. To check / your / / for string : 
+
+To answer this question you should probably checkout changelog for you kernel package. This can be done for example via . But general recommendation is to always use latest kernel version provided by distrib's security team unless it introduces visible regressions for your workload. PS. To upgrade system packages under Ubuntu one should use PPS. Also as suggested in comments if you have more than one server it's usually a nice idea to use Chef/Puppet/Cfengine. 
+
+Second is client side. I can't possibly think a way other then to told user to right-click and save to... 
+
+I think you trying to do something strange. You can easily sort messages in syslog depending on hostname they came from. See : 
+
+Also there is usually presets in MySQL packages called , , and you can search for them. PS. You should really google for some MySQL tuning examples for you storage engine. 
+
+It's more like computer science question. Especially if you want to dig into hash tables and big-O notations. The answer is: If you are handling many TCP sessions on sever you really want to look up connection's tcp parameters in O(1) time instead of O(n). FreeBSD uses chaining to resolve hash table collisions. So if there is lots of connection there will be lots of collisions and so instead of O(1) hash table lookup you'll need to do an linear chain lookup with O(n) complexity. Parameter you mentioned - is basically number of buckets in hash table. On our servers it's set to pretty high values like and even higher. With that setting we are handling about 60,000 connections per server. Each entry in hash table by itself currently on x86_64 uses 252 bytes () + 688 bytes() of kernel memory for each entry (kmem size is 512G in amd64 since 7.2+ IIRC). It can be viewed via . About structure of TCP Control block you can read FreeBSD sources: tcp_var.h or read TCP/IP Illustrated, Volume 2: The Implementation By Gary R. Wright, W. Richard Stevens 
+
+Try to decrease halfopen connections limit to minimum (i.e 1 or 2) it'll make p2p almost unusable, but also will cost you slow browsing speed

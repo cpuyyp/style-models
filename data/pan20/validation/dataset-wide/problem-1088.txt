@@ -1,0 +1,73 @@
+In that way you do not "pollute" your table with input by users. It has the same "likes" as your own (you will just need an extra or similar) but not the dislikes. As the dislikes, it is another extra table, that has to be taken into account in your requests. You could even "merge" the 2 tables with just: if you specify in a constraint that either or are NOT NULL (but not both at the same time). You will then obviously need to accept having a lot of NULL values. But again, I recommend you to think about how you will query this data afterwards to find the model that most suits your needs. Also how often the "other" case could happen? It is more like 1%? 10%? 90%? The design and optimisations would depend on this too... 
+
+step 4, Compare sort keys (simple binary comparison of each value one by one): The fourth value is enough to sort them all, so the final order becomes: 
+
+Based on the description, this is related to Amazon Aurora product, and not PostgreSQL by itself. See $URL$ 
+
+Second update based on Solomon Rutzky's comment about Unicode versions. I used the data about latest Unicode version at this time, that is version 10.0 If we need to take instead into account Unicode 5.1, this would be: $URL$ I just checked, for all the characters above, the collation arrays are the following instead: 
+
+step 4, Compare sort keys: Basically the third value determines the order, and it is in fact only based on the last digit, so the order should be: 
+
+You can test things in this SQLFiddle: $URL$ I am quite confident it could be made generic if needed, but it may be enough already for your needs? However it will not work correctly if you need to store NULL values, and if you need to handle transition such as "some data value => NULL" In such cases there would be a specific need to realy test the existence of each field and just take its value if present, including if it is NULL In passing I would also say like @Lennart that it is better to separate archive data from live data for many reasons, one would be performance, to compute the "next" version you will only have to read one row (the live one) and then doing something as above, instead of having to do things like each time, which will be more costly, even with an index on . 
+
+i would not see this as a major issue. of course things are a little larger but if we talk about a single integer column things will most likely be lost in noise anyway. we got 24 bytes of tuple header ... then comes the data. if things are 4 bytes larger? what difference does it make in a 10 column table. so, no worries ... make sure that you do what is good for your app. 
+
+as far as i know there is no such tool around. however, you got a couple of choices: a.) use oracle_fdw and just join the stuff or b.) export data to text files and use a simple UNIX diff. it works like a charm usually. 
+
+what you need is the ts_headline function. it does exactly what you need it seems. here is the documentation: $URL$ 
+
+the crux might be your loop. you can get rid around that one easy: there is a function called unnest, which can transform an array into a table which can then be joined or whatever (via a LATERAL join maybe). you are on the wrong path with your approach. if you really want this loop and so on, you need a set returning function and use it inside COPY. 
+
+shared_buffers are statically taken at startup and are never resized. effective_cache_size is just a hint to the optimizer. it is never allocated. it merely gives a hint of what is going on. so shared_buffers is what you see as taken. 
+
+i think you are facing spinlock contention. you can verify this using "perf" (in case s_lock shows up on top my guess is right). in general try the following: 
+
+it allows people to work on various files concurrently. it makes using git and so on a lot easier. also, consider looking at CREATE EXTENSION. it allows a pretty nice way to handle versions and all that. i strongly encourage to use that one as well. git is also a good thing to have in general. 
+
+step 4 : Compare sort keys: The second value is enough to sort them all, and it is in fact already in increasing order, so the final order is indeed: 
+
+This question is not so related to databases but more on Unicode handling and rules. Based on $URL$ Latin1_General_100_CS_AS means: "Collation uses the Latin1 General dictionary sorting rules and maps to code page 1252" with the added CS = Case Sensitive and AS = Accent Sensitive. The mapping between Windows code page 1252 and Unicode ($URL$ show the same values for all characters we are dealing with (except e with macron that does not exist in Microsoft mapping, so no idea what it does with this case), so we can concentrate on Unicode tools and terminology for now. First, let us know precisely what we are dealing with, for all your strings: 
+
+But the algorithm by itself is a little dense. The gist of it is: Briefly stated, the Unicode Collation Algorithm takes an input Unicode string and a Collation Element Table, containing mapping data for characters. It produces a sort key, which is an array of unsigned 16-bit integers. Two or more sort keys so produced can then be binary-compared to give the correct comparison between the strings for which they were generated. You can view the specific Latin sorting rules here: $URL$ or more directly and specifically for MS SQL: $URL$ For the character it shows: 
+
+and of course replace by the timestamp your are dealing with. This could be abstracted in the function that creates this based on the interval value and step you provide, for your specific timestamp. Not sure to have understood the exact truncation you want, so you may need to replace by . 
+
+Indeed, you should not have uninstalled it and re-installed it, as PostgreSQL starts a new database store from scratch, hence empty. BTW it may happen that your data is still there, but in another old directory. See for example this article ($URL$ that shows an upgrade between 9.4 and 9.5 but it may apply in the same way in your case. If you look at the PostgreSQL formula you can see: 
+
+I'm running a mongo 3.4.7 cluster (8 CPU, 120GB ram, primary + 2 secondaries) with ±130 open connections, each one of them to a separate DB with ±50 collections. After a few minutes of running, cache usage percent goes to 95% and stays there. Sometimes is goes down a bit to ±93%, but quickly returns to 95%. According to the docs, when cache usage is at 95%, WiredTiger will start using application threads for eviction, which slows down the DB and can explain why cache usage doesn't get higher than 95%. What is the reason that cache eviction can't keep up with the load, while machine resources are under-utilized (CPU, Disk)? Tried increasing the number of eviction threads to the maximum of 20, no luck there. Update: Here are the result of 
+
+I'm running mongo 3.4.7 (WiredTiger) replica set with two secondaries. According to the docs, when journaling is enabled and write concern is , the ack is sent after the data is written to "In memory". However the docs don't specify what happens when journaling is off on the server (). What happens in that case? What is the write concern waiting for? 
+
+The first one might explain the 16GB summary of the collection cache, however I wonder what the second metric means - what else is MongoDB / WiredTiger store in the cache, and how can I break it down? Any ideas? 
+
+I'm seeing this kind of report in many JIRA bugs and I want to generate it for my mongo instance. What software was used for generating it? 
+
+We have a cluster of 3 Mongo 3.2.13 instances running with journaling enabled, with hundreds of DBs and collections which are accessed simultaneously. We are checking the option to disable journaling, to improve the cluster's performance. According to the docs, WiredTiger performs a checkpoint every 60 seconds, so in a case of crash we should only loose up to 60 seconds of data. We are ok with that. Are there any other risks / disadvantages for disabling journaling? 
+
+This explains your results when ordering on except that ē does not exists in code page 1252, so I have absolutely no ideas what it does with it. Or if we do the Unicode algorithm by hand, using the keys value of DUCET at $URL$ : step 1: Normalization form D, so each case becomes: 
+
+so should be called only if directory is not already populated, so in your case the database just got initialized in a new directory, empty, while your data is still in another directory. But things have changed recently. Homebrew 1.5, released on January 19th 2018 has this in its changelog: 
+
+step 3, Form sort keys (for each level, take each value inside each collation array, then put 0000 as delimitator and start again for next level) 
+
+Remove the column has it can be computed from other database information. Create a view over with something like: 
+
+So Amazon added some settings. You will need to contact them directly and ask since their documentation does not provide a result when doing a search, $URL$ gives Your search for "shared_heap_size" returned no results. 
+
+It is a wrapper around PostgreSQL tool, that can be used to upgrade a database in place, hence not loosing anything, including between major versions. This article ($URL$ can give you a lot of information on how to upgrade PostgreSQL, and what happens when you use . 
+
+If you want more, you need to increase the number of connections (backends) which default at 100, see this other part of the documentation 
+
+It is a very broad question, even more so as you give absolutely no details about your setup and kind of database (volume, type of queries, active connections, size of RAM, dedicated server or not, etc.) You can start by enabling PostgreSQL to log slow queries, see the in the configuration. That will give you historical data that you would then be able to analyze and maybe correlate with other things (like from the list of @Vérace) You will then have various tools to help, as described on $URL$ : 
+
+in PostgreSQL you could use use something called "windowing and analytics". this does not exist in MySQL however. an alternative way would be to use GROUP BY and do .. 
+
+in your case the second subselect can never have the same rows as the first one (due to the empty column) so UNION ALL is already definitely fine here (saving a pointless duplication filter). 
+
+this should work somewhat efficiently if you need it for all. if you need it for jsut one folk you should go for ypercube's answer. 
+
+in PostgreSQL you should use a tool called pgbench. it allows you to run custom scripts with an arbitrary number of concurrent requests and all that. it is also able to create random values for your script and all that - it is really powerful. for the test: make sure you got a proper setting for -j (number of threads used by pgbench) so that pgbench is able to create the load. also make sure the system is properly tuned (especially synchronous_commit set to identical values, checkpoint_segments, shared_buffers). make sure you got proper fillfactor settings on those tables and ensure that prepared plans are used (pgbench can do that for TPC-B). if you got it right, it expect MySQL to be beaten by a wide margin in a high-concurrency read / write test (transactional of course). 
+
+it is not possible to have dynamic column lists. at the time you issue a SELECT the target list has to be clear. so you cannot just add a column somewhere just because some value is added. 
+
+to me the most important thing in this context is to use transactions. PostgreSQL supports transactional DDLs and people should make heavy use of it. the rule of thumb is: COMMIT stuff to the real system as late in the process as possible. this avoids the need to rollback stuff and to produce conflicts of all kinds. so transactions are really the key to making things work in a reasonable way. deployment should always happen in a transactional way as well. one thing is also to use includes:

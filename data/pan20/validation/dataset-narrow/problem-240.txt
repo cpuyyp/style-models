@@ -1,0 +1,81 @@
+The MSDN/BOL topic for DECLARE CURSOR contains example syntax for cursor usage. That said, as I had 5 minutes to spare on the train this morning... 
+
+Not good. In your scenario I think I'd be looking at something like this, which is very different to the scenario described in the articles you referenced. 
+
+With the data from that query you can judge whether the log or data files are the point of contention in tempdb. It's probable you'd be better off with both data files on one drive and the log file separate, but you'll never know without the numbers to back the decision. 
+
+Assuming you have a maintenance window that allows for a short period of downtime I would suggest using BCP to dump the table to a file. If space is an issue, compress the target folder in advance of the export. 
+
+First up, well done for trying to get to grips with how WAL works. It's often misunderstood but when people grasp the concept it's a genuine lightbulb moment for understanding databases. We need to re-word your description of the steps that occur to commit a transaction: 
+
+You could make a case either way, but if the data is going to be used for analysis and you often want to see multiple columns from that data at the same time, go with the wide table. Make sure you know your databases column quantity and row size limits. Make sure you get the datatypes right. If many of the columns are null, SQL Server allows you to optimize the table for that. You could also consider using a NOSQL (Not Only SQL) solution for analysis of this type of data. If this data is going to be less for analysis, you might want to normalize it as stated in your question. 
+
+If your database is in FULL or BULK_LOGGED recovery mode, you need to backup your database and log files on a regular basis. If your database is in SIMPLE recovery mode, then you only need to backup your database on a regular basis. Please read the following articles for more info: 
+
+We are in the process of removing a previous dba login and he owns all the endpoints and event notification objects. Endpoints were easy to change; Event notification objects not so much. I found this thread about changing the owner of an event notification object (you have to drop and recreate). I don't want to go through this process again if I can avoid it. I doubt it's possible, but outside of logging in as another user, can you create an event notification that runs as sa, etc.? 
+
+If only it were that simple. You're going to be on shaky ground if you offer this sort of advice to customers, especially if you're sending them a bill for the proposed upgrades. You can certainly offer some insight but not guarantees: 
+
+Row counts are different and the statistics update was probably a default sample, rather than . I've witnessed some comically unfortunate stats histograms as the result of sampling, each of which has been corrected by a update. 
+
+99% of the time, the asp.net session state database does not warrant FULL recovery and transaction log backups. In fact, it usually doesn't warrant any backups at all. I'd favour a script to recreate it over taking backups. NB: Be wary of folk sneaking persistent objects in to your state database. Lock 'em out. If your SQL Server isn't clustered, you have the option of targeting for state storage as an alternative to a persistent database, so it's treated as truly disposable. Assuming your usage is typical and recovery of the data isn't required either: 
+
+Intent-Exclusive lock on MyTable Intent-Exclusive lock on the page 1:211 RangeInsert-NullResource on the clustered index entry for the value being inserted Exclusive lock on key 
+
+I've got a SQL 2005 SP4 server that connects to a 2008 SP3 instance via linked servers using the SQL Server server type. Every once in a while, one of those linked servers will start throwing login timeouts. To rule out firewalls, I can RDP to the server and run sqlcmd and get in just fine, even making sure to use the same login. I'm thinking that SQL has somehow cached something that prevents it finding the right address. The remote servername is defined in that machine's host file. So far, only a reboot fixes the issue. 
+
+Using SSMS, you cannot chain a restore of the backups in one operation. You would have to do multiple restores. You'll want to use T-SQL in order to be more efficient. 
+
+If your table will have a non-trivial amount of rows, you might want to try a FULLTEXT index instead. It will be much faster and will match just on the exact word. 
+
+Microsoft has done this with the next version of SQL Server, codename "Denali", as well as SQL CE 4. Check out the OFFSET & FETCH parts of the ORDER BY clause here: $URL$ 
+
+It isn't stored in , nor is it buried anywhere in the plan XML that I can find. There is useful information in other DMVs however. For stored procedures we can get the time a plan was cached from : 
+
+I expect the analysis is carried out serially, one query at a time, as doing so in parallel would be unreliable. DTA produces recommendations by creating hypothetical indexes and evaluating the impact on a query's execution plan. If analysis were carried out on multiple queries at a time, the index created for one query could influence the analysis of another. A hypothetical index is created using the undocumented command and as the name implies this creates just the statistics for the index, without building the physical structure. 
+
+As has been mentioned in an answer previously, Thomas Kejser has referred to TF834 as SQL Servers only "go faster" switch. TF2301 enables optimisations which are beneficial to DW type queries. TF4199 requires reading the linked document, so do. 
+
+If you want to cut the noise out of a Profiler trace, ClearTrace is invaluable. ClearTrace “normalizes” queries, removing parameters such that: 
+
+$URL$ shows that -Output expects a path, not an integer as the error message says. Pub & Sub are both v9.0.4211, Dist is v10.0.2723 My Script (run at distributor): 
+
+Edit: I know PostgreSQL uses Sequences instead of IDENTITY, I don't recall the correct syntax off hand, so translate accordingly. 
+
+It depends on what the queries are. ORMs are usually really good at CRUD, as they are usually simple. The more complex the query, the greater the chance of a bad query. You can tweak the generated queries by tweaking the LINQ statements. Sooner or later though, you'll get tired of fighting and use SQL queries or stored procedures for anything that is complex. 
+
+You could also try at the beginning of the proc, setting isolation level to SNAPSHOT. More info available at: $URL$ You will incur some cost in tempdb for the row versioning. 
+
+You can, but I wouldn't. You would always have to wrap the DB name with square brackets such as [MyApp.Sales]. So to recap: if you value your sanity, don't do it. 
+
+100k records in a single non-partitioned table is a relatively trivial number. Nothing to worry about assuming you follow normalization guidelines and index appropriately. Take a look at some example schemas to avoid schoolboy errors. Study sample databases, like the Microsoft examples for SQL Server. When you've created your schema, post a new question for feedback. 
+
+Indexes consume buffer pool space, yes. This is one more reason why you should take care with your indexing strategy and minimise duplicates. 
+
+Might get the odd spurious result but it'll narrow the field. Add SQL:BatchCompleted if you have a mix of procs and statements. 
+
+Without context, this is a poor question. Bound to a single machine your requirement is a function of IO performance, not platform. An Access mdb file on a FusionIO card could outperform Trinity on a 5400rpm drive in a narrow band of tests. You'll have to be more specific if you want answers of any value. Edit: following comment. Context would be a description of what you're building. As I indicated, whichever k-v system you choose you will be IO bound when constrained to a single machine. On EC2 block storage the choice of k-v becomes even more irrelevant. If you're building on EC2 look at the native products they already provide e.g. SimpleDB or Elasticache. 
+
+You could use a Document-oriented database for this. You could then create a program in your preferred language to import the existing documents into the db, parsing the folder structure for the metadata (customer, job#, etc). 
+
+It depends on your environment. I would setup a test using both methods and see which works best for you. Personally, I would page on the server. Less data over the wire and less data in the client's RAM, the better. If you can control the client machine specs, all traffic is over a nonsaturated LAN and clients always page through multiple pages quickly, then you might want to page at the client. 
+
+I think this really comes down to user preference as there's no real technological reason to do this. In fact, for simplicity sake, I say always use dbo unless your security requirements stipulate otherwise. Of course, you can always do it for just organizational purposes as well. 
+
+You're pretty much going to have to use networking tools to do the monitoring. Another option is to query the size of the tables involved directly on the linked server and that will give you a rough estimate. If you're joining across linked servers, all the data must be brought over, then filtered down, so you're probably transferring a lot more data than you think. 
+
+None of the pages required to satisfy your query were in memory until read-ahead put them there. As to why online/offline results in a different buffer pool profile warrants a little more idle investigation. @MarkSRasmussen might be able to help us out with that next time he visits. 
+
+The relationship from sessions to schedulers maps out as: Session -> Task -> Thread -> Scheduler -> Logical CPU Once a thread is allocated to a scheduler it remains on that scheduler until it completes. It may move repeatedly between , and queues but will remain assigned to one scheduler. A session may of course be comprised of multiple tasks and threads which are distributed across multiple schedulers as the result of a parallel execution plan. 
+
+In this use case collisions as a result of truncating aren't a problem. The hash is used to check if a row already exist via an index comprised of 8 byte keys instead of an index of 255 bytes, or scanning a table containing the 4000 byte column. If the check yields no row, you insert. If there's a match on the hash, do the comparison on the raw text to determine if you have an existing row or need to insert. 
+
+I have a 2 node cluster (NODE-A & NODE-B) with 2 SQL instances spread between them. INST1 prefers NODE-A, INST2 prefers NODE-B. INST1 started generating errors then, failed over to NODE-B. Migrating INST1 back to NODE-A generates the connection errors after it logs a "Recovery is complete." message. Win 2008 R2 Ent. SQL 2008 R2 Ent. Errors from the Event Log after first failure: 
+
+Will not handle out of SQL references, but you might want to check out Redgate's SQL Dependency Tracker. It's a nice visualization tool. 
+
+You could use parameters to solve this problem with the added benefit of execution plan reuse. Set the data types to match database. 
+
+I had written a process back in 2005 to use bcp to dump the data out then pg_import the data and do all the schema scripting and conversion necessary. Procs are slightly different because of syntax discrepancies. 
+
+If either $FreeSpace or $Size -eq $null, then it won't properly complete the query string. Either use command parameters just as you would in .NET (best method) or check for $null before insert.

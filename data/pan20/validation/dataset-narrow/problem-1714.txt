@@ -1,0 +1,43 @@
+(The first byte of your program appears to be cut off, but I'll assume that was a copypaste accident.) However, if api.carriots.com were unreachable you would get exactly the Name or service not known error as you saw. Run , check your Pi's ethernet/WiFi configuration as necessary, and retry once networking issues are resolved. 
+
+Not every github Python project comes ready for use with pip/easy_install, but when you attempt to run it sometimes you'll quickly figure out the dependencies. By running , from the initial errors it appears to depend on flask and weather-api, so this worked for me: 
+
+Yes, by inspection of you have some options for this. To enable logging via port 514 for syslog, edit and uncomment these lines: 
+
+Switch your kernel to 64-bit. The bootloader included with Ubuntu MATE Xenial already checks for . You can take the Pi64 Lite image and copy over its along with the contents of . Of course, back up your existing 32-bit kernel configuration beforehand. Reboot (fingers crossed). I was surprised that going from kernel 4.4 to 4.11 doesn't cause obvious problems. Set up MultiArch. 
+
+Being two years old, that script has issues such as tying to an older version of OpenCV. Rather than downloading from Itseez's GitHub repo you're better off installing via the Raspbian package repositories. 
+
+Right, you could try editing and replacing pcm5102a with max98357a. Device tree overlays are automatically rebuilt with the target in the standard kernel build flow. 
+
+It appears you used a g++ 6 cross-compiler (default install on Debian 9?) then attempted to run the resulting binary on Raspbian 8 Jessie. You can see gcc's symbol versioning guide here where g++ 4.9 ties to GLIBCXX_3.4.20 and g++ 6 to GLIBCXX_3.4.22. 
+
+It sounds like you're using the default RealVNC server for Raspberry Pi. This does not support Minecraft Pi nor other OpenGL ES programs. Minecraft Pi is known to come out black on the client side. Some time ago RealVNC released an alpha build which copied the resulting framebuffer over rather than relying on X. This makes it possible to see a Minecraft Pi window over VNC, but my experience was that it was unplayably slow even on a Pi 3 with a fast LAN. As far as I know this feature never came out of alpha, but you can still try it. Enable "Experimental direct capture mode" from the VNC Server options under "Troubleshooting" (Thanks Andrew!) Links: 
+
+Awesome. Realizing the Pi supports v4l2loopback, I think various tutorials should be updated to use that rather than (disabled in Raspbian by default). 
+
+These libraries were renamed to and on Stretch, in order to reduce the risk of conflicting with their libgles2-mesa-dev counterparts. Edit the Makefiles to say instead. In fact, somebody already did that and submitted a pull request. 
+
+On other old emulators you can troubleshoot this with the command, but sometimes it's easier to build from source! Jason_25 posted a great summary of what's working (and what isn't) in this thread on the Pi gaming forums. As for how to install libjpeg8, I answered your other question. 
+
+Unless the Raspbian repositories aren't providing the features or a specific version you need, it's best to install via apt. 
+
+We don't know why exactly ALSA is spouting these errors, but all we need to do is avoid ALSA. Pygame is built on top of SDL, so we can use all the same video and audio controls. The SDL default sound driver is but the Python program can select something else by starting with: 
+
+Although running mock-1.3.0/setup.py and pip guaranteed all dependencies for mock/imapclient, the same can't be said of your RPi IMAP project code. If it lacks , it might have other dependencies that require manual installation. 
+
+There are several, but you're correct that ZSNES requires x86 assembly and thus isn't one of them. For Raspbian 9 Stretch in particular, many of the various Snes9x forks have not been maintained. For example the popular PiSNES requires that you refrain from enabling the full OpenGL driver. Stretch also removed to avoid conflicting with their Mesa counterparts, so for some binaries you need to rebuild from source while explicitly linking . If you must use an existing binary that references the old names, you can create symlinks reminiscent of Jessie like so: 
+
+Yes, assuming you are using a Pi Zero. Although a UVC gadget is fraught with difficulty, the required kernel module, , is available out of the box. This question covers the basic howto on getting started. If you run v4l2loopback before loading g_webcam, you'll have to pass to uvc-gadget. It'll be the other way around if you swap the loading order. As mentioned in the above link, be forewarned that you'll have to deal with resolution/format issues and various bugs when it comes to making a working UVC gadget. 
+
+Yes, many of us. In practice it works flawlessly on macOS and Windows, while Linux is more problematic. I use this on Ubuntu 16.04 but you'll find a good number of unanswered Linux + g_ether questions here on Pi Exchange. 
+
+and possibly other requirements before running and . One downside is that you might end up in the same package conflict situation depending on what's required! At the very least it'll give you more insight into the true dependency conflicts at hand. 
+
+To resolve linker dependencies, run , add to LDFLAGS in , and run the command-line in the same manner as the MCPI shim: 
+
+Audio over HDMI sometimes doesn't work out of the box on Raspbian, and the same might be the case with Kali. When you run does it say ? If so, this is common and addressed by running: 
+
+Why disable JPEG and PNG support in OpenCV? Well these depend on zlib, so you'd need zlib cross-compiled for the Pi or else those would fail to build. Keep this in mind as later I touch upon how cross-compilation tasks like this tend to snowball out of control. You can then take your micro-SD card out and put it back in the Pi and it'll have your cross-compiled OpenCV + dlib libraries, but we're still missing a big part you asked for: Python support. So let's inspect what's required there: 
+
+If no IP address was assigned on your host RNDIS interface then the Pi Zero likewise never received an IP address. Your arp-scan is probably finding a different host on your local network. On Ubuntu, typically an IP address does not get assigned out of the box. The next step is usually to click the NetworkManager GUI tray (top right), edit Connections to revise Wired Connection 3 (or whatever it is numbered), and set it to Link-Local Only in the IPv4 settings. After a few seconds, if this gets it to say Connected you then have hope of successfully pinging If it appears to connect but you still cannot find the Pi Zero on the network by name, you can next troubleshoot (e.g. run ) on the Pi itself. Even if you don't have WiFi working or a UART-to-USB cable, you can still get gadget serial running at the same time as RNDIS and connect via screen or minicom. Load g_multi instead of g_ether via and add:

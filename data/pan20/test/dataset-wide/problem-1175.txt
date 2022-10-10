@@ -1,0 +1,59 @@
+For reference, here is an example of a complete query that calculates percentage using window aggregation instead of a correlated subquery: 
+
+I would also suggest that you not apply the formatting (the function) in the derived tables. Ideally, you should not apply formatting in a SQL query at all; instead, you should delegate that job to the presentation layer. However, if you must do the formatting in the query, do that in the main SELECT only, applying it to the data returned by the derived tables. Alternative method The solution suggested above merely resolves the immediate issues you have faced trying to join various pieces of data in a single result set. There is a potentially better way to do the same calculations which allows the both and to be scanned only once. The idea is to aggregate both the yearly and the monthly portion of data in the same (sub)query, using a conditional when aggregating the monthly data. Basically, a query of that kind would look like this: 
+
+This is where the redundancies begin. If is declared to be the primary key, we can rest assured it is unique. If it is unique, any combination of and another column is bound to be unique as well without additional declaration of uniqueness – so, what is the point? The point is that by formally declaring the column pair unique we let them be referable, i.e. to be the target of a foreign key constraint, which is what this part is about. Add a column to each of the junction tables (, , ). Making it a foreign key is completely optional. What is crucial is to make sure the column has the same value for all rows, different for each table: 1 for , 2 for , 3 for , according to the descriptions in . In each case you can also make that value the default to simplify your insert statements: 
+
+you will need to group the results with a pivot. One way to do so is to use the native PIVOT syntax: 
+
+Currently there is no syntax directly supporting what you are trying to do. As you probably know, names cannot be parametrised in a SQL statement. That means that when you need to substitute names from column values of another table, you have to use dynamic SQL: first build the query string and then execute it. There is just no working around using dynamic SQL in such cases. Furthermore, you have already established for yourself that you cannot use dynamic SQL in a function. So there you are, seemingly stumped. However, if you insist on using a single SELECT statement for this, there is one way – provided you agree to bend over backwards slightly to achieve the goal, that is. And accept a major limitation of the method. The solution involves creation of a loopback linked server and using the OPENQUERY function. But first you will need to make sure your dynamic SQL solution works as it is. For the purpose of this answer, I am going to assume that the dynamic SQL looks like this: 
+
+Basically you are arranging the values of , , as a column and are applying a normal (column-wise) aggregate function to it to find the minimum. Now in your case the , etc. are expressions. Usually that is fine, you can use the row constructor with expressions. But in this case each expression already contains an aggregate function (), which prevents us from applying the method directly ( expressions must not use aggregate functions). However, that issue is easily resolved. You can use your current query as a derived table or a CTE and apply the method at the outer level, where the expressions will be just references, like this: 
+
+You could use your first query as a derived table and join it to using the predicate in the joining condition: 
+
+Or you could use a correlated subquery to get the last value that is more than 5 in the subset from the lowest ID to the current ID: 
+
+You are not showing the query you are using to obtain the results without . I'm assuming it is something like this: 
+
+You have a semicolon after . A semicolon is a statement delimiter, it should be at the end of the entire statement: 
+
+As ypercubeᵀᴹ explained, you cannot return a boolean expression in a THEN clause. Using OR as an alternative to CASE is one way to rewrite your condition. However, since in the end the chosen column is being checked using the same condition, you can still have a CASE here, but the CASE needs to return either or only, and the condition will then be applied to the result of the CASE rather than inside the CASE: 
+
+The in the above script is the input string passed as a parameter. It would probably be best to implement the script as a stored procedure. An example of such a procedure can be found and tested on SQL Fiddle. 
+
+As Aaron has explained, needs to be checked after each . There is no avoiding that, but as for using a transaction, you could replace it with a different approach, if you are open to suggestions on that. You could manipulate the SET NOEXEC setting to achieve the same result you are using a transaction for: either both procedures altered or both left unchanged. This is how: 
+
+Finally, it is also possible to move the calculation into the same scope where , etc. are calculated. You can use CROSS APPLY for that and thus avoid the need for nesting a query entirely – in other words, this way you can get rid of the CTE as well. The entire query would look like this: 
+
+If, however, you want to return something (like nulls) in both columns instead and would like to avoid repeating the condition, then you could use OUTER APPLY, but you would probably need to rewrite your comma join to use the explicit join syntax, like this: 
+
+SQL Server also supports the PIVOT operator (since the 2005 version). I can see two distinct approaches using PIVOT here. One is probably more straightforward: 
+
+Now in order to split the into three values based on the value of , you check that value when counting – like this: 
+
+The derived table calculates the final for every call. Columns , , and will stay the same across every group of rows that belong to the same call – so the main SELECT groups the derived table by those columns and uses HAVING to filter out the groups that do not have an intermediate that matches the pattern. 
+
+My own solution, which is more of a workaround, consisted in specifying a character range that included the and using that range along with the other characters in the wildcard. I used a range based on the ASCII table. According to that table, the character is located in the following neighbourhood: 
+
+is acceptable only if that statement is first in the batch. The more universal way of calling stored procedures that would work regardless of where the statement was located would be using the / keyword: 
+
+The reason you have to include them in SELECT is because, when you have DISTINCT, you may only sort by columns in the SELECT clause. Naturally, the result set will include the three extra columns as well. If you do not want them in the output, you can use the above as a derived table: your outer SELECT would pull only the three required columns and sort by the other three: 
+
+If the subquery can return duplicates, add to it, otherwise may return an incorrect result. As for the clause, there is no mention of it even in the manual for the not yet officially released version 5.7, but using a temporary table to emulate it would probably make sense. The error you got while trying that method was because the right side of / in your attempts was just a table name whereas it should have been a subquery: 
+
+You want to filter out groups of rows rather than individual rows. That is, you want to keep only the groups that have . Therefore use HAVING, rather than WHERE or ON, to add that condition, because HAVING is used for group filtering: 
+
+It is obvious, by how you have arranged the rows in your example, that there are two entities in the second table, each with its own set of attribute values. However, in SQL it is a convention that rows in a table have no inherent order. Therefore, if you want the server to distinguish between the two sets, you need either 
+
+Remember to double each quotation mark (apostrophe) inside the script. One other important change you will likely need to make is to add a WITH RESULT SETS clause to the EXECUTE statement to describe the result set, so that OPENQUERY can process the output correctly for you. When describing the result set, you will likely just repeat the same type for and as defined for them in the metadata table. For the example below I am assuming the type to be in both cases. And as for the column, I believe would work well there. So, the modified EXECUTE statement would look like this: 
+
+Can't think of any advantage, but if I could, I'm sure none would trump these three. Multiple many-to-many tables would be much better compared to this design, although I won't insist that would be the only alternative. 
+
+On the other hand, since the logic for cases when a value increases only slightly (not exceeding the reference value) is not defined, it is not clear whether either variation would produce the expected output for you. You may want to elaborate on that in your question so that you can get more options to choose from. 
+
+Copy the contents of the output column and paste it into the query window where you are writing your UPDATE statement, at the appropriate position. You will only need to make minimal syntactical adjustments, like removing the comma after the final assignment. Even if I knew I might need to do this kind of data movement again in the future, I would still consider this approach first before actually going the dynamic SQL route. If you firmly believe you need a more convenient tool for this problem, then you can use the above statement as a starting point for your script. Browse the dynamic-sql questions on this site or on Stack Overflow to find more examples to help you with the final solution. 
+
+So, to prevent MySQL from doing that, you need to instruct it to use a different symbol as a delimiter – that is what the DELIMITER command is for. Consequently, your second attempt should be something like this: 
+
+So, again, if you want the output to show same rows grouped together, add the column as the first sorting criterion to the final ORDER BY as well:

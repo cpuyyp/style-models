@@ -1,0 +1,37 @@
+I agree with Petr Abdulin that the question is too vague. Still, here are a couple of pointers that might help you to improve your design: 
+
+Your suggestion and 3nixios's answers are not properly normalized. Here is a table schema that might do the trick: 
+
+The content field is just a placeholder for whatever you want to store with respect to your tiles. In actuality, it might be an id of a record in your building table, or several fields like startedBuilding (timestamp), spriteFile (varchar), etc. 
+
+I don't know the ratio of games that use expiring rewards on timed actions. Whatever the numbers might be, I would strongly discourage you from using that sort of mechanic: 
+
+You could release the whole game with the exception of a file that stores the private key of your game. When something sends a score, you send back a random string that is encrypted with the game's public key. You only accept the score if the program sends back the original message. This should work as long as the file with the private key cannot be extracted from the compiled version of your game. 
+
+There are several potential problems with your protocol: First, if several players want to become Master, there can be several polls, which might be annoying for some players. Second, and more important, if no player gets >50% of the votes, your protocol does not yield a Master at all. I would suggest to give your players a couple of seconds to decide whether or not they want to be the Master. Then let them vote for any of the contenders. The player with the most votes becomes the Master. If there is a tie, I would recommend to choose a player randomly, but you can also have another poll as a tie-breaker. 
+
+This will result in 18x18 entries for every castle, assuming that you save all non-castle tiles as well. You could also just store castle tiles and assume that if there isn't a record for a given position, the tile is unoccupied. In order to get information about the outer layer tiles, you have to fetch information about the respective inner layer tiles and deduce information about the outer layer from that. If, on the other hand, information about the outer layer tiles cannot be deduced from their respective inner layer tiles, you have to add another table for the outer layer tiles: 
+
+Note that Smarty is not the only engine that provides these advantages, so it is not needed even if you decide to use a template engine. If you are experienced with MVC software design, don't have any non-programmers for your view files, and already got caching functionality, then don't use Smarty. It will just make your code (a little) slower, and, more important, it will restrict your flexibility by taking away the option to use native PHP in your view files. 
+
+It depends on whether or not information about the outer layer tiles can be deduced from information about the inner layer tiles. If they can, then database normalization suggests to treat information about the outer layer tiles as redundant and only store information about the inner layer tiles. This is how this might work: 
+
+I agree with Byte56 and Tetrad that you should think about elements of rules that can then be combined to form a variety of complex rules. In terms of implementation, you could give this design a try: 
+
+Try an event based design: 1) Define a class SkillActivatedEvent that stores a Skill object, a Unit object, and some other properties like the area in which the skill is active 2) Raise a SkillActivatedEvent whenever a skill is used 3a) Let skills that are already in effect react to SkillActivatedEvents by changing the behavior of the new skill, by changing their own behavior, or by unregistering both itself and the new skill in favor of a new skill. If you take this route, information about dual skills is stored in or accessed by your skill objects 3b) Alternatively, let your game controller react to SkillActivatedEvents by going through all the active skills and looking for any combos to apply. In this case, information about dual skills is stored in or accessed by your game controller object. As for data structures: 
+
+Inform and TADS are the weapons of choice for most experienced IF authors. Quest seems to be catching up in terms of functionality. ChoiceScript is perfect for simple choice-based games, but hard to extend beyond that. Undum (and its popular extension Vorple) is based on JavaScript and probably offers the easiest way to get your game into a browser. It creates nice-looking stories and can be extended quite easily. (I once implemented a World of Darkness RPG system on top of it.) 
+
+Battle mechanics: My advise is to NOT copy the mechanics of other games, especially if they're as crude as your "agility, armor, strength" characterization suggests. Read the whole $URL$ series and use the techniques described there to design and test your own system. 
+
+Smarty is not needed in the sense that you cannot implement a browser-game without it. In my opinion, a template engine has three main advantages: 
+
+The Decorator pattern is probably what you are looking for. To quote Wikipedia: "The Decorator pattern can be used to extend (decorate) the functionality of a certain object at run-time, independently of other instances of the same class, provided some groundwork is done at design time." Please refer to the full article for implementation details. Define DraggableDecorator, StackableDecorator, etc. and make your objects decorable as described in the article. At run-time, you can then attach whatever Decorator you want to your objects. 
+
+Question Are there any game-theoretic considerations that prevent the mechanic from achieving these goals? 
+
+There is often a temptation to make some parts of your application globally accessible, most commonly by making them static or by using the Singleton pattern or the Registry pattern. Do not follow that temptation. Instead, try to reduce dependencies in your OO design. Then pass the objects explicitly to whatever other objects and methods need it. This will not only lead to more elegant, maintainable, and extendable code. It is also a requirement for your code to be testable. Have a look at $URL$ for more information on this. 
+
+What you experience right now is a typical consequence of keeping a complex global state. Global states, and complex global states in particular, make side effects hard to track and your code impossible to test. Which is why, whenever something goes wrong, you have to debug your system the hard way. Your program has "only" 1.000 LOC, so not everything is lost. Just do the following: 
+
+Here is a basic version of a battle model that combines some features of A and B with WWII troop organization, while at the same time avoiding a problem you mentioned, namely that "a Gunner wouldn't mean anything if it met a Swordsman even though a Gunner would most likely win in a real fight." Define the interface of battle entities in ITroop. Implement ITroop with GunnerTroop, SwordmenTroop, etc., with different behaviors for finding targets, applying damage, reacting to battle events, etc. Now implement the Composite design pattern in order to branch together several leaf like entities to form Troops of different sizes. Define Group (up to 10 single entities), Platoon (up to 4 Groups), Company (up to four Platoons), Battalion (up to 5 Companies), and Regiment (up to 8 Battalions). In each of these classes, define a couple of additional constants and methods:

@@ -1,0 +1,71 @@
+move left to the first odd value move right to the last even value if there's a match, then swap them, and go to 1, else end. 
+
+That code gets the file-size in bytes, but then reports it in KB. Also, for that code, I would recommend a printf.... 
+
+Bottom line is that Sample() is not practical to return 1.0, and it is not producing values it should in the middle of the ranges. Sample should return a double, not a decimal, and it should not return 1.0. You will need to do deeper analysis on the return value though to ensure all values in the 0.0 to 1.0 (exclusive) are equally weighted. For Sample(), at least, the use of the inclusive range, is a problem. Don't do it. If you have an exclusive range on the return value, there are benefits. Unfortunately, if you return a double from Sample, you can't use it to create a range of long, because double does not have the same possible range and granularity as long... 
+
+Note, the mid-loop runs only twice (once for even, once for odd). The inner loop will tend to be pretty small because it only runs while the strings centered on the mid point are actually palindromes.... and large palindromes will be the exception, not the rule. There's only 1 big loop, in other words. Additionally, is only called when there's a larger palindrome than previously seen... it's an uncommon call. The above code runs the example input in 3 milliseconds on my computer (and you can see it running in ideone too) 
+
+Pre-computing the possible moves, and reducing the conditionals to a simple mathematical expression is a nice way to solve problems like this. Your code also suffers from repeating blocks, and duplicated logic: DRY - Don't Repeat Yourself. Solve that by doing function extraction. Finally, your code is full of magic numbers, which are prone to leak bugs..... Consider the following code, which, though longer than yours in terms of lines, is actually significantly more readable (except for the complicated 2D array, I admit). 
+
+Now, that code can be made asynchronous relatively easy by using the native Java tools. I will use a Java 8 function expression to create a Daemon thread for the background execution... and also the functional interface. 
+
+You are close to right on the complexity. You have two dimensions that are independent in your system though. The sort is sorting the letters in a word, and its performance is dependent on the length of the word, not the number of words. You have essentially an outer loop which is linear \$O(n)\$ and an inner sort which is dependent on , the number of letters in each word...., and those combine to create an overall complexity of \$O({n} \times {m}\log{m})\$ If you double the average size of each word, the execution time will slightly-more-than-double. If you double the number of words, the same will happen. Now, how can it be improved? 
+
+The concept you have going is 'OK' (cumbersome, but for a beginner it's OK). There are two bugs, and one recommendation that will help a lot. First the recommendation.... Change to be a boolean value like: Then, your code becomes: 
+
+Conclusion Your code has enough critical problems that I think you need to consider a re-factor. The anonymous-class thread models make spotting the logic hard. Additionally, there is a lot of stuff I did not cover here... the above details are just the most significant things I saw. 
+
+Comparator There is no need for your interface.... what's wrong with ? Why do you need to have your own? The reason you appear to have it is because you need to compare the against another and the generic type is not right for you, but you can solve it easily with wrapping the Comparator in your myTree class when you need to.... So, your code has: 
+
+Using a CTE (Supported by SQL Server) would help separate the logic of the query better than the sub-select in the from clause. Using the auto-increment ID is also something that can simplify the query. Consider the following: 
+
+Finally, when monitoring things this way you always have a fencepost problem. Your work is the space between the fenceposts, and the fenceposts are the messages you write. You always have one more fencepost than space between them. You will need to have some message outside the loop. In your case, you do 100 items of work, so you will need 101 messages. I tend to chose to print the progress message after the work, so I tend to pre-print the first message before the loop. Also, you should have a simpler system for mixing the work (the ) and the messages(). Consider the setup: 
+
+This type of practice is common, and works well. The Java JIT compiler will identify the as being a constant, and will know that it is always false, and thus will the logging entirely. There is a slight performance hit on any code that has not (yet) been compiled.... but, once the compile has happened, there is no hit at all. It is relatively common to use a System property to determine whether to log... 
+
+Fast comes at a price.... code complexity and perhaps readability. Assuming that your code produces the right results now.... and it is a big assumption because: 
+
+Your code is well structured, and nice to read. This is a good thing. You appear, from what I can see, to be using the appropriate threads for doing swing, and non-swing work. This is good. There are a few thread-safe issues I can see: 
+
+For the most part, what you are doing is fine (like @Ashwin commented on your question). About the only thing I really don't like is the name of the function . That name is just really useless. How about or something? Your other variable names are well put together, and make sense. Another issue you may run in to is if someone specifies bad input values. Your code will fail with a if someone sets a of . From a performance perspective, I expect that your code is pretty much as fast as it can be too - in a single-threaded process. Using a Java 8 stream you can possibly make the process a bit more parallel, but it would be more complicated to read. Still, I thought it would be an interesting thing to see..... though, in a production system, I would be happy to see your code instead (i.e. the following code is just a thought, not a recommendation): 
+
+Every time is a multiple of a million, report it. You can incorporate this in to a stream as follows: 
+
+You need to decide up-front whether the pivot value is going to be in the left partition, or the right partition. If the pivot is going to be in the left, then you need to return index, and the left partition is values the pivot. In my 'education', all the examples I looked at, and all the implementations I have done since then, have always returned the index.... and they have always included the pivot in the left side. There are a number of things that stand out to me in your code: 
+
+The service should be final, make it immutable. The service is created outside the class, but then shut down inside the class. This is asymmetrical. If the service is created outside then it should be shut-down outside. The class should be instead of having the method. 
+
+Generalized search In Java it is common practice to have a general method that will search in any sub-part of the array. Then, there should also be a version which searches the whole array. Your method is unusual because it does neither..... it searches sub array sections, but only from the beginning (it has a size argument...). Your method should look like: 
+
+That will always print Equals "true" for you, but it may not always print Same "true". Your code could likely be reduced significantly to just: 
+
+Thanks for including the method. As I suspected, the purpose of the hashCode method is to fulfil the equals/hashCode contract, and is not suitable for being an ID. For example, by changing the number of wins, you change the hashCode, and by proxy you change the player's ID. If you want the ID to be a temporary thing that is only constant for the short time that the player is constant, then your solution is OK. If you want the ID to last through a persist/restore cycle, or even from one moment to the next when they pee .... and their weight changes, then you need a different system. In addition, while you claim your hashCode is unique, it is not technically true. The chances of their being a duplicate are remote, but it is possible that two players will have the same hashCode, and hence the same ID. In reality, your system is not reliable, and the best solution would be to create an externally managed ID for each player - a record number from a database, a unique counter, or something. 
+
+Code Style You should declare variables where they are used. blocks sometimes mess things up, but in this case, they do not. The following code: 
+
+This function uses no additional storage, and it simply counts as many times as needed, and uses whichever value comes next. It runs in \$O(n)\$, and space complexity \$O(1)\$ 
+
+You can see it running the test-cases in ideone: $URL$ Update: I worked out a better solution using a binary search mechanism for locating the parent of a referenced link in the Flux chain. It is a bit hard to describe in words, but if you inspect the post-ordered tree, you can predict which branch (left or right) to descend to find a node. You can also compute the size of the sub-trees to any node, and thus compute that node's label. Expressed in code, you can compute the parent of any link in a tree of a given height, with the code: 
+
+Since the getter/setter is the only place where you actually know the type of the value, there is actually zero benefit for your entire subclass... it is redundant. You can get the same behaviour with: 
+
+That code goes through each character, checks to see if it is a digit, then converts it to a enum value. Conclusion What's important, is that the code separates out the digits, the user interaction, and the controlling code. This makes the main class a bunch simpler. Here's the controlling class I have: 
+
+The code you have is nicely formatted, and well documented, etc. ... but, as a singleton, it has a number of problems.... The two most glaring are: 
+
+Since this question is marked as beginner, let me compliment the neat structure and consistent style I see throughout. It's well done. Variable, method, and class names are all meaningful, and useful. The validation and error handling systems are uncommonly comprehensive, and again, well done. Validation The validation should provide more feedback to the user. Saying 'not enough arguments' is fine, but then you should also say how many are expected. Does the user have to engage on a guessing game, bouncing between too many arguments, and not enough arguments before discovering how many they need? Pre-initializing variables There is no need to preinitialize variables. The following: 
+
+A single is almost always times faster than s. If that does not make it work in time, then consider reading the entire System.in in to a buffer, and parsing it from the buffer. 
+
+Your pattern is close to what is recommended on the official Android dev network.. Formalizing your callback as an interface is the right choice, and passing an implementation of the interface to the dialog is also right. Where things differ is that the recommended practice works through the DialogFragment. I can follow your code well enough, but, to follow the path-of-least-surprise, I would recommend tweaking it to be more standard. It should not be hard. Note that the typical practice passes the whole DialogFragment back to the listener. This would work, and because the listener also built the fragment, it makes sense.... but, if your dialog is built in a place that's different to the listener, I would recommend a data container/Bundle instead. 
+
+You do know that you don't really use the enum as well as you should, right? A lot more logic can be put in there. Still, I suggest that you have far too much in the way of factory methods going on there. 
+
+There are a number of issues I see here related to the implementation. vs. ratchet freak has already pointed out that the should be outside the : 
+
+As it happens I have been working with JSON formatted data a little bit recently. I have some ideas that will help you simplify your code. As for the efficiency, performance wise it looks good. I don't think it can go much faster. In terms of code structure though, there's a few things that can help. I'll put together a laundry-list of items, and then follow it up with your code restructured... 
+
+Depending on your use case, I recommend two options. Both of them are based on a separate function for checking things.... At its simplest, have a function: 
+
+Complexity It is O(n), but where is the size of the smaller tree, not the larger tree. Concurrency This is a complicated question. But, basically, no, it is not. If you assume that the core tree is static for the lifetime of the instance, and that the test teee is static for the lifetime of the , then, the code can be considered reentrant. But, even though you say "Note that it is the clients reponsibility to not modify input list in objects lifetime.", that comment does not make the code thread-safe.

@@ -1,0 +1,37 @@
+This is correct, but strikes me as a refactoring typo waiting to happen. In Python, Javascript, Perl, Bash, etc., string literals can be delimited with either or ; but in C++, is a string and is a multi-character character constant with implementation-defined value (15677 on all sane platforms). 
+
+I know this is just a toy program, but since you mention your concerns about security: yeah, I'd agree with your concerns about mmap. If you really want similar security guarantees (such as they are) to , I strongly recommend just reading the source code and seeing how they do it. I suspect you have to go waaay lower-level than to deal properly with things like journaling filesystems. 
+
+i.e. just remove all the superfluous and , and replace by because it's shorter (and you did ask for us to make it shorter!). 
+
+Why is it not ? And why is not or at least , given that you're abbreviating to on every other line of the program? (Again, personally I would write out and especially ; abbreviating them as and is more confusing than helpful IMHO. With you have to worry about whether the proper abbreviation is or (I've seen both, particularly since is the same number of characters as and and ). I've never seen abbreviated as (although I have seen and ). 
+
+Personally, I would never use the or types in production code, because they vary in size even between different 32-bit platforms. On some platforms, is 32 and is 32 and is 64; on other platforms, is 32 and is 64 and is 64. Rather than play a guessing game with my program's future portability requirements, I would write explicitly 
+
+I don't understand why you write but then proceed to use the fully qualified names of , , and so on. I would think that you'd either use the fully qualified names of everything from (my preferred choice), or else go all out and a ton of things. Anyway, doesn't save you any typing — it actually costs you two lines and about 10 characters — so you'd do well to get rid of it. 
+
+I suggest rewriting just that portion of the code as follows, and then profiling to see if the bottleneck is gone. However, writing that just reminded me: Have you tried profiling your code? (Random Google link. Someone in the comments may have better advice about how to profile Java code.) 
+
+(I'd special-case and at the top of the function so that we don't have to worry about them down here.) Then the only missing piece is the . But that's easy — we just need to write some code to count the digits of . And we already have some code to print the digits of ! So I'd just repeat that code again. 
+
+Notice that I've replaced your jargon with a plain old human , and so on. The signedness of these integral types doesn't matter because you're going to convert them to before using them anyway; and besides, unsigned is just plain wrong, semantically, for temperatures, except arguably for Kelvins (and even there I'd say there's value in consistently using for integral values). Writing is left as an exercise for the reader. 
+
+The JavaScript-looking is C++17 syntax, but don't worry, we're about to get rid of it in our next refactor. Applying "no raw and " allows us to simplify much further: 
+
+You should be using smart pointers; i.e., this should be . Otherwise, you risk memory leaks if any of the later lines in this function throw an exception. Also, you should be using perfect forwarding () to eliminate unnecessary copies in the case that is copyable, and to eliminate compiler diagnostics in the case that is non-copyable. 
+
+You say that, but then when I look at the code I find that nothing inherits from . So it's not a base class. Also, you should get rid of all the destructors except those that are actually necessary. Classes that aren't used polymorphically shouldn't have any polymorphic methods. (This applies to and , obviously; but it also applies to and as well, because you never use polymorphically.) In general, the code is just way too complicated for what it does. You shouldn't need so many different classes, or probably any virtual methods at all. 
+
+This code is much more complicated than it ought to be, and wastes O(N) memory. Have you benchmarked it, compared to the naive solution? Which, for reference, would be something like 
+
+About inside the container versus outside: Instinctively prefer abstractions that are composable. So, if your options are: 
+
+This would allow you to make a private member function; but it would not allow you to make , , and private member functions, because they're still being touched by someone who's not a friend of the class; namely, they're being touched by . To fix this, you could expose a private inner class : 
+
+But that's not what the function does — nor what I'd expected it to do before looking at the parameter names. So basically, your parameter names are misleading. The English names for them would be and , but personally I'd go with and . I think everyone knows what means. :) 
+
+I think I don't get it. If this line had instead read , wouldn't have become unreachable, as far as handling requests was concerned? (Because requests go first to ; then to if it's non-null; but is gone, so handling just stops there.) This seems like a bug in your design. 
+
+If I were writing , I'd start by assuming that I already had the memory allocation taken care of. Then filling the buffer is as easy as what you wrote: 
+
+The expression struck me as odd. For one thing, is a ; if you meant to do the arithmetic in single-precision, you should have said or simply (which would be an , which would promote to ). For another thing, I think that if you're trying to convert an integer in the range to a float in the range , that expression isn't what you want; for the same reason that if you were trying to convert a float in to an integer in , simply multiplying by 1023 wouldn't be what you want. I would think you'd want some rounding and 'ing in the latter case, and therefore also in the former. I'm not sure, though. Lastly but most importantly in terms of your growing C++ intuition: See that parameter? You're passing it by value, which means "by copy" — similar to how when you pass an to a C# function, it gets a copy of the original value, rather than a reference to the original itself. Making a copy of an is cheap, but copying a whole vector (or a whole string) is expensive. You should explicitly pass large arguments by reference in C++, and then also mark them to indicate that you promise not to modify them. Passing instead of buys you nothing — except of course grief the first time someone accidentally passes and it's silently converted to ! Result:

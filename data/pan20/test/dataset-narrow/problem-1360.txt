@@ -1,0 +1,73 @@
+If you can provide a screenshot and some more information about the CellScreenRectangle, GetLayerIndex and TileSourceRectangle methods I'm sure there are more things that can be improved. 
+
+What you're really doing here is declaring that you want to measure your game updates in seconds. So the value of SpeedX is going to represent pixels per second. I'm not entirely sure why Microsoft decided to use TimeSpans instead of floats. I suppose in theory you could choose to represent your updates in milliseconds, but in practice I don't think that's very common. In any case, once you've decided the unit of measure it's probably best to stick with it and the easiest way to do that is to pass around a single value as a float. 
+
+Lastly, if you do decide to go down the Content Pipeline path, this documentation might be helpful. $URL$ 
+
+The last part is dealing with input coordinates from the mouse or touch screen. Because you've scaled and moved the graphics, you'll need to do the reverse for input coordinates. In this case, something like this 
+
+Try to get into the mindset of thinking about drawing things where they are and the camera literally moves the entire "scene" into view. That's what your matrix transform is doing. 
+
+So the point of using a matrix is so that you don't have to think about it. Just draw things and move the camera around independently. Also, your MoveCamera method looks a little strange. It's very unusual to have a camera class that takes a Level as a dependency. A more typical implementation would look like this: 
+
+I would take this to be your first requirement. Storing it in the colour data of a bitmap is probably not going to help here so I'd go with something else. For a 2D tile based game it might be worth investing some time to learn how to use an existing tile based map editor like Tiled. I'm currently adding Tiled support to the MonoGame.Extended project. Although, if you want to keep it really simple even that might be overkill. It's interesting to look at how games of the 80's and 90's stored levels. For example, I used to play an awesome little puzzle game called Heartlight PC and I've studied how it works. You can actually download the original game in the DOS games archive and see for yourself. The levels are stored in a text file called and look like this: 
+
+Obviously you'll also need to make some changes to allow each letter to be a different color. Once you've got the basic framework in place that should be pretty easy. I have a more complete tutorial on my blog here: $URL$ 
+
+I think you're using the wrong Mouse.GetState() method. It appears you are using the OpenTK implementation, you should really be using the MonoGame implementation that lives in the Microsoft.Xna.Framework.Input namespace. 
+
+There's no need to do anything complicated. The GameTime.ElapsedGameTime property is a TimeSpan representing the amount of elapsed game time since the last update. Therefore, if you want to measure your game updates in seconds the easiest thing to do is this: 
+
+That way, the rest of your code can deal with coordinates in virtual screen space as if you are always dealing with the same side screen. Good luck! :) 
+
+What it does is take a source rectangle and split it up into 9 rectangles representing the patches. The cool thing is you can use the same method for both the source texture and the final render. For example, to get the source rectangles you can run it over the rectangle representing the input texture. (I'm using a here from MonoGame.Extended, standard MonoGame doesn't have texture regions but the same principle applies for ) 
+
+At this time MonoGame does not include an independent implementation of the XNA content pipeline. We depend on Microsoft's XNA content pipeline implementation and Visual Studio 2010 on Windows to build content for all MonoGame platforms. Reference: $URL$ 
+
+Then when you want to render the final image you can generate a new set of patches for the sprite batch. Since the same algorithm is used for the input and output rectangles, the indices of the array of rectangles should match up and the render becomes trivial. 
+
+It's a little more complicated than that for optimization reasons, but the above implementation should work. Obviously, the action that gets fired can either just play the sound, or you can use it to spawn a new one like the code in your question. You can also queue up a bunch of things with different delays for various effects. 
+
+As you can see from this code, the way it batches things up internally is by checking the TextureID of each item in the _batchItemList and if it has changed, flushes the vertex array and binds a new texture. This approach is pretty typical of how sprite batching works in most 2D engines (from my understanding) and usually turns out okay. However, if you have too many texture switches it can be pretty costly on performance. The usual way to deal with this in a tile based engine is to use a texture atlas. That is, a single texture that stores all your tiles and during rendering you pick the tile's "rectangle" from the source texture. So it's okay to have a few different textures in your game, but try to keep the texture switching to a minimum. For example, 1 texture per layer in tile based game should be fine (assuming you draw each layer one at a time) but for tiles within a single layer, try store them all on a single texture. 
+
+The second part is how you get the letterbox / pillar box effect. It resizes the viewport on the and centers the image. This code needs to run every time the devices screen size or window size changes. For example, in the event. 
+
+What I would try to do is get rid of the draw depth calculation by drawing your tiles in the correct order to start with. What this means is, you'll be drawing your back layer first, then the middle layer, then the top layer. If your tile sprites overlap (e.g. isometric view) you may also need to draw the back row first, then the next and so on and depending on the angle, maybe reverse the loops. I'd have to see a screenshot looks like to get a better idea. You should also do as many calculations as possible outside the loops. For example, rather than checking if X and Y are inside the bounds of the map in the inner most loop, you can do it before the loops even begin. Lastly, it concerns me that some of the methods inside the loop may be taking longer than an index lookup. For example, you need X, Y and Z to get the layer index so you can get the tile source rectangle. These seems excessive, but without knowing more about your implementation I can't provide any suggestions. Here's a partial re-factoring based on the above suggestions. 
+
+Okay I'll start the wiki. Supported Platforms iOS, Android, Windows (both OpenGL and DirectX), Mac OS X, Linux, Windows 8 Store, Windows Phone 8, PlayStation Mobile, and the OUYA console. References: $URL$ Prerequisites 
+
+The MonoGame.Extended project loads Tiled maps using a custom content importer. I wrote a tutorial about how to create custom content importers on my blog. Of course, as @Shiro mentioned in the comments you don't need the Pipeline to load your own content with MonoGame. Just be aware that to make it work across all platforms you'll need to use . This is by far the simplest way and if it works for you by all means do it that way. The idea of using the Pipeline is to give you the opportunity to optimize the content at compile time. You can pre-process the data and write it out as a binary XNB file to be efficiently read into the game. The process is quite involved though: 
+
+What this means is that to get the color to change you'll need to change the over time between values of 0.0 and 1.0. To do this, create a member variable in your class and change it in the method. 
+
+This error is most likely happening because the content hasn't been built correctly with the MonoGame Pipeline tool. All content in MonoGame must be built into an XNB file before in can be loaded into the game. The first thing to check is to make sure you've added a reference to the in your file. Open the file in a text editor and look for lines like this: 
+
+If it's not there you'll need to add it. Unfortunately, this reference is not automatically added when the NuGet package is installed so you'll need to do it manually. Copy the above line and add it to your file. Make sure the path is correct, in particular the version number. You should be able to locate the DLL in your folder. There's also an install guide blog post that goes through this in more detail. If everything is correct you should see the Tiled Map Importer and Processor show up in the Pipeline GUI. 
+
+To be honest I've never used the gesture API so my answer might be wrong. However, I think I know how to solve your problem. The idea is to perform action B only if action A has not already occurred and the only way to know this is to somehow detect when the user has released their finger. Since their is no Release gesture type you might be able to craft your own like this: 
+
+So here's the deal with 9 patches (or as @hamza-hasan called them in the comments "9 slice scaling"). Either way the concept the same. The concept is pretty simple. Slice your source image up into 9 sections as shown in the image below. For reference I've drawn 4 red lines to represent how the texture might be sliced up to create the 9 patches. I've also numbered the patches 0 to 8. 
+
+You can watch that level being played on youtube The awesome thing about doing something like this is that any text editor becomes your level editor. Obviously it has some limitations, but it's really simple and works pretty well for some games. 
+
+It looks like you haven't implemented any way to tell if the animation is complete. You are using a flag that appears to be a bit confused about it's purpose. The flag gets set when the user clicks the left button and unset: 
+
+I'm not sure if there are any specifically about porting to iOS yet but there are a few good tutorials around that might help. Check out this discussion on the forums lists current tutorials. $URL$ There's also another related thread about ideas for new tutorials. $URL$ I'm currently only using MonoGame to make games for Windows and port them to Android. I suspect the process is fairly similar though, and it's not too difficult. Give it a go and see if you run into any problems. 
+
+Quite the opposite. MonoGame stands to be the perfect replacement for existing XNA developers. It doesn't do everything that XNA did yet but there's no good reason why it can't. Coupled with the fact that it sports many more platforms and it's already being used in many reputable games I'm confident it will be great for some time to come. Edit: I wrote this answer on my phone, let me elaborate a little more. Firstly, MonoGame does not depend on XNA, it's an open source implementation of the XNA API and does not use Microsoft's implementation in any way. They make it clear in the Contributing to MonoGame instructions that no code from the XNA framework is actually used in the implementation, only the public API. Therefore, MonoGame exists on it's own without XNA. Secondly, the MonoGame project is being actively developed. You can see on github there is plenty of commit activity going on. The most recent post on their website was 2 days ago announcing 2 MonoGame titles coming to PS4. Third, the MonoGame forums are active. The most recent posts are today, and plenty of discussions going on around development, new game announcements, new platform support and solving problems. They also have other active social feeds like twitter and as Noctrine pointed out an "official status" So, there's plenty of evidence to indicate that MonoGame has not died. 
+
+I believe you can use TitleContainer.OpenStream in MonoGame for a platform independent way of reading and writing files. See the XNA documentation for reference: $URL$ The thing you still have to be careful of is case sensitivity and formatting the path correctly. Otherwise I think it's relatively straightforward. EDIT: Actually the XNA documentation is pretty sparse so here's an example that should give you the right idea. If your file is in the Content folder and you've set it to Content / Copy if newer in properties. 
+
+This logic seems very odd. I think the first thing you need to do is define the purpose of the flag. To me, it should mean this: The flag is when the animation is playing and when the animation is stopped. With that logic in mind, I think you need to refactor the code to meet those requirements. In other words, the flag should be set when the player clicks the left button and unset when . You'll probably also want to block player input while the animation is playing, or perhaps queue the next action while waiting for the animation to complete. This stuff can take some tweaking to feel nice. Since this is going to require a re-think about the design of the code I'm not going to provide a full code sample. Hopefully this will be enough to get you going again though. Good luck with the #gbjam 
+
+What it looks like you're seeing is the file opening as a plain text in Visual Studio. I often open the file this way because I find it handy to be able to edit stuff outside the GUI. As mentioned by @tandersen, if you right click the file in Solution Explorer you can choose "Open With..." to get the following dialog. 
+
+If you look inside each project file on github you can see the constants defined for each platform. I've extracted them here: 
+
+Obviously the actual logic you use will differ from the example here, but this should give you enough to get started. 
+
+What I do is ignore the built in SpriteFont's in MonoGame and roll my own. If you use a tool like BMFont to generate the texture, writing a basic font renderer is pretty easy. First you'll need to grab a BmFont XML Serializer so that you can load the font file into C#. You can find one on pastebin here. $URL$ Then you'll need to write a basic font renderer. Here's one I've used before: 
+
+When using PNG files or other resources directly you need to specify the file extension when you load it with the content manager. So in your case, try this: 
+
+Create a new project to hold your content importer, processor and writer that references the . It's available as a NuGet package. Implement a class that derives from Implement a class that derives from Implement a class that derives from Implement a class that derives from (in the game project) Reference the DLL from the Pipeline tool (by editing your file) Read the content into your game using

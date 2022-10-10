@@ -1,0 +1,67 @@
+This interface would simply replace the variable part, we can now create a simple method that will be usable everytime you need a TTransport that is opened, do some actions and closed : 
+
+Your code is pretty neat looking but, alas, I think the architecture is wrong. Packet should be an immutable object acting as a passive container IMO.... by doing this you are removing the following fields : 
+
+Use / and consider adding a to print a warning message if the input of the user is invalid. Never trust user inputs ;) As said earlier, if the user input multiple space in a rows, this part may fail as you'll use on the empty string. Also, is never written to if counter is 3 which is likely a bug. Lastly, you shouldn't the variable twice. Use once and store the result in a temporary variable like this : 
+
+It's pretty neat because this new solve give a better abstraction ; two birds with one stone basically ^^ Doing your conditions like this : is not useful, you should prefer to simply write ;) On a more general note, there is something that bothers me with your architecture : the is much more than a simple solver : it actually stores the maze it's trying to solve and it's also responsible with the printing. It's doing way too much. For the first part, you should consider moving the grid into it's own class, the method can be a that returns a new from a given file. The will now solve a given maze like this : 
+
+Since you specifically talked about the method, I'll start there. While the following test may seem useful : it's actually already implied by the FileReader so you should skip it. Don't catch exceptions in the to simply use printStackTrace on them. Let them bubble up until you have a layer that can "deal with them"... in your case, you can deal with them in the method. You should also control the validity of the user input as soon as possible, if, for example, the starting position is out of bound you won't detect it before the method. Same goes for a starting/ending position that is within a wall. Also the second case in your switch will give a bad starting position if one of the value is >= 10. There is multiple pattern in the input. IMO the ($URL$ class better fits your use case than a loop with a switch as I'll show below. Lastly, the reader (now a Scanner) must be closed in the code as, otherwise, resources may leak (well, tbh, the file will automatically be closed upon program termination but it's better to use the "clean" way from the start). There is basically 2 ways to close the reader : 
+
+While I could try to improve your existing code, I'll rather tell you from step one how I'd do it myself. Let's start from the basics : You want to make a 'ToDo' application with multiple users (stored in a database) that each have a list of tasks. This application will be printed to the console (at least at the beginning). At this point, you should make a quick UML class diagram : We'll have a which will fetch the users from our database (for now, we'll go with a ), as we have user, we'll manipulate objects and they'll themselves store multiple s. Plus, we'll have a that'll mix every previous objects together and will be responsible of managing the various inputs. Finally, there'll be a that'll print the data given by the and send the user input to the . Here is a quick example of some of the classes : 
+
+As we have greatly reduced the number of side-effects, you can now unit test your code. For example, one unit test can look like : 
+
+First and foremost, you should put that into its own function. Secondly, good job in considering the case where multiple space are following one another :) sadly, if you indeed have multiple space it'll fail later in your code :( maybe you shouldn't only consider space but also ? (char for is '\t') Thirdly, you didn't have to use an array, there is the method inside . 
+
+That's quite complicated just to read something from the console consider using for such a simple use case 
+
+Module names Your module names clash with modules in popular packages. is provided by , by , by , although the last isn't often used. If you ever want to use in your project (for constant indexing, for example) you will have to pull some tricks. Instead either use some other names, or use or in your module path as long as you're not sure what final name you want to use, e.g. 
+
+Magic numbers are bad. What is this everywhere? Were does it stem from? What does it mean? Of course, that's the number of characters in your alphabet, but the stray number doesn't show that information. So we should change that: 
+
+However, since is merely a , it's more or less hiding the dependency at another place. Still, it's something to keep in mind, if you don't want to end up with something like this. But how would you check this? Well, you would run tests, over and over. Here's the second design critique on , it doesn't take a . Truth be told, if I say that is too much for a small script, then 
+
+Naming isn't true to its name. It just returns the first prime number in the given list or otherwise. So might be more apt. Efficency At the moment, you check \$ n \$ candidates in . But that's not necessary. First of all, if we found a divisor , then we also found a second divisor, . We also only need to check up to \$ \sqrt{n}\$: 
+
+As you can see, except for the first element, you will always get for any other element. This adds a little bit more logic to the empty case, but you don't need to traverse your range twice, and this method makes your algorithm eligible for input iterators. Other than that, the only other thing I would change is to use an instead of an . This prevents you from accidentally using . And global isn't my cup of tee either. You can, however, move that into your . But here's a little exercise: you can just use an : 
+
+Why as second argument and not as first? Because you usually have a function that is a polynom . That way you can easily give a name to and then only use , and so on: 
+
+At some point, you need to read the line. You've chosen to do so. Note that it is not feasible to remove from , because you would end up with . Still, we can have a look at to see what we can do. We can read the code literally: 
+
+You don't need overloads if you provide default arguments You don't need constant s You don't need to check the length of your collection (except for ). 
+
+With , I'm somewhat sure that your logic isn't 100% correct. According to the documentation, you check with increasing counters, but will take the last element for which holds. Since , you will end up with the last element for which does not hold. Either way, if you look for the first element that holds a predicate, you can use from instead: 
+
+Concerning your comments on , did you accidentally use ? This will give wrong results. Otherwise I cannot reproduce your behaviour. 
+
+So this would be a way to improve your runtime tremendously. Further places for improvement is too opaque, it's not clear what you're doing. Try to split it into several sections. For example, all those lists of symbols can be abstracted into 
+
+What does now do? Well, given a key and something to encrypt, it gives us the encrypted version and a new key. Here is how you would use it in : 
+
+Which is 0,2% of your original time, or a 500x speedup. However, this comes at a cost: is too large for a , since \$\log_2(500000^4) \approx 76\$. The greatest number you could check with a is 65535, \$2^{16}-1\$, which shouldn't be very surprising. As the standard does not provide or similar, you should make sure that your numbers don't exceed those bounds. You can either write your own large integer logic for this, or use GMP. Proper bounds and parameter estimation Next up, you can increase the lower bounds of and , so that \$a \le b \le c\$. And for , well, if we have , , , then there is only one solution for . We can directly search for that solution with binary search. The binary search makes a \$\mathcal O (n^3 \log n)\$ algorithm from your current \$\mathcal O (n^4)\$ one, which should provide a lot more speed than the previous speedup. Even better, if you used the appropriate bounds for , and , we can bound by $$d^4 = a^4 + b^4 + c^4 \le c^4 + c^4 + c^4 = 3c^4$$ and therefore get $$c \le d \le \sqrt[4]{3}\,c.$$ With the proper binary algorithm,you can finish the first , case quickly: 
+
+Of course, you should prefer a well named constant over this ugly 1000000. Other things in the code Now that we are done with the performance aspect : 1. the name aFile is not really good looking IMO. 2. there is two nested try clause within each other but it's useless here. 3. please never user empty catch block :'( After all those tweaks : it takes my computer 1 minute and a half to read a 28.5 mb file. 
+
+It'd also remove some useless comments such as as the code would now look like which is more readable. does way too much and should be refactored almost entirely. Finally, 
+
+Array have an "old-school" feel and I'd avoid them if possible. Consider using List (and especially ArrayList) for those kind of use case, thus transforming previous method in : 
+
+Avoid magic number 6 and 16 should be replace with properly named constants... 16 is also dependant of the first number ; if I'm not mistaken the number of possible hourglasses is (6 - 2)² 
+
+The indentation of your code isn't good :s I think making immutable would make for a better code When an object is constructed it's usually a good idea to make sure it is correct, in your case you don't make any check over endTime and startTime (endTime must always be > to startTime), also is useless here as you are only extending Object You should hide the field with private modifiers You can check the new java time objects (such as LocalDateTime if you don't want to be bothered by time-zone) instead of using ints In your : note that if a meeting conflicts with more than one other meeting(s), the result will be off Still in your findNumberOfConflicts method : you should avoid modifying parameters as much as possible as it makes for harder to understand code, consider the following : 
+
+So we are unless we have more than maxOccurence, in which case the will always give us maxOccurence as a result. That's not very palatable though IMO, I'll use static import to make it cleaner. Let's also not forget to store the result. 
+
+I removed the test for ISBN nullity in the method, simply cuz now it's impossible to have a field (ignoring reflexivity, but if someone use reflexivity to mess with your objects internal and invariants, it's their own problem :)) Your repository object is really good looking :) Only thing is, if you apply the previous advices, you don't need to make copy of the book everytime :) [EDIT] : completely forgot to add something about the price, storing price in double is usually a bad idea, consider reading : $URL$ & $URL$ 
+
+Your object is mutable (mainly due to the method). I'm not sure you want it to be immutable (but it's a good idea considering the code) but you should at least make it thread-safe. To turn it into an immutable object, you should make numerator and denominator and rework a bit your reduce method as well as your main constructor. 
+
+Special note Remember that people's names aren't as easy to manipulate as they seem : some people have space in their first name, others have multiple "middle name" (in France for example, we can have as many surname as wanted, though we use only one). Also some family name may not be case sensitive (Victor D'Hondt is sometime written Victor d'Hondt or even Victor D'hondt). Something to consider if you ever want to add name comparison. 
+
+To ((very) slighlty) improve performance you may give your StringBuilder a big starting size like this : 
+
+You aren't really solving the problem as you are not rotating the array per se, you are printing it with a small shift. Only looking at the output on the console there is no difference for the user ofc but if you want to manipulate the rotated array at another places in your code it's not possible. So you want to store the rotated array somewhere instead of printing it, let's call this You can use the current logic in your for loop to fill the variable so the logic behind your code is fine ;) 
+
+Maybe you'll find that's enough of an improvement but there is still 6-7 lines duplicated between the 2 methods. Let's dig a bit more and go functionnal : We can see that the 2 methods look like this :

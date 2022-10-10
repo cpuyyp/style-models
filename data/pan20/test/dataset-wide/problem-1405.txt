@@ -1,0 +1,105 @@
+And while we're in those operators, you should check whether both sides are the same. That way you can short-cut the operation: 
+
+Note that I've removed 's type signature. This is somewhat controversial, but the general rule-of-thumb is that you want type signatures at the top-level and usually leave the type-signatures at the not-top level, unless GHC gets confused. The (small) problem with type signatures in and is that the type parameter in is not the same as the one in . is necessary for that. So lets get rid of that. 
+
+While this only uses the given strings from the exercise, it already tells us that there is something amiss if we run the tests with : 
+
+The random number is part of the game, so it's a little bit strange to generate it in . Your function already suggests a name for a another function that takes care of that step: 
+
+This however needs knowledge of the standard library. So how do you find those functions if you don't know them yet? Welcome to Hoogle. We can find by searching for , by and by . If we didn't have any of those helpers, your code would be fine, except for the strange explicit result in 's first argument. That was too complex, as you will stop as soon as you find a either way. 
+
+You can heavily improve the parser if you add line and column numbers to the parser error, but that's for another time. For memory, I suggest you to use a separate data type for the whole memory, not for the parts left and right of the current cursor. Something like 
+
+that is you don't check the . Note that this is still a contrived example. * Technically, that's not true. You can use references, pointers, or wrap the return value in some /variant, but let's keep things simple 
+
+I don't know Rust too well, so take this review with a grain of salt. That being said, your can be heavily simplified if you . That way we don't need to remember whether the input was valid: if it's valid we just : 
+
+Users will provide wrong input. Either because they intended to do so, or because their finger slipped and they accidentally put instead of . If you don't want your program to crash, you probably want to ask again instead. Therefore, we should probably use a function: 
+
+But that's out of scope for this review. Instead, we can simply say that 's unit is seconds, disallow creating values with its data constructor, and provide some helper functions: 
+
+Possible undefined behaviour There are several places that will lead to undefined behaviour. In it can be possible that . We will then happily copy into where . It's easy to create an example for this: 
+
+Let's check how often you actually use each number. In , you use twice, and both and once. In , you use twice, twice, and all of the other numbers once. Hm. Does this hold for a fourth line? 
+
+That simply breaks to much. Your Monad is also missing its Functor and Applicative instances, which would make it easy to "cheat". And if you implemented a that limits the number of s, you start to break Functor laws. Note that due to the Monad/Functor laws, we should be able to rewrite 
+
+Since there is already a function called , I wouldn't call the element the same. There's no way that those two can get mistaken though, since their types differ. So you're safe at that point. However, you will still get a warning on . Next, you call your list . Lists are usually called (one , may ses), which makes it a little bit harder to catch than it needs to be. We can also split the list into the three parts at the same time: 
+
+Note that instead of makes it possible to use an array. Also, is one of the functions that a user may overload. The documentation example above uses Doxygen with JavaDoc style, but it's just an example. Unfortunately, we lose the as 's underlying type on the way, but that's the price we pay for not knowing the container at all. We can model your original variant now as 
+
+Use proper functions instead of macros Macros can get surprisingly hard to handle. For example returns true, whereas returns false. Since you use C99, prefer inline functions instead: 
+
+Don't repeat yourself Your code suffers from being WET. Your 's formatting function is repeated. So let us get rid of that first: 
+
+Note that your usage is misleading: the folder has to be located in the folder the program is run, not located. Let the compiler help you Note that I got rid of the ? You declared it, but you've never used it. You probably had all of your program in your and decided to refactor (good!), but you forgot not only the , but to something in . Both of these mishaps could have been found with compiler flags: 
+
+Add documentation This depends on whether you want to re-use your code in a (future) project, but what is currently clear to you might not be as clear in some days/weeks/months. While we're at it, use a code formatter. Some of your single-statement s have braces, other's dont, e.g. 
+
+Seems familiar, doesn't it? "repeat-an-action-n-times". This time, it's . Since we don't want to throw the result away, we use (note the missing ): 
+
+Try to minimize the scope of a variable. Note that you should come up with some kind of "error" return value if the character is not in your alphabet. is often used in the C world: 
+
+Note that can get shortened into , but I'm not sure whether you're ready for that yet. Keeping things actually pure Alright, we've seen how one could use standard functions to process all those lines. But it's still in . Can't we do anything? Well, what would the alternative be? We still need to process a bunch of lines. A "bunch of something" can be easily expressed with a list, so let us write the type signature of our potential candidate. 
+
+All in all, your code will work, but we can improve it. Write functions in terms of other functions You have written both as well as . However, you only need one of them. The other one is the d variant: 
+
+Use descriptive variable names for iteration is fine, but for "exploration reason why" isn't. Keep the scope of your variables short You already use C99, so keep the scope of your variables to a minimum. You never use outside of your in , so move it into the loop, for example. Use instead of magic numbers on arrays with static size In , you use twice: 
+
+Optimizations The additional memory in isn't necessary, as you can just subtract 4 times eleven directly from . Comment consistency Apart from the minimal optimization your code is fine. Your comments aren't, to be honest. There isn't a best-practice or a style guide for brainfuck as far as I know, but the problem stems from the inconsistency. In the first line, it starts with . It's not completely clear what that means, so I'll go with "read into cell 1". immediately gets renamed to : 
+
+Ah. Much easier to read. That's what functions are for. Note that any sophisticated compiler should inline that function anyway, so you may also drop if you don't want to use C99. 
+
+Yes and no. Monads in Haskell just provide an abstraction to chain operations together. There are many monads where you can "escape" back to your usual world, e.g. the monad: 
+
+Why is the necessary? First of all, will make sure that we don't accidentially change your string in our function. And will get rid of additional copies that would happen throughout the execution. Note that we can get rid of : 
+
+"I would have only space for three digits, but in my assignment I use !" But we're not done yet. Keeping the example with negative numbers from above in mind, what goes wrong in your actual counting? 
+
+However, the types of and would differ in that case. By the way, this variant of is in the standard library, and is also easy to implement. 
+
+However, that's not really necessary if you rewrite All at once If we also inline , we end up with the following code for the list variant: 
+
+There's a great saying in carpentry: measure twice, cut once. It concerns cutting wood or other material, where you have to throw away your resources if you accidentally cut at the wrong place. A similar saying is there for software engineers: you can't optimize what you can't measure. There are several ways to measure your code, e.g. benchmarking, profiling, or looking at the generated assembler to see how many instructions a certain part of your code will take. Here, we will take the latter route, start with the assembler, take considerations step by step and see where we end up. A study in assembly Lets have a look at your code. Well, not yours, but the assembler the compiler generates. You can use . On my platform, this results in the following "hot" section in : 
+
+Which brings us back into the realm of your lifetime. Exercise Write a function, that given , and checks whether there exist a , such that your property holds. It should return if there does not exist such a , and the otherwise. Use that function in your code. Make sure that you need roughly \$\log d_{\text{max}}\$ iterations in that function. Important remark about integer sizes Keep in mind that is usually just a 64 bit integer, which means that the largest integer you can store is \$2^{63}-1\$. Integer types with more bits have greater bounds, but are platform specific. Also, multiplication can be a tad slower, since multiplying 128bit numbers isn't as easy as multiplying 64bit numbers. See the next section how to get multiplications down An actual review Our is now essentially two multiplications. However, we're still using too often. After all, we don't need to recalculate \$a^4\$ in every iteration. The compiler happily does, since it doesn't optimize aggressively enough. Which brings us to the actual review: your code is cleanly written, easy to read and to understand. Unfortunately, well-written, modular code often doesn't squeeze the last bit (heh) out of your hardware, unless your compiler/runtime is very smart (and thus often expensive). So let's get back to the drawing board for a final review of your code: Includes 
+
+Initialize the seed once I've moved the call into . That way there will be only one call to , regardless of how many times you call . That's handy since 
+
+You can run and find the query on SEDE. It searches for questions () that have at least one answer, no accepted answer, and the maximum score of all its answers is . The resulting list can then be checked for fast Zombie removal. Is there something that is utterly wrong? Or can this weapon help us in our fight against the undead? 
+
+Your compiler should have told you that you never actually use , , or . But even then, you have all those values scattered around. Is always the player's HP? Is the amount of attacks the player has left? We shall group the values that make a character: 
+
+There is a pattern. We have our text, then whatever the user gave us, then again our text, and so on. Let's split that into fragments: 
+
+That's not really surprising, since is more or less just an abstraction of . Since is in your case, we can just get rid of it and end up with . We can use to our advantage if we have several ful functions. However, we only have . Speaking about , there are several nitpicks: 
+
+This "if there is return nothing, otherwise change the value" slightly pattern is so common, that there is even a function for that, , which you can think of as 
+
+However, you should try to make all your functions pure. That way, you can easily test them later. Also, you can try to generate passwords that contain at least one digit. It's not possible with random by default, but you can probably achieve something similar to a modified . 
+
+The types are imported unqualified to make the type signatures easier to read. Next, it's a easier to exchange your types later if you provide a type synonym: 
+
+Your old version returns on , but your new one returns , unless you also check . Therefore—At least in the sense of asymptotic analysis—both variants will have the same performance. 
+
+Using type annotations in or clauses can be misleading. The in 's type is not the same as the one in . Here's an example that shows that both s differ: 
+
+While this might seem correct, the combination of and doesn't end well. According to esolangs, oOo code may have a non-divisible number of letters. The remaining ones are discarded. More on that later on . is fine, but isn't, as is : 
+
+Note that makes it easier to change the other types, as there is less repetition. It's completely up to you to write like this, though. Encapsulate possible errors in the type (if possible) In consider or instead of : 
+
+This will only export the type, not the constructors, though, so I'm not able to generate a new . I can only reuse already existing ones. Use canonical names Your is a parser, therefore I suggest you to call it instead: 
+
+First things first: is this a good variant of FizzBuzz? Well, yes. I would probably write the same variant, except for whitespace and types. In your usual Haskell code, you want to annotate the top-level bindings with their types: 
+
+That way we don't have to carry along. (Exercise: write with . Have a look at if you get stuck). Use higher order function to your advantage When you do the same for all elements in a list, it's usually time to use . If we take a look at , we can see that it uses for all numbers and then sums it: 
+
+What's nice about those functions is that we can easily check them with QuickCheck or other testing frameworks, since they are all pure. For example, we can check that 
+
+We can use just for the nesting difference, which removes the repetition of . By the way, and do the same. I suggest to rename the latter to the former. Probably a remnant from a previous version. Provide more power to the user At the moment, your user cannot work with the AST since it doesn't get exported. They can't even use the type . They can use the values, though. So let us have a look at the power a user should have. Export types (but not necessarily their constructors) If I have a malfunctioning , I would like to dump it at some point. I would write 
+
+Use instead of + accumulate In a fold, you usually use a function that reduces (or folds) your input into a single result. You, on the other hand, use to create a list from an input list. Both lists will have the same number of elements. That's not a fold. That's a map. So first of all, let's use instead of : 
+
+This means we can change it to a while loop, since the condition olds true. That's guaranteed by the : 
+
+Yes. It's usually a good idea to use what's already there. However, your has only one function to add elements at the end. If you only add elements at the end, use . Not . You only want to use if you need to insert in the middle of the list very often. But isn't really cache friendly. It depends on what you want to do with your container. See this benchmark for more information.

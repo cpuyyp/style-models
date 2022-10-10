@@ -1,0 +1,77 @@
+Logically, this simpler looking query prescribes the server to first create a cartesian product of the two tables and then filter the result set by the condition in the WHERE clause. If that was indeed how the server would execute the query, it would probably not work very fast. However, it is likely that MySQL can figure out the possibility to push down the conditions in such a simple case, thus effectively changing the logical order of execution, and come up with an efficient execution plan. I invite you to test and compare both solutions. 
+
+Or you could use a correlated subquery to get the last value that is more than 5 in the subset from the lowest ID to the current ID: 
+
+You, however, want a user-centric report. So, first of all, you need to transform the original set to a user-centric one: 
+
+By this method, all rows that have any of the specified attributes are retrieved and grouped by . In order to determine the groups (persons) having all three attributes, a HAVING filter is introduced to compare the number of rows* in each group to the total number of attributes in the list. The method can be slightly generalised if you can afford storing the attributes to search for in a (temporary) table. Here is what it would look like in that case: 
+
+The columns ABSENT, LATE and PRESENT in your output represent totals per student, whereas the date columns represent details per student, and details are the pivoted columns. In order to get such output with PIVOT, your source must provide totals on the same row with details. The source in your query is not providing that kind of information. It is grouping by student_id, attendance_Date, attendance_id, and that grouping does not have any effect since there is always one row per student and date. In order to have both details and totals on the same row, you can use window aggregation, like this: 
+
+You could use a window MAX() to achieve the result in a way that is semantically very close to the one you have discovered but does not involve a join: 
+
+In SQL Server, a stored procedure's argument can be either a string literal or a variable. It certainly cannot be a string expression, like in your attempt. To resolve your issue, you could declare a variable, assign your expression to it and then pass the variable to the stored procedure: 
+
+You are taking the week day of January 1 as a number of days and subtracting it from January 1, unless that date falls on Sunday, in which case you are subtracting nothing (that is what the is for). For Monday-based week numbers, the result of the above formula will always be a Sunday, and in this case it will be the Sunday of the first Sunday-based week of the year. Before going on to calculating Sunday-based week numbers, here is another formula for turning any date into January 1 of the same year: 
+
+Based on your current code, it appears that a product can have at most one match in either or . With that fact in mind, I would probably try a different approach. First, I would rewrite the base query returning all the prices like this: 
+
+This way whoever wrote or were reviewing the query would catch the issue very soon. Of course, we are all human and we can forget adhering to rules easily too. Still, the method might result in fewer issues of this kind. 
+
+You do not need to use SELECT with the CONVERT function. You can see above that I simply omitted both the SELECT and the column alias. However, if you do use a SELECT in an expression, you need to enclose it in round brackets, like this: 
+
+I am not sure if Access supports this but generally SQL allows you to solve this with the help of a derived table. If you use your present query as a derived table, you can reference all the computed columns exposed by it simply by their aliases, like this: 
+
+The above query assumes that the first entry in a partition is indeed the very first addition of rows. ( means the absence of the previous will be treated as a zero.) If that cannot be assumed safely in every case and you would prefer to return NULL for first entries, you could use just instead: 
+
+You just need to stop relying on the non-standard behaviour provided by GROUP BY when the SQL mode is not enabled. Normally, when grouping, you cannot retrieve a column that is not specified in the GROUP BY clause unless you wrap it in an aggregate function. That is because that column may have many different values (remember, we are talking about grouped rows) and there is no way to specify which value of the many should be used in the output. There is a recent extension to that behaviour according to which columns that are functionally dependent on the GROUP BY columns may be selected without specifying them in the GROUP BY, but MySQL has so far went the simple road of offering you just two modes: either you cannot retrieve non-GROUP BY columns without aggregation at all or you can retrieve any such columns, regardless of functional dependence. So, in this case, you are retrieving columns and that clearly can have various values per . Which value is ultimately selected is out of your control, and that is the problem. The solution is to define for yourself exactly which row from the other tables you want to get when you are grouping by and implement the logic the way it can be followed unambiguously. For instance, if you want to go by the behaviour you are observing in MySQL 5.6, you could define it as 
+
+Since you want to count differing values in a set that may contain identical values, I would say is the perfect tool to use. For instance, the following will count distinct levels per product: 
+
+Again, you will need to test the final query in your environment to see how much, if at all, these additional modifications affect the performance. 
+
+So, if table A has no match on Item and Date at all, the NOT EXISTS predicate will evaluate to True. If there is a match and its status is 0, the predicate will again be true because of the Status condition. 
+
+You can use a expression or an expression to calculate the master ID to use it as the primary sorting criterion. The expression will check whether the row is a duplicate or not. If it is a duplicate, return , otherwise return . In standard SQL it will look like this: 
+
+Of course, if the table is referenced by other tables, you cannot simply remove all data – you will probably need to disable or remove the foreign keys before re-populating the table and enable or recreate them afterwards. (That is an entirely different problem that would need to be addressed separately, in case you need help with it.) 
+
+You can see that the aggregate results are both returned as their own columns and used to create another computed column, the total of all entries. As you can also see, with the above query I have also taken the liberty of slightly rewriting your conditionals. I just wanted to make them more compact. But there, again, I am not entirely sure if Access will accept that syntax. If not, you can always revert the syntax to yours. 
+
+Joining the results Use your current queries (the monthly query, the yearly target query and the yearly actual data query) as derived tables and join them together on the employee ID (). Do not use the inside the derived tables, as there is no need to join it several times when you can do that just once. In fact, you can use the table as the joining point for the complete query, something like this: 
+
+Now, how can you count only the distinct values matching a specific condition? The answer is, by using conditional aggregation, i.e. one that uses a CASE expression as the aggregate function's argument. So, to count only distinct passed levels, you can use a query like this: 
+
+However, if the table has no rows or if all values are null, this statement will not do any assignment. In this case, if PRINT still outputs nothing, it means was null even before the SELECT. Therefore, you may still need to apply the previous method. Besides, it is not a good idea to assign a variable this way when a table has many rows, because you have no control of which value will ultimately be assigned. Therefore. Alexei has a point there as well with regard to using TOP, as well as combining it with ORDER BY and, possibly, additional filters. 
+
+In case the source table is too big to be converted in one go, you can do that in batches several (hundreds? thousands?) FK sets at a time, making sure each group of rows with the same FKs is inserted unseparated. A filter on e.g. FK1 could achieve that, so the first time it would be 
+
+Alternative All that nice talk about clear logic and maintainability notwithstanding, you might still like to be able to implement the query as a single SELECT. Even though we have managed to simplify the initial version by reducing code repetition, the expression still has to be specified twice across the query, because each SELECT leg needs it, so why not try eliminating that repetition too? And if that is not enough of a reason, the alternative solution might turn out faster, maybe even noticeably. And maybe the resulting query would not look too ugly. In the end, it would just be nice to have a choice, plain and simple. So, how would it be possible to rewrite the query using WITH ROLLUP, so that both the client details and the rollup row would be produced by the same SELECT statement (without any UNION ALL kind of cheating)? Well, you can use the former solution as a prototype. One part of that query performs group concatenation over clients. The other part counts rows over the entire set. Now, if you want to have a single-part query, the single part must do both operations at both levels. Which kind of information to show at which level should then be determined by another set of conditionals. Taking the above-mentioned points into consideration, here is my attempt at a single-step query: 
+
+The LATERAL keyword allows the right side of the join to reference objects from the left side. In this case, the right side is a VALUES constructor that builds a single-column subset out of the column values you want to put into a single column. The main query simply references the new column, also applying DISTINCT to it. 
+
+My only issue with this method is that it is very MySQL-specific, which, in my opinion, is worth keeping in mind. No other RDBMS supports this syntax (unless that product is a MySQL fork, like MariaDB, for instance). Both methods shown can be found and played with in this live demo at Rextester. 
+
+You were almost there. First of all, your query contains what seems to be typos: there are two references to in it that should most likely be instead, and the alias should probably be (or the other way round; my query below assumes the former). Now with that out of the way, you can get the other name by referencing it via the alias that you assign to the second instance of : 
+
+Note that the above method assumes your table has no other columns apart from those shown in your example (UserID, Year, Mth, Value). If there are other columns, replace dbo.YourTable with a derived table pulling only those four columns: 
+
+I believe you could also make the first query a view and then just select from it filtering the results as necessary: 
+
+If the current WHERE condition specifies today and you want yesterday, then just subtract one day from both expressions. That will make the first expression and the second simply : 
+
+will evaluate to TRUE only when the is truly empty. The 's trailing spaces will count (because they will no longer be trailing after appending the ). And you can go similarly about finding the length. This 
+
+The syntax itself, however, is unambiguous enough as it is (to the parser anyway). It should be noted that the nested join syntax is not universally popular. If you like, there is an alternative that involves no nesting – a right join: 
+
+First of all, after applying PIVOT, all columns of the pivoted set must be referenced using the alias specified for the PIVOT clause. As per the manual: 
+
+Missing ORDER BY in GROUP_CONCAT. If you omit an ORDER BY, you are simply saying that you do not care if one time the query returns the string as and the other as and later as . If you want your results to be predictable, always specify an ORDER BY and always use enough criteria to avoid ties. In the above queries the lines were simply very long already and I purposefully omitted the ORDER BYs for presentability's sake. The issue can be easily fixed with an ORDER BY like this: 
+
+The variable is an variable. The type has higher precedence than any string type, and so it changes the meaning of the operation, which now stands for mathematical addition rather than string concatenation. In other words, you are effectively trying to add a string, which is your query, to an integer, which is the variable. Since the string fails to convert to an integer, you get the error shown in your question. Solution: change the in that fragment to (or ), like this: 
+
+Effectively this is the same as the previous query: eliminating the repetitive join pattern in the code most likely will not prevent the repetitions in the actual plan. However, the code is arguably clearer to understand this way. 
+
+Having many options how to write your queries may be beneficial when you need to tune them for performance. 
+
+Intellisense, however intelligent it may strive (or claim itself) to be, cannot possibly know that you only want columns in that context. Without that piece of information, therefore, the list will include all items that are valid in the given context. If you want to make it clear that you are only interested in selecting the table columns, you could qualify the column names with the table name and the syntax will restrict the number of available tokens for you. Consider this:

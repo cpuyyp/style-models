@@ -1,0 +1,77 @@
+Personally, I am not all that comfortable with the Permissions you have. Since mysqld is not running, try the following 
+
+does not separate the columns to update. They should be separated by commas () What you probably wanted was 
+
+Notice that in the DERIVED2 part of the EXPLAIN plan, the FULLTEXT index was indeed used. MORAL OF THE STORY You will have to get into the habit of deciding how many stopwords your database will have, creating that stopword list, configuring it, and then create/recreate all FULLTEXT indexes. You must also get into the habit of refactoring your FULLTEXT search queries in such a way that the MySQL Query Optimizer does not generate a bad EXPLAIN plan or nullify indexes for the rest of the query participating in the EXPLAIN plan. 
+
+Here is how to go about doing this InnoDB conversion: Step 01) Create the script to convert all MyISAM tables into InnoDB 
+
+This will echo the with the log file and position of the Master For the sake of this example, say the output is 
+
+This command will keep the number of dirty pages to a bare minimum. This command should be run about one hour before you perform the rsync method of backup. This might even help XtraBackup as well though XtraBackup does not require a mysql shutdown. 
+
+I think your explain plan is doing a heavy index scan. What you might need is an index with those exact three columns. Please create this index 
+
+OBSERVATION #2 You have --complete-insert as a mysqldump option. This will embed column names to every INSERT statament before the VALUES clause. Even with --extended-insert, on every batch of rows being inserted has the column names being sent into the mysqldump. You can reduce the amount of bytes sent to the mysqldump by removing --complete-insert. RECOMMENDATION If you have another Windows Server that can be setup as a Slave, do the mysqldumps from that slave rather than from the production machine. 
+
+does the exact same thing. In both cases, it looks for . If you attempt to access the metadata of , by doing 
+
+There is no physical folder for those tables, not even .frm files. You cannot mysqldump it. You cannot drop it. You cannot add tables to it. You cannot drop tables from it. So, where are the tables ??? All tables in the INFORMATION_SCHEMA database are stored directly in memory as MEMORY storage engine tables. They are totally internal to MySQL, so the .frm mechanisms are handled in mysqld. In my answer, I first showed the table layout of INFORMATION_SCHEMA.TABLES. It is a temporary table in memory. It is manipulated using storage engine protocols. Thus, when mysqld is shutdown, all information_schema tables are dropped. When mysqld is started, all information_schema tables are created as TEMPORARY tables and repopulated with metadata for every table in the mysql instance. The INFORMATION_SCHEMA database was first introduced in MySQL 5.0 to give you access to metadata about tables of other storage engines. For example, you could do SHOW DATABASES to get a list of databases. You could also query for them like this: 
+
+For mysqldump, --opt includes --extended-insert. If you use --skip-opt when doing mysqldump, it disables --skip-extended-insert. Here are the options of mysqldump that affect extended insert: 
+
+You should provide the EXPLAIN plan for a query. Since the data is identical, it may not be necessary. There are a couple of things that may be different YOUR PROCESSOR I looked up the Intel Core 2 Quad Q9400 @ 2.66GHz (TEST) and the the Intel Xeon E5530 @ 2.40GHz (PROD) and found a difference. 
+
+and start mysql. GIVE IT A TRY !!! UPDATE 2014-12-17 11:18 EST This was not a guess. Here is what I did to prove it to myself. I saw right above and that surprised me. I have never seen options with uppercase letters before. Since I have MySQL 5.5.37 running on my Windows 7 laptop, I did the following: 
+
+What do you get ?? A table with 1,073,741,824 rows. Easily, 4GB+. Imagine creating any table of any size. How about creating a bunch of tables in the test database and freely accessing them at will ? The best thing you can do under these circumstances is to run this query: 
+
+I also noted how your innodb_read_io_threads and innodb_write_io_threads are maxed out. You only have 4GB of RAM or which you only have 1GB free (due to your 3GB or 3072M Buffer Pool). I would lower your threads from 64 to 8. If you have the budget, you should go upgrade your server class to or where you can have 4 CPU and 15 or 16G of RAM. You could then increase innodb_buffer_pool_size to 10G or 12G. Then, your remaining InnoDB settings would make sense. I would still lower your threads from 64 to 8. 
+
+You do not want to silence this. Those options are for your protection (or at least the protection of less experienced MySQL Users). The only option you could attempt to play with is --compatible 
+
+EPILOGUE Configuring log-slave-updates tells a Slave to take a binlog event from its relay logs, execute it, and record the event in its local binlogs (if log-bin is enabled on the Slave). Thus, not having log-slave-updates enabled in your MultiMaster setup is the root cause. Big thanks to @Michaelsqlbot for the hint. 
+
+Using the MONTH() function on a column automatically disqualifies any index from usage You can state the range in the clause 
+
+Let's say the timestamp was "2013-09-03 01:23:45" STEP 05 : Find the timestamp of that position in the binary logs of ServerB Let's say the binary log on ServerB is master-bin.000004 STEP 06 : Dump position matching timestamp inside ServerB's binary log master-bin.000004 
+
+Give it a Try !!! NOTE : Please notice that I do not need to read the actual table's data content. That's far more efficient than reading the entire table. UPDATE 2012-11-15 13:40 EDT The code from @sensware's answer gives columns. The original question asked for columns. I augmented the code to test just my table: 
+
+That line takes the table offline with respect to the application. To get a good idea how long it should take to optimize run the following: 
+
+and then GIVE IT A TRY !!! I am sure there are other methods which involve doing a DELETE JOIN of the contacts table directly against itself. I prefer not to do so. 
+
+I have a rather ugly approach that will strip alphanumeric characters from a user variable STRIPPING ALPHAS 
+
+Here is one thing that caught my eye when you replied to my comment: The target table is InnoDB and you are using LOAD DATA INFILE. I see two issues ISSUE #1 : LOAD DATA INFILE While LOAD DATA INFILE can load InnoDB tables, that command can be tuned for loading MyYSAM tables. There is only one option to do this: bulk_insert_buffer_size. either setting to very large or setting it to zero to disable it. There is no synonymous provision for InnoDB. ISSUE #2 : InnoDB Storage Engine Let's take a look at the InnoDB Architecture 
+
+Step 04) Call the stored procedure every 15 minutes using a crontab or using a mysql event Step 05) Zap the slow log every week, month, or year: 
+
+Since what you are experiencing is the expected behavior, you should not use Prepare Statements. You are making many calls to execute a single command. If you simply ran this 
+
+The general idea is this: mysqldump preps multiple rows for a single INSERT statement. This is known as an extended INSERT. My example shows how to create a group of 20 rows to perform such an INSERT. If you want to increase to something greater than 20, you may have to increase max_allowed_packet on the Remote Server. 
+
+I noticed something interesting about your query: you are getting these totals for this year. The trendCut date is not a static value. It is a very bad candidate for an index column since the column value changes and it is neither first nor last in the column order of the index. The index you need is this monitorID,trendCut,nGram,nGramWord,total However, this would still be deficient. Suggestion: If you do queries that require trendCut by year, you should have a trendCutYear column. Try the following: 
+
+For starters, I would not touch the buffer sizes just yet. The sizes youhave in the question are monstrously too big. Here is another observation: You have BLOB data. Ouch, your temp table is going to eat space rather quickly. You could do somehting like this: Create a 32GB RAM Disk called /var/tmpfs by adding this line to /etc/fstab 
+
+These things can make ibdata1 grow but not to any dangerous levels. Over time, I have seen ibdata1 grow to 10G at worst in an environment that featured constant dropping and recreating of InnoDB tables. Performance should be OK. With a bloated ibdata1, you can probably handle big transactions in terms of rollback and insert buffering. I would just increase innodb_log_buffer_size to compensate. 
+
+That way, each pma database can be specific to the local DB instance. As for writing, you must use SUPER privilege to bypass the read_only restriction. Only other alternative is to drop the read_only option from /etc/my.cnf and restat mysql. 
+
+Everyone is used to this one, the good old text file. Just run the following to flush a slow log everyday STEP 01) Turn off the slow query log 
+
+Make sure these script exist on both DB Servers Simply run dbvip on whichever server you choose. . So the failover process and protocol are the following: 
+
+This will allow your current session and new connections to have the extended capacity and permit you to safely run those statements. Give it a Try !!! UPDATE 2014-12-03 00:51 EST I was just thinking. The MyISAM tables and may not like the ALTER TABLE because they were created when myisam_data_pointer_size was 6. To change it manually, do the following 
+
+You can set the RAMDISK_SIZE to your liking OPTION #2 : Use FUSION IO Mount on a FusionIO Disk (all memory, CPU aggressive). Have fun clearing this with your CFO. EPILOGUE Both of these options allow you to use MyISAM and InnoDB as you normally would. The goal is simply to place the entire in RAM. Give it a Try !!! 
+
+The mysqldump option recorded the log file and position as of the start of the mysqldump on line 22. Give it a Try !!! 
+
+I had to use some dynamic SQL to generate all the columns plus a field called 'Nearest' PROPOSED SOLUTION 
+
+That fact that your binary logs are bigger than max_binlog_size just indicates that you are writing too many changes per single transaction. expire_logs_days With regards to expire_logs_days, the granularity is in days. There is nothing you can do with that. If you wish to squeeze the number of binlogs down, you may have do one of two things: SUGGESTION #1 : Scan in the binlog index file, find the last 10 binlogs, get the first binlog of those 10, and run something like: 
+
+I have some queries you can run against the INFORMATION_SCHEMA Run this to get the Total MySQL Data and Index Usage By Storage Engine

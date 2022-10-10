@@ -1,0 +1,57 @@
+where pops two objects of the given size, applies to them, then pushes the result on the stack. The question, now, is how close we can come to implementing . Intuitively, the type is something like 
+
+I presume you are aware of all the standard issues with , and that C++11 fixes by far most of them. I'm thus going to assume you have no C++11 support; if that's not the case, most of this doesn't apply because the whole thing should be rewritten with different semantics. Comments in order I see things: 
+
+This solution does not sit well with me. It looks like you're doing too much: checking how to take the input, taking input, and then checking whether that input worked all at once. Before looking at the code, though, it's worth asking whether this is really the interface that you want to provide to the user. The way you've designed it, it looks like it is meant to be run by a human, as the requests for input will only muddle the output in a script. Furthermore, spell-checkers are usually non-destructive: running it with the wrong input file or the wrong dictionary file shouldn't lose you any data. All in all, this makes double-checking with the user whether the dictionary file is correct questionable. It is also inconsistent: you do validate the input in that case, but don't in the case that both files are provided, so the user has to remember that if he intends to rely on the input being checked. My first suggestion is thus to change your interface: only prompt for things that are not already provided, and if you detect an error, report it and exit. Now to the code: you have a few cases where the program can go in an infinite loop. This happens if the user closes , or if the user provided two filenames via and then at least one failed to open: you'll keep trying to open it and will never be true. Secondly, you're using in most places, but use to ask the user whether he's sure. This will likely break if the user provides one command-line argument and then some file fails to open. Thirdly, the condition of your loop seems strange to me. Why use an extra that you then set at the very end instead of using or to get out of the loop, or, better, checking the condition directly? You can use a do-while loop if you want to save yourself one check, though I wouldn't bother as the performance effect will be negligible, while the code will be clearer. As for the switch construct: I'd use a helper function or two instead. The code is sufficiently small for it to be clear, especially with the comment, but I don't think it wins you anything over two function calls. In general, the function looks too big to me, but I've already covered that above. Last and least, mixing and is strange. I can't come up with any technical problems, but mixing two styles without a good reason is generally more trouble than it's worth. 
+
+A function makes sense when there's several places that call the same exception-throwing function and they all want to immediately catch and handle a single kind of exception said function may throw. For example, often makes sense as parsing may be common and may have only one failure state (no parse). It makes sense to do 
+
+In my opinion, you should get into the habit of programs working on files, not on user input; you'll find that programs are much easier to chain that way. Possible further improvements are handling the (catching it and printing something like "No even numbers entered."), splitting the repeating functionality into a function (questionable use), and maybe adding a function that would be something along the lines of 
+
+What are the possible problems with this approach, and are there any improvements to be made? One part I'm not sure about is defining in the assertion. Seeing as this is an inner scope it should always hide out values, shouldn't it? Could this lead to unexpected warnings (maybe glue to it?)? EDIT: With suggestions incorporated: 
+
+Here's code that does exactly what you were doing, but with 's new constructor and with no temporary. I think this is just as clear, but some may disagree. An even clearer way to do this is 
+
+I could be missing something, but I think you meant to have one of these. (They are likely the same in memory, by the way, it's just a matter of different types.) 
+
+Commentary: I'm not sure I like the way the case when is defined is handled (I don't like it when expressions are evaluated), but I don't think there's any way of handling both that and the unused variable error. Further Commentary: I've thought about it, and I'm fairly certain I do not want expressions to be evaluated, as that would discourage expensive asserts (which I think is a bad thing, assuming those asserts improve matters). 
+
+First of all, I would specify that your stack is using a "dynamically allocated array", as opposed to just an array, as I at first expected a C array when looking at the title. That varies from person to person, though. On to more important things: 
+
+Most binary operators are best defined outside the class in order to make them more symmetric. I would recommend using the following pattern: 
+
+Here too, there is plenty of room for error checking. I removed the parentheses around as I went along; PEP8 discourages these, if I remember correctly. Either way, it is a very valuable read. 
+
+I've been looking at ways to use asserts in programs that must do some kind of cleanup on fatal errors, and have arrived at the following pattern (PROJECT being replaced by the name of the project): 
+
+Notice the funny syntax in the constructor. That's called a constructor-initializer, and it's a good idea to initialise your objects that way when possible -- it might be faster, and it makes it more explicit. Notice that the string is passed by const reference. This means you don't copy it, but that you also can't change it -- you don't want to change it, so that's okay. It has another benefit, but I'll show that later. Finally, we make const so that you can call it on a const instance of . Not very important in your minimal code, but it pays off to be as const-correct as possible. 
+
+This code is perfectly fine to use -- I applied some cosmetic changes, but they don't particularly matter. Gabriel is suggesting you use iterators, but I don't think those make things any better: 
+
+Notice the docstring: it's important to document your code, and while the purpose of is obvious, getting into the habit of adding documentation is good. You could also put the following docstring at the top of the file: 
+
+The way you use ranges is not particularly pythonic, as far as I can judge. I think something like this would be preferred: 
+
+These are nowhere near as elegant as the recursive one, in my opinion, but they very well may be faster. I've profiled all five six with the inputs 53435 and 57435 (takes too long on ideone, but is fine locally) and got the following results: 
+
+Everyone knows you can't put a in an . I decided to implement a collection which does allow you to do this: 
+
+Idem for all similar operators. Feel free to make the return type const if you'd like, although that's not always desired ( may be useful). Most of your static functions look like they should be free functions to me. I don't see a use-case for . 
+
+Note that the spacing may be off (you use 100, 110, and 120 in the different functions -- either pass it as a parameter, or choose one). Secondly, instead of the long if..else chain, you could use a dictionary. For example: 
+
+performs addition of s, performs addition of s, etc. We'll use some monad to store the state of our computation. It doesn't really matter what we use, so we'll just represent it with here. Our function to execute one instruction might be 
+
+I would go with the third, with the second as secondary choice. The first mixes addition logic and comparison logic: it's not immediately clear that the zero is meant to exclude those objects, as opposed to giving a default for . The second is better, but it hides the point behind a lot of unnecessary syntax. The fact that you're working on and not gets lost. The third is even better. It can be conveniently read left-to-right, and all the information is grouped near what we're doing (condition is after the where, sum elements are after the sum). Personally, I would use 
+
+Unfortunately, we can't just say (nor, for that matter, ). Here's a solution I came up with to allow a single definition of in the presence of this. I've simplified a little to reduce the amount of code, so is and we assume all values involved support plenty of operations. 
+
+Now you've got to build your abstract syntax tree. I would advise a class that contains a list of children, the associated tag, and the text in it. Thus, something like 
+
+By the way, you're not checking that the array is of sufficient length in . in does not depend on the parameters of the second-outermost loop, so it should be in the outermost loop. You should also use instead of in the call to . About testing: , , , and all seem to be pure functions, so you can test them simply by checking the return value. You might want to get a framework like GTest or Boost.Test to make them easier to write. 
+
+I wrote a function () that takes a C string and a destination buffer, and then copies the last word into the buffer. The code was originally C++, and was changed into C later. 
+
+Prefer to use RAII above ; you are already doing this with , so disposing of it in the doesn't make much sense. On the other hand, you are not disposing of that way and I would say that this could leak to (extremely unlikely) errors. For example, if was a property and threw, you would now fail to dispose of correctly. 
+
+Therefore, apparently, it is possible to write something a little faster to what you have, but not by a lot; profiling with a larger set of inputs is needed to really be sure, too. If false inputs are indeed significantly faster to compute with the recursive variant, you may be better off using it as most of the results are not going to be palindromes. EDIT: I've added the function provided by Winston to the results. EDIT2: More functions and their running times can be found here.

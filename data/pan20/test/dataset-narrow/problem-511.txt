@@ -1,0 +1,57 @@
+First, you can use instead, so you can actually cancel the wait from maethod. Second, I think you can easily estimate how many milliseconds you have to wait on every iteration, instead of waiting for half a second every time. 
+
+If method is only called by the service that watches files and should not be used by consumers, then it should not be available to them as public method. The easiest way to achieve this is to inject interface instead of implementation: 
+
+Yes, I think it would make more sense, if you have all the required information to construct new animal. If you don't - you should consider moving this logic to game system that would manage the breeding and that would have access to both instances and to your world state. 
+
+It is error-prone and it allows you to store completely unrelated entities in single cache (bad idea in general). I would probably move timeout and to constructor, making class generic and, therefore, strongly typed. 
+
+Why do I have to pass as parameter in order to get it? How does method returning makes any sense? What is the relation between parameter and returned , are those the same instance? You should use clearer method names and signatures to answer those questions. 
+
+Here acts as replacement. The idea is that any object can subscribe to "events" by calling method and any object can invoke "events" by calling . acts as a mediator and passes messages from publishers to the list of subscribed s. P.S. Note, that some commonly used frameworks (e.g. Prism, MvvmLight, and most other MVVM based frameworks) got you covered and already have some messaging system in place. Nuget has multiple standalone implementations available as well, if you are working on, say, Unity project. However implementing your own event aggregator is a great exercise (I have actually shared my implementation on SR, when I was playing around with Dataflow). 
+
+In general I feel like proper unit tests should not use delays and should not rely on them. Not only because those delays quickly add up if you run this method multiple times, but also because the behavior of unit tests becomes unpredictable. The same test can fail on one machine and pass on another, simply because on one machine timed out, while on the other - it did not. IMHO you should take it as signal, that you design is flawed and should be changed. If you own , then you should probably modify its API so consumer can wait for the value (using async methods, events, observables or any other suitable tool). If you do not own then you should wrap it in non-static service and mock this service in your tests. 
+
+It will work for every other class, that has method declared (most standart value types do). You can add method to your own classes, to make them support this kind of deserialization. You can also modify the above code to use instead, to avoid parsing issues related to different decimal separators in different cultures. 
+
+Personally, I hate deciphering Regex expressions. So I would not use it unless necessary. You should be able to split string in to lines using method just fine with . Also is basically , is it not? methods IMHO will look better if you add a couple of local variables: 
+
+I agree with Dylan. Even if you are going to swap multiple sorting implementations in and out (as in strategy pattern) or reuse class in multiple places, interface still looks like an unnecessary abstraction layer, at least in its current form, where it simply wraps LINQ query. As for your code: 1) You should try to flatten dependency tree. Right now your service depends on paging, which depends on sorting, which would probably depend on filtering, etc. It results in tightly coupled, hard-to-follow code with deep call stack. 2) Your interface should do one thing, which is sorting. It probably should not have a direct access to database. Also it might be a good idea to invert dependencies, but it depends on how the rest of your code base is organized: 
+
+The obvious advantage (which might as well be a disadvatage, depending on context) is that this way you will always have a single instace of , and once it is reloaded - every model will use new instance (given they access it via property). Also is a bad name for an interface. Interface name should not be a verb. It should either name a property of an object (e.g. ), or name object itself (e.g. ). 
+
+while it is similar to what you have, it conveys your intention in clearer way. But overall I have to agree with Adriano, I think you are over-engineering. A simple factory will do the job and will probably take less code to write. However you can improve your implementation so it works more like a simplified version of WPF style, so that those actions you were saving up can be applied to any instance of . That, I think, would be much more useful. That you can't do with a factory. 
+
+Somewhat similar but still a bit different approach is to encapsulate your context into some container class and put this wrapper into IoC container instead of context itself. Might look like this: 
+
+for two reasons. First: it doesn't have a third value for "empty" cells. This leads to huge amout of all over the place. Having a third state will remove those and imrove code readability. Second: i do not like and as member names. I cant say i do not understand those, but there is something fishy about this naming. :) I think and would be much better. Why throw an exception? Why cant you remove the setter? Is this property supposed to be virtual? 
+
+I am uncertain, if those tests are good enough. I am also fairly new to TDD, so any advice is welcome. Fraction class: 
+
+You don't show your business logic and you don't say what kind of processing you are doing, so it's hard to tell whether inheritance is the best approach. It doesn't look like it based on your examples. Maybe it is better to have a single class that would contain all the boiler-plate code you require (similar to ) and inject as delegate/interface instead. 
+
+You should avoid code duplication in constructors. For larger objects this practice can quickly spin out of control. Re-use existing constructors instead: 
+
+Instead of using generic you can create your own small class to hold the data and give its properties meaningful names. Having instead of and instead of will improve readability. You can also add a property to represent the type of operation, instead of using as some sort of termination code. 
+
+1) The library you are trying to use clearly does not fit your requirements. So why force it? Aren't you essentially just calling: 
+
+IMHO, it is all-around best option, as it allows you to control when to do initialization. Call initialization automatically on every call: 
+
+I don't understand the use of dictionary if all your need to do is return the pair count. You dont actually need to return pairs themselves, right? Can't you just increment some value every time you find a pair then? Especially if that is one of those tasks, where they measure performance. I'm sorry if I am missing the point here. Edit: Ah, nevermind, I figured it out. But still, won't looping through collection be a lot faster than dictionary lookups, at least for small arrays? 
+
+I don't "get" this whole syntax. I find it really hard to follow and maintain. I mean, yes, when you need to build arbitrary expression, based on some data (user-entered formula, for example) - class is useful. But in your case - you know the evaluation logic beforehand. Why use expressions at all? I would drop them while its not too late. A couple of regular methods will do the same job, while being a lot more... straightforward: 
+
+Well, i am new to this weekend-challenge thing so I am not sure, from which stand point should i review such question. I'll give it a try. 
+
+It's a good idea to move hardcoded "magic" strings to constant fields with descriptive names. It will help you avoid silly mistakes, such as accidently typing "1886" instead of "1887". You will also be able to easily change string value without the need to go through you code looking for places where you used value "1887". 
+
+So you try to white an error to log file, write operation fails and throws an exception, you catch this exception and... try to write it to the same file? I think you can safely assume that in most cases it will throw the same exception again. You also forgot to flush and dispose the stream. 4) Overall I do not see anything particularly "custom" about your implementation, that can't be done by pretty much any other popular logging library available on nuget. My advice would be: do not waste your time on writing yet another logging library. Just pick an existing one that was already optimized and tested by thousands of other developers. And focus on writing actual business logic for your actual application. 
+
+Svick gives a good explanation on why this pattern exists. It is used, when you are not sure which base functionality derived class might actually need. Using your variant makes class dependant on single injection, which might not be the case for every derived class (at least in architector's opinion). Meanwhile, your issues with this particular base class can be easily solved by adding another base class to this hierarchy: 
+
+if not: then i agree with Chuck - you need another layer of abstraction to encapsulate lookup logic. replace in method with 
+
+Another thing to consider is whether you really want to hard-code those values. Maybe it is better to move those settings to some xml/json configuration file and parse/deserialize it instead? 
+
+I guess the bottom line is: if this class helps or have already helped you debug the problem you were having, then good for you, well done! :) However, in its current state I would not recommend using it in production code on regular basis. Multi-threading is already hard enough to get right, your class makes things even harder. Instead I would recommend following mr.eurotrash's advice. Refactor your code, so that you have only one access point to your shared resource, and then lock the entire thing from the inside. For us, mortals, in most cases this is the only bulletproof way to synchronize access.

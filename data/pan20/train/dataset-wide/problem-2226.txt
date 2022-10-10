@@ -1,0 +1,51 @@
+then go into each DB Folder of /var/lib/mysql (or datadir) and see if a table has both and . Those will both are outside ibdata1. Those with only are still in ibdata1. If you would like to extract all InnoDB tables out of ibdata1 without performing the Cleanup, simply run the following: 
+
+These must be resized. Since you are using MySQL 5.1, please do the following: STEP 01) Convert all InnoDB tables back to MyISAM STEP 02) STEP 03) Add the following lines to after 
+
+OPTION #1 : Use Master/Master You could use Master/Master only under one condition: If you write to a DB on ServerA, DO NOT ISSUE WRITES TO ServerB, and vice versa. In this way, you split writes cleanly. Splitting writes to the same DB in Master/Master can be a little clumsy if you depend on looking up rows by IDs that have the AUTO_INCREMENT property. If you look up rows by unique keys that never change from server to server, such as Social Security Number, Driver License, a HashKey and so forth, the splitting writes to the same DB between two Masters in Master/Master is fine. OPTION #2 : Use Slave Servers @DTest already described this, so I will add nothing additional to his suggestion (He get's a +1 for it). OPTION #3 : Use MyISAM in the Slave Servers When using read-only slaves that are not being used as a master for other servers, you should do two things to the data in that MySQL Instance 
+
+Make sure the UniqueKey has a unique index. Give it a Try !!! Since your timestamp is a UNIX timestamp, I'll adjust the code using UNIX_TIMESTAMP() function 
+
+OK, fine. You return a list of preferences that satisfy the innermost subquery Now, how did I compare the number of matches? If the length of > 0, count the commas in prefs and add 1. FINAL QUERY 
+
+Here is another maneuver: If the tables are MyISAM, you could copy the MyISAM tables (.frm, .MYD, and .MYI files for each table) in other folders (databases in the eyes of mysqld) instead of doing mysqldumps, and perform similar operations as mentioned before. Make sure no writes to the tables take place during the copy. 
+
+You do not want to do one monolithic transaction because if the transaction fails for any reason, mysqld will spend a long time rolling back everything from the undo logs. There are 1023 undo logs in the system tablespace file (a.k.a. ibdata1). Here is what InnoDB looks like: 
+
+The size or datatype of the column is irrelevant. It is the unique values that matter. If you only have 7 unique values that means 14.286% of the rows have to be considered. Instead of giving the MySQL Query Optimizer the stress of figuring out that out, you should partitioning the table by hash: 
+
+You can parse text file. The header of each query should have the process ID (Thread ID) that the query ran under Way #2 : Activate the General Log as a MyISAM table There is a table called mysql.general_log. It is a CSV file by default. Run the following commands: 
+
+You evidently have connections still coming in from somewhere who can no longer authenticate. Maybe you could try using netstat and watch port 3306. If your have removed certain user@host values from mysql.user, then there is no need for real concern in terms of the process ID established and used. You may want to run this query now and then... 
+
+ASPECT #2 : Join Operation You could manipulate the style of the join operation by tweeking the optimizer According to MySQL Documentation on Block Nested-Loop and Batched Key Access Joins 
+
+Each MYD requires a file handle. Each MYI requires a file handle. Thus, you can have 60 file handles open. Here is what you can do to see how many file handle open up after a mysql restart 
+
+As we all know, mysqld_safe and mysqld are very different mysqld : The database server instance daemon mysqld_safe : Control program that examines and sets the environment for mysqld to execute. The mysqld executable is actually launched in a loop. When mysqld terminates, the mysqld_safe program will examine the return results and decide whether 
+
+If you know that the MyISAM tables are not being actively queried, not only can you ignore recommendations for key_buffer_size, you could actually lower it. What can you do with the extra RAM you just reclaimed? One or more of the following options: 
+
+Then, replication caught up. My advice would be to properly serialize your INSERTs on the Master because this bug-like situation is actually quite avoidable. 
+
+You can use the INFORMATION_SCHEMA to do every elaborate things: such as : Get counts of all tables using specific storage engines: 
+
+Since the creation of an index is DDL, it must always incur a lock on all moving parts of the table. How does the locking work ? MyISAM For the table whose datadir is , there are file handles on the following files: 
+
+You want the ratio Key_writes/Key_write_requests to be as close to 1 (100%) as possible. I wrote a nice set of queries you can run to see such ratios. You can find it in my answer to the post MyISAM key buffer Perhaps just running will clear away whatever index changes are lingering. If your system does not do heavy writes, this is probably all you need. I recommend converting everything you have to InnoDB so your database can survive a crash. After all, you do not want any changes to an index to linger. Take a quick look at the InnoDB Plumbing (picture from Percona CTO Vadim Tkachenko) 
+
+Since you asked for a specific summonerID, reversing the PRIMARY KEY gathers all the corresponding gameIDs faster for summoner 401129 Make the changes, rerun the EXPLAIN plan. It should improve a great deal. Give it a Try !!! 
+
+To make sure your table is clean and the trigger is working, assuming ID 200 is the default, run these steps: 
+
+with both mysqld binaries. My guess is that although they might be the same version of mysqld, they may have been compiled two different ways or installed differently. Perhaps there was some yum install of mysql done. An RPM install of mysqld will not be same size as a source-compiled mysqld. Usually, source-compiled versions of mysqld will have a service name instead of . They way to find that out is to do this: 
+
+You could use the init-file option You could just create an init file called Put the customer SQL in You could then try one of two things Try #1 Add this to 
+
+However, the introduction of triggers slows down app performance just to authenticate users, particularly if the number of user login is high. Rhetorical questions for your research: 
+
+If you use a DBVIP, you could remove the DBVIP from the Master and bring it up on the Slave. EXAMPLE Let's make up a DBVIP, like . Put this up on the Master in the OS 
+
+Here is a pretty wild suggestion Convert all ngrams to 32-character MD5 keys This table will hold all ngrams of any size (up to 255 characters), 1-gram, 2-gram, etc. 
+
+only if all your queries do no preface the table with the db and you explicit set the current database to zo_dev_matrix. CAVEAT With MySQL 5.6 and back, you must restart mysql after changing the filter in . Starting with MySQL 5.7, you can create a dynamic replication filter so a mysql restart is not necessary.

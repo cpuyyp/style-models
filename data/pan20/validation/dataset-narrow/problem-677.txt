@@ -1,0 +1,83 @@
+Since we are on a code review forum I would suggest you to give more meaningful names to variables, avoid redundant assignments (e.g. initial array assigned to variable is not used), and split the logic into smaller methods that perform distinct functionality. Also you can use extension method instead of writing your own. But I guess that's not what you want to hear, so in terms of algorithms I suggest you to apply the A* algorithm to this problem instead of full search. If you find it difficult to understand and implement, I would recommend you to pass the Machine Learning course from Coursera or Introduction to Artificial Intelligence from Udacity 
+
+If you cannot use the cached results (your current logic), then the implementation can look like this: 
+
+You can filter all the data needed right from repository, and then iterate over collection containing required elements only: 
+
+Apply .NET naming conventions (don't use Hungarian notation in particular). method: use the keyword for all disposable objects () + you can initialise logWriter with a single line: 
+
+I suggest to make non-nullable by replacing usages of with a completed task. It will simplify the code as you can always await on this field, and assume it is the "current" task running. You would need to introduce locking in order to synchronize access to the continuation task, and ensure that the is only called when it was a winning bid. Also, you would need a double-checked locking to ensure that your task is the winner: 
+
+You have a bug in implementation, you're throwing based on instead of values. Also, you don't actually need to throw this exception explicitly, it will be thrown anyway by expression. 
+
+Assuming that you load the data into your instances from database, it's better to issue a direct query over database rather than iterate on a client. As a side note - it is an awful practice to compare dates by comparing strings. If your table has a column it's much better to cast the value to and compare typed dates like that: 
+
+I would use Linq methods to simplify the code. Also I've extracted 2 methods to simplify the main method. And please rename to whatever your find appropriate :). 
+
+It's better to use constructor to set the cancellation after 5 seconds. Also, method is a recommended way to run compute-bound tasks (see remark here). Other issues worth noting: 
+
+I preserved counting the number of term occurrences within document even though it is never used in your code, because most likely you would want to use it at some point later. I removed method (it's used only in one place, and it basically does the same as , so there is no need in separate method. Note how dictionary and are dynamically populated in as we find new terms in documents. 
+
+Note that in this implementation the only way to stop listening the port is to get an exception on . You might want to introduce the to have a control when to stop this process. With this approach registering and listening for all ports will be as simple as: 
+
+I haven't tested this code and can't guarantee it will work on WinMobile 6.5. The main purpose of it is to demonstrate how serialization/deserialization is abstracted from request handling, and how to decouple different request processing. 
+
+It's quite easy to answer your question by looking at the source code. As you can see they copy all objects into new array before iterating them. I suspect that your code will work incorrectly when rows are deleted (accepting changes for deleted rows means removing them from ), most likely you'll get exception since it's not allowed to change collection while iterating it. 
+
+Note that method throws exception if lookup won't find the class matching your criteria. If you prefer to return in this case - use instead. Also, if this kind of code will be called quite often I would suggest to create a that caches the mapping from previously looked up keywords (strings) to the type found. But in general your solution doesn't look correct from architectural point of view: you're trying to match a certain string to full name of the class (and that string most likely is not equal to full name, otherwise you could just call method). It may cause side effects if someone will add a class containing the same substring: for example your intention is to use string to lookup class, and it works correctly now. But after a year of intense development someone may decide to introduce some new fancy task called ... and bang, your code is broken, since new class may suddenly pop out instead of expected one. Update Since you're saving a full name of the type you don't need to search all assembly types for it, just do 
+
+There is no sense in creating a task and waiting on it straight away. The following code is almost identical to your test method (almost - because tasks are created on a thread pool here): 
+
+Your solution is absolutely correct and practical. In fact also returns empty array under the hood, just slightly in a different way (they have a separate instance holder class that is lazily initialized). 
+
+it looks like you're trying to separate DI and IoC principles. In fact they are just different points of view on a same thing, because Dependency Injection is the software pattern usually used to implement Inversion of Control. So there is no need to make difference between them, quite often these terms are treated as synonyms, and most IoC containers do dependency injection as a part of their function. knows too much about , as it tries to initialize it with . This task should be delegated to IoC container (or the code that registers objects in container), and should only use the pre-configured instance. Also, either should expose the method that predicts the future and outputs it to writer (so that just calls this method) or should be declared on class (preferably), and then this class acts as a mediator that gets prediction and outputs it to the writer. The line highlights this problem 
+
+It's probably a bit too heavyweight for your task, but have you considered using knockoutJS for it? It's a quite powerful MVVM javascript framework that uses the notion of Observables to keep UI in sync with underlying data model. 
+
+But the question is still why would you need a string representation of last 3 years, comma-separated. I would consider having a method that will return enumerable of last N years instead... 
+
+Instead of shuffling items yourselves it's easier to apply random sort. So your logic can be rewritten in a single statement: 
+
+Instead of creating a task to check the queue every second it's probably better to just to create it once and wait for the data (errors) to arrive. will help here to provide automated blocking until the new data is available. I've simplified file operations here (each log entry will cause the file to be opened/closed), and it might be acceptable if you don't expect lots of exceptions from your application (as for me that's a reasonable assumption). With a bit of more advanced code (e.g. using ) you could add a logic to keep the file opened for certain period, but I would initially go with simple solution, and change it only when it becomes the bottleneck.... P.S. I strongly dislike creation of exception in order to log the fact of disposition. It shows that your log doesn't contain exceptions only, so you should consider having exception object as an optional parameter in log entry. 
+
+Filtering is actually done correctly, using the best and recommended approach. All LINQ queries are executed lazily, that is they are not executed until you start enumerating them. So all those calls actually just register additional filtering of the records which would translate to entries in the clause in SQL. One thing to notice - the call to method before is potentially ineffective because it forces the ordering to be done on the client side instead of SQL. I would rewrite it as 
+
+You have to learn a lot about OOP... There is no polymorphism in your code, as this principle is designed to tackle exactly the kind of code you've written. The code that uses should never branch its logic based on actual derived type (otherwise it would brake Open-Closed Principle), instead classes should use polymorphism to specify differences in logic. Here is simple example based on your code: 
+
+Firstly I would like to describe some generic recommendations (and performance improvements, as I assume it is quite a critical data structure for you): 
+
+What you need to complete is to define a which consists of 2 180-degree arcs and 2 lines, and pass it to method 
+
+You have missed the Entity Framework and/or NHibernate :), both of them are good data layers that are mature enough. If you want to have a good data layer - the best you can do is start using one of them, and stop designing a wheel. Out of those two I would prefer NHibernate, but Entity Framework may be easier for beginner. Concerning your code - properties should not represent factories (like you do in ), in other words repeating calls to the property getter is assumed to return the same value. To fix that replace property with method Also you are missing the notion of transactions and unit-of-work here, and a whole object mappings story. 
+
+It's absolutely fine to have such a helper. If you want to hear my opinion - I would rather simplify your original code as following: 
+
+It seems that you have a global static logger methods. It is not a good practice, as you're loosing the possibility to tune logging levels for different areas of your application (e.g. setting log level for to while keeping level everywhere else. I recommend to follow the logging patterns suggested for your logging framework (see Creating loggers for NLog for example). The code is not thread-safe, so you may get issues if your application publishes, subscribes or unsubscribes in different threads. Use either locking around collection or ‎. logging level should be used only when the application encounters a critical error after which it usually cannot continue to run. In your case I would suggest to use log level when email cannot be sent. is static, which means that you will have a strong dependencies in your code on this class. I suggest to introduce IoC framework (check out Autofac or StructureMap). The response of is not used, so it can be . Your current code requires spinning up threads per each observer per each notification. I suggest to switch to asynchronous processing model, changing the return type of to . Most likely you would want to wrap the notification of each listener in to avoid side effects when buggy subscribes to your service 
+
+You should mark your and as readonly You are using the presence of the queue in the dictionary as a signal that another thread is currently working on specific ID which is not quite obvious You mix non-blocking (await) approach along with blocking (ManualResetEvent.WaitOne). It would be better to stick to one of them (preferably non-blocking). If you change the approach from "notify the guy after me that he can start working" to "I'm done", then you would be able to capture only the last "guy" against specific ID. "I'm done" is easily modelled by . 
+
+It seems that you are looking for object-relational mapping (ORM) framework. ORM framework is a recommended way to talk to the database. There are several frameworks out there including most known Entity Framework and NHibernate. It will require a bit of learning after direct //, but that would allow you to get rid of manual SQL string manipulations and concentrate on main business logic. 
+
+As to performance improvements (other than caching ) - currently you scan the through the list for each and every item in . Assuming that lexicon is built from it would be much better to scan the list only once, tracking which items you've already counted and where are the doc boundaries. Since you haven't provided the meaning of all parameters participating in this method it's hard to suggest a proper solution, but here is the first approximation: 
+
+That will make your code decoupled, different graph traversal methods would be independent from others, and code would be much easier to read and understand. Example of and implementation: 
+
+This pattern is called a Prototype object creation pattern. Usually it is used to do a deep cloning of objects (that is if is a reference type then it should also be cloned). 
+
+The code overally looks good except that Ayende suggests (and I completely agree with him) not to wrap RavenDB sessions into repositories. I would just create an extension method to add these filters to 
+
+The main issue here is that you don't expose the actual slow part as a . What you currently do is you create a new thread each time you need to send HTTP request instead of just using asynchronous execution that doesn't require new threads (except the one your code runs on). Other issues worth noting: 
+
+Unfortunately you haven't described specific use cases for your pub/sub requirement so it's hard to show this solution on specific example 
+
+UPDATE: To hide the details, and express the locking behaviour even further you can wrap the like this: 
+
+If you want to write tests for this helper class only - they would be integration tests since they touch the file system. In order to make the code unit testable you need to make it independent from hardware and physical interaction with network or disk. If you want to unit test the business logic that uses this , then you should introduce Inversion of Control to separate business logic from file activities. You'll have to create an interface that describes all operations you can do with files, transform this static helper class into class implementing that interface, and reference file operations from business logic via interface only. Example of file helper: 
+
+There is no way to simplify generic parameters if you want to keep Entity class generic, as noted by @svick. The only thing I can suggest as alternative here is to remove generic parameter from . I don't think you need 10 different types for field, most likely you'll have or , so you can create 
+
+What you are actually doing is updating the with objects from based on matching . The optimal solution would have an O(N+M) comparisons (N and M - number of elements in both lists, while your solution performs O(N*M) comparisons. In order to make your code simpler I suggest to use the lookup table like this: 
+
+As of code itself it is quite good, the only thing to note is that you can add a constraint on and just use . But as with all self-written DB access frameworks I would suggest to switch to mature ORM frameworks like Entity Framework or NHibernate (if you haven't worked with them previously Entity Framework would probably be easier for you). They have a well-developed environment, proper unit-of-work management, good querying and tuning capabilities. 
+
+The SQL Server query analyzer is smart enough to understand that these queries are identical (given that is unique in for a certain doctorID/favType pair). They should yield exactly the same execution plan, and thus they are equal in terms of performance. I would prefer second variant though...

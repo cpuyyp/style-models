@@ -1,0 +1,83 @@
+Here's the most elegant way I can think of writing this. I use to handle both Arrays and Objects as your tests showed you wanted to support them, though as pointed out in comments your code didn't. These changes also allow you to use more than 2 pick properties () as you can with the normal /. For 3 and 1.8? you'll need to change to the rest of the code should remain the same. 
+
+I'm biased here, but as a past Mootools developer I keep comparing your function with Class.refactor. Personally I would prefer you add a reference to the original function on - maybe as some property or let the user handle storing the original. I'm not a fan of adding a global for the original function. A question, why do you not pass to your constructors? If you're wrapping some classes this seems like it may make usuage less intuitive. Update (still at work and can't look into removing the approach yet but I think I found a great change... You can rewrite the extremely confusing like this (unit tests passing): 
+
+Alright I'm going to focus on some potential errors with your function. The first obvious issue is you're relying on being set. This isn't always the case - for instance consider any class declared . Now if you run . Furthermore, many frameworks provide some class extension/constructs such as which would invalidate that check. Further issues may present themselves with code minification. Out of curiosity, I decided to plug your code into the underscore js test suite to see how it would do. I couldn't implement as it accepts multiple types as objects. It passes all the tests but the ones for understandably. I excluded the tests as I couldn't get them working on gists or jsbin but they pass as well. Not bad :)! 
+
+One last thing before I head out... These are terrible variable names and, moreover, extending an object with its self is pointless 
+
+Alright first thing the order that an engine enumerates object properties is not guaranteed!!! Its pretty consistent but there are engine bugs and you shouldn't rely on the behaviour. That said, this is how I would write your . You can use to create the ranges list but again - order isn't gaurenteed. You could sort it I suppose? 
+
+Why is the inner type ? As far as I can tell the order is irrelevant, so I would think that made more sense. ? Names should communicate meaning. My best guess is that it's short for matrix, but you don't actually have a matrix here. Options for better names include and . Most of the other variable names are also too cryptic IMO. 
+
+This looks like a test wrapper rather than the "main" code. It would be nice to offset it in a separate file. There's also a good case to be made for writing unit tests before you write a TUI test wrapper, and I think you would find reviews of unit tests more useful than reviews of a TUI test wrapper. 
+
+Or in other words . You're rotating lists often enough that maybe it's worth factoring out a function to make the flow of logic clearer. 
+
+depends on three things: , , and . Therefore it's not necessary to cache more than one row at a time. With that insight you should be able to refactor it to not need at all. I actually prefer to solve this problem by going down rather than up. That is to say, I define my intermediate result as . Then the double-array of can be processed in order using a simple loop, as opposed to in reverse using a slightly more complicated loop. 
+
+You say that you're looking for techniques to shrink the code. The simplest one is to not overcomplicate. Consider 
+
+Maybe I'm missing something, but where's the conversion to feet? I see a calculation using a speed in miles per hour and an acceleration in metres per second squared. It would be an astonishing coincidence if that gave a distance in feet without an extra conversion factor. 
+
+PS on a point of English language pedantry: distinct is a better choice of word than unique. Perhaps deduplicated would be better still in this context. 
+
+These only appear to be used in direct assignments such as . Why not inline the assignment as follows? 
+
+is unconditionally an improvement, and looking at your example data, in practice it should avoid you running out of memory. 
+
+Ok, so you've heard that you should hash passwords before storing them, because it turns out that is a SHA hash. But you don't seem to have heard of salt. The password database is going to be wide open to a rainbow table attack. I would recommend that you use a framework which has a good password storage mechanism (if there is one). If not, read the OWASP Password Storage Cheat Sheet very carefully before you rewrite this code. 
+
+I'm not a minifier but theres no good reason to do Counter proposal: I believe you should drop the arity requirement and drop the global - instead inform the user they should cache the original locally. I've rewritten the code with these considerations in mind. Here's a jsbin with these changes (note I haven't removed the global to respect your test cases): 
+
+Edit this will also not work for objects created via unfortunately. will throw a as the resulting object will have no property Similarly it will fail for any Object that has a property... consider 
+
+Spent a little hacking away at this to simplify the code. I wrote comments on changes inline the script, let me know if you have any questions Some thoughts on the changes. Notice that how I restructured your validators in the form 
+
+I would add a after your Also the helpers you use in seem pretty redundant. I would personally drop the helpers and write that function: 
+
+Some key things to notice - see that its checking backwards, that will improve speed for near sorted collections. You can use instead of the while loop -- thats the difference between the and implementations. You can write the while loop as below if ya prefer 
+
+I don't see any good reason why you're using some of these hacks. It took me a while to understand what you were doing and I was pretty much forced to step through it in debugger. Going to review this line by line and point out simplifications and patterns as I see fit. I'll be batching together all my suggestions into a counter proposal in this jsbin, using the unit tests from your repo. To start, it seems quite unneccessary and non standard to get the global scope your way (and I'm going to later argue you shouldn't need it)... 
+
+I've made some validators of my own and this is my personal preference for structuring validators and it allows us to due away with that weird variable. I've also fixed a bunch of your linting errors - there were a lot of them so I didn't really comment on them. In the future run your code through jshint before posting it :) One last thought. There doesn't seem much of a reason for you to be writing this code as a class as its most likely a singleton and you're not writing the code on the prototype. I've resturctured your code to be a more conventional singleton rather than a class Here's the start of a counter proposal... Theres likely bugs but the code is a great deal simpler and uses less hackery than your original approach. 
+
+This is fine until someone uses the class with a which overrides . In an object pool you care about object identity, so this should use . (NB the above line occurs twice). 
+
+IMO that's a lot easier on the maintenance programmer. But then without the parameter is simply duplicating code, and you can eliminate it in favour of 
+
+That \$\gcd(x, 10) = 1\$, so \$x\$ is odd and not divisible by \$5\$. Given such an \$x\$ we can recover \$y\$ by a division modulo \$10^d\$. 
+
+None of these need as wide a scope as they have. In particular, and are only used inside the nested loop, and are initialised every time they're used. They should be pushed in (if not eliminated...) 
+
+Most of the names follow C# capitalisation convention, but not all. and are both local variables and should start with a lower-case letter. 
+
+Some OO purists would argue that you should ask an object to do something for you rather than to return data to you, but most Java practitioners are not such purists. I would expect to see an override of rather than a method. (Also, for preference, I would follow 's convention for the of a map). 
+
+For such a simple condition I would prefer to use rather than if-else assignment. I would also reorder the second condition to exhibit the symmetry more clearly: 
+
+Huh? The first method ignores its argument, which is not an out-param but is overwritten without being read. The only caller is the second method. Why not just have this? 
+
+If I supply no command-line arguments, or if I supply an invalid one, the output is That doesn't help me at all with figuring out my mistake. I'd rather have the ! 
+
+This can be shortened and probably made faster by using a basic bitwise trick. selects the least set bit of , so 
+
+Correctness Although maybe some comments would convince me that the code is in fact correct, I'm highly suspicious of the parsing. is called once per line of input, and inserts a directed edge. Nothing in the supplied problem statement suggests to me that streets are one-way. I also find it highly suspicious that in a completely disconnected graph is going to end up being negative. If it's counting streets, surely it should be zero in that case? 
+
+Don't have time to do a full review but you probably want to reorganize your and loading. This will allow the browser to download the stylesheets concurrently while downloading+executing your scripts. Also you probably want to load before as knockout will delegate to the more robust method where applicable. In the press release for they claim you won't have to load jQuery first. Also note, there's no advantage to loading in head afaik as it won't actually apply the templates () until the content ready event. Also you probably want to point to a single version of jQuery to prevent something going awry between jQuery (quite unlikely I guess but worth considering).. 
+
+I would probably add a class/something to use as a selector (in this case I added ) to make lookup easier. You can do this in other ways such as getting the values of the actors map so do it as you will. Also your case is calling on a string as is the current contents of whatever the event is hooked to. 
+
+The extend method is being applied to which is the set of selectors will apply when selecting elements (see here) -- are the pseudo selectors acknowledges. The extend is useful if you want to add multiple jQuery selectors succinctly but for adding pseudo selectors I think its just a norm noting you can also add the selector as below 
+
+is redundant you can just do You will run into false positives for any property set on such as or (for instance consider ) is not a sufficent as it will miss any falsey value (NaN, null, false, 0, "", etc). You should use either the operation or This can be done considerably faster (and more accurately) by iterating the array instead of the properties on (lets you get around a call) 
+
+The first thing that really jumped out at me is your method is using synchronous http requests (looks accidental as you're using a callback anyway, see msdn for why this should be avoided etc). Instead of you probably want Making async requests will allow the first notable improvement I would make is to make loading async. I'm going to use the native promises -- feel free to adapt 
+
+One more note: you probably want to add your custom selectors near the top of your code (and definitely outside of your keyup event handler!) in case you want to use your selector somewhere else in your code. Now some nitpicks Your Javascript near the end becomes difficult to read because the formatting of your handler. Try pasting your code through an automatic formatter and notice how much easier it will be to follow (eg $URL$ 
+
+Again, this can be memoised. It's also possible to trade off memory for speed by splitting up the multinomial as $$\begin{eqnarray}T(\lambda) & = & \binom{m}{a_1, \ldots, a_k} r(1)^{a_1} \ldots r(k)^{a_k} \\ A(n, s) & = & \sum_{\lambda\vdash s} \binom{n}{m} T(\lambda)\end{eqnarray}$$ where the sum is over all partitions of \$s\$, \$\lambda = 1^{a_1} 2^{a_2} \ldots k^{a_k}\$ in the frequency representation, and \$m = \sum_i a_i\$. \$T(\lambda)\$ can be memoised, but also it can be calculated incrementally by using a more complicated object to store the partitions instead of just an array of the parts: 
+
+can be written as a one-liner using something called list comprehensions. This is something that's worth learning because it's very common style for Python. 
+
+I don't pretend to understand all of the code (some comments might help, particularly comments which indicate the types of variables and arguments), but I don't think it's really clustering. In fact, I strongly suspect that it's classifying the star locations into an icosahedral dissection of the sphere. If I'm correct then that points to an algorithm change which seems likely to give a good speed-up. Linear algebra is, in any case, rather heavyweight. The ray-triangle intersection calculation is unnecessary if all you want is to know whether the ray intersects the triangle. A spherical triangle is the intersection of three hemispheres: testing whether a point is in a hemisphere is a simple dot product and sign test, and testing whether it's in the intersection of three is three dot products and sign tests and two Boolean ANDs. That's worst case sixty dot products per star, and if the ANDs short-circuit then it will be fewer. However, if I'm correct about the isocahedron then it has a very useful property. It's a Voronoi triangulation. You can classify each star into the corresponding triangle by converting its coordinates to Cartesian, taking the dot product with the centre of each triangle, and picking the triangle which gives the largest dot product. That's twenty dot products per star, but further optimisation would be possible by exploiting the structure of the icosahedron to create a binary decision diagram. I haven't calculated whether it can be reduced to the information-theoretically optimal 4.33 (average) dot products per star, but I certainly expect it could be as few as six or seven.

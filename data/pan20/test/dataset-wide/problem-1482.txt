@@ -1,0 +1,75 @@
+Entity Framework implementation assembly References Model and the Entity Framework / System.Data.Entity assemblies 
+
+Of course you can expand on that by employing the template pattern for the extra parameter settings. I would also look into extracting the parameters to a "parameter object" instead of several parameters. 
+
+Instead of wrapping the proxy creation in a concrete service proxy implementation, I'd write a concrete service factory instead which in turn uses the ChannelFactory. The service factory class could also use an interface for creation, so you can have multiple concrete factories. $URL$ That way your code can continue to depend on the interface only, and you can change the way the proxy is created without writing concrete proxies. You could also have a "local service factory" which doesn't go over the wire. Usage would be something like this instead: 
+
+More on extensions methods here: $URL$ Inheritance Put these methods in a base class and have the behavior that differs in inherited classes. [edit]Updated to show how the base class can be generic[/edit] 
+
+Even though the code is short and pretty enough, I think you'd benefit from reading about the strategy pattern and state machines. Go ahead and google it for a wealth of resources on good programming techniques. You'd also be much more confident in how it works and how to arrive at those patterns by employing unit-testing and test driven development. (JUnit is a good start) Good luck with your assignment! 
+
+If you do this, you'll probably see some pattern emerge. I can already see two classes, or rather instances of a- instead of one. Maybe something like Strategy? 
+
+Testing Now I need to test this. First we load a single key:value pair, where the key is a hashable structure. I chose a tuple with 3 integers: 
+
+Next we can test our bulk-load method: together with the "many keys - shared value" which is focal in your problem: 
+
+(1) a new key to a known value only means an update to the values. Next we worry about if it's a new relationship with a new value: 
+
+Update2 Above: Runtime test without powerfunctions and with Justin Peels recommendation to use return list(a.values()) 
+
+A dictionary can hold 1 key to N values, but not N keys to 1 value. Fortunately the reverse operation of N keys to 1 value is the reverse of the dictionary, so we can trick around this by creating a class: 
+
+Now we can add and delete. But how about bulk updates? They constitute a special case because can't see that you want to propagate your update onto multiple values. So we need to tell it WHAT to update. Here is a proposal that uses the relationship between the key, the old value and the new value that should be accessible to all keys that other would have a relationship with the old value: 
+
+In test03 I need to pack the value into a list, because iterload needs two iterables. I could made my code much harder to read by accounting for many different cases, but I think the programmer should build a function for one thing and make it clear for future recall of what the function is supposed to do. In test04 - below - I have added the usage of the update function. 
+
+I just re-read some comments and realize you need paging too. Add a private int page, and a private int pagesize, then add the multiplication of those to foods[i] in CreateButtons, and swap foods.Length with pagesize. You can have as big an array as you want then. 
+
+Property will expose the current value on postback by it self. You could also expose an event on your control that you refire in the ValueChanged event of the hidden field. 
+
+I don't immediately see any efficiency issues with your code. It's simple and concise. But I do notice that you don't follow all the best practices for plugin authoring described here: $URL$ I guess you'll do something else than alerting ten times in production? ;) 
+
+You should use as predicates on your interface and have the implement that interface. By only using , you won't get translation to L2E etc, but will have to enumerate the entire DB table before you can evaluate the . The interface can be mocked, hence unit-tested without a physical db and also used with other ORMs. It's generally prefered to keep and the in a separate implementation. You can pass the to the repository constructor, which can access an internal property on the UOW exposing the . By doing that you can share the same between repositories, and batch updates to several entity roots of different type. You also keep fewer open connections, which are the most expensive resource you have when it comes to DBs. Not to forget they can share transactions. :) Hence you should not dispose the DbContext in the Repository, the Repository really doesn't need to be disposable at all. But the UnitOfWork / DbContext must be disposed by something. Also, ditch the predicate to . Since you return an , and use an for the predicate, you can keep building the Queryable after the call. For instance . It will still be translated to "select [fields] from [table] where [predicate] order by [orderprop]" when enumerated. Otherwise it looks good. Here's a couple of good examples: $URL$ $URL$ $URL$ And here's how I do it: Model / Common / Business assembly No references but BCL and other possible models (interfaces/dtos) 
+
+This bit repeats several times. I would encapsulate it as a private method (?) to avoid code repetition. And as a side note, I don't really see any purpose in , it's just clutter. Clear the collection anyway (even if it's empty), I wouldn't expect much of a performance boost from this check :) Benchmarking This is weird to me. You're setting in : 
+
+I'm not sure about this condition. There are other states where connection state isn't Open, and yet it should still be closed - see $URL$ I would err on the safe side and try to close it anyway. You could test it, but I don't think anything bad's going to happen if it's closed already. Or you could make it instead. Since there are other possibilities (, , , ), this is not the same thing. 
+
+It's simplier. Alternatively you could use a regex pattern and get rid of all the injection chars in one go (with ) rather than one by one. I'm not too fond of the name - it's actually filtering the injection characters out. Personally I'd rename it to - somewhat clearer to me - or perhaps just , which is a widely recognized synonym for this operation. 
+
+Do you plan to extend this class? If not, I would mark it as . Given its nature, inheritance can open a Pandora box. 
+
+Not always. It can also return an error. Exposing crucial request settings as public properties (rather than eg. method or constructor parameters) is questionable too, in my opinion. It doesn't enforce calling code to supply the necessary minimum of information required for the request to succeed. So it's not a particularly friendly API, if I the burden of remembering which properties need to be set is still on me. Your method doesn't even validate it explicitly - eg. if is not set, I'll just get an exception from complaining about the lack of , and you're leaving it up to me to figure out that it translates to the not being set. Same with . Such mutability also introduces an inherent lack of thread safety - what if someone changes one of these properties (from another thread) while is being executed and is half-way through? We don't always need thread safety, but it's one thing not to implement it at all, sort of ignoring the issue altogether, and another: to throw it out of the window by design, for no good reason. Other things being equal, I'd say prefer stateless/immutable objects to stateful/mutable ones. Naming: if the class is named already, there's little point in naming all its properties , , etc. (with curious omission of - why not , then?). It's known as Smurf naming convention anti-pattern. 
+
+Makes sense, but you should DRY up your concrete factory at least. Forgive me my rusty Java, but something like this: 
+
+This makes closed for modification (cannot change price / individual price), but open for extension (can add to price). (Naming and structure in my example could probably be improved, but it serves the purpose) The behavior is still possible to modify, though, so an even better solution would be to have some collection or set of rules you can add to, so you don't accidentaly override without calling . 
+
+There's a couple of nice alternatives for you. Extensions If you don't need to encapsulate the instances, you could make your methods extensions for or whatever you've extended: 
+
+Put the contents, or all of each if and foreach into their own functions. Unit test the functions. Put everything else into small functions too. In the end your main function should read like a small story: 
+
+This might be off topic, but if you use switch statements for more complex functionality, you should read this before going further. $URL$ 
+
+All good answers. I'd like to add my two cents to @deepee1's answer. If you keep the FoodItem class he provides (with a constructor), you can create a list of food items and then create everything else with completely DRY code. You can even easily move the definitions out of the code. Not to mention creating n different UI's with the same "logic". Here's what I'd do: (Forgive any mistakes, long time since WinForms :) ) 
+
+As a sidenote, I'd look for another name than "BaseClass". It doesn't say anything about what it does. 
+
+Next we need figure out how to get data into the database. This is similar to the SQL INSERT STATEMENT, where we maintain both our keys and values in single transactions: 
+
+Now we just miss one thing to pass all your test: The bulk loading method where you map N keys to M values. This is a "cartesian" product, which is a fancy word all N's maps to all M's. In Python this is a walk in the park as we can iterate over both and reuse our method: 
+
+We have now implemented the INSERT STATEMENT in our database. Now it's time to worry about how to delete records and relationships. For this we hack the function to both take a key and a value. Why? Because otherwise we won't know whether the user wants to delete a single relationship only, OR all entries associated with the key I thereby choose that: 
+
+This also works as our assertion in the last line doesn't complain: The value of d[1]...d[3] are the same: The text string I add two more tests, which should look very familiar to you, though with minor exceptions: 
+
+So far so good. A slightly annoying thing is that we can't really read what is in the database even though we can get things in and delete them. This calls for the SELECT STATEMENT - or python's method. But(!) we need to be careful, as our database stores data internally as a s that are accessible from keys. So we need to unpack them onto something useful. As I like working with lists, I have chosen to provide lists, unless its a single value, whereby I only return the value itself: 
+
+No. ViewModel - as the name itself indicates - should only model the view. Business logic, such as validating a certificate, should be extracted to another class (a service), adhering to the Single Responsibility Principle. This includes handling any errors that occur. Extract elsewhere. 
+
+Who would have thunk! Not too informative... In contrast, this code doesn't comment the non-obvious stuff. For instance, now your class has a certain policy regarding nullability - which, as I said, is by itself an improvement over the previous code, where this policy was sort of accidental. But is it obvious that throws an exception whereas is ignored? I wouldn't have guessed that correctly, and yet the documentation doesn't say a word about it. It's too busy telling me that element is element. By the way, it's not just a question of documentation - I'm not sure I like this asymmetry in principle. And it isn't the only inconsistency lurking in the implementation, either. For example won't crash when the list is empty - but will if there are already elements in it. What's the rationale for that? :) That's not predictable behaviour in my book. Speaking of , this comment is just plain wrong: 
+
+There's no use in putting "generic" in the name. Any C# programmer knows that indicates generics by itself. Case in point: in .NET we've got and - not . (So "drop the the" ;) ) 
+
+Error handling or the lack thereof. Sending an email can fail for a variety of reasons, and you don't handle exceptions or failures. In you're sending emails in a loop - what if there's 10 managers, and sending it to the second one fails badly, shouldn't we try to ensure that the remaining eight would still receive their notifications? You don't handle edge cases either (such as an inexistent recipient: it would result in a once you tried to retrieve from a null , if didn't contain any entity under a given id).

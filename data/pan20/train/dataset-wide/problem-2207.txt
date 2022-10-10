@@ -1,0 +1,73 @@
+As a side note, another commonly used feature with some overlap here is triggers. It is often better to have a virtual column than a trigger updating legacy columns on insert/update. In response to this specific question: 
+
+You can use statement-based replication and add the column to a slave first. Any pending modifications will queue up on the slave, and apply once the alter has complete. When the slave is fully up to date with the new schema, you can effectively 'promote' it. I am sure you are aware, but MySQL 4.1 is quite old. Triggers were not introduced until MySQL 5.0 (2005), so this limits your options to use tools like pt-online-schema-change. 
+
+I can't vouch for their credibility, but I did manage to find 4.0 RPMs with a Google search for "mysql 4.0 rpm". The obligatory disclaimer of course is that MySQL 5.5 is now the minimum supported version of MySQL. But that will be the same case with using Red Hat Linux 9 (Shrike). 
+
+Let me maybe try and describe the historical problem with log flushing and how adaptive flushing works: 
+
+I wrote about this a while ago, after I contributed to the interview process at Percona. I think that to assess someone, you have to try and make them do what they would be doing in regular day-to-day activity. Random questions like "What is a serial data type in MySQL?" or intelligence questions like "why are man holes round?" do not achieve this. You also want to make sure that you give everyone the same test. If you have an open-ended conversation only interview, the more confident and (slightly manipulative) people will stand out, as they can subtly skirt around your questions and change them into ones they are good at answering. You won't always realize when this is happening but it often contains something like "when I started as a DBA we had 2MB of RAM, and used tapes.. blah blah blah" :P Having said that, here's my standard list of questions: 
+
+The simple answer is: it is not possible to guess what is the source of contention. The more detailed: MySQL 5.6+ can instrument a break-down of query execution time, so that you can see if performance is stalled waiting on IO, locks, etc. The diagnostic feature is called . The easiest way to start using it, is to download MySQL Workbench 6.1 and chose "Performance Reports" (under Performance). 
+
+Short answer: MySQL does not support this feature. Longer version: The minimum granularity for replication filters is at the table level. If using only MySQL (and no script in between) you can achieve similar by having a shadow table on the master which you apply triggers to insert into. The resulting trigger changes can then be replicated to the slave in the desired format. Noting that this would require row-based-replication enabled to work, otherwise triggers fire on slaves. If using a script in between, you can quite easily watch for changes in the replication stream and apply any transformations. I have an example of how to do this here. 
+
+The best way to see current threads (including all foreground and background threads) is now with . For example: 
+
+The file is only used by (which is deprecated). The new way to bootstrap a server () writes the randomly generated password to the error log. 
+
+Multiple queries executing at once A single query executing in parallel Some sort of logical read ahead for table scans / clear cases where the next pages are well known. 
+
+There is no footprint, and you will likely not see overhead. Sure, there are hypothetical cases: If you have many virtual columns and from a client then more data will be sent across the network (since rows are sent in full; clients don't know they can reconstruct certain data from virtual column definitions). 
+
+In my opinion you are changing too many settings without evidence of benefit. In some cases you are also setting values to the default, which is fine - but it may be beneficial to just inherit the default so that if it changes you can take advantage when upgrading. Specifics: 
+
+I agree with @Remus' last point - most people use Hadoop for crunching and store the result in MySQL. You can also have apache write a custom log for you with only the fields you require, and export environment variables from the application for Apache to save (if required). For prior art, I would recommend taking a look at how OpenX (advertising server) has solved this problem through various versions: 
+
+The minimal package was designed for use by the official docker images for MySQL. It cuts out some of the non-essential pieces of MySQL, but is otherwise the same product. 
+
+With mysqldump you can only safely use if all your tables are InnoDB, otherwise your backup is inconsistent. If you have the requirement for a hybrid backup, then you need the on all tables in the backup (default), which will be safe for all engines. It's also worth mentioning that the default options will make sure your backup is safe, you don't need to turn any special flag on. Note: If you do have a hybrid mix, perhaps look at xtrabackup. It will only be locking during the MyISAM phase of the backup. 
+
+It used to upset me how features were decided at MySQL... How was it decided that partitioning was a critical feature for 5.1, but backup totally missed the radar? There seemed to be a bunch of low hanging fruit (years old bugs) that were not being addressed, and I was always cynical that unless it could check off a box on a features grid, it would never be handled. There was a bit of talk, but no indication it was any better under Sun's management. However, now that Oracle is in control, several years old bugs are being addressed, performance has become a feature, and I actually find really compelling reasons to upgrade to 5.5 and 5.6. I feel awkward having to defend one of the world's biggest software companies, but they're really not getting enough praise. Instead everyone is making claims they are somehow screwing the project. Most of the projects they 'screwed' made no commercial sense to them... however they make a non trivial amount of money on OEM licenses and subscriptions/professional services for MySQL. 
+
+Correct. There may be reasons to hide changes that other transactions see (as part of multi-version concurrency control). If you're trying to build tests to prove things - make sure you understand how transaction-isolation levels work :) 
+
+I have a blog post explaining why this is here. The short version: The query cache causes scalability issues on multi-core machines. So it is now disabled by default. 
+
+To extrapolate a little from your question, I am assuming you are worried about memory fit with a tree, because to efficiently search, all root nodes should be in memory, since you always have to walk this path to find your leaf pages? This is true, but one consolation is that commercial databases try and make their trees as fat as possible, rather than deep. Try running xtrabackup --stats on your data to see. For example: 
+
+There are a number of commercial tools that allow MySQL to Oracle replication (Continuent, Oracle GoldenGate). I have not used any specifically, so I can not provide specific recommendations. If you are going to write your own solution, I think the best way is to watch the binary log stream. I have an example of how to do this on my blog. 
+
+For (1) I/O will be able to execute in parallel for this. There are some limits with MyISAM: table locking and a global lock protecting the (index cache). InnoDB in MySQL 5.5+ really shines here. For (2) this is currently not supported. A good use case would be with partitioning, where you could search each partitioned table in parallel. For (3) InnoDB has linear read-ahead to read a full extent (group of 64 pages) if >56 pages are read (this is configurable), but there is room for further enhancement. Facebook has written about implementing logical-readhead in their branch (with a 10x perf gain on tablescans). 
+
+What happens when you set to 2 (and why you get better performance) is that you just buffer changes for longer, and therefor get more IO request merging, and better performance. It doesn't create more work. Shameless plug for additional reading - When does MySQL perform IO? 
+
+An index on (s,s,l,l) only uses the index for (s,s,l), but applies Index Condition Pushdown for the remaining (l): 
+
+In the comments of my post Tim Callaghan linked to this: $URL$ Which shows inserting 1 Billion rows using the iibench benchmark. 
+
+So it looks like the time increased because there has to be a comparison to confirm that the value itself has not been modified, which in the case of a 1G longtext takes time (because it is split across many pages). But the modification itself does not seem to churn through the redo log. I suspect that if values are regular columns that are in-page the comparison adds only a little overhead. And assuming the same optimization applies, these are no-ops when it comes to the update. Longer Answer I actually think the ORM should not eliminate columns which have been modified (but not changed), as this optimization has strange side-effects. Consider the following in pseudo code: 
+
+Yes, your kill statement is the likely cause. The command will only show you what is happening in foreground threads. InnoDB is likely rolling back the transaction in the background. Some diagnostics you might find useful: 
+
+I would recommend using InnoDB memcached over Handlersocket. The advantage of InnoDB memcached is that: 
+
+There's really risks associated with both approaches: Option a) Index from the start, but not realize you have created a number of indexes which are never used. These add some overhead (most noticeably to queries that modify data, but also with optimization of SELECT statements trying to identify the best index). You will need to discipline yourself to identify indexes no longer being used and try and remove them (PostgreSQL can do this; unfortunately MySQL by comparison is very weak at this out of the box.) Option b) Don't add indexes until people start complaining, or your diagnostic tools trigger that certain queries are slow and could be improved. The risk that you introduce is that you don't have a big enough time window between when you notice you need the index, and when you have to add it. PostgreSQL does support building indexes , which does reduce some of the stress from this sudden-index-add-requirement, but there are some caveats noted in the manual. 
+
+You can kind of do this from MySQL 5.6 and onwards using . I have an example of finding the ideal buffer pool size on my blog here: $URL$ The caveat is that you may need to either restart or lower the buffer pool size first. Inactive pages will just stay in memory if there is no need to make free space - which could skew your result on a server that's been running for a while, yet has plenty of memory. 
+
+Obligatory disclosure: I have worked for MySQL AB/Sun Microsystems & Percona (I never worked for Oracle). I'm now independent, and have no shares/remaining stake-holdings in any. I do however acknowledge that I have a stake holding in MySQL succeeding in general, as I have invested time in a specific skill-set. 
+
+This is a somewhat complicated question. When first starts up, it will allocate a bunch of memory for itself, but the operating system will actually delay allocation until the memory is first read or written to. That is to say that you will often see in a program like that the size is much larger than the size until the server warms up. Within caches like the and will have a maximum size (that you can change in your my.cnf file). When these buffers are full, then they will discard the least recently used (LRU) contents to make room for new content to enter the cache. So yes, after some inactivity (and assuming a full cache) the tables that are not in active use will be removed from the cache. In MySQL 5.6 it is possible to see the contents of the via a series of meta-data tables in information schema. I have an example of this (to show ideal minimum cache size) on my blog here: $URL$ 
+
+Option (b) tends to be my preference, but I think a hybrid of both options is probably the best solution. It has to do with your confidence level as to whether you think an index will actually be used. What makes this a particularly complex discussion is that it is usually easy to change indexes, but it is harder to change schema. I do not want to promote the delayed reaction of b as an excuse to be reckless. 
+
+As noted, will change the system tables to include any new columns required. MySQL 5.6 includes support for microseconds in and , and as such uses a different format on disk for storage. Conversion to the new format does not happen as part of , but will happen on or and in which case you will not be able to start MySQL 5.5 and use this data directory. 
+
+MySQL will not serve you stale data (if that is your question). The index is maintained and kept up to date as part of every operation (whether be INSERT, UPDATE, DELETE etc.). 
+
+Shameless plug: I wrote about this in a blog post. A couple of jobs ago I was using this to log/serve ~1 billion ads/month. 
+
+Total memory: 24.41 GiB (InnoDB needs about 5-10% more than your buffer pool for internal structures) Buffer Pool memory: ~23.85 GiB I'm going to have to guess that the memory is consumed at the MySQL layer (not InnoDB), and two common causes are intrinsic temporary tables, and very large sort/join buffers. 
+
+The first thing that I would point out is that MySQL data files are quite portable. You don't have to worry about endianess/bitness/operating system etc. The next thing to mention, is that in MySQL versions do not always paint a picture of what has changed:

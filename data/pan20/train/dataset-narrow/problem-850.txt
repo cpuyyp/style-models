@@ -1,0 +1,69 @@
+You would still use the visitor pattern he proposed, but this alternative IDeviceScript implementation would allow you to populate your list of available device scripts via some configuration source (a flat file, database, app.config, etc.). 
+
+You could simply make GameState a Flags enum, which is merely a more compact version of the decision table palacsint proposed. 
+
+To build on @Jesse C. Slicer's comment above: interfaces are for defining contracts, whereas abstract classes are meant to add some base implementation code. An abstract class without any implementation code does not add anything an interface does not already provide. Even worse, it blocks inheriting from other (potentially useful) classes. Relationships can be defined either way. You are free to provide an abstract class to callers which takes care of some of the base functionality, or you can extract an abstract base class during a later re-factoring pass if you like, but your API should still stick to the interfaces as much as possible. 
+
+encapsulation Most of the members in are currently public. Many do not need to be. The general interaction with the trie is going to be creating it, adding words to it (currently part of the creation step), and fetching data from it. With those use cases in mind, none of the properties need to be public, and in fact, none of them need to be properties. Instead, I would change them to private fields. By convention, you should then rename them to _camelCase (e.g., ). Also, since a caller is only going to be interested in the root, the third constructor should be private. Additionally, the method is dangerous to call on the root, but the above use cases dictate that callers only care about dealing with the root. Since all the children of happen to also be objects, you can make it private. This also allows you to remove the root flag altogether, since it was only there to prevent invalid access of , and callers can no longer directly access children. for great justice None of the properties (now fields) are modified outside a constructor, and given the behavior of , none of them should change. As such, it is best to make them explicitly read-only: 
+
+The reasons for these questions specifically is that I like concise code, writing it on few lines without having any too long. Code 
+
+I'm working through some Project Euler problems using C++ and some of the numbers in question are starting to get quite large (21000 for Problem 16) and I need to add some of these large numbers together, so I quickly threw together a string represented (positive) integer adder: 
+
+Note that this would require a few changes to make it work but would result in there not being any recursion hidden away. 
+
+I'm aware that not all op-codes have been implemented as I have only implemented the ones needed to get the 15 Chip8 games that I have copies of running. The code that I am most interested in having reviewed are the chip8.h and chip8.cpp files however I have included (the majority of) main.cpp for completeness. An update that I would like to work on would be to switch from using a statement to using function pointers but would like a hard review of the current working code before I begin with that. Thanks to this tutorial which I used to get started and for opcode . chip8.h 
+
+Something I'm less sure about as I haven't implemented a CHIP-8 emulator in some time is that it doesn't appear to be functioning 100% correctly, although some games are certainly playable. As far as it running is concerned, I picked of a few games to see how they ran, I had no problems with: 
+
+Once again, this took around 21 seconds consistently. Finally, I created a simplistic variant which loads all the data up front, places it into a System.Data.DataTable in the loop, then binds the table to the grid upon completion: 
+
+You can use a format string to ensure that there are at least 2 digits in the format without having to check first. The format: ensures there are at least 2 digits, but allows for more. It will prefix 0 to any single-digit input. also has an overload which takes in an , so my personal preference is just to collapse that into the call. It also happens to line up nicely :) With that, you can create a method with appropriate parameters which can handle both cases: 
+
+Before I get started, I would suggest using an ORM for database access whenever possible. However, the remainder of this answer will assume that is not an option (for whatever reason). Use the MySQL ADO connector library You are currently using OleDB to access your MySql database (indicated by tag), but there is actually a MySql-specific library you can use. It uses the ADO.NET interfaces, so your code will have few changes aside from which objects you work with (e.g., instead of ). It appears that the MySql team also maintains a MySql.Data nuget package as well, making this even easier: 
+
+The easiest way to accomplish what you want is to create a list of the possible enum values and data bind that list to the combo box. You can do this through the designer (under Data) or with the following code: 
+
+The first thing that I noticed was that your (default) tick rate seems extremely low and I think one of the things that caused this (due to possible confusion more than anything) was the fact that your variable affecting it was called : 
+
+I'm dereferencing a lot of iterators in order to swap and assign values, is there a better way to be doing this? Is this implementation better than my last implementation? I'm looking for answers that think about stability, efficiency in terms of speed/memory, etc. (Possibly an obvious question) Also, I know nothing about templates, is there anything more to it than adding the line then line before the function and then using within it? I can't figure out how to get rid of . Obviously this goes against the templating, how should I store the results while I'm doing the merge? (Edit: since looking back at the previous accepted answer, I figure I should create a new vector outside the original call to (inside ) and pass the of that array as the destination, rather than defining a new array inside each call and using . Is this correct?) 
+
+Recently I've been doing some experimenting with RPN and the shunting-yard algorithm, in order to test these systems more appropriately I planned on writing a tokenizer and then using these tokens to check validity and eventually get some output. I also think that I could use this to work with some primitive programming language, such as making a CHIP-8 assembler. Function The intention is for my tokenizer to separate the input string into a list of the following: 
+
+One aside to mention: you should split your UI and business logic code. For the sake of tossing it into a working example quickly (I'm doing this over lunch), I removed all the UI code and replaced any print-outs with calls. I also did a little refactoring to split method calls. Additionally, I renamed to so I could run it side-by-side with the original. Finally, I made some of the non-static method static, but only to speed up running the project. Pay no mind to these changes. 
+
+The latter allows you to implement and define tests for both methods in isolation from one another, only refactoring when you have a full set of tests. With these tests, you can safely validate whether refactoring can safely switch to using or not. The former way will save you some time, and as long as you don't skip any tests for , you will probably be OK. The downside is that you have to context-switch to . 
+
+Since the class has only static and constant members, you should make the entire class static. It eliminates the unnecessary empty instance constructor the framework automatically generates. (see code analysis rules CA1052 and CA1053). You should also generally use the type aliases provided (i.e., string instead of String, bool instead of Boolean, etc. - see StyleCop rule SA1121). Additionally, I would change the recursion in so it does not have to recurse another step when the depth is zero. 
+
+An alternative to @svick's answer is to use an extension method which only takes in two functions, and then chain them together, as follows: 
+
+I've recently started learning OpenGL and thought that a great way to start using it in its simplest form would be to create a Chip8 emulator using the keyboard callbacks and graphics that GLFW and OpenGL provide. As this question would be too large to request a review on my classes used with OpenGL and my Chip8 emulator, I'll keep it to just the Chip8. 
+
+On top of the comments provided by Billal BEGEURADJ, you also have the possibility of a stack recursion error in your code: calls calls calls calls calls calls And calls To fix this it may be worth making the game get started from outside of the class in a loop: 
+
+I'm writing a very simple engine which I hope to use to create a game at some point and felt that I needed buttons to allow the user to select options in a menu, so I wrote up a rudimentary button class. Think of this as similar to Windows forms if you like. Whilst what I've produced works and I can detect the button presses I feel like this is not the simplest way to do it (although note that I would like to do it myself as a learning exercise rather than using an existing library to produce the buttons). One of my biggest problems is that the buttons are done using rather than and so have a top left anchor and working based on window width and height in pixels rather than a center anchor ranging from -1 to 1, needless to say this makes rendering buttons a chore. Any advice on how to improve that alongside general scrutiny would be much obliged. display.h 
+
+Why don't you just write a helper method for generating this? You have already, just modify it slightly to look something like this: 
+
+If you're only concerned with validating arrays of numbers and you know the bounds of the input, you can easily rewrite your function like so: 
+
+Refer here for the definition of a balanced binary tree. If you don't like having two return values, you can always refactor and write a separate function to get the height of a tree. This would allow you to implement it without having to return two values and would improve the readability of your code as well. This is the suggested way to do it. I would say avoid raising exceptions unless you're certain you know you want to. You should never raise an exception if you don't have to. 
+
+Comments about the code are appreciated and welcome, but I have a few specific questions about best practices with regards to using Mongoose. 
+
+If you want, you can always refactor functions like so that you type less. Something that I see a lot of people do is: 
+
+LOL. Technically not infinity, your program would theoretically end if I played until the heat death of the universe. It seems like you're using it for a infinite loop. Why don't you use a loop instead? An infinite loop looks like this: 
+
+Looks like no one has yet read through this code yet, so I guess I'll give it a try. Here are my initial observations, as well as some general suggestions: 
+
+Following the review of my old merge sort implementation here, it appears that the biggest improvement to make was to use iterators instead of copying the s. Having never used iterators before, I'd like a review of the new code following that review: 
+
+The following is a .wav file generator that I wrote briefly while (re)learning about audio sampling: 
+
+Is there anything that I can do to improve my function? I'm especially interested in the use of storage types other than and what the advantages of doing so would be. It should also be noted that I do have an intention of doing something like this in a however, as this was quickly thrown together for the solution that's parked for the time being. I'm less interested in my method of solving Problem 16, however any comments on that would also be appreciated. 
+
+As a small suggestion, I noticed that your s have an odd line at the right hand side due to drawing them with the outline of an oval (as you noticed and commented in the function). You can fix that by instead using two filled ovals, a big one which is filled using and a smaller one filled using (Although this does require adjusting the to compensate for the missing width): 
+
+From this code review I'm most interested in comments w.r.t the genSamples function, the program as a whole seems to work well for frequencies between 20Hz and 18000Hz although there are some strange distortions after that as my sin wave becomes distorted (normally I wouldn't be able to hear 18kHz+ but as the the distortions are clearly audible). Any suggestions on how to improve the wave generation functionality would be greatly appreciated. Note I am aware of PEP8 and I am less interested in the styling of the code as this was just a quick write up to test what I'd been reading and to try out a couple of things, the code will be tidied when I more fully understand what I'm doing and how I want to continue. Until then I'd appreciate it if just the functionality of the code were to be critiqued. Also note that the current setup of the code takes some time to run and any performance gains that are possible would also be appreciated.

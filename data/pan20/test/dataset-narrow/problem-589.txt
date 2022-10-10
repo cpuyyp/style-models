@@ -1,0 +1,73 @@
+Extract your redundant generator expression to a function so it only occurs once. To preserve flexibility, introduce as an optional parameter This makes the comment redundant because is a self-documenting name (you could call it if you want to be more explicit), so you can remove that Rephrase your docstring to make it more readable: normalize and with a slash don't make sense together PEP 8 suggests not to align variable assignments, so does Clean Code by Robert C. Martin. However, it's more important to be consistent within your project. 
+
+And that's it! This is all that goes in the class. (I called it because that's my personal convention, but is okay too). What happened to the rest of the code? In , we're really only interested in the rough flow of logic and handling the input, so the other responsibilities have been delegated to . One of the problems with your original code is that it only has two classes: and . But those are too many responsibilities bundled into one. Tracking game state 
+
+Implementation For simplicity, each entry is represented by a mapping characters to child entries – if this is problematic, feel free to remark on that. 
+
+Know your library should immediately make you think of a . should make you think of a sorted collection. I give you: the , part of .NET since version 4.0. When LINQ is not enough, extend it LINQ uses extension methods, so if it doesn't have what you need, add your own: 
+
+Theoretical Background The fundamental problem Programmers like to think of themselves as smart. We tend to solve a problem, marvel at our cleverness, and leave a mess behind without even realizing it. It's only when we revisit our code later (often in the process of trying to add a feature or fix a bug), we realize that reading and understanding code is a lot harder than writing it. There's often too much information to comfortably wrap our heads around. We then write comments (in your case, almost a comment per line) to help make sense of the whole thing, but in doing so, we add even more information, and this time there isn't even a guarantee for reliability or truthfullness: comments go off faster than milk left out of the fridge at 40°C, rendering the "information" they contain obsolete. Even worse, comments are often redundant. It's as if we are writing everything twice! A good programmer is a lazy programmer in that she never repeats herself. (Comments do have their place, for instance in the documentation of public APIs and explaining particularly weird decisions we made.) The solution In order to cope with complexity, we need to split it up and simplify it as far as possible. In other words: Divide and conquer. If our classes are small, we can easily spot the responsibilities. If our methods are small, we can easily discern the flow of control. If our lines are short, we can make sense of the statements they contain. Conciseness isn't the only thing that matters. It's even more important to choose proper names. Without proper names, we are constantly decoding and reconstructing the information that should be apparent from reading the code alone. 
+
+Generally, in WPF, widths and heights are not explicitly stated. You should try to use relative and automatic dimensions where possible (which often requires choosing the correct container). For instance, you could use relative sizing for your grid columns: 
+
+Why are you storing and seperately to begin with? Instead of storing using four properties, use only two, storing both Date and TimeOfDay inside them: 
+
+And that's it! Well, almost. You've probably got a pretty good idea what the enum and the helper class have to look like, but I'll show them for the sake of completeness. Helper data structures Some Java experts and professionals will tell you that every field should be protected by getters and setters. I disagree (and Robert C. Martin happens to be of the same opinion): Some classes really have no significant state to protect, so they should be classified as data structures without behaviour and may have public fields. Others will disagree, and using getter-setter methods is fine too. 
+
+Alternatively, you could just use a and calculate the counts when you need them, using the LINQ extension method: 
+
+This gives a nice overview of what your code does - similar to article headings in a newspaper or chapters in a book. Here's the implementation. Your has been split up into concise methods. Each of them does one thing, so they are easy to understand. 
+
+The implementation calculates the correct result (232792560) in less than ten milliseconds. In less than half a second, you can find out the answer for an input of ; The solution is over eight thousand digits long and therefore somewhat outside the scope of this answer. 
+
+You'll notice the use of a class called . This is a Value Type. It has no significant behaviour; it just contains data and some static convenience methods to create instances of it, as seen below. Some OOP purists disagree with my use of fields; feel free to make them and add getters if you so desire. 
+
+Others have written in detail how you can improve your exception handling, which is really important, but your core logic can be reduced to the following: 
+
+Code structure Readability, maintainability, reusability: you should strive to achieve these three goals in your code (apart from correctness, of course, which goes above all else). One problem with your code is that everything happens directly inside . You should delegate the bulk of your work into helper methods: 
+
+You need to look through your code with an analytical eye and discover the pattern that you are implementing. I call it default if (null or) empty. So I created an extension method to implement that pattern. 
+
+Your code works, but its quality leaves some room for improvement. It should be simplified by refactoring. Here are some suggestions: Naming Even if it is only an exercise, utmost care should be applied when choosing names to make sure they are descriptive and clear, but also to comply with coding conventions: 
+
+Redundancy Tracking the same state twice Look carefully at your instance variables and . Track their values during runtime with the debugger, and you will see: if then , but if owner != -1 then isLocked == true. In other words, you are using two variable to track the same piece of state. You should remove and replace it it with the following method: 
+
+Range Helper Class This class makes heavy use of generics to allow for flexible ranges to be defined (ranges are always inclusive in this implementation, i.e. and are included in the range). You might want to extend this class later on, but currently all we need is the convenient factory method and the check for . 
+
+Output Parameters I agree that it would make more sense to initialize the output parameters with since you made the effort of making them . But if you take a step back, you realize how ugly the use of parameters is in this situation. So I deleted them and made return an instance of a new class designed to hold two pieces of information: and . I called it , but I'm sure you can find a much better name for it. LINQ Query I rewrote your query as a because I find the syntax less convoluted. However, using a method chain is also all right if it is more readable for you. End Result method 
+
+In other situations, working with can be a replacement for explicit pixel sizes. Remember that hard-coded sizes are an obstacle to localization (where long words in foreign languages are cropped) and less flexible. 
+
+Now, we delve a little deeper. Users aren't usually accustomed to the programming convention of counting from zero, so we'll allow them to enter their moves in familiar terms and subtract to transform them to an appropriate format for use with Java. 
+
+The simplest way I found to find if any of the values is as long as is a binary search, which only works when lengths are sorted. You could use a loop just as well. In game, we sometimes have to check if a cell is empty, so we check if it's on the board and, if it is, whether it is also blank: 
+
+A note on Performance If you have a small number of relatively short files, your current approach should work. However, it's suboptimal for larger amounts of data as you need to execute your program once for each file, always keeping the entire file in memory. However, you should not change to a more complicated approach unless you experience serious performance issues. In that case, you should explore (which will only read a few lines into memory at once) and (which allows you to process several files at once (you'd have to use temporary files to store the results). 
+
+Instead of your "two-dimensional" array of , I've used the enum to make the code more expressive (and to get rid of all the magic numbers such as 500, 1000 and 50 that are so prevalent in your original code). We keep count of the moves so far to easily tell if the board is full without counting the full cells later. In the constructor, we fill all the rows with cells: 
+
+A move is allowed if the game is running and the cell we are trying to put an X or O in is empty. You can only make a move if the game is still running. If we don't have a winner after making the move, the next player's turn starts: 
+
+If performance means anything to you, use , as Guvante suggested (don't forget to add to your project references and using directives). As an added bonus, can handle both negative divisors and arbitrarily large divisors (tested it with a 128 bit long divisor, worked fine). There are a few other improvements to be made to your code. You needn't define a char array for the alphabet, better just use a string constant - you can still access the characters by index. Also, avoid converting to from reversing and going back again. Instead, let the parameter be of type from the beginning and then, if needed, reverse it using (it actually mutates the array, so you don't need to assign a new one). Putting it all together: Usage 
+
+Applying it to your Tic Tac Toe The entry point Look at your method. It spans nearly 50 lines and contains six levels of nesting. I tried really hard, but my head nearly exploded trying to comprehend everything you were doing in there. What if that method were to look like this? 
+
+Finally, we've arrived at the implementation level: We're using the Scanner to gather some valid input. 
+
+As svick suggested, use LINQ to SQL. The entity classes and stored procedures (, ) can be generated automatically in the ORM designer. Here is how your code could look like using LINQ to SQL (adjustments may be required): 
+
+You could encapsulate the conditions in a class. Note that the fields are of type to avoid overflow when calculating whether triangle inequality is violated. 
+
+Your code tells us otherwise. You are not removing the lines from PYGR to MCG; your code removes the word PYGR and every character that follows up to one character before . I assume that is not quite what you were trying to achieve? If you update your question to explain if you are trying to remove everything between (excluding) and , including one of them or including both of them, I'll gladly adapt my answer. For now, I will assume the latter. Edit: All right, in accordance with your comment I have changed my answer to replace all text from (inclusive) to (exclusive). Reviewing your code Readability 
+
+Glen Peterson's advice is good, but there's something I'd like to add: You're programming in Java, an object-oriented language. When first learning to program, it's often hard to imagine the practical value of using objects. Therefore, as a beginner one often ends up with a style similar to yours: all code is in a single class, and indeed within a single method in that class. This style is called monolithic and although it has the benefit of being very concise, it leads to unmaintainable, hard-to-debug and unreadable code. As the requirements evolve in complexity, these problems become worse. To solve them, first analyse the responsibilities of your code: 
+
+So your is a lie. Rename it to and set it to false (a cleaner, completely different solution will be given below). 
+
+The criticism is justified in the sense that your constructor shouldn't do any complex work (such as file downloading) at all. So just set the two fields and be done. The file download should be explicitly started after creation of an instance. The try-catch at the end of your constructor does hide as . Avoid ever throwing if it isn't right at the start of your method, or you will confuse your callers. Remove all this as you shouldn't be doing the download in the constructor anyway. You are right: is not an adequate return type for . In this situation it would have been important to demand an explanation as to what kind of return is expected! However: if you change the method to return , you also need to change the name as is no longer an accurate verb. I'd simply go with . This may be a bit subjective, but I wouldn't specify Exceptions in the clause unless they are checked exceptions and therefore have to be included. So I'd leave out the . The criticism was presumably referring to the unclosed output stream: 
+
+Thanks for submitting your code for review — it shows that you care about code quality and you're willing to improve and learn. Note that OOP stands for object-oriented programming and does not have a plural form ;-) Alexandre has given you some good advice and one possible implementation. I'd like to critique your code a bit more thoroughly and offer another, more lightweight possibility. 
+
+Scroll back up and look at our while loop in . So now it's clear: the game is only running if there isn't a winner yet and the board is not yet full. Otherwise, it's ended. 
+
+A lot of effort went into transforming your original code into this readable and expressive form. But where, you ask, has all the code gone? Let's go step by step. Because I have split everything into separate methods that each do one thing only, I've promoted the local variables to fields. There's your familiar Scanner, plus a reference to so I can use the short form and drop the (I find it more convenient, but go with what you feel most comfortable with). The methods that are called from all look pretty much how you expected them:

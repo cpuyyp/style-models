@@ -1,0 +1,53 @@
+You need a router if you have to route between networks. That is completely independent of the use of DHCP. 
+
+HP Switches support distributed trunking, so yes you can connect a switch to the trunk. The trunk is a single logical link, so yes the traffic is load balanced based on some combination of source and destination mac addresses. 
+
+Routers will route packets. That's what they're designed to do -- so it shouldn't be a surprise. You can turn off this default behavior with the command 
+
+I think you're confusing what goes on internally on the switch. How it keeps track of which ports are in which VLAN is up to the manufacturer. It's important to remember that 802.1q frames are a different format than "standard" Ethernet (802.3). Standard Ethernet frames do not have VLAN IDs. A PC or other device transmits and receives Ethernet frames (802.3). When a switch transmits frames on a trunk, it uses 802.1q framing, which includes a VLAN tag. If the switch is transmitting frames with tags, then that port is a trunk port. Most hosts do not understand 802.1q frames, so they ignore them. That is why you can have tagged and untagged frames on the same port. But it's still a trunk port. 
+
+Yes, it's possible. But you would have to advertise a /24 network (or larger), based on current Internet routing policies. So if your name server IP was 1.2.3.4, you would have to advertise 1.2.3.0/24 from each of your locations. The rest of the addresses in that subnet would be, practically speaking, wasted. You also would have to have your own provider-independent address space, which is not easy to come by, especially on IPv4. 
+
+You can capture wireless packets and identify the unique MAC addresses using Wireshark with your adapter in promiscuous mode. Of course, this assumes all the hosts are talking while you are capturing packets. Even if you can't decrypt the packets, you will still see MAC addresses. 
+
+This will direct Internet traffic to your firewall. If you haven't set up NAT on your firewall yet, post a copy of your firewall config and we can modify that for you too. 
+
+R1 does not become the DR because DR election in OSPF is not preemptive. That means that once a router (R2 in this case) becomes the DR, it remains the DR even if a new adjacency is formed with another router with a higher RID. In other words, a DR gets elected "President for Life." 
+
+One way is to create two logical interfaces (trusted and untrusted) on your firewall, using 802.1q trunking. You will configure your switch port to be a trunk with two VLANs. Logically, your Linux box will have two ports. Linux configuration is off-topic here. You can get details on configuring 802.1q on Server Fault. 
+
+The ASA is a security device, so it was designed to communicate with untrusted devices. That means it doesn't send or receive any more information than necessary. So things like CDP are not available. Generally, the only information on a neighboring device you can get is the MAC addres, via arp. 
+
+You can have only one data stream. A typical web browser makes several tcp connections to a web server to increase performance. That's why you often see the text appear before the graphics on a web page. you can't do that with only one stream. It's possible for a host to be both a client and a server at the same time. If the port numbers are the same, you can't do that either. 
+
+Your firewall is maintaining a connection table for UDP connections. For example, when you send a DNS query, the firewall creates an entry for that flow so that the DNS reply will be allowed back into your network. The entries in the table time out after 30 seconds of no activity. 
+
+Port 21 is used only for FTP control. You also have to "tunnel" port 20, which is used for the actual data transfer. 
+
+Yes, you need to SSH into each context. Contexts were intended to be configured by different administrators. 
+
+If your AP can offer multiple SSIDs, then you can have one SSID for each VLAN. You tag the VLANs and set the switchport to trunk. If your AP can't offer multiple SSIDs, then make the switch port an access port and don't tag the vlan. 
+
+The problem with looking at flows is that you only see the source and destination, and nothing in between. Also, you only see flows that exist at the time you capture data. There may be other network segments that have no flows at the time you measure. You won't be able to detect them. 
+
+Just to add one footnote to @RonMaupin's answer: although classful routing is long dead, many people informally use the terms "Class A, B and C" as shorthand for subnet masks. So when someone calls a network a Class A network, they simply mean it has a mask of /8 or 255.0.0.0. Similarly, when they call something a Class B or Class C network, they merely mean it has a mask of /16 or /24, respectively. That is the sense it is used in the quote you posted. 
+
+When you specify the bridge as a root bridge, you are, in fact, setting the priority -- to a value lower than any other bridge. You can't have it both ways: Either you make the bridge the root and let the switch figure out the best priority value, OR, if you want to set a particular priority value, then you can't say it's the root. It may end up being the root if you set the priority low enough, but that's not guaranteed. 
+
+Wireless routers (actually, they're called access points) can only transmit and receive on one channel at a time. So no, they don't transmit on different channels. Dual band access points (2.4 and 5 GHz) have two radios and two antennas so they can operate on both bands simultaneously. 
+
+The answer is "it depends." The term "network" can have different meanings depending on the context. Usually it is better to speak of routing domains. The routing domain is all the routers that participate in the particular routing protocol (in large networks you can have several routing protocols, and therefore several routing domains). The two link state protocols in use today, OSPF and IS-IS, both have a hierarchical domain structure. That is, they can divide a large routing domain into smaller subdomains to improve efficiency and convergence time. In OSPF, the subdomains are called areas, and in IS-IS, they're called levels. To use OSPF as an example, you can have a "network," consisting of a single area (domain). All routers in the area have a full topology map of the area. With multiple areas, OSPF routers have a topology map only of the routers in their area. They also learn a route to the backbone area (also called area 0), that links the multiple areas together. 
+
+Short answer: you can't. Switches do not modify Ethernet frames, so there's no difference between one that was sent directly from the server and one that passed through the switch. 
+
+The 2.4GHz band is one of many portions of radio spectrum, called the Industrial, Scientific and Medical (ISM) bands that are allocated for unlicensed use. As long as you operate within the power and antenna limits, you can pretty much do what you want. So the short answer is, you can. But there are very good reasons why you shouldn’t. Part of the confusion regarding wifi channels comes from the allocation of the frequency spectrum. The ISM band was first allocated in 1958, before most of us were born and well before anyone even imagined wireless networking. The channel definitions were made before wifi was invented, and they assumed 5 MHz spacing. 802.11b and g transmissions require 22MHz bandwidth. Because they’re 22MHz wide, the signal covers two channels above and below the center frequency. So if you use channel 6, your signal spreads across channels 4-8. There is only room in the entire band for three 22MHz wide signals (in the US) without overlapping if they center on channels 1, 6 and 11. If you transmit your wifi signal between two of these channels, say centered on channel 3, two things happen: your signal interferes with other wifi users on 1 and 6, and their signals interfere with you. This will greatly increase the number of data errors, which in turn will cause retransmissions and significantly reduce your throughput. It’s as if there are a number of parallel bicycle lanes, and you try to drive a bus down one of them. Although you drive down one lane, your bus will occupy several of the adjacent lanes. If someone happens to be driving their bus in one of those adjacent lanes when your bus goes by, well…it won’t be pretty. If you only want to use one access point in a remote area with no other wifi signals, then you can probably get a away with using a different channel. But in most urban commercial environments, the 2.4GHz band is pretty crowded. If you use an overlapping channel, you are likely to experience (and cause) interference. If your wireless system is large with many access points, then you will need all three non-overlapping channels to get good coverage. Using something other than 1, 6 or 11 will limit the density of your access points, further reducing throughput. In summary, it’s good practice to use 1, 6 and 11 to get the maximum use of the radio spectrum with a minimum of interference. 
+
+"Hostname" is used specifically in the context of the TCP/IP suite. Other protocols or operating systems (MS Windows) often use the term "server name." So for example, a device could be referred to by its Server Name in Windows, but by its Hostname using DNS. The names can be different. Often the two terms are used interchangeably. 
+
+As you can see, there isn't really a usable VLAN 0 or 4095. Cisco uses VLAN 1 as a default VLAN, and management protocols (STP, CDP, DTP, etc) are sent on VLAN 1. You can use VLAN 1 for simple installations where there is no VLAN trunking, but good practice is to not put user data on VLAN 1 in a multi-VLAN environment. 
+
+Note that these are the default values. I'm showing them for clarity. The port for your BSD router should be a trunk port, because presumably you will be routing between networks, but your question doesn't make that clear. If you provide a little more info, we can provide more help. 
+
+Airplay travels over IP, so normal routing applies. You need a router to route traffic from one VLAN to another. Unless you start messing with Multicast, Bonjour will stay on the local VLAN, however. Is this a bad idea? It depends ;-). You have to tell us a lot more about your production environment to make an educated guess. 
+
+So a HTTP session is created by establishing a TCP connection. It follows that the session ends when the TCP connection is terminated. Ultimately, many definitions like this are a bit squishy, so they can mean what you want them to mean. Just don't get too hung up on figuring out the OSI model. It's just a model.

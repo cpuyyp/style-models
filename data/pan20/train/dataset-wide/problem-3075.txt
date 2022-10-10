@@ -1,0 +1,43 @@
+You create a new, private each time the method runs. The intention behind s is that they're created once and then used over a longer time span to execute multiple (short) tasks. This should save you from having to create a new for each task, because the executor manages a number of threads which get re-used for multiple tasks in succession. You don't need that . The usual idiom of the is like: Callable myCallable = new CheckConnection(...); Future future = service.submit( myCallable ); ... Boolean result = future.get(); It does not make any sense to a (single) task to an executor and then start waiting for completion immediately. This will block exactly as if there was no involved at all. In your case, you could just write with the same effect w.r.t. concurrency. 
+
+Suggestion Don't run your checking code and wait for the result. Better have your checking code run in the background periodically (e.g. in a dedicated or a ) and have that code post its result back to any interested party. You can use a to send a message from a background thread to the UI thread. For example, send one message each time the connectivity state changes. 
+
+It looks like you should be able to compute the bit error probability once, in the initialization. Then that whole method would become . You could also replace the use of with your own, dedicated instance of and use its for example, or . Either should be somewhat faster than the double-generating version. Indeed, you can skip that boolean logic in favor of speedy bitwise , like 
+
+Does not work reliably. is assigned when the corresponding thread executes that line; if it does or not before the next iteration changing is undefined and hence not guaranteed. 
+
+Doesn't work because you do not in the worker threads, i.e. the worker threads don't care and still access whenever they want. Plus some more issues which affect the functional correctness. I suggest you try and fix those first. You may want to have some read on Java's threading, especially about how and relate, what thread-management routines there are in (mainly thinking about , , and ) and when and how to use . It's actually not very complex, and pretty straight forward to use/implement in a simple case like your's. To improve your solution you could then familiarize yourself with and for inter-thread event signalling and/or ready-made data structures like s for data exchange between threads. 
+
+These lines are in a function that has as return type. These also produce compile errors. They need to be changed to: 
+
+I am going to suggest couple of changes to your code. Providing a clean way to terminate the program Your code does not provide a clean way to terminate the program. Once started, you have to terminate the program by pressing the equivalent of Ctrl+C, killing the process form the Task Manager, or some such indirect mechanism. There are lots of ways to terminate a program cleanly. One of the easiest things to do is look for or as the first character of the input to exit the program. However, if you allow for such a method, you'll need to change how you receive user input and process them. Instead of 
+
+With this approach, doesn't need to have any knowledge of as a class. If there is a possibility of conflicting global names, you can put in a unique GameManager.h 
+
+You are not making the links between the previous item of the list with the next item of the item being deleted. With your current code, the previous item's points to a deleted . You don't need a . A is sufficient. The code is more readable with the second definition. 
+
+FWIW, your function has a bug. If you change the input string to , you will notice the problem. The reason for the bug it that the null character is neither a digit nor an alphabetical character. Here's an updated version of the function that fixes the bug. 
+
+You can avoid use of by using as the key type in the for keeping track of occurrences of elements in the container. 
+
+This is one way of reading the contents of the file once and using the contents in the loop. Function to read the contents 
+
+My reason for recommending this is that it is possible to overload the addressof operator, . If that were the case, 
+
+Your code looks very good to me. The only thing I would recommend changing is . The fact that the function hold a variable that is changed in violates encapsulation a little bit. I would change it to: 
+
+Remove the member variables and With a as the member variable, you have access to and . There is no need for storing redundant data. Argument types in the constructor Since it makes no sense to have negative values of or as inputs to the constructor, I would make then an unsigned integral type. 
+
+I don't see any good reason why you're using some of these hacks. It took me a while to understand what you were doing and I was pretty much forced to step through it in debugger. Going to review this line by line and point out simplifications and patterns as I see fit. I'll be batching together all my suggestions into a counter proposal in this jsbin, using the unit tests from your repo. To start, it seems quite unneccessary and non standard to get the global scope your way (and I'm going to later argue you shouldn't need it)... 
+
+Well thats how we would want to write it anyway... But alas, we live in tough times where people still try to support Chrome 33 and Firefox 26 (poor souls). I'll let you fellows in on the way some popular libraries write their functions I suppose. Actually, I recently improved underscore's uniq function so you may notice its faster than you expect. Lodash's method is even faster in some cases Anyway, heres the fastest way I know how to make a set, there was some discussion in doing it this way in underscore... It similar to what lodash does (here's a discussion on implementations $URL$ 
+
+However, in you can use which would be more intuitive. will be available in underscore 2.0 if they accept my pull request 
+
+No need to check if the variables are . A dates value is its time so when you make (less than/greater than) comparisons with a Date instance () you're essentially comparing it to or which will be the same as . Therefore the below will always be equivalent: 
+
+I would add a after your Also the helpers you use in seem pretty redundant. I would personally drop the helpers and write that function: 
+
+Spent a little hacking away at this to simplify the code. I wrote comments on changes inline the script, let me know if you have any questions Some thoughts on the changes. Notice that how I restructured your validators in the form 
+
+Along with @jerrycoffin and @RobertoBonvallet's suggestions, I would write this as a loop 10 times out of 10 (this is the conventional for loop case afterall). I tend to use loops whenever I'm iterating every item of a single collection and a loop for any other purpose (but either can always be written as the other so w/e floats your boat). I would also probably cache the result of and if I were using anywhere else in the loop I would probably make a variable for it as well. I usually consider using a if I use 3 or more so if you extend further that may be something to consider Also is a cryptic name for a loop control variable. Use , or - don't worry about variable name length as you'll usually end up minifying your code if you're writing anything substantial. That said

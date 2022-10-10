@@ -1,0 +1,83 @@
+Hiding version details is not security through obscurity unless that is the main security measure you rely on. Exposed version details can allow an attacker to easily identify known security issues rather than having to probe for them. Forcing an attacker to test for known exploits may be useful for an Intrusion Detection System to detect and handle obvious malicious attempt signatures. I would consider this a low risk if you are following other best practices (eg. limiting network exposure, actively applying security updates, monitoring for intrusion attempts). Putting a reverse proxy in front of your MongoDB deployment may also add unwelcome operational complexity for server discovery and failover. 
+
+Mixed-version replica sets are only supported for consecutive major versions (i.e. 3.2 and 3.0) and expected to be used transiently during a rolling upgrade to a new major version of MongoDB. A mixed replica set with 3.2 and 2.6 members is definitely not supported. 
+
+A self-configuring tree topology, with the current primary as the root node. By default MongoDB allows replication chaining so secondary nodes can choose to sync from other secondaries based on ping time (for example, to mitigate bandwidth usage when multiple secondaries are in a remote data centre). A self-configuring star (or hub-and-spoke) topology, if you disable replication chaining. 
+
+A COLLSCAN operation is a collection scan, which indicates that no index is being used and the collection is being iterated in natural order. If your query had no criteria but requested a sort by , the index would be the best candidate to return results in the expected order. In MongoDB 3.0 I would expect this to be indicated as an IXSCAN rather than a COLLSCAN. 
+
+I would suggest looking at the query performance in aggregate as there are should be other performance metrics that correlate. You should ideally track your MongoDB metrics over time using a monitoring system. For monitoring suggestions, see Monitoring for MongoDB in the manual. Asya's presentation on Diagnostics & Debugging also provides a good overview of performance troubleshooting tools and how they were used to solve some specific performance scenarios. 
+
+There are several online testers for YAML syntax that can be useful to troubleshoot problems (eg: YAML Lint). 
+
+If you want a quick way to check if a database is actively being used, you can use the administrative command. This command provides usage statistics with collection-level granularity. For example, using the shell to check if a collection is being actively queried: 
+
+This is incorrect. Without a primary you cannot write to a replica set, but reads are still possible using non-primary read preferences such as , , , or . The default read preference is , which provides strong consistency (versus eventual consistency when reading from a secondary). The read preference reads from a primary if available, otherwise from a secondary. 
+
+There isn't a direct equivalent of the "logical connection" abstraction. However, since you are already connecting via , it sounds like you have a sharded cluster which does abstract the connection details for the underlying shards. All connecting to the same cluster have to use the same list. If you deploy a per application host, each application can connect to the on localhost. Alternatively you could have a fixed set of shared and expose these via DNS cnames that resolve to "local" for that application or data centre. If you want to further lockdown per-client access, each client application could authenticate using different credentials which limit their access/permissions per-database. MongoDB 2.6 adds further granularity including collection-level access. For more information see Security Concepts in the MongoDB manual. 
+
+It's sensible to think about how to scale your application in future, but you can start with a simpler deployment that can grow with your requirements. 
+
+MongoDB 3.0+ will log a warning if you have an even number of voting replica set members, but does not prevent you from using this configuration. The log warning will be similar to: 
+
+The method returns a cursor, so what you have calculated is the size of the cursor object rather than the size of a document. You should use to return a single document if you want to measure the BSON size: 
+
+Start . At this point all config servers should be online with the user information. Re-enable the balancer so normal balancing activity & chunk migration can resume. 
+
+The default configuration for a replica set is designed for automatic failover: if the current primary becomes isolated from a majority of replica set members, a new primary can be elected to continue write availability. If you do not want automatic failover, set the votes for your secondaries to 0: 
+
+Since the only possible update was to the array, indicates that "mango" was added. Value already exists in the array Add "mango" to the tasty array in the document: 
+
+A replica set can only have one primary, so you wouldn't gain anything by swapping the roles of the current primary and secondary. The data still needs to be replicated. 
+
+If you want to configure multiple replica set members on a single machine for testing purposes, all members need to use different ports and/or IP addresses. 
+
+When using projection to remove unused fields, the MongoDB server will have to fetch each full document into memory (if it isn't already there) and filter the results to return. This use of projection doesn't reduce the memory usage or working set on the MongoDB server, but can save significant network bandwidth for query results depending on your data model and the fields projected. A covered query is a special case where all requested fields in a query result are included in the index used, so the server does not have to fetch the full document. Covered queries can improve performance (by avoiding fetching documents) and memory usage (if other queries don't require fetching the same document). Examples For demonstration purposes via the shell, imagine you have a document that looks like this: 
+
+You currently have a Primary/Secondary/Arbiter configuration. Instead of compromising replication by stopping your only secondary in order to copy the files, I recommend adding a new secondary with increased storage and dropping the arbiter (since it won't be needed if you have an odd number of voting nodes). Once your new secondary completes initial sync you can then upgrade and resync the other secondary, and finally step down the primary. At this stage you could either drop the former primary and add an arbiter to return to your Primary/Secondary/Arbiter config, or consider adding another secondary to the replica set so you have a more robust Primary/Secondary/Secondary deployment. For a critical production environment I would encourage you to use three data-bearing replica set members instead of two plus an arbiter. A main consideration when using a three node configuration with an arbiter is that if one of your data-bearing nodes is unavailable, you no longer have replication or data redundancy. 
+
+The Cloud Manager (née MMS) documentation includes a list of the Database Commands Used by the Monitoring Agent. The main command to start with is , which includes most metrics specific to a instance (as opposed to replica set or sharded cluster information). You can run this command via a driver and preview the results with the helper in the shell. Available subsections and output may vary depending on the version and configuration of your MongoDB server. Interesting sections of serverStatus typically include: 
+
+As part of the MongoDB 3.0 upgrade it is strongly recommended that you upgrade to the SCRAM-SHA-1 authentication scheme. New users will have their credentials created in this format by default; mixed authentication schemas will likely lead to confusion. You will need to upgrade your client driver & admin tools (if you're using a GUI) in order to use the WiredTiger storage engine. Drivers/tools that have been updated for MongoDB 3.0 will also support the new authentication method. As per the note on the SCRAM-SHA-1 documentation (referring to a future major release which would like be 3.2.x): 
+
+You can debug the aggregation pipeline by starting with a single stage and then adding on additional stages one at a time assuming you are seeing the expected output. Sample output from MongoDB 3.2: 
+
+You can influence selection of the current primary by configuring member priorities for a replica set, but the general goal is to provision a set of peer nodes (with similar hardware resources such as CPU/RAM/disk) to allow any data-bearing secondary to be promoted to primary. Sharded Cluster Query Topology With a sharded cluster your application connects via the routing service, which will direct queries & commands to the appropriate shard(s) and aggregate results as required. The networking topology here might be described as a partial mesh, as each connects to the 3 config servers and the current primary for each shard (and potentially secondaries, based on read preferences). Note: Your approach with the use of distinct ports for different roles (replica set membership, config server, mongos) makes sense as a way to self-document the sort of service you are connecting to. 
+
+Chunks in a MongoDB sharded cluster are metadata representing contiguous ranges of shard keys. All documents for a given chunk range will exist on the same shard, but the chunk does not currently determine the locality of data on disk. 
+
+Stopping one of the config servers ensures there are no changes to the metadata in the cluster (chunk splits or migrations cannot be committed without all three config servers available). Use to export the config database from config2 After running the you should have a directory with bson files. Create a new data directory on . The storage format for WiredTiger data is different from the existing mmap data, and cannot use the same dbpath as mmap. Restart the server with the WiredTiger and appropriate storage options: 
+
+The MongoDB server actually does not search any locations for config files, and there is (as at MongoDB 3.2) no way to specify multiple config files or include config file fragments. There was a feature suggestion for includes discussed (see: SERVER-14911 in the MongoDB issue tracker), but it was decided that includes are not part of standard YAML and configuration management systems are likely the best option. 
+
+The field might represent a selection of values (or in this case a very long string). Next, create an index on which is a commonly used field queried by your use case: 
+
+Authentication only controls access to clients connecting to a MongoDB deployment. Securing remote access to your server or encrypting your data files are separate security measures. If an attacker is able to gain access to a shell on your server and run privileged commands (like restarting the service), access control is irrelevant. Similarly, even if your data files were encrypted an attacker with privileged access will be a major security problem. As the administrator of a server, it is your responsibility to have appropriate access control, firewalls, auditing, and other security measures in place. Security involves multiple layers of defense, and access control is only a starting point. At a minimum you should also enable network encryption (TLS/SSL) and appropriately limit network exposure. For a list of recommended security measures, see the MongoDB Security Checklist. 
+
+The keyfile is used to secure intra-cluster communication, so all components of a sharded cluster ( and ) must use the same keyfile. The documentation you referenced is for a single replica set deployment. For a sharded cluster see: Enforce Keyfile Access Control in Sharded Cluster. 
+
+The GeoJSON spec doesn't support multidimensional coordinate positions in the format you are suggesting: 
+
+If you want to restore a backup into a replica set, you need to into the current primary. Data will be replicated to other replica set members via the normal means. You can use to drop each collection (if it already exists) before import, but in a full recovery scenario you would normally be rebuilding the replica set starting from an empty deployment. As at MongoDB 3.6, only inserts documents - it will not drop any existing databases or upsert/update/replace any existing documents. 
+
+As you've noted, MongoDB's configuration only determines which NIC IP addresses the server listens to (not the client IPs that are allowed to connect). To limit network exposure you need configure solutions at the operating system and/or network infrastructure level (eg. firewalls or VPNs). The current version of includes a link to some suggested resources depending on where your MongoDB deployment is hosted: How to Configure Allowed Hosts, Firewall, Whitelisting and Blacklisting in MongoDB. For more information, also see Hardening Network Infrastructure and the Security Checklist in the MongoDB documentation. 
+
+To allow the command you need to grant either a built-in role that includes this privilege ( or in MongoDB 2.6) or create a user-defined role if you want a more narrow scope. For example, to create and grant a custom role to run serverStatus: 
+
+Note: if you are storing currency values as floating points you should be wary of rounding with floating point numbers. The MongoDB manual has examples of how to Model Monetary Data. 
+
+If you are using MongoDB 3.0 + MMAPv1 with allocation (aka "exact fit"), then the document will have to move if you change from 32-bit ints (4 bytes) to 64-bit longs (8 bytes). With there is no extra space available to store more bytes, so you should start with NumberLongs to avoid expected document growth. 
+
+To avoid this behaviour when building new indexes on collections with significant existing data, you should build the index in the background instead: 
+
+You can certainly test standard replica configuration and deployment issues on a single server, but some scenarios are easier to set up with multiple environments (even if those happen to be VMs or containers on the same host server). The and commands help control election outcomes; for HA testing I expect you'd be randomly shutting down or firewalling processes to confirm the outcome is as you anticipated. 
+
+However, you could use a different operator with equivalent outcome in an implicit . For your example query, is equivalent to so the following would work: 
+
+In general MongoDB only supports mixing adjacent major versions (eg. 2.6 and 3.0, 3.0 and 3.2, 3.2 and 3.4) in a replica set for the purposes of a rolling upgrade to a new version of MongoDB. Mixed version requirements are currently only mentioned in the upgrade notes but I expect the underlying assumption is that new deployments would always use start with the same version. If you create a new replica set deployment using MongoDB 3.2, the replica set will be using a new election protocol ("version 1") that older versions of MongoDB do not support. For more information, see: Replication Election Enhancements. The proper solution is to add a MongoDB 3.2 arbiter to your new 3.2 replica set. For any new deployment I would definitely recommend using identical versions of MongoDB to avoid unexpected issues. 
+
+To restore a single database you need to provide the path to the dump directory as part of the command line. For example: 
+
+As at MongoDB 3.4, there is no server-side functionality for query listeners or triggers. There are some open feature suggestions for triggers in the MongoDB Jira issue tracker, but these all appear to be associated with operations that update data (insert, update, delete) rather than queries. 
+
+While most distributions have moved on from the 2.6 kernel, there are some Enterprise stalwarts like RHEL6 that will not upgrade the default kernel during their release support lifecycle. Redhat does cherrypick and backport fixes with their own kernel subversion, but will remain on the original kernel base from the time of release. RHEL has a 10-year support policy followed by 4 years extended lifecycle support, so old versions tend to remain in the field much longer than you might expect. RHEL6 moves into extended support in 2020, so there are still new deployments using the 2.6 kernel in 2017. RHEL7 uses the 3.10 Linux kernel and won't reach extended support until 2024.

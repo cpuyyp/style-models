@@ -1,0 +1,63 @@
+You will have only memory for exactly two digits. That's not enough! You have to calculate the actual number of possible digits. Luckily, that is simple: 
+
+The activity index is basically the difference between the last question activity and the latest question's answers' activity, e.g. $$ \text{activity_index} = \max_{a \text{ answers } q} a_{\text{LastActivityDate}} - q_{\text{LastActivityDate}}. $$ Since any answer activity automatically updates the question's it is always non-positive. The lower the index, the more likely that a new answer is necessary and the current 0-score answer is insufficient or misses the point. 
+
+Let's start with your imports. You should get rid of those you don't need, e.g. , . Next, you shouldn't mix integral and floating point calculations, unless you're fine with imprecise results. For example, will give the wrong answer around : 
+
+The point-free version of is perfectly fine. It's also the most natural one to do by hand, since is , and follows exactly that style. Defining new functions by combinatiing old ones is great if you have that style of function, e.g. 
+
+'s scope is too large, by the way. It's just necessary inside the loop, so we can limit its life time, but we need to in this case: 
+
+In this case we've dumped the plumbing into , added type signatures and made the functions non-partial. Now, let's step back to your smart-constructor: 
+
+The point-free variant is not only harder to read, but even longer, and I've already used infix- to increase the pointful version by two characters. The same holds for , although the original variable names where a little bit long: 
+
+You could get rid of the "hack" with and , but that's left as an exercise. If you really want to use , remove the . It just introduces an additional error source: 
+
+The number of possible digits is 16 (10 - (-5) +1). After counting them, we end up with a digits array that looks like this: 
+
+I guess that you know that there are better algorithms, so for a simple algorithm like this there is not much to improve. You certainly have to consider negative numbers, though. Also, some variables are available for the whole scope ( and ), but only used for a short time. Try to limit the scope of a variable as much as possible, as it prevents errors like 
+
+I'd argue that your post is now less readable. Shorter doesn't mean more readable. At any point in your code we should be able to tell what names are in scope. Without we usually only have a handful of names. As soon as we use we flooded our namespace with another one and have to keep those names also in mind. For example, your in could be called without problems if you hadn't used . But now is grabbed from its namespace and (possibly) also in scope, which can yield very strange compiler errors if you ever decide to change to . 
+
+Yes, a single one. is nowadays. It stems from a time when wasn't a superclass for . The laws state that 
+
+Which is 0,2% of your original time, or a 500x speedup. However, this comes at a cost: is too large for a , since \$\log_2(500000^4) \approx 76\$. The greatest number you could check with a is 65535, \$2^{16}-1\$, which shouldn't be very surprising. As the standard does not provide or similar, you should make sure that your numbers don't exceed those bounds. You can either write your own large integer logic for this, or use GMP. Proper bounds and parameter estimation Next up, you can increase the lower bounds of and , so that \$a \le b \le c\$. And for , well, if we have , , , then there is only one solution for . We can directly search for that solution with binary search. The binary search makes a \$\mathcal O (n^3 \log n)\$ algorithm from your current \$\mathcal O (n^4)\$ one, which should provide a lot more speed than the previous speedup. Even better, if you used the appropriate bounds for , and , we can bound by $$d^4 = a^4 + b^4 + c^4 \le c^4 + c^4 + c^4 = 3c^4$$ and therefore get $$c \le d \le \sqrt[4]{3}\,c.$$ With the proper binary algorithm,you can finish the first , case quickly: 
+
+Prefer qualified imports for The modules contain several functions that have the same names as their list counterpart. Therefore, they are usually included as qualified modules: 
+
+That's a nice use of and Repa. All in all there isn't much to review, it follows a common approach on Conway's Game of Life with Repa. No type signatures are missing, but with Repa it's more or less mandatory to add them. Well done. But the next time, consider adding all your code, and were probably interesting (I suspect to be the same as but using ). 
+
+As they are all equivalent, I suggest you to use the one you like the most, and which you will understand even three months later. Your original one is the easiest to read. 
+
+To your "faster quicksort algorithm" question: you can find a where quicksort will take \$\mathcal O(n^2)\$ instead of \$\mathcal O(n \log n)\$. It's average time complexity is \$\mathcal O(n \log n)\$. Mergesort on the other hand is always \$\mathcal \Theta(n \log n)\$ time complexity. Usually will be fast enough for all your use cases. 
+
+However, we're sorting. Therefore calling the comparison function a predicate is a misnomer. A predicate is a function , whereas is a comparison. But doesn't convey its meaning by its type. Do we return if the first shall come first in the sorted arrangement? Or do we return ? Will sort ascending or descending? Those questions are easier to answer if we use instead. This signature follows 's, so we have a pretty good feeling what means, namely that holds true. If we keep that in mind, we can write the following variants: 
+
+but we only removed mutability. So let's get back to the drawing table. Why do we need ? Because we want to know which we should use from the . We would like to traverse a cycle of those values at the same time as our original message. That's exactly what and are for: 
+
+doesn't change at all. The compiler will most likely throw that line away, but better don't include it. 
+
+While we're at it, you have to be very careful in those methods. You can still accidentally change your list: 
+
+is , so we were able to get rid of too. That being said, has a lot of responsibility. Split it into multiple parsers, and it's suddenly a lot easier to grasp: 
+
+But let's say that you don't actually know how many points you have. Let's assume that someone wants to check a many points. Suddenly, the memory usage of your program explodes: 
+
+Oh boy! A snake game. I'm excited, since this was also one of my first games. So let's get to work, shall we? Keep it short and simple The biggest concern with your code gets obvious if we just have a look at your post. Your whole code is inside a single file, which makes it hard to navigate. Your file ist "just" 270 lines though, but still, it's a first step to make your code more readable. Consistency is key The next concern is missing consistency. You provide a class for your snake, but a with C-like object oriented programming . That's somewhat arbitrary. Also, you're calling your struct , which makes it easy to disambiguate it from normal variables (which use ), whereas your other class starts with a lowercase, and the suffix is superflous. Instead, pick a naming convention that immediately shows whether you have a class-like type, a function or a simple variable. This leads to 
+
+That won't compile. Or your compiler should yell at you, but it doesn't want to. Make suire that you enable warnings. Undefined behaviour In , your loop must not run if is empty: 
+
+We end up with five calls of the base case, which is what you would expect. But if we count the in-between calls, we get calls for , calls for , calls for . The number of calls increases by a factor of \$1.618\$. This is called an exponential time algorithm, because its runtime has the asymptotic behaviour of \$\mathcal O (1.618^{n})\$. The recursive variant looks great on paper, and it's how Fibonacci numbers are defined after all, but the run-time is ungodly. One can speed the recursive variant up if we would remember the values; if we calculate , we can remember the result of that we need in for our later use in . That process is called memoization, but it's an overkill and not easy to implement. Instead, write in an iterative fashion: 
+
+The is just a little helper for questions to the user. What did we gain from splitting ? Well, does not have to care for the game at all. We can replace by any other game, e.g. , and we don't have to change our at all. So try to isolate your code a little bit. Next we have . There's a bug in there, you use twice, once as (correct) answer, once as the number of turns the user has. Therefore, they have to guess , , and so on. The original random number wasn't used at all. Let's fix that first: 
+
+Yes it does. To simplify a condition/loop Allright, I changed a lot here, I have to admit. But the most important change is . What other changes did I do? 
+
+You'll notice that this will only allow syntactic correct programs, e.g. those that have the right pairings of and . You can use and instead, but that could make evaluation tricky. You can then define two parsers: 
+
+Here's a mnemonic: if one of your functions is a dual to another, and one of these uses , the other one should likely use . is the dual of . The first uses , but the latter is missing . Is the queue empty? Let's use a : 
+
+At some point, you need to read the line. You've chosen to do so. Note that it is not feasible to remove from , because you would end up with . Still, we can have a look at to see what we can do. We can read the code literally: 
+
+Therefore, you're not calculating the "usual" fourth of a circle, but instead a circle with a fourth of the original size (\$\pi(\frac{1}{2})^2 = \frac{\pi}{4}\$)). Luckily, it doesn't matter for the convergence. A real test that checks whether a point is in the unit circle is tremendously easier:

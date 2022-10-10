@@ -1,0 +1,61 @@
+Short answer: Yes, but it won't be pretty. Explaination: While there are algorithms to automagically UV map polygon soup, the mapping probably wont be ideal. UV mapping is an art really. Choosing where to hide the seams and where to put them to limit stretching and optimize texture space. That said, there are lots of tools that can make manual UV mapping a heck of a lot easier. For example: $URL$ 
+
+Calculating inPageLocation inPageLocation is a UV coordinate that is relative to the top-left of the page, rather than to the top-left of the whole texture. One way to calculate this is by subtracting off the UV of the top left of the page, then scaling to the size of the page. However, this is quite a bit of math. Instead, we can exploit how IEEE floating point is represented. IEEE floating point stores the fractional part of a number by a series of base 2 fractions. 
+
+Evaluate the BRDF Get the pdf for choosing this direction based on the BRDF Calculate the light pdf, given the sampled InputDirection 
+
+In this code, all the lights have an equal chance of being picked. However, we can importance sample, if we like. For example, we can give larger lights a higher chance of being picked, or lights closer to the hit surface. You just have to divide the result by the pdf, which would no longer be $\frac{1}{\text{numLights}}$. Multiple Importance Sampling the "New Ray" Direction The current code only importance samples the "New Ray" direction based on the BSDF. What if we want to also importance sample based on the location of lights? Taking from what we learned above, one method would be to shoot two "new" rays and weight each based on their pdfs. However, this is both computationally expensive, and hard to implement without recursion. To overcome this, we can apply the same principles we learned by sampling only one light. That is, randomly choose one to sample, and divide by the pdf of choosing it. 
+
+The virtual texture represents the theoretical mega atlas we would have if we had enough vram to fit everything. It doesn't actually exist in memory anywhere. The physical texture represents what pixel data we actually have in vram. The lookup table is the mapping between the two. For convenience, we break all three elements into equal sized tiles, or pages. The lookup table stores the location of the top-left corner of the tile in the physical texture. So, given a UV to the entire virtual texture, how do we get the corresponding UV for the physical texture? First, we need to find the location of the page within the physical texture. Then we need to calculate the location of the UV within the page. Finally we can add these two offsets together to get the location of the UV within the physical texture 
+
+I am trying to implement refraction and transmission in my path tracer and I'm a bit unsure on how to implement it. First, some background: When light hits a surface, a portion of it will reflect, and a portion will be refracted: 
+
+A ray enters a material, and we apply the BTDF, then after some distance, a volumetric scattering event happens, after which (in the isotropic case), the ray scatters in any direction in the sphere. This repeats until the ray exits the material with another BTDF. My questions are as follows: 
+
+I was thinking something like this: (I apologize for the DX functions. I'm not super familiar with the corresponding OpenGL functions. That said, OpenGL should be quite similar) 
+
+This is the screen's video scaler module. Essentially, it is a dedicated piece of silicon that allows the user to use non-native screen resolutions. 
+
+In a recursive ray tracer, the simple implementation would be to shoot a ray for reflection and a ray for refraction, then do a weighted sum using the Fresnel. $$\begin{align*} R &= Fresnel()\\ T &= 1 - R\\ L_{\text{o}} &= R \cdot L_{\text{i,reflection}} + T \cdot L_{\text{i,refraction}} \end{align*}$$ However, in path tracing, we only choose one path. This is my question: 
+
+Input vector - aka, the light source (In Cartesian coordinates) Output vector - aka, the eye (Also in Cartesian coordinates) Spectral data (spectral data is discretized into 31 bins) 
+
+IE. we bounce around the scene, accumulating color and light attenuation as we go. At each bounce, we have to choose a new direction for the ray. As mentioned above, we could uniformly sample the hemisphere to generate the new ray. However, the code is smarter; it importance samples the new direction based on the BRDF. (Note: This is the input direction, because we are a backwards path tracer) 
+
+How do I choose the distance between scatter events? Intuition tells me there should be some kind of scatter pdf, which gives the probability to scatter after a certain distance? 
+
+You could use some kind of formula to get an approximate value, based on these factors, but, in my opinion, it's simpler just to do it manually per scene. Or, you can remove it entirely, and use more sophisticated methods to calculate indirect lighting. 
+
+Firstly, as @trichoplax correctly pointed out, your randomPoint function calculates a point in a cube, then uses rejection sampling to return all points that are inside a unit sphere. In order to return points on a sphere, you would need to change the greater than to an equals. That said, rejection sampling is very inefficient. A better way to sample a sphere, is to sample in spherical space, then transform to cartesian. ie: 
+
+What is the volumetric equivalent to a BSDF? It looks like I can use a phase function such as Henyey-Greenstein to determine the new direction, but what do I use for attenuation? Lastly, what are some better Google phrases for Monte-Carlo volumetric scattering? 
+
+Re-draw it from scratch every frame (or, every time something changes) Track the sections of the screen (ie. "dirty rectangles") that change each frame, and update only those portions. 
+
+If this ends up being too slow, you could try to do this calculation in a compute shader, then draw the result using an indirect draw call. See AZDO. 
+
+The code here is heavily influenced / copied from PBRT v3. They have a series of classes and functions for sampling from shapes. 
+
+Image from Wojciech Jarosz's Dissertation Appendix A One example of importance sampling in Path Tracing is how to choose the direction of a ray after it hits a surface. If the surface is not perfectly specular (ie. a mirror or glass), the outgoing ray can be anywhere in the hemisphere. 
+
+Render each frame on the server and stream them to the client with something like H.264 Stream the graphics commands to the client, and let them render them. 
+
+However, this is not uniform, and will cause samples to clump at the poles. To prevent this, we transform phi: 
+
+However, in the case of next event estimation, uniform sampling the whole sphere is inefficient, because a ray can only 'see' half of the sphere at a time. So if we generate a point on the 'back' of the sphere, the sphere will occlude the point, and your calculation will be wasted. Instead, you generate samples in a cone, which covers the great circle of the sphere, as viewed from the starting point of the ray. 
+
+If the pixel size or shading area is large compared to the entry-exit distances, we can make the assumption that the distances are effectively zero. For convenience, we split the light interactions into two different terms. We call the surface reflection term "specular" and the term resulting from refraction, absorption, scattering, and re-refraction we call "diffuse". 
+
+To start, I highly suggest reading Naty Hoffman's Siggraph presentation covering the physics of rendering. That said, I will try to answer your specific questions, borrowing images from his presentation. Looking at a single light particle hitting a point on the surface of a material, it can do 2 things: reflect, or refract. Reflected light will bounce away from the surface, similar to a mirror. Refracted light bounces around inside the material, and may exit the material some distance away from where it entered. Finally, every time the light interacts with the molecules of the material, it loses some energy. If it loses enough of its energy, we consider it to be fully absorbed. To quote Naty, "Light is composed of electromagnetic waves. So the optical properties of a substance are closely linked to its electric properties." This is why we group materials as metals or non-metals. Non metals will exhibit both reflection and refraction. 
+
+The data is defined in the following range: For input vector, $\theta$ (theta) varies from $0$ to $\frac{\pi}{2}$, and $\phi$ (phi) is always a constant $0$. The output vectors are uniformally distributed across the hemisphere. Since $\phi$ is periodic on $2\pi$, mathematically you can define the bounds of $\phi$ in an infinite number of ways. In this data set they chose: $$\phi = [-\pi, \pi]$$ but it would be perfectly fine to choose $$\phi = [0, 2\pi]$$ Now, in order to use the data: 
+
+Using an 'ambient light' term in your lighting calculations is an approximation of the indirect light reflected around the scene. Usually it's up to the artist to choose an appropriate value. There isn't really a formula, because the indirect light is dependent on many factors: 
+
+Blit pixel data of the dirty rectangle areas to one of the data transfer buffers. Copy the buffer to the GPU Use the GPU to blit the pixel data from the data transfer buffer to the GPU copy. Present 
+
+Since the input vectors only vary over a quarter circle ($\theta = [0, \frac{\pi}{2}]$ and $\phi = 0$), not the whole hemisphere, you will need to find the matrix transform that transforms your input vector to the quarter circle. Apply the same transform to the output vector. Using the transformed input and output vectors, look up the spectral response of the BRDF. 
+
+Would this be correct? Or do I need to have some kind of correction factor? Since I'm not taking both paths. 
+
+However, if we want lights to have area, we first need to sample a point on the light. Therefore, the full definition is:

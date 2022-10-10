@@ -1,0 +1,59 @@
+What does your colleague propose as the primary key for this link table? Primary key columns can not be NULL of course: the table above has nullable. There isn't any natural row identifier (which is what a PK is) in the example above (a IDENTITY column is not a primary key), therefore it fails in any modelling process. Don't even think about creating tables without some model (ERD, ORM, IDEF1X, whatever) You'd also need CHECK constraints to ensure you don't have 3 way links. Finally, you're straying into 4th and 5th normal form territory but for the wrong reasons. I can't find any examples on the internet: that shows how stupid this is 
+
+When using the GUI, you have to specify "" to enable over writing of a database with a backup from another database. See "Using the REPLACE option" on MSDN How to? With raw SQL, you need : 
+
+Assorted thoughts... Your database code will outlive your application client technology. Think of ADO.NET -> Linq -> EF as well as assorted ORMs. Whereas you can still run SQL Server 2000 code from last millenium against all of the above client technologies. You also have the multiple client issue: I have .net, java and Excel. That's 3 sets of application logic. "Business logic" shouldn't be confused with "data integrity logic". If you do have clients starting transactions and doing assorted checks, that's a lot of db calls and a long transaction. Application logic doesn't scale for high data volumes. We have 50k rows per second using stored procs. A sister team using Hibernate can't get one per second 
+
+You can have a link table PetOwner (multiple owner) or OwnerID as an FK in Pet (single owner). This requires each Cat or Dog (or Rabbit, Snake etc) object to have the same attributes. Option 3: The final way is superkey/subtype. This is is useful because if combines elements of options 1 (different attributes per Cat and Dog) and option 2 (keeps the idea of Pet) This defines one Pet object that has exactly one sub type of Dog, Cat, Rabbit, Snake etc. The super key comes from the extra UQ1 in Pet to enforce subtype. Pet as a table also stores common attributes. 
+
+if you use this function for each row of another table you have a cursor that iterates over the table in the UDF for every outer row Even this is better. It's now table valued and expands like a view. 
+
+In SQL Server Management Studio Object Explorer, expand a database and look at "Database Diagrams" to create one. This require db_owner rights which you should have as a DBA (a.k.a sysadmin) 
+
+Permissions error, reported as an (old) MySQL bug Check out the permissions bit in the MySQL install docs 
+
+SQL Server maintains this in sys.master_files, after you have restored the master database When SQL Server starts up, you'll see a lot of suspect databases. You can attach the MDFs and LDFs using the info in sys.master_files 
+
+An example of how it can happen: Two processes, each one has a shared lock on the same page, then an exclusive lock is needed by each process. Each process can't exclusively lock the page because of the shared row locks. So, a deadlock happens on the same page. More examples here from @AlexK 
+
+The first option scales better becauses a few indexes on the main EAV fact table can cover all queries nicely. 
+
+If you want to add a new Position you simply add a row to the lookup table. This also removes data modification anomalies which is one point of normalisation Also, once you have a million employees then it's more efficient to stored tinyint PositionID than varchar. Let's add a new column "salary currency". I'd use a lookup table here with a key of CHF, GBP, EUR, USD etc: I wouldn't use a surrogate key. This could be restricted with a CHECK constraint like Gender but it is a limited yet expandable set of data like Position. I give this example because of I'd use the natural key even if it does appear in a million rows of employee data despite being char(3) rather then tinyint So, to summarise, you use lookup tables 
+
+64 bit always. You do understand 32 vs 64 bit generally? Windows Server 2008 R2 of course. Windows 7 is desktop, Windows 2003 is obsolete 
+
+You can use SUSER_ID which will give you the SID from sys.server_principals regardless of metadata visibility Also note that syslogins has been deprecated since SQL Server 2005 
+
+.. for each table, with SET IDENTITY INSERT ON if requirede Then I'd add indexes and constraints after loading data. It depends on your comfort level with SSIS (mrdenny's answer) or if you prefer raw SQL. 
+
+Is this consistent, time after time? I see a CPU difference which could be compile time. Are there any LINQ settings that affect this? Edit: 
+
+I've used SQL Server Agent to run jobs every 10 seconds. It's OK. If you don't have it, you can use the Windows Scheduler to run osql or sqlcmd as required. Or say Quartz.net in your app. Or anything that can call a database on a schedule (AutoSys etc) 
+
+Following on from Andrew Bickerton's answer... The 4th way is to use EXCEPT where the RDBMS supports it This should give the same execution plan as NOT EXISTS 
+
+I would use my own identifier. The species name may be unique but - it's too long - it's a string For example, in SQL Server, if used as the clustered primary key it will be used in non-clustered indexes, thus repeating the long string. And typically foreign keys omn child tables will go to the primary key, thus repeating it again As a string, you have the overhead of sorting and comparison (case, accents, etc). Using a surrogate numeric key avoids these problems: but you must create a unique non-clustered index on the species name. Is species name a good long term identifier too? Not my area of expertise but don't many species have alternate names, or controversies, or get reclassified, or "maybe this species"? Example: how many Giraffe species are there? 9? 2? 6? 8? 4? 
+
+"Business Intelligence" covers everything from database design to Excel monkeying. Based on this, my interpretation of the new BI edition is "whizzier" features on the OLAP/cube/analysis/mining side compared to the RDBMS side. Arguably, only "column store" is really relevant to BI. Partitioning itself may be Enterprise edition only, but the ALTER TABLE..SWITCH can be run in Standard edition. The BI edition also has no memory use limit for SSAS and SSRS 
+
+As you've found, migrating or restoring a database can lose object permissions when assigned directly to users. So why put yourself in that position? You can also CREATE LOGIN with a SID so it is the same on all your servers and you don't get orphaned users either. If you'd asked the correct question we could have saved you some coding... Personally and finally, I'd say this is bad practice on "need to have", not "blanket do anything" 
+
+No, you don't need to gave the columns in the same order. Not least, table order may not reflect actual on-disk order (this is 100% true for SQL Server, and I'm sure MySQL is the same) Unless your OCD itch needs scratched 
+
+I'd compare the data using, say, Red Gate SQL Data Compare in addition to DBCC. Comparing all data in all tables row by row means checking every populated page. However, for larger databases this will a long time, so you can run aggregates over columns (say AVG or CHECKSUM_AGG). I use this to quickly compare results but it would scale and force data to be read. 
+
+If you mean "sleeping" in sysprocesses, then this is most likely OK. Your calling code will use connection pooling to "logically" open and close connections. This avoids overhead of actually opening and closing connections which is expensive. Examples: MSDN for .net4 and for JDBC 
+
+This covers points addressed in this answer: Does a re-index update statistics? However, this separation is a foible of mine based on this article (and older articles) 
+
+Yes, it is there correctly. You have run CREATE LOGIN correctly. The number of stars in the SSMS box is just a mask and is unrelated to your actual password. SSMS doesn't know or try to read your password from the server Note that SQL Server doesn't store your password so it can't relate to the in SSMS anyway. SQL Server hashes it into the column of sys.server_principals 
+
+The refers to the internal name of that file, not the database name. Run this to see what I mean. You're looking at the name column 
+
+First off, don't mix "primary key" and "clustered index". One is "how to identify a row", the other is "on-disk structure" Then, you don't need an index on by itself because it is the left hand column of the clustered index. However, it won't be covering (see links below) And for each point in turn: 
+
+This will probably run slower then using separate SELECTs separated by IF. However, you do have 16 permutation. So I'd probably combined both techniques: 
+
+Every statement in SQL Server has a plan. The fact of the statement being in a UDF or proc or adhoc doesn't matter usually In this case, I suspect it is cache misses causing the delay. You can test by DBCC DROPCLEANBUFFERS (caution: will affect all processes on that box). Compile time would be for every change of parameter, not just to an unused one. One thought though: Is the UDF processing or churning lots of data, enough to cause cache misses? 
+
+I wouldn't bother testing status of the triggers, personally. A disabled trigger should not exist IMHO. Not least because OBJECTPROPERTY does not support it in SQL Server 2000 Edit: My mistake, OBJECTPROPERTY in SQL Server 2000 has ExecIsTriggerDisabled as per comment. So you can track status before and after

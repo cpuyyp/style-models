@@ -1,0 +1,75 @@
+Next thing is that you need to build the contents. The weird thing is that in your code you actually discard all the strings being returned except for the last call. I'll assume this is a bug for now. 
+
+As a side note (and because we are on CR): is not a really good name. I know that sometimes numbers are used to indicate newer versions of the same method but I'd suggest to rename it if you can. 
+
+The initial predicate evaluates to and is as well. Entering the first block this means is always and can be omitted and is always hence the path is never taken. Given all of that the code boils down to: 
+
+On top of what has already been mentioned: Your implementation will break if any of the column names or values contains a ';'. Proper CSV parsing is a tad harder than most people naively assume. Now this may or may not matter because you might say "The data will never ever contain " however given the number of times this phrase was uttered and then proven wrong you should consider actually either implementing a proper CSV parser or use an of-the-shelf one. It's not that hard and will protect you against Murphy (at least for that case). 
+
+To know for sure what exactly is inefficient you'd need to hook up a profiler. Code wise you should be able to do it all in one query if I'm not mistaken: 
+
+Even on a 64 bit system the size of an array is limited to 2GB. So if your largest key is in the vicinity of or larger then you will get an . Depending what else you are doing in your program you will get it much earlier. If you are experimenting around with sorting algorithms then there are some interesting approaches reducing the key space. 
+
+You should be able to get rid of the call to by inlining the call yourself. You just need to do some pre-computation (this time sticking with ): 
+
+Another standard convention in C# is to place opening braces in their own line (at least for classes, interfaces and methods) as shown above although admittedly there are some exceptions to that (mostly for auto properties, simple get/set properties and guard clauses). An advantage of sticking to standard language ecosystem coding conventions is that it makes it easier for other programmers to read your code. 
+
+All serialized types need to have a parameterless constructor although it is enough for it to be . All properties and fields you wish to be serialized need to be public. The serializer will ignore private properties and fields. 
+
+Easier to debug. You can simply set a break point and peek the queue. This is quite difficult to do with the wrapped task approach. No use use of lower level synchronization primitives. The first time I read your code I instinctively thought "Hang he's got a why the calls" until I realized that the decrement happen in the async task outside of the lock. With the you program against a slightly higher level of abstraction which is often a good thing. Fewer class members which reduce the state complexity of the object (the queue is the only member). 
+
+If these rules are followed you are less likely to forget to dispose of objects which require it. For your code this means that you should implement which could just call . In addition to you should also dispose of at that point (which means that you probably should move the creation of into if you want to start/stop multiple times). 
+
+Consider refactoring your into a method like . If you ever want to change your dispose method or add logging or whatnot then you have to change only one place. Code duplication should be avoided even for trivial things like that. You swallow exceptions in and and return a which tells you nothing except that it went wrong. Same in and . You throw away a lot of information which will be useful for troubleshooting should the need arise. In general I would consider that a bad idea. Replace your magic constant either with a definition or even a setting you can tweak. If you make it a setting please make it a - I personally find all that code which scatters around s with implicit units very annoying. I often have to look up what it means because it's not always that obvious - seconds, milliseconds, ..? 
+
+If you have indeed identified the json deserialization to be a performance problem (by profiling it) then you can 
+
+Yes it's one line of code more but the intent is much more obvious at a first glance. As suggested in the comments you might want to invert the condition and continue. Reduces the level of nesting: 
+
+You said that you are a beginner and apologize for your bad formatting. However there is no real excuse to write badly formatted code. Not sure what editor or IDE you use but if you use something else but notepad most editors and especially IDEs support auto-indenting and can re-format your code. Make use of it. It significantly increases readability which has a direct connection to how easy it is to spot bugs. Good formatting means: Proper indenting and to have spaces between operators and things like commas and semicolons. For example this: 
+
+As you are writing C++ there is no need to declare all local variables at the beginning of a block. Declare them where they are needed. Give your loop counters sensible names. Single letter loop counters are accepted practice but sometimes it makes it easier to read to provide some more descriptive name. There is no value in using loops everywhere. In some places loops would be much cleaner to read, especially since they allow you to declare the loop counter in place. I found it very hard to discern all the loop variables to see if they are being used later on for some reason. So your first loop in could be rewritten as: 
+
+is not a very good name for the property which seems to indicate whether or not the user is logged in. seems to be more expressive. 
+
+Highly depends on who reads the code though and how the spec (if it exists) was written. If the spec says: Try to reconnect if the system is offline or a reset was forced then the second version is easier to connect to the spec than the first one. If you have some UI binding (for WPF for example) then having the second property can be valuable. Usually things like disabling a user control is done by setting the property to false. Now imagine you need to have a button enabled if the system is offline. Much easier to bind if the property is available. 
+
+Now let's see how we can start refactoring things First of all the blocks all have the same code so we can easily extract those into a function: 
+
+A way to speed it up is to build a map from code to enum. You can do this once in a static contructor: 
+
+I don't know if this just the latest "hip thing" with C++14 but I find int _c = 0; much clearer to read since it's explicit and will have the same effect. Just because a language feature exists doesn't meant you have to use everywhere. 
+
+Standard naming convention in C# for property names is . Why are you using to format the file name when the parts are all static strings? Unless I'm missing something then this: 
+
+Well, it depends what you want to do with this data. If you ever want to query individual field names or debug an issue with a field you will have a hard time extracting this kind of information out of an XML blob. Potential pitfall: According to the coldfusion docs, maps to columns on MSSQL. You need to make sure that the column is as XML can get pretty verbose and any character limit might get hit. On how to better store the data this is hard to say. From your example it looks like a form has fields and each field could have multiple values. This looks like a classic 1:n relationship to me: Form table: 
+
+And in the future if you want to filter entities by you create a with a method which you then can use as 
+
+The advantage is that the filtering by specific entities is encapsulated into single classes with single responsibilities and you do not have to litter your code with all these filter interfaces. The concern that an entity can be filtered is now removed from the entity and kept separate which is always a good thing. The more an entity has to know what might happen to it the more complex your code structure will become. 
+
+There is no real reason why your method should be restricted to and . You can make it easily generic (the below code is based on @Dmitry`s answer): 
+
+Well, you start two s each reading and writing a file but not the same. So basically it should be ok. Some remarks: 
+
+Apart from the things which already have been noted: You duplicate the interpolation loop in your body which violates DRY. The easy fix for that is to copy into . Also rather than assigning to which copies the vector you could use which swaps the contents of the two vectors in constant time. So your main body can be written as: 
+
+then you don't need the call. It also has the advantage that instead of you can do in case you change the size of you won't have to remember to change it in multiple places. If your user types in a command with more than 10 parameters you will start overwriting memory. should be given a maximum number of commands as parameter. You should define constants like and as named constants because it increases readability and you can easily change it in one place without having to sift through the entire code. So something like this: 
+
+The violates the general expectation of methods in the .NET framework. A method should return to indicate whether parsing has succeeded or not and return the actual result as an parameter. Your implementation will simply throw (which is what the methods were meant to avoid) if the fails. Magic numbers like and should be avoided - introduce named constants for those like and . Instead of just blindly waiting in the you should create another you can wait on - it should get set when the main loop has quit. Instead of dealing with threads directly you really want to have a look at the Task Parallel Library. Instead of polling you should make use of the asynchronous socket API and (examples can be found on MSDN). Or in these days you probably want to be more looking at to make use of the feature in newer .NET versions. Those are far more effective since they won't waste CPU cycles trying to read data which isn't there. Especially when you are targeting low power devices similar to Raspberry Pis you really want to be as efficient as possible. Since you have no guarantee that you will read the entire message in one go you should consider supporting partial reads. UDP gives you no guarantees about packet delivery which means packets may be dropped and/or delivered out of order. Your application protocol will have to deal with this. 
+
+You seem to have a typo in your enum, it should probably be . is initially hence you can get rid of the conditions because they will never evaluate to true anyway. So for example this makes this whole block useless: 
+
+is a particular bad name for for the singleton property as typically implies an action rather than a property and such is expected to be a method. Traditionally static singleton instances are named . The singleton instance is not thread-safe. Don't know about the rest of the code and how the startup works but it's possible for multiple requests coming in and obtaining two different instances. Even if it's currently not possible (because the instance is being accessed by the startup code from a single thread) you should still use or lock it so you won't have to worry about it even if the code changes. The public static is sub-optimal since it's not clear what exactly it is refreshing - it's hiding the fact that it's refreshing the data of the singleton. I would get rid of it and just make the method public (after renaming it to ). It won't create much more typing work but be a lot more explicit about what exactly it is operating on. The main problem with static singleton instances is that they are prone to be accessed from everywhere - this creates implicit, invisible dependencies which can come easily back and bite you when it comes to unit testing and refactoring. So as much as possible classes which use it should be given an as a parameter to make it visible what they depend on. You should consider the use of an IoC container (Windsor, Ninject, Unity, ...) which greatly helps with this. Don't know out of the top of my head how it works in ASP.NET MVS but I'm sure it has support for resolving dependencies of controllers via IoC container. For extension methods it's customary to throw a when the parameter is . This brings it more in line with "normal" objects which would throw a when they are while being dereferenced. The in here seems somewhat pointless: 
+
+You should get rid of the suffix. There is no value in attaching the type as a suffix to the name. You don't need to write everywhere to access members. You have an property which is not used. 
+
+Your implementation is broken, for example 15 should print but yours will print . 35 should print but yours will print . Turning an integer into a string can be done with . For reusability your code should be encapsulated in a class which you can instantiate and play as many games as you like. Once you have refactored the code into a class consider decoupling logic from output. For example you can pass in an to which you can append your output without having to care where it ends up. 
+
+which means if the difference between two color part is less than the calculated step is . Also you will get quite big accumulated errors due to the rounding. For example if you start with the color and want it to fade to then you will end up only fading to because and = but the will be truncated to due to integer division. You do set the final color to the target color but it would be smoother to calculate the step sizes as floats. You keep track of the various part and intermediate values in a bunch of arrays which do not have any direct relationship. It's also not very re-usable this way. I would encapsulate it in it's own class. 
+
+You use as parameter name when you pass the list around but I think a better name would just be . implies that you pass the first node of the list around rather than the container. is correct but reads nicer (imho). I would consider changing the interface slightly: 
+
+As strings are immutable you can't really avoid intermediate store of the data as it's being encoded. As you already know the length of the final string you can avoid the shuffling: 
+
+- What are and ? From reading the source one can see they are source and target node - so they should be named accordingly. The names of the parameters of a function are an important piece of documentation and should convey their meaning. You have created a link between your data structures (, ) and an algorithm which seems weird as they have only in common that Prim's is a graph algorithm - meaning you need a graph to run it on but the graph doesn't need the algorithm. I'm pretty sure I could implement Dijkstra's algorithm and run it on a graph of yours. The problem is that this creates a barrier in your mind for the re-usability of the classes. Also it reads odd if I write

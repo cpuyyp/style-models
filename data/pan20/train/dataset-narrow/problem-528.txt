@@ -1,0 +1,41 @@
+You cannot use hints in Redshift like Oracle. You can do things like set the distribution keys. If X is always used in that fashion, it may make sense to incorporate that into your DDL. See here: $URL$ 
+
+Because you wrote "each one of the..." it sounds like you are updating individual rows. Rather than doing a row at a time, have you explored writing the SQL so you are letting the DB update many rows in one SQL statement? That will likely get you much better performance than trying to multi-thread manually. 
+
+I simply copy pasted your two queries but I noticed these two tables don't have a join between each other. Do you mean to have a cartesian product? 
+
+I think that means "ELT is easier to do when the source and target database engines are the same, because you frequently have them talk directly". For example, ELT over Oracle DB links (Oracle to Oracle) or SQL Server Linked Servers (SQL Server to SQL Server) is much easier than setting up heterogeneous links with something like GoldenGate. Tools like Presto can make this easier though, as you'll see people do: 
+
+That sounds like a many to many relationship where you need a bridge table. You would store everyone in an employee table with an ID and then have a separate hierarchy table with manager and employee combinations. 
+
+It would be helpful if you gave tables and columns, but something like this might work. Basically, move the WHERE into a case statement and set the column equal to itself if the condition is not met. 
+
+Trying to do a fast and reliable insert over an intermittent connection will be a headache. I would: 
+
+Cleaner data, as it is generally more efficient to fix the problem upstream. A real database. I would not use Access for anything important like that. It gets corrupt and can only grow to a certain size. Ask the client if they can host a DB to hold this data or can spin something up in the cloud. Use some form of tool like ETL to extract and load the data into your database. 
+
+Memory can help you by caching and thus reducing I/O. However, that won't reduce CPU usage which is your problem. This is an unusual bottleneck, as CPUs are insanely fast for most database work and I/O tends to be the bottleneck. In your case, it is even more inusual, because you have 16-cores and VPSs tend not to have great I/O performance. First of all, make sure that you are CPU bound. should help here.If you have high numbers on the column, you are probably I/O bound; high numbers on the column could indicate that you are really CPU bound. If you are CPU bound, analyze what queries are you executing and why they take long to complete. You are either executing a lot of queries/s or they include complex calculations (i.e. aggregates, functions, etc.). The solution for the former is usually caching on the frontend, which means executing less queries. The latter is solved by simplifying your queries (if possible- you might have queries which are needlessly complex) and calculating stuff once and reusing it (say you have lots of aggregate queries; create a table with the aggregation results and query that instead of running aggregates continuously). The most efficient way to research about this is by logging which queries you are running and analyzing the log- tools exist which do this neatly. If you are I/O bound, then you can tune memory usage, although the OS cache is often working correctly. Take a look at : 
+
+The first line of numbers accounts for memory usage including OS caches, the second doesn't; by comparing both you can see how OS caching is working. Also, will already tell you how much I/O you are performing (, columns). Often, the key to solving I/O problems is query tuning and indexing; indexing prevents full table scans (i.e. reading the entire table to get a limited set of data, which causes excessive and unnecessary I/O). Again, logging queries is most effective here- running on the queries will tell you which operations the database is performing to execute the query, which often leads you to understanding inefficiencies in the query (and altering the query to solve them) or finding out about needed indexes. 
+
+Good news. There is a SQL command usually called MERGE or UPSERT that basically does this. See this page for more information: $URL$ You probably want something like: 
+
+I would recommend one of two approaches. I agree the "have a table for every event type" might get annoying over time. 
+
+Come up with a generic event table where most of your events can have conformed messaging. Keep the idea of event and event types and create a few more generic fields like severity and user_id that are widely relevant. For things that you can't make generic, have a few grab-bag columns you can stuff things into. The JSON idea isn't as bad as it once was as many RDBMSs (e.g. SQL Server, Postgres) have pretty good support for dynamic parsing of JSON. If you record the type of event you're logging with a type ID, you could later run a SELECT query that parses the JSON up into normal columns for all rows matching that type. 
+
+This is not a challenge for one, modern RDBMS. You will realize you do not want to have one database per store the first time executive management asks for "How many iPhone 7s do we have on hand across all stores ahead of the new Apple launch?" I have seen retail systems managing several hundred thousand SKUs across several hundred stores. The master inventory was one ~10 million row table with columns like: 
+
+In both ETL and ELT the data from A ends up in B. No, you don't need Hadoop for ELT. Actually, using Hadoop between two databases would be more like ETL. Maybe a diagram would help: 
+
+I would call that data integration. You're taking data from various sources and integrating it into one nice, clean table. Normalizing or denormalizing it is a separate (but related) decision. Your table sounds like it will be relatively denormalized. $URL$ 
+
+You really want to read first: $URL$ If you want to keep your history in a separate table (and probably you do), you will probably want option #3; it tends to be the easier to implement and more convenient, #1 are #2 are pretty ugly and "un-relational". 
+
+This is a "materialized view" and triggers are used often to implement them. It is duplication of data, and an opportunity for data inconsistency, but if needed and well implemented, they can improve performance a lot. But I don't see what are you asking. 
+
+So we are writing an app whose schema should reference data which lies currently in an external PostgreSQL instance. We are negotiating being able to put our schema within the external database, but we are evaluating different possibilities. One option I'm pondering is basing our app on PostgreSQL and use its facilities for accessing external PostgreSQL instances. What's the status of this? PG's documentation contains $URL$ and $URL$ , which allow you to reference tables in an external server. What's their status? Are queries performant (i.e. sends WHERE to the other side)? Can you reasonably join between local and foreign tables? There's also pgsql_fdw ( $URL$ ), which seems more featureful. Does it offer an improvement on the above? Anyone using it? Thanks, Alex 
+
+, but it seems a bit overkill to me. You could also force the creation of an artist row in any case, but sometimes this doesn't seem appropriate. Are there any better approaches? Cheers, Álex 
+
+I've seen a few instances of entities which have a field which can be either a reference to another entity or free text. You typically represent this in the UI by having a dropdown widget which can optionally have text instead of one of the dropdown items selected. Say you have a song entity which was recorded by an artist- the artist can be either a reference to an artist entity or a random string. I'd usually represent this like:

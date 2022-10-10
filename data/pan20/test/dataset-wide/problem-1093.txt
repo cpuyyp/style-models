@@ -1,0 +1,77 @@
+You can always check if a variable is dynamic or not with on $URL$ Or looking at the parameter directly: $URL$ If it is dynamic you can: 
+
+Changing doesn't need you to nuke ib_logfiles. This could easily be the reason for you had to restore the database (*). Just stop mysql -> change the settings in my.cnf -> start mysql. 
+
+InnoDb ruby is a great tool which does exactly what you want. Troubleshoot If you don't use this can also be normal data growth so confirm this first. If you use then it is most likely indeed the undo history. You can confirm that by running: 
+
+You use the inner query to enumerate the results by date. Here you probably want to apply some heuristic where condition to filter the results to optimize your query. For example if they in average play every second day then you can limit for the last one month or so. Then you can count the lost games with the given conditions per team. @update to show teams with 0 loss 
+
+It's fine to write to the master directly. A database does much more for you than just persist your changes to disk. It manages transaction, enforces integrity, etc. If you introduce a queue you introduce a new cog in the machine that can break and a lot of complexity that you need to manage for yourself and that is actually not required in most cases. I worked with MySQL master servers having thousands of connections all the time and handling thousands of inserts/updates per second without problem. InnoDB is quite efficient if your tables are well designed and you have your configuration properly optimized. There are many ways how tables and my.cnf can be optimized for writes if that's your main concern. Some general tips: 
+
+There is an alternative method of splitting where your main table contains only the small, filtering and sorting columns (including these columns too) and "data" is stored separately. It's always best to try which works best for your dataset and query patterns. I did a benchmark about a year ago comparing one big table with two splitting strategy that can help you get started: $URL$ 
+
+For further optimizations if necessary you can look into spatial indexes (you haven't mentioned which MySQL version and engine you're using). Also you can geohash the coordinates into a single numerical column and have proximity match on that then filter by the coordinates which I use on bigger database and works like a charm. $URL$ $URL$ 
+
+If you're concerned about the downtime might cause you can look into hot backups. For example percona-xtrabackup. Here is what I would do: 
+
+Workload Assuming InnoDB engine you want primary key to be a continuously incrementing id so INSERT won't be random causing too much page split and fragment the tablespace. Benefits of : 
+
+The same query cannot be produced by Django ORM. You can only use raw. However there are some options to still keep the benefits of the ORM. 1) Using a view 
+
+Create a slave with xtrabackup (set master_info_repository to table if you have MySQL 5.6.2+) Have it replicated and let it catch up Stop the replication: (optional) Make a backup of master info file if you have MySQL older than 5.6.2 Make a note of the position with Make the mysqldump Destroy the database and all the files in and remove all the relay logs Restore the database with mysql_install_db and execute the dump (make sure you have file_per_table settings) (only on <5.6.2) If necessary restore replication (if it was in table than the dump contains the information so no need) 
+
+That returns you the amount of MBs written to the log file in an hour which is the rule of thumb for smoothing out write IO efficiently. To my.cnf: 
+
+For apache with htaccess you can put a shared favicon.ico (an empty image or something) and this should work (I didn't test this): 
+
+Then the old master should start to replicate from the new master and catch up. A couple of things to keep in mind: 
+
+I tend to use both 1) and 3) depending on the actual situation. 1) for situation where I can either inherit the model from the original or I don't actually need the original model I can just have a new one. 3) when I need the original model. I tend to put the queries into files in SQL directory in the app (just like templates). So I have a clear indication that I'm doing something database dependent and I can easily switch/rewrite them later if necessary. I hope this helps. 
+
+The error itself is happening because there is a create view (or procedure) statement and the slave doesn't have the user who created it. In mysqldump you will have this format: 
+
+With of course setting your threshold to the right level. The above example assumes 1% which is huge in terms of geo coordinates but you get the idea. Since MySQL can only use one column for range queries from a composite key having a combined index won't help but separate index on latitude and longitude will. Then MySQL can choose the one which is more distinctive for the specific case. 
+
+Since MySQL 5.6 import tablespace is possible ($URL$ Since it's quite cumbersome I would only do that though if you need to 'merge' production schemas from multiple physical servers into a single dev database. Otherwise as Rick wrote replication, snapshotting or xtrabackup are all better options. 
+
+Now, matching (same structure) is actually not mandatory if you only want to drop it but you need to have a valid frm file. If you do this you should be able to drop the table afterwards: 
+
+tl;dr running is sufficient Because is complete superset of . If you run you don't need to run separately. See the discussion on the mailing list archive. Analyze is an additional maintenance operation next to vacuum. It is supposed to keep the statistics up to date on the table. 
+
+1) No. You have to restart MySQL and that means downtime. 2) To minimize the downtime you need an identical server which you can switch to and back. The procedure on high level: 
+
+The list is kept for MVCC ($URL$ as @jkavalik mentions in his comment. This is required for providing isolation for transactions ($URL$ A record cannot be deleted under you as long as you're in a transaction. When you start a transaction (depending on your isolation level) you get a "snapshot" of the current state of the database. This is implemented in MVCC by TRX_ID which is being checked against your actual transaction id. If it's higher you cannot see that because it means it was updated after you started the transaction. Deleted (and also old versions of updated) records are picked up by a purge thread in the background as of MySQL 5.6. It used to be in the master thread and now the number of threads is configurable also ($URL$ 
+
+Set up slave You can set it up from the nightly backups. That's actually a common practice to provision slaves from backups to also have them tested. You can go back as far as you have binlogs stored on the master (expire_log_days variable). The impact of having a slave starting from older backup is that it has to fetch the logs from the master but that shouldn't be a heavy operation. Unless your master is already on the edge you shouldn't really notice it. The other impact is that it will take longer for the server to catchup which is of course expected. Switchover Switchover can have some impact if you use auto-increment IDs and your passive master is not fully caught up with replication. Best is to make the old active read-only for a second or two while checking the passive for master position. Once there is no change you can move change it to be the active and make it writeable. Depending how you point to the active master (DNS switch for example) it might take some time during which time both masters will accept writes and the old active being read-only will report errors. I hope this helped. 
+
+By having more tables you're certainly not going to increase the memory allocation for MySQL. Number of tables has no influence on memory usage. Discussing memory allocation is out of scope now but this may be useful to take a look: MySQL memory calculator. 
+
+The records are stored in a B+Tree on the Primary Key Every single secondary indexes will have your primary key appended to them 
+
+Be aware in this case you will get the results back in arbitrary order not necessary the order of ids produced by the subselect. 3) Run the select directly You can get the ids to a list from the database and use them to query from your model. 
+
+Any of these will only reports current data. Unless you have a consistent high load with many long open transaction where the purge thread is unable to keep up you will mostly have free pages. It may be beneficial to plot this over time so you have an understanding of what your server is doing. Fix Shrinking ibdata is not possible. The only thing you can do is to dump and restore your data via mysqldump (or any other equivalent tool of your choice). Other considerations Since 5.6.3 it's also possible to separate your undo tablespace from the main ibdata file ($URL$ There may be some interesting thing for you. In 5.7.5 innodb_max_undo_log_size parameter was introduced. 
+
+MAX(id) can have different values in case you have concurrent users. Even in a transaction you can read different values in a READ-COMMITTED and READ-UNCOMMITTED isolation level. Just write exactly what you described with limiting the update to a reasonable subset of rows. For example running this after your insert will always set the correct values. 
+
+The 80% is just a general rule of thumb for helping people start with a more sensible value than the default. Buffer pool size calculation can actually be more complicated. Ideally frequently accessed data pages should remain in the buffer pool and you don't want too much eviction to happen because of its impact on performance. This is again generic but a more realistic measurement to have the buffer pool large enough to accommodate hot data + enough space for avoiding unfrequent reads triggering too much eviction. Just because you have a database 1TB big you don't have to have 1Tb of buffer pool if you only read the same 100MB all the time. Keep in mind also that inserts and updates also affect buffer pool usage because the operation happens there. You should try to match the amount of data you can write into innodb logs (controlled by ) and the space required for this in buffer pool. Even if you have large innodb log files but you don't have enough space for insert than eviction will cause flushing data pages to tablespace which in essence have the same effect as checkpointing. One empirical way to correctly size buffer pool is to set as high as your datasize (or as large as possible) and run normal production load on it while decreasing the size constantly while measuring transaction rate, response time and . When you see performance starting to drop that's the size that you need at least. 
+
+You also need to have execute otherwise you cannot "CD" into the directory nor MySQL will be able to. Run this to fix directories recursively: 
+
+You still need to wrap this into and make sure your mail is sent as proper html otherwise it will be only be creepier. As it was described by Baron Schwartz: $URL$ 
+
+That really depends on the size of your system and the level of automation you're using. What you can do with log_bin and log_slave_updates: 1. Quick failover It's not hard job to find the most up-to-date slave promote and determine the position on the other slaves and point them to the new promoted master. There are tools to help your there. Since MySQL 5.6 and the different flavours of it provides different implementation of GTID which makes it even less painful. Without binlogs being enabled a restart is required which (again depending on your setup) can take significant time (hours even). 2. Incremental backups and point in time recovery You can take a base backup of your slave with mysqldump, percona xtrabackup or any tool you prefer and make sure you don't run out of binlogs in case of a recovery you can just replay those logs. 3. Analytical capabilities In case of statement based replication you can process those binlogs and gather useful statistics about which tables are the most written to, updated etc. +1 Scalability Once you reach that point you will already have the tools and configs for it but it worth to be mentioned: you can move your slave around easily, change the topology whenever you feel so. 
+
+As @jkavalik wrote you're executing the update with a dependent subquery which effectively runs it 3861 times making it highly ineffective even if the query itself runs fast. An updated version of the query could be: 
+
+tl;dr Yes, will contain the rows that were just updated. Please note that you're not in a transaction context. So every query is an implicit transaction in this specific case. Assuming you did have a begin somewhere would still see the rows because it's the same connection and the same transaction. If you started the transaction and opened a separate connection or you had a concurrent process/request it would only see the rows without commit if your mysql is running with transaction level. You can check the global settings by: 
+
+(from $URL$ The most flexible and probably the best performing option for search is to have a feature table where you store all the possible features. And there's a table to store what property has what feature. The downside of this approach is space. Assuming your using InnoDB every row will have a 13 bytes overhead + the two columns (property_id, feature_id) ~ 6 bytes. So you can expect something around . (To compare the first option will need ) 
+
+This will only update originalid which haven't yet been set and with the correct value. Also please note that you can have the last insert id by the function LAST_INSERT_ID function. $URL$ So this would also work (and you don't need an index on originalid to be effective) 
+
+As @jkavalik said with your current setup the only option you have is to recreate the master as the slave of the new master and do a switchback if necessary. Keep in mind that you will have some data loss because you can have some unreplicated transactions on the failed master unless you enable semi-sync replication. 
+
+Your key_buffer, innodb_buffer_pool and innodb_log_buffer together already exhausts the available memory in a a t2 instance. If you also consider the per thread allocations (>3M) * 70 (max connections) the possible usage is growing by another 210M minimum. You have 270MB InnoDb data. If you don't expect it to grow significantly over time almost 600MB buffer pool is overkill. Make it somewhere around 300MB or if you expect it to grow then adjust with care. The 256MB innodb_log_buffer is completely superfluous. It's in the same order of magnitude as your data. You're never going to write that much that needs to be buffered. Increase your innodb_log_file_size rather if you are maintaining a write heavy operation. Key_cache_size is also way overprovisioned. You don't need more than what the size of your myisam indexes. Drop your per thread buffers and improve as it is necessary. Without seeing the usage hard to say exact numbers but I would start with something like this: 
+
+Slow log also has a bit more information than general log. 3# You can use tcpdump and percona-toolkit to retrieve the queries:

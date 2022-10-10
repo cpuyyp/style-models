@@ -1,0 +1,57 @@
+It is possible to create cyclic directory structure with symbolic links, so it may be reasonable not to traverse them. E.g. you can use from package to traverse only real directories: 
+
+This is pretty nice code. I have two main concerns. The first one is about handling errors. You are mixing tree approaches: , throwing explicit , throwing implicit (as in ). It's better to stick to or — they are explicit and you can handle them in pure code. The second one is about dividing your program in meaningful functions each having single responsibility. Such functions are simpler and you can more easily compose them. For example, checks if dictionary is not empty, adds to pattern and matches pattern. It is better to split error handling from data processing (in this case by lifting dictionary check to ). Another one is : it parses string into list of digits and implicitly checks for nondigits (throwing useless 'no parse' error). You can skip this as you check for invalid symbols in . 
+
+Let's review this code purely from a performance angle, without a focus on style or anything else (in addition to optimization suggestions, Peter already mentioned several things in areas other than performance). First, you can play with all the algorithm discussed here in this github repo. I compiled it on Linux but it should approximately work on Windows if you have or - if you add a thunk to adjust the calling convention. If someone really wants it I'll do it. Profiling If you've ever asked for performance help, no doubt someone has told you to profile, profile, then profile some more. So sure, let's start there. I'm going to use Linux's since it is awesome and free and available on Linux, but you can get the same information presented nicely in Windows using VTune or maybe with this stuff. Anyway, let's run on the original algorithm to get a feel for any high-level issues: 
+
+Note that in Haskell there is no single element tuple, so parentheses around are redundant ( but not ). 
+
+Also have to note that I like your coding style: domain-specific type aliases and short functions with descriptive names make code easy to read. 
+
+I tried to elaborate on great answer by Toxaris. After precomputing results for first numbers, most of time is spent on extracting digits and squaring them. It is possible to calculate squares of digits for sequential numbers in incremental manner. If you have list of squared digits for some number then here is how to calculate list of squared digits for . 
+
+The first row (for prime 3) means that after doing a 64 byte read at position , the next read should start at position to properly stitch the bitmaps together, the next at 2, and so on. The row for 5 says jump from 0 to 4, then 3. Notice though that these are simple increments the prime. So the series for 5 is just "plus 4, mod 5": . All the rows are similar. So if you are reading 4 consecutive 64-byte bitmaps for prime 3, you can do it directly like this, without any index calculations at all (assuming has the base of the LUT for the prime): 
+
+Now, when you have all of the expansions, you need to filter and count those with numerator longer than denominator. 
+
+replaces letter by searching for another one positions away. I'll implement this literally by creating cycled alphabet and searching for letters in it. This is inefficient but allows to get taste of laziness. 
+
+With LambdaCase extension it is possible to write without (but it does not seem much more readable): 
+
+You can read more about it here. And of course it is better to use instead of simple lists if the code is full of lookups. 
+
+Huh, well that kind of sucked. At 5.2 cycles per candidate it's a bit slower than the algorithm in the OP. For one thing it still has ~9% branch mispredictions. It turns out the main culprit is this line: 
+
+Bring back the Vectors The next step is to vectorize this. This is getting long so we'll skip the first version ( which clocks in at 0.27 cycles per candidate) and just go to my final version, : 
+
+The inner loop has now grown to 8 instructions from 6, but we have banished the branch mispredictions: 
+
+The inner loop here runs once per prime and processes 64 bytes per iteration (512 odd candidates), in 14 instructions. The the two instructions are doing the heavy lifting of combining the bitmmaks into the two accumulators, and the rest is mostly just managing the indexes. The outer loop runs when the bitmap for all 30 primes have have been accumulated and stores the bitmap into a temporary buffer provided by the caller. We periodically break out of the asm code to examine the generated primes (in this case, simply counting) - see for some details. In a real implementation, you would still want to do the handling periodically, but you might inline it right into the function. Let's time this guy: 
+
+Haskell is great for it's declarative style programs and most of the first hundred Project Euler problems are easy to write in such a way. First of all, this problem is about ratios, so let us import module. 
+
+It may worth inventing your own combinators with semantically appropriate names. Here is an example using ExceptRT monad from errors package: 
+
+The code seems a bit too verbose because of explicit search tree construction. It is possible to make it more concise by using list monad for building search space. Here is my attempt to rewrite it: 
+
+creates cycle from a list. skips some characters and returns list starting from . Try it in ghci ( is infinite so be careful with it). 
+
+This is just a "saturating" shift, which returns zero if the shift amount is 64 or more3 and which compiles to a branch4. It also turns out that the loop has no less than two very slow division instructions every time around, coming from the two operators in this line: 
+
+Branch Mispredicts This code is being crushed by branch mispredictions: 20% of branches are mispredicted, and there are a lot of branches about 1 of every 5 instructions1. Usually you are looking for a value less than 1% to avoid a big impact. Off the top of your head this is going to have an impact of about 9.3 billion misses * 15 cycles = ~140 billion cycles, or about half the total running time. This also explains the poor IPC of 0.87. Toplev.py We can try to confirm: 
+
+In this case changing fields in or won't break . You can enable extension to get only specified fields : 
+
+Maps as arrays In you are taversing heights 200 times. It is possible to emulate array with and do this in one pass: 
+
+Thus you get self documenting code and all of functions for free (for each field compiler generates accessor function with the same name). This also leads to more concise implementation of other functions: 
+
+Snap catches all exceptions thrown within handlers and converts them into responses with HTTP 500 code. So error handling in your code is pretty fine (if you are ok with converting "postgres is down" or "invalid query" into HTTP 500 code). Side note 1: You are setting at the top of the handler. It is easy to forget to add/remove this code if you are modifying some part of handler that is actually writes response data. It may be more convenient to define helper function: 
+
+1 This makes total sense when you eyeball the code: the inner loop has 6 instructions, and the trips to the outer loop increase the branch density a bit. 2 Note that the output indicates the prime density is half that: 11.5% - and that's the true prime density - but the algorithm only examines half the numbers since it skips all even values, so from the point of view of the looping structure the prime density is 23%. 3 Shifts of a by amounts larger than 63 are famously undefined behavior in C++, so this is needed for correctness, but even at the x86 assembly level, we'd need something because x86 shifts are "mod 64", so a shift by 64 is the same as a shift by zero, not what we want. 4 This would be much better as a conditional, but doesn't do it that way, perhaps because there is a read of the array on one branch and doesn't want to do that in the case the value isn't used (even though it can probably prove that is always in bounds). 5 This is just a consequence of 11 and 8 being relatively prime, and indeed since we are only dealing with odd prime numbers on the one hand and powers of two (for the various bitmap arrays), this useful properly will occur repeatedly. 6 At the limit of very large reads, the size of the table goes up proportionally to the read size, but for smaller values it is sub-linear. For example, when I moved from 1 read in the algorithm to 2 reads in , the size increased only from 158 bytes per prime to 190 bytes per prime. You can see the behavior by adjusting the constant and running the command. 
+
+Vectors as arrays If overhead of trees is too much for you, it is possible to use which is for real arrays in Haskell. 
+
+I don't know any readable way to rewrite without parenthesis. Haskell is smart enough to calculate and at compile time. In terms of performance, if you don't specify end of the list there will be no checks for the end of the list at runtime (which is good in this case). 
+
+It is really nice that you provided domain-specific type aliases. This makes type signatures more readable and allows to easily change underlying data representation as in this case.

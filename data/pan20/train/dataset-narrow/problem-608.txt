@@ -1,0 +1,47 @@
+It looks like you want to keep the rows where the combination of , and are the most common. You can do that with an updateable CTE that counts the number of occurrences for each combination using and then enumerates the counts using . 
+
+The and is the culprit and it is in the Xpath expression that is to blame. I don't think it is possible for Microsoft to fix this with the current structure of the internal table even if you were allowed to leave out the from the function. They would probably have to create multiple internal tables for each path expression with unique constraints in place to guarantee for the optimizer that there can only be one element for each row. Not sure that would actually be enough for the optimizer to "break out of the apply pattern". For you who think this fun and interesting and since you are still reading this you probably are. Some queries to look at the structure of the internal table. 
+
+SQL Fiddle You said in your question that you want to get the values from all the tags. I don't know how useful this is to you but you can build a Name-Value list with all the attributes and elements in the XML. This will give you all elements. 
+
+You should shred on in your second query as well and use a predicate against the node in the values clause and then get the value from node. 
+
+It is not very clear that the name must be unique across all objects in the database. And even that is not true. The name must be unique within the schema in a database. 
+
+You should use the nodes() method of the XML data type to shred your XML. If I understand you correctly you want to fetch the nodes from the root node where the attribute is and from that node you want the nodes where the attribute is 'item'. I will just assume that the XML you have provided with numeric node names is not the actual XML you are using but that the node names are valid XML names. 
+
+Depends entirely on your use case and what the data looks like that you have. This answer is in no way an attempt to optimize your query, only a way to show you how to make use of the indexes. The result of testing on your data could show that you get the best performance by not using any indexes at all, or perhaps use the index only on some parts of the query. As a general rule it is always good to keep an index as small as possible so using instead of is a good thing if you know that you are dealing with integers. 
+
+Your expression returns all four filenames. Change the XQuery to to get the first attribute with the path . With XML that looks like this 
+
+You should be able to do this with some string manipulation using charindex() and substring(). It looks like you can use to find the start of the value you are looking for and to locate the end of a value. 
+
+With a query like that there is no difference between using or and that is because SQL Server builds almost the same plan for the two versions not using an index and exactly the same plan when index is used. That is true both for SQL Server 2012 and SQL Server 2014. For me in SQL Server 2012 the queries without the XML index take 6 seconds using the modified version of the query above. There is no difference between using the full path or the short path. With the XML index in place the full path version is the fastest and takes 5 ms and using the short path takes about 500 ms. Examining the query plans will tell you why there is a difference but the short version is that when you use a short path, SQL Server seeks in the index on the short path (a range seek using ) and returns 700000 rows before discarding the rows that do not match on the value. When using the full path, SQL Server can use the path expression directly together with the value of the node to do the seek and returns only 105 rows from scratch to work on. Using SQL Server 2014 and the new cardinalty estimator, there is no difference in these queries when using an XML index. Without using the index the queries still take the same amount of time but it is 15 seconds. Clearly not an improvement here when using new stuff. Not sure if I completely lost track of what your question is actually about since I modified the queries to be equivalent but here is what I believe it is now. 
+
+Not sure what you are seeing and not seeing in the event log but it works as expected for me (version 11.0.3000). The mistake you did with your extra path expressions is that you forgot in the path. Testing this with the extended events and looking at the execution plan for operator (there should be none), I found that one extra path is enough for your queries to make it use only the index to fetch the data . You can have in there as well and perhaps it will make a difference or not depending on what your XML look like. Note 1: You have mixed up the names of the columns in the index and your query. That might contribute to the problems you have with extended event. Note 2: The events for missing selective XML indexes is generated when the query is compiled. If the query plan is used from the cache you will not see any events. 
+
+Group by and get the rows where there are less then 3 distinct values in . To figure out what groups are missing you can use the table value constructor to include the group names you want to check and use to build a string with the missing group names. 
+
+If you don't want to use xsi:nil you have to decide what value you want to have in the XML when the value in the table is . For strings it might be appropriate with an empty string. For integers you might want to use or or perhaps convert the column data to a string first and use an empty string for integers as well. You have to decide what value you want and use isnull and cast to get the output you want. Example: 
+
+The result is . In your case there can probably only be one node and only one node but SQL Server does not know that so you have to build the XQuery to guarantee only one value returned. . 
+
+You selected the default instance name as the name of your instance. Instance Configuration "If you specify MSSQLServer for the instance name, a default instance will be created. For SQL Server Express, if you specify SQLExpress for the instance name, a default instance will be created." To connect to the default instance you don't specify the instance name, only the server name. 
+
+Empty string in the path expression and the absence of an alias on the returned column will give you your string back as xml. 
+
+What you want here is not entirely clear from your question. My guess is that you want the value from the node where the node is . Shred the XML using the function on and add a predicate to check the value for . 
+
+Scalar valued functions are executed in a different context than the main query and setting that up for each call takes time. 
+
+The expression within the predicate returns true or false and if it returns true it will return one node to the exist function. If the predicate returns false there will be no node returned. Logical Expressions (XQuery) 
+
+If a selective index should be used or not is decided before optimization but if a secondary selective index should be used or not is a cost based decision by the optimizer. Why is the secondary selective index not used when the where clause filters on? Update: The queries are semantically different. If you add a row with the value 
+
+That is because union is trying to remove duplicate rows. If you don't need that you should use instead. If removing duplicates is what you want then you should add a the the query above. 
+
+I believe that the cast to XML is killing performance for you and what is happening is described by Paul White Compute Scalars, Expressions and Execution Plan Performance The cast to XML is deferred to where you actually use the XML column so in your query the cast happens three times for each row returned. 
+
+The query above works from SQL Server 2005 even with compatibility SQL Server 2000 (80). If you find your way to SQL Server 2012 you can use lead and lag instead of simulating with an . 
+
+You should have a look at Property Promotion in XML Best Practices for Microsoft SQL Server 2005. Create a user defined scalar valued function that extracts the value you need and use the function as a computed column in your table. You can persist the column of you like and you can create a regular index on the column. You don't have to persist the column in order to create the index.

@@ -1,0 +1,51 @@
+In practice it seems that SQL Server does allow some additional cases beyond that mentioned in the documentation however. As you show in your question does in fact work so the restrictions on changes to columns used in indexes appear to be the same as those for user created statistics. Moreover the caveat mentioned about Primary Keys seems to be untrue also. The following works fine. 
+
+No. Rebuilding the table is the only way. See this Connect Item for confirmation. You could use SSMS to script this for you if you trust the somewhat buggy table designer. Apart from that you could declare a view with the desired column order as a way of grouping logically related columns together. 
+
+If you can't change the query you can use a plan guide. Test the performance of the query with (will need someone with permissions to try this). If that produces satisfactory performance you can apply this with a plan guide. If it doesn't produce satisfactory performance try and find a hint that does. Possibly if inappropriate nested loops is the problem. You might need to resort to the hint. Once you know the hint(s) required you can apply them using the information here. 
+
+You would need to write triggers that route the Inserts/Updates/Deletes to the appropriate table. This could initially be based on whether Id was <= 2147483647 or not but that isn't going to work if you try and migrate rows in the background from the legacy table to the new one so probably best to do the following. Delete trigger Apply deletes against both tables by joining on id Update trigger Apply updates to both tables by joining on id Insert trigger Route all inserts into the new "YourTableBigInt" table. It shouldn't be possible for an insert through the view to enter an explicit identity that might clash with anything in the original table as any attempt to will fail now that is actually a view. You could then have a background process that deletes batches of rows from and s them into . Once the original table is empty you can drop it and the view and rename YourTableBigInt to YourTable. 
+
+NB: Support for 2005 is somewhat limited however. The product itself doesn't support incremental or filtered statistics and I haven't introduced support for stats stream as it would need one of the kludgy workarounds to convert binary to string before this functionality was added to . 
+
+The option clause can only be used on standalone statements. Not where the is being used as an expression. The following examples don't allow you to specify a query hint either. 
+
+but the data there is not persisted across service restarts and might not be accurate for your requirements (e.g. running will update the time even though no rows were actually deleted) 
+
+There is in fact no useful way to do this as far as I can see. The other answer mentions and leaves it up to the reader to figure out the details. From experimentation I assume they mean . This fails to take account that is itself a use of the page and the value gets updated before it is shown to us. A script demonstrating this is below (takes 12 seconds to run). 
+
+You can't. The return datatype must be specified in a function. It is not an optional part of the grammar. You can return though. 
+
+The plan you have at the moment looks like the most optimal plan to me. I don't agree with the assertion in the other answers that it is sending the 2.6M rows to the remote server. The plan looks to me as though for each of the 54 rows returned from the remote query it is performing an index seek into your local table to determine whether it is matched or not. This is pretty much the optimal plan. Replacing with a hash join or merge join would be counterproductive given the size of table and adding an intermediate table just adds an additional step that doesn't seem to give you any advantage. 
+
+To replace the scan of 40 million rows with 1,386 seeks. If that table was not available then a recursive CTE could be used to achieve similar results. 
+
+It just means that the query optimiser doesn't require an explicit order guarantee either for some later operator in the plan (e.g. merge join or stream aggregate) or to avoid a sort because you have explicitly requested an . When you might in some circumstances get an allocation ordered scan rather than a scan that follows the linked list of the leaf pages in index key order for example. 
+
+The table contains a million rows. All of them match the predicate. Under compat level 130 the 10% guess yields an estimate of 100,000. Under 120 the estimated rows is 1.03913. The 120 behaviour uses the histogram but only to get the number of distinct rows. The density vector in my case shows 1.039131E-06 and this is multiplied by the table cardinality to get the estimated row count. All of the values are in fact different but all match the predicate. Tracing the extended event shows that under 130 there are two different events. The first one estimates 100,000. The second one loads the histogram and uses the CSelCalcPointPredsFreqBased/DistinctCountCalculator to get the 1.04 estimate. This second result appears unused. The behavior that you observed is not consistently applied in 130. I added expecting this to be a clear win for the 130 estimator as the 120 struggles on with a memory grant for one row but this minor change was sufficient to bring the estimated rows down to 1.03913 in the 130 case too. Adding reverts the estimate going into the sort to 100,000 but the memory grant doesn't increase and the estimates coming out the sort are still based on the table distinct values. 
+
+Notice that the result set has 3 rows and CountOverResult is 3. This is not a coincidence. The reason for this is because it logically operates on the result set after the . is a windowed aggregate. The absence of any or clause means that the window it operates on is the whole result set. In the case of the query in your question the value of is the same as the the number of distinct values that exist in the base table because there is one row for each of these in the grouped result. 
+
+but it seems to be capped at no more than the original plan cost (and the overall plan cost doesn't get adjusted upwards either hence incorrect percentages) 
+
+If you decide there is some criteria by which the row to be updated should be selected after all simply change the accordingly so that the desired target row is ordered first - e.g. would update the latest one as ordered by a column called DateInserted if such a column exists. 
+
+depending on the exact expression behind and (e.g. you can't use this and get correct results if they reference window functions). 
+
+I don't think there is any way of recovering from such an error once it has happened. For your specific use case you don't need anyway though. You can assign the return value to a scalar variable then insert that in a separate statement. 
+
+Add before the delay to flush anything in the buffer to the client (SSMS?) first otherwise SQL Server will wait for more data to fill the packet. 
+
+Your statistics need updating. See Statistics, row estimations and the ascending date column. Recent dates are not proportionately represented in the statistics and so SQL Server underestimates the number of rows that will match the predicate (as shown by the Estimated no of rows of 1 vs actual 13922). So it chooses a plan with nested loops and a seek on the other table. The use of prevents a seek being used so you get the hash join more suitable for the actual number of rows involved. If you update the statistics on that column it should choose a more appropriate plan naturally. You might also consider using Trace Flags 2389 & 2390 to make this issue less likely in the future. 
+
+When I run your script to create a statistics only database and the query in the question I get the following plan. 
+
+I would probably abandon the views here and use the new views (as opposed to the backward compatibility ones) instead, or at least materialize the results of the into an indexed table first. Recursive CTEs always get the same basic plan in SQL Server where each row is added to a stack spool and processed one by one. This means that the join between will happen as many times as the result of the following query . Which I assume in your case (from the 11 mins execution time) is probably many thousands of times so you need the recursive part to be as efficient as possible. Your query will be performing the following type of thing thousands of times. 
+
+You can get rid of one of the sorts by simply changing the order of the columns in the CTE so the one appears last (The connect item for this Unnecessary Sort is here) 
+
+Whilst it doesn't guarantee that the plan will be exactly the same (e.g. compute scalar operators can move around for example) it will likely be pretty close. 
+
+For me about 50% of the time this second query returns a row with different values as the value changes between the two seeks on . 
+
+This is absolutely not a canonical answer but I noticed that for the nested loops query plans shown in the SQL Fiddle it was possible to apply the plan from Query 2 to Query 1 with the use of the hint but attempting the reverse operation fails with

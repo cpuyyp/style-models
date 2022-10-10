@@ -1,0 +1,119 @@
+This is happening because the division by zero error is being raised before the procedure is even executed - It's happening when the arguments are actually passed in to the procedure. You can verify this with a small proc that doesn't do anything: 
+
+I'd use instead, with a job for each refresh. It's then easier to manage, and view previous executions. 
+
+It's not possible, however you can easily generate the needed commands. Use SQL*Plus and spool this to a file: 
+
+... will only return odd numbers, due to the lower bit in any integer always being 1 when a number is odd. 
+
+... at the mysql prompt. The session will still be open after the file is executed, unless the file has a command in it that causes the mysql shell to exit. 
+
+It's essentially because you've created a multitenant capable database, and are trying to create a user in the root. Read up on multitenant - documentation link. 
+
+In the tree view on the left-hand-side, expand the tree for your database connection. Expand "Other Users", then "XYZ", then "Views". Double-click on the view name "ABC_CHAR" - this will open the column list. Click "SQL" above the column list to see the query that created the view. The other way to achieve this is to use SQL: 
+
+Doing this in the database is easy with a trigger. However, it's all well and good doing this in the database, but we have no idea how the application itself works or will deal with this (if at all). For example, the application may display what the user has entered rather than the value that the trigger has automatically inserted. I think you're going to have to deal with this in the front-end, which is something we probably can't help you with. Anyway, here's how to write a trigger to do this. Test tables and data: 
+
+Obviously, alter the numbers and path as needed. Adding a datafile impacts your backups. Take a full backup immediately after adding it - this is the only thing you really have to worry about. 4Gb is HUGE for a tablespace. I'd first investigate whether there are some large objects being stored in the tablespace that shouldn't be there ( is your friend). Also, note that you cannot remove a datafile once it has been added to the tablespace. 
+
+If you want to create a user that can admin any of the pluggable databases, prefix the username with . For example: 
+
+What you have entered is 2 queries on a single line, which SQL*Plus will send to the RDBMS - Oracle will then try and parse the string sent as a single query and fail because it is not valid SQL. See the documentation for more details: $URL$ 
+
+Oracle's datatype behaves as both an ANSI and datatype. This was a design decision that only Oracle knows the reasoning for. I'll add that Oracle isn't the only RDBMS that doesn't follow ANSI SQL standards in this way. Obviously, you can remove the time portion with . 
+
+I don't know how to call an Oracle stored procedure from a DB2 stored procedure, but the syntax for calling an Oracle procedure over a database link is: 
+
+The character set of an Oracle database is set at the database level, not tablespace level. You have 3 options: 
+
+If you don't need the original data, you can exchange the partitions with empty tables that you create yourself. Demo: 
+
+The and data dictionary views provide all the information you need to track what executed, when, and if any errors occurred. Documentation link here. As pointed out in a comment, you can add multiple clauses, comma-separated, as follows: 
+
+.... to start off with. Look at your screenshot - you completely ignored the fact that the command gave you the command-line usage back, rather than actually doing anything. 
+
+Scripting it is easy, you can run in a loop and use , or spool a query from SQL*Plus to create the script for you: 
+
+DB Fiddle Test to show an example. Also note that you should not use as a column name, as it is a reserved word. 
+
+You can do this using the MySQL Workbench Migration Wizard, which was introduced in MySQL Workbench 5.2.41. There's a blog post on the MySQL Workbench site here that details how to perform a migration. Note that it will not be able to migrate more complicated database features. 
+
+The first dpkg execution may ask for you to install dependencies. If you're installing on a 32-bit system, alter the URLs accordingly. Latest .debs are available on $URL$ - Select "Debian Linux". 
+
+The errors you're eluding to actually happen before the database, so auditing won't help. You'll need to enable listener logging/tracing to diagnose them. Add: 
+
+Use a trigger. Here's some code you can use as a base. If you also need to handle UPDATEs, only a small change is required. 
+
+See this documentation section (search for "Enabling Automatic Shared Memory Management") - Read that whole documentation section to gain a better understanding. As an aside, your does seem very small. 
+
+is for /, is for /. If your normal characterset is UTF%, you're generally safe staying away from the datatypes unless you have some strange internationalisation requirements. If so, feel free to edit your question! 
+
+.. it's already configured to only listen on . If there are lines with other IP addresses before the , it means that it's listening on those interfaces. To change MySQL to only listen on , edit your configuration file (usually ), add the following: 
+
+The other way to do this is to just move your entire Postgres data directory to the external drive, then symbolic link the external drive directory back to the original location. If you want to create multiple tablespaces over many drives you can also specify which tablespace a table or index should reside in using the TABLESPACE parameter in the creation DDL. 
+
+I actually hate myself for answering this! Change the data model to use a lookup table, . It'll break horribly if the shop enum names have commas or quotation marks in them (probably). 
+
+and can be the relevant columns cast to a (there are no or columns involved), as I do not need to do any post-processing of the values themselves. At the moment I can't think of a sane way of doing this for a large amount of columns, without resorting to generating the queries programmatically - I may have to do this. Open to lots of ideas, so I'll add a bounty to the question after 2 days. 
+
+That should solve your problem. The original code didn't work correctly as you can't test for equality with a NULL value - you have to use IS NULL or IS NOT NULL. 
+
+The table_privileges view is only preserved for compatibility with ancient versions of Oracle. You should instead be using the user_tab_privs view, all_tab_privs view, or dba_tab_privs view (documentation links for each when you click). 
+
+This obviously causes problems due to ownership etc, as well as the data residing in a tablespace that you don't want user objects belonging in (from above example, because we didn't specify a clause: 
+
+The plain answer is that not all RDBMSes support all of the various ANSI standards. Oracle just happens to not support this particular part of it. Oracle does however support . By the way, an example of is terribad - You can break older versions of Oracle by doing an into . 
+
+Yes, WE8ISO8859P1 is a subset of AL32UTF8, though a small bit of conversion might be needed (which CSALTER will deal with & CSSCAN will inform you of when you do a preliminary scan). A must-read for Oracle 10.2 is here. Doing a full export/import will be more time-consuming than using csscan/csalter. Another good, albeit old, read is the Oracle Character Migration Best Practices white paper. 
+
+The parameters are all prefixed according to which part of the system they affect. = filesystem, = networking etc. This sets the system wide maximum number of shared memory segments. At a high level, a share memory segment is a "piece" of memory that multiple processes can all attatch to at the same time. You can view all current shared memory segments on a Linux box using the command . configures semaphores. A semaphore is best described as: 
+
+Your question could mean two things. Either gathering stats on the machine (ie: CPU speed, IO wait times etc), to aid the Cost-Based Optimiser in picking the best queries based on your hardware, or gathering statistics on the Oracle tables. For the former, pick a time when your system is at high load, then use: 
+
+This should sort you out. Remember to login & out again once edited, or do a to source it. Also, make sure it's executable ( ). 
+
+The VARCHAR2() datatype requires a data length. .. as indicated by the error message , which tells you the error is on line 7. The 3rd from last line: 
+
+sqlplus is not in your path. Use instead of , as that will read the users ~/.bash* files & set the environment accordingly. 
+
+Just plug the window size into where the two "7" values currently are. SQL Fiddle here - new fiddle with slightly altered data so you can see that the windows are different for each . 
+
+Yes, it's safe to delete them. If you're running on Linux, set up logrotate to compress & then delete after a set period of time. Examples of Oracle logrotate configuration can be found here. 
+
+If you don't need to run your database in archivelog mode (ie: you don't need to be able to do any disaster recovery & don't care if your data goes AWOL), you can turn archivelog mode off (as SYSDBA, database in MOUNT mode): 
+
+Before those two steps, you may also need to do a in so that it "knows" that the deleted archivelogs have been removed (depends on how they were removed). 
+
+Are there any approaches that I should consider given I'd like to keep updates to a minimum, updates atomic, and retrieval queries as simple and "performant" as possible? My initial thought was to use an extra column, and only update and the values for a single row (with the retrieval query using ing by ), but that fails when you need to move a row in between two other rows that have the same value. No specific database in mind, as i use a broad spectrum myself. 
+
+If you get a during any of this, then a different solution is needed. You might have to set the hidden parameter and/or recreate the control file to recover from this. 
+
+It's easily tested. There are two possible scenarios. Scenario 1: Scenario 1 is creation of a PK using an existing index: 
+
+You may nave to do the same for and if they exist in both tables (in this specific query). It's good practice to always fully qualify column names - can make the query easier to read. You can always use a table alias too to cut down on typing. 
+
+.. from within . or the process. Any config validation errors will then get put into the Postgres log file, and it won't reload the config. Example log: 
+
+This definitely says to me that these views, and the associated commands, are for .NET stored procedure support. 
+
+In your case, will still match and so will return the row etc etc. Change all of the above conditions to and you'll be OK. 
+
+Click on the database name in the left-hand pane, then click on "import" at the top. Select "XML" from the format dropdown, "Choose File" and pick the file from your filesystem, then hit "Go". 
+
+In short, no. You can however use the view to check which objects the views and functions depend on, then query to check the for each of these dependant objects - that should give you an indication of which objects have changed and caused the view to be invalid as a result. It's quite normal for objects to become invalid in development databases when columns are added to tables etc. 
+
+This is explained in the documentation, here. See "B.2 Changes to the Optimal Flexible Architecture for Oracle Database". 
+
+The documentation for states that to shell-out you just have to use blackslash pling, followed by the command: 
+
+There will be an easier way to do this, but I needed some practice and my brain hurt thinking about how to do the unpivoting and keeping the last record. SQL Fiddle. If you've never used before, my apologies. 
+
+The documentation states the size of datatypes here. 0 (the number) is stored as 1 byte. Other single digit numbers will be stored in 2 bytes (one for the exponent, one for the mantissa). You can test this yourself by creating a test table and using the function on test data (doc link). A will be stored in bytes. I'd always store numbers in a . Unless you're dealing with trillions of rows, the space saving will not be significant enough. 
+
+To change the behaviour, download the source for the mysql CLI and modify the handler to behave as you see fit, then recompile & install. 
+
+Quite simply: Null VaLue The function substitutes any NULLs in a given resultset column with the value given as the second parameter. 
+
+Get the client to call . This will then be set in the audit field. Obviously you'l need to call it first from the client whenever a new connection is pulled from the pool. For example: 
+
+List all users who can SELECT on a particular table (either through being given a relevant role or through a direct grant (ie grant select on atable to joe))? The result of this query should also show through which role the user has this access or whether it was a direct grant.

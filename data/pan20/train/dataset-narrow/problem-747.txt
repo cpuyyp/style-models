@@ -1,0 +1,49 @@
+You'll need to use a instead. If your data is indeed distinct, use a for better performance -- the step to eliminate duplicates is eliminated. 
+
+If you really need to do this (a la Windows Registry values) I would probably try to keep it simple and keep it to one table something like this (untested pseudo-DDL): 
+
+Store the first. When you do this you can enable index key compression. See $URL$ for the syntax and $URL$ for the concepts. In your case, you can do it like this: 
+
+is purely a shorthand way to create an column with an associated sequence for its default values. The documentation for linked from the question even says as much: 
+
+Test! Be sure to test this in your Test / Q&A environment! Generate representative transaction loads, but also much higher loads to see how it will perform in the expected and unexpected cases. Even at high transaction levels, you will have to weigh up the performance associated with updating and storing the running totals vs how often they are queried. 
+
+If I had more reputation, I would add a comment asking you to describe your indexes. As it is, I'll assume you don't have indexes since you didn't mention them. First, consider using on your queries to analyze the decisions the planner makes. 1.5m rows shouldn't take 20 seconds with any sort of reasonable combination of hardware and indexing. See the documentation of the modifier to get started with that. You should include to see the cost breakdown and timing info from actually running the query, and more importantly the individual processes that go into each stage. Second, a schema like this would benefit not only from indexes, but from some limited use of multi-column indexes. (See documentation.) Consider creating indexes on: 
+
+I wouldn't recommend this avenue though for fear of subtle corruption of your documents (as noted above). 
+
+Oracle installs some handy "$ORACLE_HOME setting scripts" in /usr/local/bin (or possibly in another location such as /opt/bin depending on your flavour of Unix/Linux). These are called and . They can be "sourced" (ie its commands executed) in your current shell and will then prompt for $ORACLE_SID and set $ORACLE_HOME based on this value. If there are any Oracle instances this script should default the values so you just need to press enter to each prompt. If you're running bash on a Linux box you would use to do this. See $URL$ 
+
+Determine dependencies between systems both on the "from" side and on the "to" side. This will affect the "flow" of the migration. Decide how the data will be migrated. Amongst others, choices are: 
+
+You don't need to only on a schema. You can get more specific and specifically to a table, like this: 
+
+I don't believe you can use pgloader in this way if any of your HTML contains character sequences that would be interpreted in the context of CSV. For example, any backslash followed by digits is perfectly valid (and not-special) HTML, but would be transformed to something else by pgloader while importing. I can't even estimate how pgloader will handle the double-quote and single-quote symbols scattered around in your documents. You would also need a byte that doesn't exist anywhere in your content to serve as a row delimiter; you could use some low-value control byte for this purpose assuming your HTML is valid and doesn't contain any of these special bytes. This naturally depends on your chosen character encoding, and is rendered worse if you have multiple encodings among your documents. Assuming everything is UTF-8, the NUL byte should not appear in any UTF-8 stream. Assuming you aren't concerned about special CSV character sequences, you could attempt to do this import using NUL as your separator value: 
+
+So doesn't require . Having is applied after the aggregation phase and must be used if you want to filter aggregate results. So the reverse isn't true, and the following won't work: 
+
+Note that for some cases, an statement can be turned into a expression which is somewhat similar to the operator in C and Java, but more generic. Your pseudo-code: 
+
+Oracle's wrap program doesn't wrap triggers. The way to do this is to move the code into a package or a stand-alone procedure, and make the trigger a one line call to invoke this code. See the documentation on the limitations of wrapping: $URL$ In your case, something like the following (untested) should work: 
+
+I'd go for option 1. With this approach there are no "hacks" in the app for anonymous users. The standard security model continues to apply with the only difference being that if you don't know who the user is (ie, they haven't authenticated) that you pretend they are the anonymous user, which in effect they are. Option 1 is also the approach used by most (all?) web servers and file servers: they use an "anonymous" or "nobody" user. 
+
+and others. It depends highly on what your code is doing. Duplicate the database to another server and create different configurations of indexes and run your code against it. ( again here!) Multi-column indexes are great because they help the planner check multiple filtering/sorting criteria in one pass of the index. Third, to address your last points, I'm not sure that pagination or moving to a non-relational model will help. The fact that you're using foreign keys actually points to a strongly relational set of data. You can, of course, try MongoDB for free and see what the performance looks like. 
+
+but note that and are very large sledgehammers for building very small spice racks. Consider reviewing the excellent documentation which covers this in detail. For your specific case, you could do something as simple as: 
+
+This is almost certainly not what you want in an OLTP application. Or in a data warehouse type application it implies that is a dimension, and is a fact table. However you would normally see a hierarchy in a dimension, which you don't have. So then there's no advantage in not using the built-in datatype instead of inventing a surrogate. 
+
+You can't embed DDL in a stored procedure like this. Either use and your DDL statement passed to it as a string, or, better, remove the stored procedure entirely an execute the DDL directly. 
+
+Mathematically, disjoint = not intersects. As to which is faster, according to the documentation on spatial indexes at $URL$ , a spatial index can be used for a query containing . Strangely enough, is not listed. 
+
+Attempting to do an insert will not invoke , even if the trigger is defined as , because the rule is modifying the command itself; after the command is re-evaluated, it's no longer doing anything, and the trigger no longer applies. Obviously your rule does not need to be defined with , and in that case, your rule and your trigger could both apply. With specific regard to your code, it's hard to say without knowing the definition of , but it doesn't look like it since your trigger and rule are defined for different operations on different tables. 
+
+You can consider a rule as transforming the command being executed, whereas a trigger is altering the data itself. (Note that this is a simplification! Spend some time reading the documentation for and rather than trusting some random internet guy.) So you can define a rule that is invoked when PostgreSQL sees a certain command, and transforms that command into something that would not invoke the trigger. Take for instance a rule defined as such: 
+
+All I've done is move all the code into a stored procedure, and redefined the trigger to CALL that procedure. 
+
+Oracle will only scan the partition for the year 2013. On the other hand, if you are altering the table to add or remove partitions, you will more often than not need to name the partitions. This isn't always true: for example, Oracle 11g has interval partitioning where Oracle can automatically create new partitions for new data as needed -- perfect for the example I just mentioned. 
+
+Yes, 'W' will do that -- replace the file. Use 'A' to append. I don't think you can "modify in place"; you might have to copy the file to a new one making the changes you desire, delete the original and then rename the copy. All of this begs the question why you're trying to do all of this in PL/SQL. It might be better -- certainly easier -- to do it in an external program written in eg Python and invoke that.

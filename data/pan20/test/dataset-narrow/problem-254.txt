@@ -1,0 +1,55 @@
+Note that, this should be done on the primary and all standby databases as well (just in case a role transition happens and a standby becomes primary). 
+
+Yes it does. Starting with version 11.1, we have Adaptive Cursor Sharing with bind sensitivity and bind awareness, which allows the optimizer to produce multiple optimal execution plans for the same SQL statement, depending on the bind values. 
+
+With Grid Infrastructure, you need to modify the configuration with srvctl, for example after upgrading to a new release: 
+
+By the way, this is a really bad idea (autonomous transaction trigger). Check what happens if you do something like this: 
+
+No, it is not. It is not guaranteed (well, it is, with , but that is in the subquery, and that is not good enough for the optimizer) that your query returns at most 1 row for each key value from the base table. You need a unique constraint on to make this work: 
+
+And run the queries, in the generated trace file, you can view the final form of the query that is executed. 
+
+shows units in database blocks, not bytes. 4 MB is not enough for a SYSTEM tablespace. Most likely what you saw was 4M blocks, which is 32 GB with a 8K blocksize tablespace, and that is the maximum size of a datafile in a 8K smallfile tablespace. That is why your attempts had no effect. You can add a new datafile to the tablespace, for example: 
+
+Short version: no. Active Data Guard is an optional feature that allows you to open the standby database in read-only mode while applying logs from the primary. If you need the standby database only in case of disaster, then you don't need to buy this option. 
+
+You can choose the first two from these. A logon trigger can also issue the , and you don't need to modify the application code for that: 
+
+The whole error message may reveal more, and I would check the specific table in the dictionary views (, ), and look for such "anomalies". 
+
+Since I use OMF, I can easily recognize the file number, because it is part of the name (258, 257, ...), but you can get this as: 
+
+TFA is a seperate installation. It is not part of the database home. Uninstalling the database home does not automatically uninstall TFA. It is installed while executing root.sh, but it is a seperate installation. No. Uninstall it with , as root user. None. 
+
+When an index name starts as SYS_.... and has a seemingly random identifier on the end, then that index was generated automatically, which is quite unlikely for a bitmap join index :) You can confirm the index being a bitmap join index e.g with the use of dbms_metadata.get_ddl, which will show you the actual join condition used: 
+
+This feature was requested 11 years ago, and it is still not implemented: Bug 5034478 : ENH: ADD PARAMETER TO IMPDP TO OVERWRITE NLS_LENGTH_SEMANTICS 
+
+then yes, the database block will need the 50 ITL slots. But even then, most likely you will not need to set INITRANS to 50, because the database will manage this automatically, and 50 is well below the actual limit in a standard 8K database block. This may not be true for , , , as when they happen, the database block is most likely full and the number of ITL slots may not increase in that case. Imagine a full database block that stores 50 rows and has 2 ITL slots, and 50 concurrent transactions want to lock 1 row each with . But with , that uses empty database blocks or continues writing to existing ones with free space in them, it should not be a problem. Note that there are many ifs, mays and questions here, and as I said, in most of the cases, the default values are adequate. Yes, I can create an artificial example that works as above, but real scenarios are fortunately different. 
+
+Defining a type with the same name and properties is not the same as using the actual type defined in the package. You can test it with: 
+
+You can not just use any function in the list when you use . You need to use an aggregate function (, , , etc) on columns not included in the list, or include the columns used by a regular function in the list. You use and with your function, but they are not included in the list. Including those columns in the list should solve this, but that may not provide the result you want. Another way is to write your own aggregate function: Using User-Defined Aggregate Functions 
+
+This generates as many rows as the largest range requires, with data , starting with , so no correction needed, when we add these values to . Now simply join this to your original table and limit the number of rows by , finally add the row number to : 
+
+This is typically caused by some leftover socket files at temporary locations with wrong permission (for example someone started the listener as root). Shut down the database and delete those file as: 
+
+But the above 13 objects are not accounted for in the above underscore view or X$ tables, they are in another X$ table (): 
+
+If you want static registration for , then use . Your tns entry contains , and you try to register the database with (). Fix the above and start the listener: 
+
+1) This is typically caused by inappropriate configuration of the parameter combined with a lacking backup method. The default value 7 means that records (of archivelogs or backups) are kept for 7 days, after that, they can be reused. If you do not backup/delete your archivelogs for 7 days, the database may reuse the controlfile records pointing to them, basically the database "forgets" these entries and leaves them in the filesystem. You should regulary backup and delete your archivelogs and set appropriately based on your backup strategy. If you use user-managed backups instead of RMAN, you need to take care of deleting these logs manually. RMAN can backup and delete these files in a single command. 2) Depends on your backup requirements. If you use user-managed backups, make sure you have backups of these files, then delete them. If you use RMAN, you can use , then use RMAN to backup and delete them. If you do not need any backup of these files, simply delete them. 
+
+I can easily create an index on "large" (over 200K character) JSON documents, so first a JSON with a lot (50000) of short (2 characters) records: 
+
+Oracle by default does not cache query and function result, but both cache do exist. $URL$ The importance of these: there is more than caching blocks. Even if you process everything in memory, why process the same requests again and again, if you already know the answer? What you are referring to when mentioning autotrace and physical reads, is the buffer cache. 
+
+But you never re-enable it. When you run the script the 2nd time, substitution variables are not replaced with values provided by the user, because is still . Just add the below to the start of your script, so variables will be used in consecutive runs: 
+
+This looks like a typical hierarchical query, but it was implemented the "manual" way. I do not think you should focus on the here. You should rather rewrite this as a true hierarchical query by using the clause. Something like this (just an example, not necessarily what you need): 
+
+can be locked without any difficulties. is different though. You can't lock it, even if you can, you can't. 
+
+You mentioned AWR, so you are licensed to use ASH also. You can find the session(s) executing the specific SQL in DBA_HIST_ACTIVE_SESS_HISTORY view based on the sql_id. The PLSQL_ENTRY_OBJECT_ID and PLSQL_ENTRY_SUBPROGRAM_ID columns contain information about the PL/SQL call stack. This however may not be complete if you have several levels of PL/SQL packages, procedures or functions built on top of each other. If you know the sql_id and that the SQL statement will be executed in the future, you can set a trace event to dump an errorstack for this specific statement (which can cause quite big overhead and create huge trace files, but I could not come up with a more effective method). Given the below example:

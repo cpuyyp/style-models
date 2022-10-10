@@ -1,0 +1,127 @@
+I suspect that the upper limit is in the register. (Why else would you move it to when the input is too large?) Then it would be better to not use the immediate value and just write: 
+
+The 3rd instruction here tells me that the value 1 that you moved into the register isn't all that important after the addition, so why not just increment the currentx variable? 
+
+In its present form your program entirely depends on the values in and having a permanent meaning. If your program were to become longer and more complex, this would no longer be a desirable approach. Then variables would be in order. An example on how to use these: 
+
+This is the only place where your code conceivably could fail. You store the dword from without making sure the high word has any meaningful content. If the high word is empty you're in the clear, if not the screen will get disrupted. Since modern BIOSes do use 32-bit registers, you can't be sure... The shortest way to 'correct' this is: 
+
+Defining the masks. If you are willing to address the masks through the instruction then a 50% gain in storage for these masks can be achieved. The reduced alignment condition will further add to this gain. 
+
+See how I reduced the number of instructions by introducing an extra label on top and no longer needing the label at the bottom? 
+
+The first improvement you should do is making use of the possibility to fall-through in the code. Don't use but rather fall through as equality is the only state that remains after and . Also ifEqual would be a more correct name for this state. 
+
+What about overflow? Finally, because of the exact test data (a=4, b=15, c=86, d=155, e=8) that your program uses, there's never any risk for overflow on these calculations. In a realistic program however (e.g. one that uses user-inputted numbers) you should always check for overflow. Consult the manual to find out about when the arithmetic operations produce overflow. 
+
+This console application uses the Rich Edit Form Input procedure for which you can find the source here. It presents the user with a dialog that has 5 input boxes and 2 buttons. The dialog is drawn differently depending on screen width. You use TAB or SHIFTTAB to switch between fields. ENTER and ESCAPE have their usual meaning. The program supports both input redirection and output redirection. 
+
+If the 8th byte of the input buffer holds a non-zero value then the storage space is supposed to contain an old string (perhaps from a previous input). The old string is not required to be zero terminated and is immediately shown on screen. While the input is in progress, the input is confined to staying within the user specified input box on the current row. Longer texts will scroll horizontally. When the input is finally done, either the complete text or at least the right hand part of it is shown in the input box, leaving the cursor beyond the last character. The first key to process and the last key processed are of particular interest in building complex dialogs. They are passed through the register. This procedure does no ctrlC checking. This procedure supports input redirection. 
+
+Do observe that I wrote 13,10 and not 10,13. On the DOS platform convention dictates the use of CRLF=13,10. This might not seem too important to you but recently I came across a question on Stack Overflow where someone suffered a malfunctioning emulator precisely because of this! 
+
+All of these assignments require a 32-bit immediate value. That's a lot of bytes! Because later we need , we can start with clearing and incrementing twice towards 2, storing the intermediate results in memory: 
+
+You can easily address the 2 previous array elements by adding offsets -4 and -8. This liberates the register that also no longer needs to be preserved. 
+
+You load your boot program at linear address 00500h. That's fine but stay aware that BIOS has its PrintScreenStatus flag here. That's why so many Operating Systems start at linear address 00600h. 
+
+Bit 5 lives in the register. Testing to see if it is on or off can be shortened by not using the double opcode instruction . Best choice here is the Modr/m byte less instruction . 
+
+With so many open issues I was at first reluctant to start reviewing this program. It's certainly a good thing that you know these issues exist, but I would like to advice you to not defer implementing at the very least checking the error status that you obtain from selected BIOS system calls. Disk systems are delicate enough that we should not ignore reported errors! As per request I've focussed my review on the matter of robustness. There's a BPB_BytsPerSec. The fact that your program is "hard wired" to use 512 bytes per sector speaks by itself against robustness. The BIOS Parameter Block has a field that tells you the count of bytes per sector {512, 1024, 2048, 4096} 
+
+Given all the things you want to do, and all the devices you want to interface from within this 512 bytes bootloader, you should take more steps to reduce the footprint of this error reporting routine. 
+
+Now mask1 can be found at address [masks+8 -0] Now mask2 can be found at address [masks+8 -4] Now mask3 can be found at address [masks+8 -8]. Using the masks. Comparing EDX to 0 can also be done through decrementing EDX and watching for the sign flag. A simple negation of EDX gives the negative offset needed to fetch the correct mask. 
+
+Because these variables really are registers too, and because the preferred way to zero a register is to it with itself, you should write instead: 
+
+The solution I've presented above will work out nicer if you add a single CR code to the message at start. 
+
+Because this variable really is a register, and because the preferred way to find out if a register is zero is to it with itself, you should write instead: 
+
+Decrementing counters. Given that the output is to be redirection friendly and that the matrix on the screen shows up filled column wise, adjustments to these decrementing counters are necessary. These adjustments account for the missing decrements due to the step when going to the next column. The numbers aren't processed in natural order. Hence. Instead of decrementing I could have used incrementing on the counters. Usually (1) doing so requires an extra instruction that will certainly add to the code size but not necessarily slow things down. (1) It's possible to avoid the additional while still incrementing when we start from negative numbers and move towards zero. 
+
+Here's a clear opportunity to optimize the code. Instead of conditionally jumping to done you can use the opposite conditional jump and fall through. This saves an instruction: 
+
+In stead of branching, you could use one of the conditional forms of . Same code size but faster. Having less labels is also nicer. 
+
+A small error here. On exit with Ignore the register will hold an uppercase J. My main concern here is why you want both the register and the ZeroFlag express essentially the same thing? If you would stick to only return result in the ZeroFlag then you could save extra bytes and at the same time get rid of the , , and registers being modified which is a good thing. 
+
+Binary decision tree. Next table shows that using a binary tree reduces the number of divisions enormously. Moreover it gains importance as the number of test cases rises. 
+
+This part is essentially calculating the opposite of the number in the register. Why not use the instruction? It's well suited for the task. It gives smaller code and doesn't clobber the and registers. Also note that the ldxsetup1 label isn't really needed in this program. It's noise. 
+
+I found it remarkable to see the directive so far down in your program. I would have expected this almost at the first source line! 
+
+When the counter in is smaller than 8, you jump to SetupLessThan8Bytes where you just make a convenient copy of the counter and then jump again to SetFinalBytesLoop. If you move the instruction that makes a copy of the original counter to right before where you compare the counter to 8, you can save yourself from writing 3 lines of code (a label, a , and a ). Moreover the program becomes clearer. 
+
+At first glance this felt wrong. Rest assured it's correct, but the mention of something relative to always only makes sense when it's absolutely clear where is pointing to. I would have preferred it like: 
+
+It's perfectly possible to move the numbers in the variables without putting them in a register first. But in the case where the same number goes into more than 1 variable using especially the register is advantageous as it reduces code size. 
+
+You are obviously free to choose which register to use for what purpose, but since the beginning of (programming) time these few registers have had their own dedicated uses. It would therefore increase the readability of your program if you respected this ( Counter, Data, Pointer): 
+
+When I first saw this use of string primitives I expected to see a range of addresses to be compared, but you only process a single word. Next code then uses less instructions and is a few bytes shorter. Note the use of the Segment Override Prefix. 
+
+In this simple program it is what I would do. If the polling section were much longer I would keep what you wrote. 
+
+Because you used to test the exit condition, you denied yourself the chance to use ASCII's in the range [128,254] when constructing this prompting string. Just use the instruction, it's equally small. 
+
+Elimination process. The order in which the eliminations take place is crucial. Not only for obtaining correct results but also because choosing an optimal ordering reduces the number of divisions by 5 to 6 percent, as next table shows. 
+
+Why in next part of the code doesn't your division use the register straight away? Why do you first move the divisor in to ? That's just a superfluous instruction! 
+
+A better strategy will be to simply subtract without looking at which number is the largest and then later take the absolute value of the difference. 
+
+You've placed the zero before the carriage return/linefeed. Those won't be outputted as a consequence! 
+
+Your comments certainly explain well enough the purpose of the code, albeit this one (; Preserve ESI) is a bit superfluous. What would greatly enhance the readability is you writing tail-comments in stead of whole-line-comments 
+
+The output can easily be customized by changing the 3 compile-time variables (number of )COLS, (number of )ROWS, and WIDTH( of one column). The only restrictions are that the product ROWSxCOLS must fall in [1,255] and that WIDTH must allow displaying the 3 digit number, a separator, and any combination of tags. 
+
+Divisions are costly. In order to conclude that the current number is prime, you perform a division by 2. 
+
+As said before, clear registers using . Furthermore you can compare memory with an immediate directly, no need to do it through using a register. Had you written the (short) 16-bit version above the (long) 32-bit version, the conditional jump could reach the 32-bit version easily. 
+
+I'll use the triangle code to show many opportunities to shorten the code. was moved to the top to avoid reading the tw variable twice. 
+
+A simpler way of converting follows. It uses less labels which is a good thing for readability. It uses less jumps which is a good thing for speed. 
+
+After striking all of the common routines it becomes clear(er) that - as is often the case - there's a price to pay for the increased speed. 
+
+The main loop performs a redundant first/only iteration as mentioned in the answer by @DavidWohlferd. You solve this by a one-time jump towards the end of the loop: 
+
+Here you see the importance of local labels. No need to invent unique names for all of these trivial locations. Do note I changed the instruction by its unsigned counterpart . The numbers involved are inherently positive, and so seems more natural. 
+
+Everywhere a division was needed I chose to replace the usual instruction by an instruction. This can only work if neither dividend nor divider exceed 255. It proved to be a winning move as it: 
+
+Extensibility I wrote these programs with extensibility in mind. If the number of test cases increases, the versions that use an elimination process or a binary tree, rapidly become more complex. The version that uses decrementing counters can be modified easily. But the version that uses a lookup table needs very little change indeed. See how I gracefully didn't use the , , and registers so they could easily be used for the 4th, 5th, and 6th test cases? Why then not try your hand at FizzBuzzGoYesWeCan (dividers 3, 5, 7, 11, 13, and 17)? Using prime numbers guarantees every tag will show up by itself at least once. 
+
+I've also avoided the duplication of the instruction that you already had in the top part of the program. Shaves off some bytes! 
+
+The optimization The most important optimization that you can apply to your program is making sure that the qword value that you write is aligned on a qword boundary, so a memory address that is divisible by 8. The extra alignment loop will at most iterate 7 times. 
+
+If you're really interested in becoming better at x86, you should avoid retrieving the parameters using relative addressing. It works and it can shave off a few bytes, but it is very error prone! Imagine at some point in the future you need to preserve more than . It would require closely checking all the code. Using prologue/epilogue code isn't that much more difficult: 
+
+Yours is as good a solution as anyone else's. That said, a solution that pushes the elements would not need to address these elements relative to at all. 
+
+Check out The program that you wrote only uses 8086 instructions. Perhaps this in intentional. But if you're interested, x86 has a very powerful instruction that 
+
+but forgets to exit if this produces zero. The loop that follows is started anyway and at the bottom where it reads 
+
+Looking at the code I've just written above, I don't think there's anything ugly about it. It's the cleanest way to do it, and overtime it'll prove that it is self-explanatory. 
+
+We always strive to get the smallest code without loosing readability. I think next snippet does a good job (it's 2 bytes smaller and well commented): 
+
+Your program uses many BIOS functions that require you to set the display page beforehand in the register. You specified it correctly in the SetCursor routine, but not in the several WriteCharacterAndAttribute calls. 
+
+That's fine but you could use the fact that PrimeMode is equal to zero here and just have it incremented instead of using the space consuming immediate value: 
+
+There's not much that can be said when looking at the total execution time. Removing the DOS api call shows how predominant it really is. Striking all of the common routines finally establishes a ranking of some kind. 
+
+Still room for improvements. In an effort to get rid of the separate instruction I came up with a 1 byte smaller solution. This also no longer contains the complementary that you commented about. 
+
+Bypassing when the counter is zero is fine, but perhaps a negative counter value should rather be considered an error and handled accordingly? Don't loose yourself in jumping around 
+
+You would better move the instruction below the . I don't believe there's too much guarantee that api calls keep interrupts disabled! I get it that you're trying to write compact code, but it's a bit back-firing here. In you only write the low half of the register because you cleverly know that the part is still empty from the code before. What you forget is that the single instruction only requires 3 bytes whereas your pair of instructions requires one byte more. Because by now you're committed to using what's already in , you write a somewhat obfuscating where a simple would have been so much clearer.

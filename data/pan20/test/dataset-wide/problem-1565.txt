@@ -1,0 +1,103 @@
+Consider what happens when is not default-constructible; consider what happens when is default-constructible but its default constructor is relatively expensive. What do you want to have happen in those cases? Consider what happens when is move-only. What do you want to have happen in that case? 
+
+As mentioned in the comments on the question, the name of a function template can deduce what kind of function pointer to decay to: 
+
+The way to solve this problem is: when you fill in the board, fill it in with a special kind of cell, , and have your AI treat specially (for example, treat it as never matching any of its neighbors). 
+
+Looks reasonable to me. I don't understand why you keep and as separate values; IIUC, is "the size of the struct so far, minus its last element", and is "the size of the last element". It seems like you could just keep "the size of the struct so far" as a single value. That is, isn't your code equivalent to the following? 
+
+When I try to insert a value of an unsupported type into a , I get a horrible spew of template error messages: 
+
+But it's also super easy to fix. Just take that code that computes the number of tilings, and move it straight into the constructor of your class! 
+
+The actual code implementation looks fine to me; nothing to complain about there. :) You might be pleased to (or, you might already) know that is part of the Library Fundamentals v1 Technical Specification, which I think means it ought to be coming to C++1z. However, it's not in the working draft yet as of N4567 (November 2015). 
+
+Finally, be aware that you could always just use instead of writing your own class; or at least that you could pretty easily implement your class in terms of . This would give you foolproof swap/move/no-copy boilerplate for free (via the Rule of Zero), and would be shorter as well. 
+
+Don't use . (Yes, you said don't bring it up. Doesn't mean I have to listen to you. Similar principles tend to apply in the real world.) 
+
+I think you've got too much code there; certainly I didn't read all of it. But I'll take you on my journey through the parts I did read. 
+
+Furthermore, once I saw what you were trying to do, it was apparent that wouldn't be good enough either. Try the expression ... can you figure out why it crashes? 
+
+The first problem could be solved by allocating the "object data" directly after the "interface data", with allowances for alignment/padding: 
+
+Notice that we will only ever use this function with integer-literal and arguments, so the is testing a compile-time-known value and will be optimized away by the compiler. On the other hand, neither Clang nor GCC seems smart enough to figure out that the math in the "else" branch is equivalent to the math in the "if" branch; so by providing the optimized "if" branch explicitly, we're helping Clang and GCC save a couple of instructions. Here's the "x" rotation: 
+
+The compiler is smart enough to know that this function is a no-op that always returns . So, you've got some fundamental misconceptions about what an is in C++. On your platform, it's a 32-bit quantity, and it has no "not-a-number" values — it's not like floating-point. You should go read up on bits and bytes, and maybe start your math programming with something a lot simpler, like the old classic "Fahrenheit to Celsius temperature converter". 
+
+Now, looking at , I realized that of course I should have known that it modified the heap — because it took a parameter of non-const pointer type! If it wasn't going to modify the heap, it would have taken a pointer-to-const. ...But then I looked and saw this: 
+
+This is harmless (in this context) but unnecessary, so you should remove it. In general, if you grep your codebase for the phrase , you should find zero instances of it. The one legitimate exceptional case I've ever seen in real code is 
+
+This creates a global variable (so, you know, don't do that) — and it creates the global variable in every .cpp file that imports this header file. So unless you only have one .cpp file in your project, you're going to get linker errors when you try to link your project. What you wanted to do was put this variable definition in a .cpp file and put a declaration of it (using ) in your .hpp file. Alternatively, as of C++17, you could have made it an variable: 
+
+The word would be clearer if you spelled it , and likewise should be . The use of syntax is much much harder to read than a simple would have been. In the case that is 0, no CAS is necessary. Instead of repeating the assignment to twice, refactor your loop. The expression is a verbose synonym for . Put it all together: 
+
+I think you're using "abstraction" in all the wrong places — your code is implicit when it should be explicit, and vice versa. To start with the simplest case: 
+
+It is worth noting that is unlikely to do anything, on modern compilers. It will be inlined into the destructor and then all the dead writes will (or at least may) be removed. There are attempts out there to write a "" using the C++ allocator model, which might or might not be relevant to your interests. 1 2 3 By punting the problem up a level to the person creating the object, you at least stop needing to worry about it yourself. 
+
+Again, this shouldn't result in any better codegen (for any halfway decent compiler); but your human reader will thank you. 
+
+Your instinct to use a plain old loop is correct. However, there are a few nits to pick with your code: 
+
+The question I want to ask back to you is, "Why do you need CapSwitch and SimpleSwitch to inherit from some sort of GeneralPurposeSwitch?" You shouldn't write OOP code for its own sake (in fact, you shouldn't write any kind of code "for its own sake", at least in a production codebase). You should start from some sort of problem in need of solution, and then write exactly the code that solves that problem. For example, if your problem is that you won't know until runtime what kind of switch is hooked up to your hardware, then you might need this kind of code to work: 
+
+Admittedly the above code generates two warnings on both GCC and Clang, and it's a hugely unlikely refactoring anyway; but still, if this were my code, I'd use in both cases. 
+
+You don't explain which functions are "the following functions." Also, it might be more appropriate to write this as 
+
+You're not really asking for a code review here; you're more like asking the community how they would write the code for this problem. So, not really on-topic. However, here's a hint (partial answer) for you. Consider each of the four shapes in isolation. Write four functions, one per shape, each taking an parameter that indicates which of the 9 lines (top to bottom) the function should be outputting. For example: 
+
+You can figure out the first parameter of a non-overloaded function pointer pretty easily; I'm not sure but your code looks more complicated than it ought to be. Unfortunately, your code completely falls down in the presence of overloads and/or templates. Here's the error message: 
+
+Now, at first glance, the longest possible string we could be printing into the buffer here is , which is only 84 characters long. So that's cool, right? We've got 15 bytes of "fudge" left over! No problem! We therefore resist the angel on our shoulder pleading with us to use the correct buffer-overflow-proof construction, 
+
+IMHO your interface's use of both and , and both and , is unfortunate. There's a whole alphabet available; maybe you could come up with some synonyms with different initial letters? Alternatively, just removing the short options would eliminate the potential for dangerous typos. Plenty of tools these days have only GNU-style long options — we can afford such luxuries now that most of us have retired our teletypes. :) 
+
+Update to my previous answer! The original questioner (@Zacariaz) reported that "I'm currently looking into so-called delta swaps." I don't know how Zacariaz got turned onto them, but they are indeed amazingly efficient at doing bit-permutations. (So I can at least feel good that I identified the root problem here as "bit-permutation," even if I didn't know the best solution.) 
+
+I would also consider renaming to , since that's what it's doing. Sure it is "internal", but what it actually does is "single-step the PRNG function", and that's more important to understanding the code. 
+
+That function looks expensive; are you sure isn't doing a whole bunch of calls (and garbage-collection) behind the scenes? Even more importantly: All that exception-handling is expensive! 
+
+Why would you want to? :) That's definitely a style choice that should be made at the style-guide or commit-hook level, not enforced at runtime by some random user code. But if this is part of your style-guide, then yes, and then will do the trick! 
+
+This has different behavior from the original if for example inherits from ; but I'm sure from context that that's not the case. 
+
+This is super duper confusing, or else it's one of those typo-bugs I was warning you about. Here you're adding together (i.e. ) and (i.e. ), taking the of that (i.e. ), and declaring a typedef named . If you really wanted this typedef, you should write it as 
+
+Seems completely fine, depending on your use-case. I think you've over-engineered your trivial example a little bit; e.g., you provide a containing nothing but a single one-line function. You could have inlined it into (making a header-only class), and in practice you probably would. I can think of two things that might be useful in a less trivial example — or, they might be further examples of overengineering. 
+
+This way, your header includes all the headers it depends on, recursively, and you never have to worry about whether your caller included something else before you or not. 
+
+As for using STL algorithms: yes, I bet there are several places in this code where STL algorithms would be useful. That -loop that just reduces two sequences with respect to seems like a good candidate for , for example; and I didn't write for you, but I bet it's a two-liner with the appropriate STL algorithm. (Look up and to get started.) However, the resulting code is extremely unlikely to be any clearer than the naive -loop-based version, and probably harder to maintain.. So take STL algorithms with a grain of salt. Everyone knows that debugging is twice as hard as writing a program in the first place. So if you're as clever as you can be when you write it, how will you ever debug it? 
+
+The above solves your problem in about 16 lines of code, as opposed to 29 lines for your cleaned-up version, as opposed to 42 lines for your original. And the advantage of splitting out the "concatenating lists" subproblem is that there are many different ways to tackle that particular subproblem — 
+
+Incidentally, I don't know what the initialism stands for, but you should be aware that to a native English speaker it bears an amusing resemblance to "omfg". :) 
+
+You'll find that a significant fraction of C++ programmers today "collapse" their namespaces like this: 
+
+As of C++11, absolutely not! Chandler Carruth has a good talk on why "inout" reference parameters are terribly awkward for optimizers. Prefer to return a nice clean newly-constructed value whenever possible. 
+
+Putting on a declaration that's not a definition is usually (always?) pointless. Put on the definition to solve ODR issues (which in your case you have not got), or maybe sprinkle it around to encourage the compiler to optimize more (which is getting to be more and more voodoo these days, so probably don't do that — and besides, how's the compiler going to inline the definition of a function that is defined in a completely different .cc file?), but in any case, put it on the definition, not on the declaration. I would even consider removing the declaration of (and so on) from the .h file altogether, and replacing them with lambdas somewhere in the .cc file: 
+
+I notice that you provide both and . First of all, why and not ? Second, have you considered whether the correct signature might be just a single overload ? Your structure could arguably be viewed as a handle referring to the buffer; fetching a mutable reference to the object stored in the buffer can be done without modifying the structure itself. Food for thought, maybe. 
+
+Orthogonal to the first idea, here's another one. Right now you have knowing about and vice versa, which is pretty ugly if your attitude is that is the "real" object and is just an auxiliary. (Think versus , for example.) (It might be different if you're coming from a Model-View-Controller world, and you think of and as co-equals.) Anyway, if you think of as a second-class citizen, it's annoying that has to include , isn't it? Well, you could get around that (and turn into a header-only class) by turning into a class template: 
+
+I'm not sure what the best practice is with : take it by value or by const reference? I'll assume by value is fine, since the whole point of is that it's cheap to copy. But in general, taking things by const value is weird. It doesn't change the function's signature — i.e. 
+
+This line certainly looks like it's missing an at the beginning! C++ isn't Python, after all. But it turns out that is a global variable, and so this line is correct — it's merely an expensive and confusing way of writing 
+
+Here's the general outline that I'd use for this problem. Obviously in the real world we wouldn't bother with any of these classes at all, because we wouldn't be trying to make our class behave analogously to a real library book. (We'd probably just have one big SQL table with columns for "title" and "checked out by ___", and code to update the table in the obvious way.) But trying to make a skeuomorphic class seems like fun, so let's go for it. 
+
+Anyway, that's all I bothered to look at, since I assume most of the mass of code you posted is occupied with nonsense similar to . BTW, if you can find a used copy of The Elements of Programming Style, I highly recommend picking it up and reading it cover to cover. You'll learn a lot about programming, and the bonus is that it'll be harsh critiques of other people's code instead of yours. ;) 
+
+I mistrust your function because it takes a size but fails to ask the caller what alignment they want. If I want space to store an , I can call , but if the pointer I get back is 1-byte-aligned, that doesn't help me. As a general rule, allocation functions should always take both size and alignment parameters. 
+
+In fact, you should read up on X Macros and consider whether the above code would be more readable and maintainable (particularly regarding what happens if you want to support unsigned types, , etc.) if you wrote it as 
+
+Move semantics are more subtle (and probably less important) than I'm making them sound here; I won't go into detail here. But there is no shortage of material for learning more about move semantics if you want/need to.

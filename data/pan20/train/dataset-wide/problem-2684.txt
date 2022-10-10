@@ -1,0 +1,57 @@
+Why does the function end when is not equal to ? That should be mentioned in description, that must be to make it work. 
+
+Hmmm... anyway, I really like what you wrote here: "I'm noticing that reading doesn't really help much as much as writing programs and running into issues and solving them." This is absolutely spot on. All this general babbling around usually makes little sense when hit by real world problem. Also refactor a lot. Not just the code, and implementations, but as learning is your goal, dive deep into finished project and go trough all the API, all the abstraction, and try to imagine something better, easier to use, easier to understand it's responsibilities, easier to read and get the idea and eventually easier to implement (although sometimes to get better API and abstraction the implementation can be more bloated, but the cost of bloat has to be clearly justified by the cleanliness of resulting API/abstraction). 
+
+I was thinking whether searching for neighbours for new word can be optimized by searching only trough "neighbours of neighbours of first-found-neighbour", but after short tinkering with it I think this is not valid, this would maybe work for all 4-letter permutations forming complete graph, not for regular words when plenty of possible 4 letter permutations are not available. 
+
+Peter Cordes did leave you several review comments in the original SO question, so I will post the code-only here which is sort of adjusted by his advices (and my small modifications). Commands to compile: 
+
+Treat the as a precondition for the loop contents. It's right at the start, so it's obvious that you're doing something 'special' with it. Maybe even change the to a to push it further up. 
+
+may be better split up into two functions, one to create it and the other to read the contents from the source, even if the function is called from - and you need to be aware of the possibility that the allocation may fail. On the other hand, you may wish to consider just allocating a single block of size rows*cols of memory, and indexing it via rather than allocating several smaller blocks. For 'neatness', you should consider using instead of , just to give a (possibly) sensible initial value. could do with some layout changes, such that each row is on a separate line, and the corresponding cells line up under each other, something like (but would depend on the type of data expected). 
+
+Have a look at Clear the Screen. It basically boils down to using what you did (since the Windows console doesn't accept standard ansi sequences), although you might try the route. 
+
+There's nothing intrinsically time-consuming here code-wise - I think the best approach is to make sure that your database tables are set up correctly with the required indices. Perhaps create a view on the db to push some work onto that rather than select in code? I am a little puzzled however by your middle_consumption function. The inner loop contents do something like: 
+
+I would move lot more closer to the area where it's modified, so it can be easily seen with eye, where the whole block is, and span over fewer branching points (which is always error prone, to keep correct stack across some branching). You can actually surround just few instructions with , not having any branching at all. 
+
+You don't need to check size() for even/odd value, the integer division will work in your favour in this case, so 3/2 = 1. And random_access/bidirectional/forward iterators have overloaded operator, so you can add the result directly to . The would be helpful when you would use container which has only available (can increment, but only by single step). Then it can be still somewhat simplified to: 
+
+Hmm... ok, one bit of source just to make it look a bit less like "wall of text" (although I'm afraid it's too late for that :D ). 
+
+This will not compile, you should rather provide working source for review. By building it yourself before posting you will prevent some kind of accident, like cutting out more than you did want. Also I have no idea what is or , so no way to review it and put any advice on that. Except stop using cryptic short symbol names which can't be comprehended by reading like plain English. 
+
+performance ideas (from comment): If you are already assuming ASCII alphabet-only word inputs, you may do direct , which will yield only values, and for vs it will produce the same values too (functioning as fake ). I also personally prefer non-else/non-nested variants (when they make sense), so I would do and the would go after that in the loop block. This is part of answer is level golfing advice, i.e. lowering readability and robustness of source for some hypothetical performance gain, not suitable for real world production code ;). 
+
+One of the points that should raise a query is the amount of repeated code - you have a duplicate for every if. This suggests creating a function to handle it instead. Personally, I would end up with something like the following: 
+
+I'd add another vote for "don't do this", you (or another) will suffer having to reread/debug it. I'd try something along the lines of: 
+
+Which is just another version of ony's answer. Slightly simpler (maybe), but either version will need keeping in step. 
+
+Notice any patterns in the GLOBAL parts, in the same way as you simplified your buy/sell function. Separate these out into "access functions" for the globals - in this way, you isolate the globals into a (hopefully) single point, and remove their (direct) use scattered elsewhere in the code. These access functions should be as small as possible. 
+
+As you've discovered, s are hard to deal with. Assuming that you now know what to do with your repeated code, here's one method of dealing with them. If we start with a function: 
+
+Always use for single line s (and , etc), even if it's not required. It'll save a lot of time one day... Rather than and then , you might consider using instead to do it automatically. leaves still allocated, and hence a memory leak. Either free it in the block, or use another label and free it there. I would avoid for statements with multiple controlling variables like 
+
+Beware of optimising things, trying to get tiny improvements. By running your program with varying optimisation settings, I got the following ratios (memcpy/memset): 
+
+how to use the result of (which has to be done anyway to test remainder) as approximation of suggested sqrt(input) test, for earlier exit. used to set zero into register (shorter opcode than plus modern CPU recognizes it as idiom of "set to zero" and optimizes for it) to check if remainder is zero (shorter opcode than plus modern CPU will recognize it as idiom of "test for zero value" and optimizes for it) resolving even numbers at the beginning (even numbers have zero in least significant bit: . And the only even number being prime is , no need to test other even numbers by . but that means only odd divisors have to be tested in the loop, because for sure. So my loop is testing divisors 3, 5, 7, 9, 11, 13, 15, ... some non-trivial usage of arithmetic instructions and flags to check for input values ahead of loop, as those would break the loop logic and produce invalid result. It may be nice exercise for you to "decipher" how it works. you should try to keep things "together" (if possible). For example you set up for at the end of your loop code block, so it's A) not together with , interleaved by (hard to read for human, no problem for CPU) B) you have code duplicity (), because you have to init the register values ahead of very first separately. => So I do initialize right ahead of , only single time in code, and it's easier to read IMO. 
+
+Warning: this hasn't been rigorously tested (i.e., with a known seed)! There are a couple of things that can be tried without majorly changing things: 
+
+I think the big thing here is to beware of external data. Assume that it could be garbage. For instance: 
+
+should be . The use of may be bit of overkill for what you want it for. If you use a space in the text, you get told that it's being replaced by a space. Create constants instead of using 'm' and 'eng' 
+
+Remove any global line and mark out which variables are neither local to the function, nor passed in as a parameter (this is obviously easier to do with smallish functions!). 
+
+and probably should be initialised to NULL as well. doesn't call for any previous loaded dlls. If Load should be called once only per , that should be detected. A more informative exception could be thrown. "...during attempted insertion of plugin xyz", for example. Beware of function name decoration, if that could be an issue. 
+
+Move all your global variables into the main function. You'll have to add a load of parameters to other functions, which seems like a backward step, but it'll help. You'll notice a lot of repeated parameters, which indicates they should be packaged together into a structure of some sort. Concerning the cellArray map, the items are currently a dictionary of exits, id and position. Instead, make it into a class with separate position and connections objects. As an added bonus, it even has a method , although please change it's name to something positive, using not(notConnected()) is confusing. Other 'obvious' structures are the maze, xy coordinate, display. PickNeighbour is far more involved than it needs to be. Creating an function will simplify it a bit, creating a map from direction to "cell offset" will flatten it to just a general case. Apart from the above: 
+
+EDIT: The invalidity of PIC-ness was nagging me, so I finally did dig into the issue, and fixed it, these are things to be modified in the answer above: Commands to compile: 
+
+I never did MIPS Assembly, so I decided to try on this simple one. I will comment on your code mostly from performance point of view (as smac89 covered simplicity/readability variant well). In your case I wouldn't be afraid so much of branching (and it's not trivial to lower amount of branches down), but about number of integer divisions () and also syscall outputting integers (hidden divisions). From the limited info I was able to found about real world MIPS architecture implementation it looks like for example PIC32 MIPS32 M4K Core does use about 1 cycle for 1 bit during divide operation, maybe with some early exit optimizations, so in worst case it's about ~32 cycles for 32b/32b divide. I tried to use MARS and it works OK, but I don't see any serious performance information except simple instruction counters, plus is not counted into the stats at all. So outputting integer is "for free", while in real world it would hurt so much that it would be probably better to keep just string representation of and increment it as string, avoiding binary integer (at least with my code it would work, as I don't do on it, so I don't need integer form of "number"). Anyway I didn't go that far, only reworked your loop to avoid divisions, and also to avoid pseudo instructions when possible, so the amount of real instructions generated is similar to the source code.

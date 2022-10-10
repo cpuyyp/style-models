@@ -1,0 +1,89 @@
+which means that we can use a fixed sized array to keep track of the number of occurrences of each number, and all dictionary lookups now become "simple" array subscript operations. This also makes sorting the missing numbers redundant: 
+
+is better named because that is what it does. I prefer instead of to convert a sequence into an array, but that is a matter of taste: 
+
+If performance is the first priority then you should work on the UTF-16 view of the string, because that is what stores internally. (However, that is an implementation detail and might change in the future.) 
+
+you get rid of more forced unwrap operators. Finally, the textfield outlet is expected to be non-nil (otherwise you did not connect it correctly in the interface builder). That is the reason why it is declared as an implicitly unwrapped optional . There is no need for optional chaining in 
+
+is the string length – which might not be obvious to the reader, and is error-prone if you change the given number. It should be computed from the string instead. Global variables You pass the number of adjacent digits as an argument to the function, but the big number itself is a global variable. Passing both parameters to the function makes it easier to add unit tests. Simplify the program logic You reset , , and each time after a product is computed, this seems unnecessary complicated to me. 
+
+is compute twice, and might be a more effective way to concatenate the array elements. More important, it does not work: For \$ n = 130 \$, the factorizations \$ 2 \cdot 65 \$ and \$ 5 \cdot 26 \$ are both mapped to the same hash key "265", so that the output of your program is 
+
+The downside is that you have only a common else-block for the error condition and cannot distinguish which of the optional bindings failed. Instead of and you can use subscripting for and : 
+
+(I prefer a comparison over an optional binding to the unused variable in this situation.) Note that this makes the initial check for a non-empty string obsolete. In order to prevent two decimal separators (such as "1.2.3"), you check if both the existing string and the replacement string contain a period. But this prevents the replacement of – for example – "1.2" by "3.4" with copy/paste. To handle that correctly, you have to build the new string and check that: 
+
+If the purpose of rounding the number is to present a result to the user up to a certain precision, then it is better to use a number formatter instead, for example 
+
+Another possible improvement could be to check in if the observing object still is alive, and remove it from the list otherwise. 
+
+because that is automatically synthesized in Swift 4.1. A future version of Swift will also synthesize the automatically, this is currently discussed at 
+
+and implemented in $URL$ Until that is implemented, you have to provide a method. I would probably not choose the method because that requires a conversion to strings. A good choice would be the function in Hashing.swift from the above pull request, this is also what hash.hpp from the Boost library uses: 
+
+Your method assumes that the given string is in a valid format and can crash otherwise (by accesssing out-of-bounds array elements or unwrapping s). As @Ashley already said in his answer, you should define a failable initializer instead, which returns if the input is invalid: 
+
+(compare SE-0140 Warn when Optional converts to Any, and bridge Optional As Its Payload Or NSNull). But: All these conversions between , Swift dictionary and are actually not needed, you can achieve the same much simpler. As stated in Swift Blog: Objective-C id as Swift Any, 
+
+A switch-case statement allows to transform only the ASCII letters, with a well-defined behavior for other characters. Finally, instead of creating an intermediate array, you can append to the view of the result string directly. Putting it together, the function could look like this: 
+
+(Remark: I am using println() for diagnostic output in this review instead of your log.atLevelDebug(). The reason is that I wanted to test the code before posting an answer.) That seems to be working code (with one exception, see below), but there are some things that can be simplified or improved. is a possible value for any , so you can simplify your initialization, for example: 
+
+The advantage is that you don't need the cast anymore and the compiler can check for correct types. Some type annotations are not necessary, e.g. 
+
+That is fine. The Swift reference explicitly states: "You can also add property observers to any inherited property (whether stored or computed) by overriding the property within a subclass." 
+
+and check if that performs better. As already mentioned in the comments, caching (or memoization) increases the performance dramatically. You'll find some caching solutions in the various answers to Project Euler problem 14 (longest Collatz sequence) in Swift 3. Here is a version using an array to cache all results for up to a certain limit, this turned out to be quite fast: 
+
+The location property simply becomes if decoding fails, and the badges property defaults to zero via optional chaining. Summarizing the changes so far, the class looks like this: 
+
+A more efficient approach is to divide the given number by 2, 3, 4, ... As soon as a factor is found, the number is divided by this factor. Using the fact that composite number \$ n > 1 \$ must have a prime factor \$ p \$ for which \$ p \le \sqrt n \$, this leads to the following function: 
+
+The condition whether to insert the separator at an offset is quite complex and it is easy to make an error. A completely different approach would be a recursive implementation, which is (almost) self-explaining: 
+
+I would do an "early exit" in the case \$ p \le 1 \$ and save an indentation level for the "main case": 
+
+The regular expression matches all "uppercase alphabetical characters" (Unicode characters in the "Lu" general category, to be precise), and not just the ASCII uppercase letter A...Z. Therefore your method can produce garbage, e.g. for German "umlauts", or even crash, e.g. for Greek letters: 
+
+There is one error in your implementation: The test must be , otherwise the returned values are not correctly distributed according to the given weights. You can check that with the input list 
+
+which indicates that there is no alignment problem when casting an arbitrary pointer to . But that may be different on future architectures, with using the above function you are on the safe side. Alternatively, you can use : 
+
+This makes your and some of the properties obsolete, at least for this application. Note also that I used the Swift type instead of the Foundation type. One can even get rid of the index in the above loop by iterating over the and a shifted version of that array, and then the complete function looks like this: 
+
+so that they can be configured directly in the interface builder, with a live preview (compare IBInspectable / IBDesignable: 
+
+in is an instance property, and the (256) colors are computed each time an instance of is created, that is 100 times (the number of threads) for each image update. With a static property the colors are computed only once in the runtime of the program: 
+
+As observed in Computing the square root of a 64-bit integer, this can produce wrong results for large numbers, because an IEEE 64-bit floating point number with its 53 bit significand cannot represent large integers exactly. Here is an example: 
+
+(also making the obsolete.) Mutating the temporary string can be avoided by working with a (which is a kind of view into the original string) and only updating the current search position: 
+
+There is still too little (horizontal) whitespace, I suggest to check your code against the PEP8 coding style, for example at PEP8 online. Also function and variable names should be according to PEP8. More suggestions: 
+
+would be one possible solution, but the better way is to use an enumeration which can take exactly two values: 
+
+Let's start with a performance improvement: Your method repeatedly extracts substrings from the given digit string (which is a costly operation with Swift strings), and then repeatedly converts the characters in a substring to an integer. It is better to convert the entire string to an array of integers once with a single string traversal: 
+
+is the currently displayed score, and the method computes the next value to be displayed. It looks a bit complicated, but it works correctly for both positive and negative scores. starts a sequence of three actions (if necessary): is for the delay, computes the next score to be displayed and updates the label, and causes the method to be called again. The sequence action is created with a key. This has two advantages: The action can be removed, and starting a new action with the same key will automatically stop the previous action. 
+
+Finally: There is nothing in the implementation which is particular to strings. You can make the class generic so that it can be used with other data types as well. Only minor modifications are necessary: 
+
+Even if the code is only needed for ASCII letters ("A" ... "Z", "a" ... "z"), it can still be improved. Defining a global function instead of a closure variable increases the legibility. You should also use a better function name, is pretty non-descriptive: 
+
+But this is not yet perfect! The problem is that the sublayers do not animate correctly if the view's position or size changes, e.g. when rotating the device. You'll notice that clearly in the iOS Simulator if you activate "Debug -> Slow Animations": 
+
+We know that the fetch request returns an array of objects, the cast cannot fail. Therefore the second half of the method can be reduced to 
+
+The winning combinations are not dependent on the particular instance of a board, it is more logical to define them as a class variable: 
+
+You can replace by if the initialization with zero bytes is not needed. (If you are planning to work with – implementation-defined – "over-aligned" types then the required alignment must be passed as an additional parameter to the creation function, and more work is necessary to ensure that the address of the field is property aligned.) 
+
+That makes the code shorter and safer: If you add another enumeration value later, the compiler will check that it is covered in the switch statement. There are several places where an array is created incrementally using , e.g. in JPSNeuralNetworkNeuron.swift: 
+
+printing a vector produces nicer output (the angle brackets are just an example to disambiguate the output from an array): 
+
+This should be used as the basis for implementing an function. Have a look at $URL$ if you want to implement the yourself (for educational purposes), for example 
+
+Which leads us to the class: The push and pop methods are a bit too complicated. The reason is that you use a single node with for an empty stack, a single node with for a stack with a single element, and then a linked list of nodes for two or more elements. It becomes much simpler if you use a linked list with one node for each element in each case, and points to the front node, or is for an empty stack. Then you don't need an method because the optional property

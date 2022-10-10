@@ -1,0 +1,91 @@
+You need to check if the input is a number every time you process it; not just the first time. Note that your do-while loop will run for a single iteration every single time, so it is completely redundant and can be deleted (keeping the loop body). Take a look at this: Improved Version Usage is called with a question and a valid range of answers (refactored from your two similar methods). Note that this flexible scheme allows for arbitrary ranges to be passed in. 
+
+That way, you don't seperately have to set all the labels to and all the buttons to , just remove all occurences of the following two attributes: 
+
+Almost all of your comments can be made obsolete by choosing proper names and generally making the code as expressive as possible. IMHO, we should avoid comments that tell us what a particular statement does, rather we should use them only to clarify why we have made an unusal decision. Or, to put it like Uncle Bob, I view every comment I write as a failure to express myself in code. So I deleted most of your comments from the refactored version below because the names now stand for themselves, without the need for further clarification. Dangerous and unusual things 
+
+I hope you find this review useful. I've tried to clearly mark the parts that are purely based on my opinion. Having spent a couple of hours on this, I'd appreciate some feedback in the form of votes and comments. And sorry for not linking to the more advanced concepts I touched upon: you may need to Google a lot of things. I'll try to come back and put in some links some time. 
+
+Agreed, it looks a bit messy with the big type, but you could probably create a type alias to get rid of the syntactic mess. Even if you dont typedef the whole thing, I guess that exposing the type of could be an interesting idea. Alterntively, there is even better than IIFE: in your can, you can use initializer lists to achieve what you're trying to do: 
+
+Technically, it is rather odd to just compare for equality with one big number where there could be numbers even bigger. Didn't you mean: 
+
+By the way, I would expect functions named and to return columns and rows, not their size; you way want to change their names. You could also implement so that it is also available at compile time: 
+
+Here is a minimal working code at Coliru. Is such a design reasonable or is it overkill to elegantly solve this problem? 
+
+Obviously, the best way to speed up your code woud be use another algorithm. However, the other posts already do a great job covering that part. Therefore, I will review the other things in your code that could have been done better: 
+
+Whenever it makes sense, try to use boolean values instead of integers. The header defines , and that you can use to make your code clearer. Using booleans instead of integers can help to clarify your intent. For example, here is your function with booleans instead of integers 
+
+This should look like this, assuming that you have a member named and that your class has a method named which takes a and returns a : 
+
+But overall, your code seems pretty good: the style is good (indentation, variable names, redability, proper use of to prevent surprises, etc...) and the internal logic also seems good (type erasure, use of to cache values, efficient use of iterators, etc...). Therefore, I don't think that you have to worry :) 
+
+Stating Your Requirements It's important to have a clear defintion of what you want to achieve before you start writing code, even though there are many different ways of achieving that, for instance by practicing Test-Driven Development or writing a formal specification. The important part is that without a clear definition, you can't validate whether you're done. In your case, the question contains a description that is completely different than the code and quite unclear. The above is vital even if you're only writing the code as an exercise for personal use or learning. Testing and Edge Cases In the following code: 
+
+It's concise — a one-liner. You could even skip the extension method and use the directly. It's readable — by wrapping it in the extension method, the intent of using the is clarified. It performs well — in my crude testing, it beat your and Sandeep's versions for both small and large input sequences. (Specifically, the based approach runs twice as fast as Sandeep's version for your original input, and at least three times as fast for very large input sizes). 
+
+Finally, we again override , giving us the ability to output the game board. This is still a lot more complex than I would like. Ideally, this might be delegated to a separate class. 
+
+Alternative implementation By refactoring step-for-step and slowly introducing changes, I arrived at the implementation shown below that aims to illustrate the points made in this answer. was renamed to and is now generic (it can work with any type of elements, as illustrated in the Usage section). It accepts an Array of elements in the static convenience method . After initialization, the frequencies can be calculated by calling . That method returns a which is the class that encapsulates the string formatting (I went ahead and made the output a bit more pretty). The naming could probably be more accurate from a mathematical perspective — go ahead and rename things if you feel that these terms aren't quite correct (probably or something would have been more exact). The frequencies are now stored as s to allow for bigger calculations, though that can be changed easily if you don't agree with the decision. If something requires further explanation, go ahead and ask in the comments. Usage 
+
+Also, as a side note, most modern compilers just don't care about , at least they don't take it as a hint for inlining since they already do a great job when it comes to inlining stuff. Nowadays, is just a way to solve ODR problems, which don't happen with templates. All of your functions are function templates, so you can safely remove . 
+
+You would like to store and instances in a colleciton as if they inherited from a common base class. With our solution, you only have to write a new class: , and then feed it to the : 
+
+Since all the values in this line are known at compile time and is apparently not meant to be changed, you should consider making it both and : 
+
+Also, you can get rid of the inheritance specifier for since you are using a . That does not change anything whatsoever. 
+
+That said, I also agree with @Jamal: most of your headers can be moved to the and you can get rid of which is not used. Use C++11 From what I can see, you are already using C++11. Try to use more of it: 
+
+Never forget that the standard library is your friend and probably always has the algorithm you need to perform a known task on a linear set of data :) 
+
+There are too many things in your function. It shouldn't handle the expression parsing, but delegate this task to another function. Also, if you are using , you don't need to at the end of : the compiler will have your program automagically return 0 when it reaches the end of the function. 
+
+Input Processing This will properly validate the input, and I made it a bit more readable by extracting a method for getting the next integer. I have to admit I'm not a big fan of but it was the simplest and most readable thing I could come up with. Note that each method has its own, clearly defined task: the method is all about validating the correct bounds (and doesn't know anything about your ) while the method is all about retrieving the next integer from . 
+
+Use list comprehensions and generator expressions to your advantage Use the function with a generator expresssion to verify that all answers are in the specified range 
+
+Doing the same string concatenations multiple times You have used throughout your code, always passing , a message, and a thread id. You can extract this functionality into a new method: 
+
+Notice that you don't need to hang on to an array or list of numbers; you can track the statistics as you add numbers. Please also note that all this code knows nothing about validation or input/output: all it cares about is tracking statistics. Next, we'll need a collaborator that validates our input. Because I'm assuming your validation requirements are likely to change, it makes sense to define an interface ( means there can be validators for any type of data, such as strings, integers or floating-point numbers): 
+
+I can't comment on how secure your code is, however there are a couple of other problems that I would like to point out. Clutter Your using directives can be cut down to: 
+
+You can have both performance and readability using the newly-introduced (.NET 4.0) method (a reference to is required). With the stuct, you gain an additional advantage: your code will work for arbitrarily large numbers (assuming sufficient memory). 
+
+As you can see, yet another copy of the incremented variable is made and is called. Therefore, you may want to use instead of in a generic context. Miscellaneous tidbits 
+
+Since you are using matrices, I don't think that you need the runtime polymorphic behaviour offered by but that you created functions so that you could call methods of the derived class from methods of the base class. If this is the case, you could use static polymorphism instead, thanks to the Curiously Recurring Template Pattern idiom (CRTP). In other words, make take a template parameter which corresponds to the type of the derived class: 
+
+The problem is that I want to keep the user side simple, but also to avoid (hence the static polymorphism). There are three main functions in the class: * : the recursive formula. * : so that the end user can use the final instances as functions. * : helper function (same as operator()) so that the recursive formula is easier to write. It would be great if the user did not have to specialize and could just give , but I can't seem to find a way to do so. Do you whether there would be some way to ease the functor writer work? 
+
+You could make you code way cleaner by using some C++14 additions: the user-defined literals for . Thanks to them, you don't have to care anymore about the underlying type of your duration data, you only have to think about the usual time units: 
+
+I was about to add more things to my answer on your previous post and noticed meanwhile that your already asked a following question (that's almost too fast! :o). I have done some additional reading about C++14 and integer sequences. And I have found some things in the standard that could help to improve your code again. I realized at some point that you were using as the of . However, you initialize your with the result of and returns a , not an . Then I remembered that, along with , there is a for which is called and which has been made to solve the kind of problem that your are trying to solve. Therefore, you should every occurrence of by and of by . 
+
+Criticism Concept An important idea in software development is that code should be reusable. Your code seems like a specific application of a general idea that applies not only to throwing the dice but just as well to tossing a coin or drawing a card (and gathering statistics). So you should consider designing your code in a way that allows it to work for all these (and other) scenarios. That is to say, the number of elements in the input sequence (currently 6) and the element names themselves (currently ) should be configurable by the caller of the code. Separation of concerns I'll keep this part short since Alexandre has already elaborated on it. Just remember a few key points: 
+
+Pretty straightforward: and will show up on the game board correctly, so all we need to do is override of to give us an empty space. Also, there's a convenience method to give us the next player. Formatting the game result 
+
+What we are looking for is the least common multiple of all natural numbers in the interval , so we'll need a method to generate them (closed means including both bounds and the numbers between): 
+
+EDIT: I understand that you can't change the format (as per your comment), so I've added the code below to allow you to stick with your current file layout. The modification required is tiny: simply skip the first line, and only look for the smallest difference in lines that have more than one number. 
+
+In order to find a more elegant solution, we first need to identify the problems; only then can we solve them: 
+
+The default value of and is , you can get away without setting it explicitly. And is by default. So you can remove all occurences of the following: 
+
+I did manage to improve some things since the question was posted. So here is what I discovered, that could somehow improve the implementation and the usability of the : 
+
+Now, lets have a look at the functions that you have reimplemented and that you can already find in the standard library (there is some overlap with other answers): 
+
+There is at least one place where you may have problems with raw pointers. It has to do with exception safety and the piece of code I am talking about is the method (but it also applies to ): 
+
+As I said in the comments, your system is pretty close to a system of signals and slots. Congratulations if you never heard of the pattern before, that's an excellent way to implement an the observer design pattern! I still have few notes: 
+
+Today, I will require your help to improve an iterator adapter. The goal of the adapter (I called it ) is to adapt iterators for example: map iterators return instances, a will provide an iterator which iterates through the keys while a will provide an iterator which iterates through the values. Here is my implementation: Here is the header file: 
+
+Unfortunately, you are unlikely to find a better sort than the linear insertion sort when it comes to sorting small data sets. The only sorting algorithms that might be faster are sorting algorithms specialized for a given size of input: for example, optimized sorting networks can be really fast if you need to sort a small amount of integers, but are generally slower than the insertion sort if not implemented properly or if used with other types. The following image is a graph that shows the performance of different kinds of sorting algorithms to sort small fixed-size integer arrays (the time in ms corresponds to the time needed to sort one million arrays of a given size). Distributions had a random pattern:

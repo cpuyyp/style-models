@@ -1,0 +1,53 @@
+Combining both of these functionalities in the same class can get confusing quickly. construct Why does the constructor do sanitation? You already have , shouldn't that be responsible? And where is the result actually checked? basicSanitize The name alone already suggests that this isn't a great function. It's so generic, this function could be doing anything. Let's look at what it is doing (adapted from my answer here, as these kinds of functions are quite often combined, even though they shouldn't be): 
+
+Note also that I removed the useless default from the beginning of the switch, added it again at the end, and threw an exception for invalid values. I also simplified cases 2 and 3 ( can be phrased as ), and I combined the two continue conditions. 
+
+Readability and Usability Your function is indeed quite generic, which does give you a lot of power in your controller. But I would agree with you, that this is not necessarily a good thing. Just looking at your controller line, I would have no idea what it does, because it's impossible to know what all the NULL values stand for. Apart from it being hard to read, I would also think that this function is hard to use. I would have to look up the order of the parameters each time when I write a query. Need for Flexibility The first thing I would check is if your models actually need to be this flexible. Because that way, you do blow up your controller a bit, as it has to make the decision of what to actually extract. In your example, you don't actually need the limit, offset, or order_by, so if it's not needed elsewhere (and probably also not needed in the future), think about removing it. I'll just assume that you do indeed need the flexibility, but it's something to think about. Two Possible Alternatives I could think of two different ways to improve your code, one offering reduced flexibility, the other keeping the existing flexibility and increasing readability. Option 1 The first option is to write additional functions which access your function internally: 
+
+Here is a nice overview of what HTTP methods should be used for what. Reduce Method Complexity Currently, your and methods are a bit complex, because they handle the single case and the multiple case (), or the update and create (). This leads to multiple checks on the id ( and ). Your code would look better if there would be separate methods for each case, eg: 
+
+Now your code is a lot more readable. Note that I also extracted sub-tasks to their own function. This increases readability, reusability, and testability. Misc 
+
+Not really. You basically wrapped your function up in a class. It doesn't hurt, but it doesn't provide any benefits either. 
+
+Note also that I removed the unneeded variable. It will probably not increase performance, but the code is nicer, I think. I don't know what values and could possibly have, but I would assume that you can somehow save checking (and possibly some of the other bounds checks) each time. You could also try to save and in a local variable to save the computation/accessing, but I would assume that either the compiler optimizes this for you, or that the introduction of an additional variable offsets the performance gain. I don't think that is the bottleneck (although it would be good if you would profile this), but here you could also save the result of etc in a local variable, instead of saving as you are currently doing ( is never used anywhere except as argument for , so this would actually make sense and should result in nicer code). 
+
+Note that I also changed your formatting (curly brackets for one-line statements and statement on its own line). Now you can also notice that you have a pattern, which would look a lot nicer as : 
+
+I'm also a little worried about usability, as the user has to look up how to structure the routes array. I thought about adding a method, which would mean that the router could be used like this: 
+
+Not a full review, just a couple of things I noticed: Security All of your queries are vulnerable to SQL Injection. You should use either mysqli_ or PDO with prepared statements. Your setRecord script is also vulnerable to reflected XSS ( where n is user supplied). Your code is also vulnerable to CSRF and stored XSS. Structure Your PHP file contains HTML code, CSS code, and PHP code. This is definitely too much. Personally, I would separate it as much as possible. The first thing I would do is put the CSS info in its own file. Then, I would introduce functions; for example , , , etc. This makes your code reusable, more readable, and means that you can get rid of most of your comments. You should also introduce functions for duplicate code. For example, instead of this: you might have 
+
+The same is also true for input strings. For example, nobody will be able to remember . Code length Your main class is way too big. A first step to fixing this would be to extract duplicate code. For example, you have this very often: 
+
+Return Value I don't think it's a good idea to return in . What would it even be used for? The code would look like this, which doesn't make much sense: 
+
+You have a lot of null checks (well, two at least), which I think leads to less readable code. Also, it shouldn't really be necessary to have them. this isn't really something this method should concern itself with. In my opinion, should handle that case (via , which is a ). Although it's a case that really shouldn't happen in the first place. Why would getAuthToken return null instead of throwing a not found exception? You should also always try to reduce the level of nesting you have, to increase readability. If you have 
+
+You are still recreating the if-structure, just with a worse syntax. Performance I did not profile your approach, but in many situations, the extra cost of the additional function calls for the simplest of basic expressions will be noticeable. Misc 
+
+SQL Injection You are vulnerable to SQL injection via . You need to use prepared statements for all values, not just some of them. Naming and could be more descriptive. Currently, I don't really know what "total" means without looking at the code of the function. You also don't need "total" at all (it's assumed when talking about a count). would be easier to understand. Duplication Your two queries are basically duplicates apart from the WHERE clause. You may want to remove that duplication. 
+
+doesn't seem to serve any purpose. The only thing it seems to do is hold an instance of PDO, so why not use PDO itself? also only seems to be a wrapper of PDO: 
+
+I would say that the first one is a bit more readable, while the second one is a bit more extendable. Note though that the functions are not actually the same. For example will produce different results. Also, personally, I would extract the array from the body of the second function to make it actually reusable: 
+
+The code used to get those numbers (it's not all that exact. I wouldn't trust it to accurately tell us which one of the fast functions is the best, but it can tell us that the stack version is a lot slower): 
+
+Defense in general Looking at your code, it seems that you are not really sure what you are defending against, and are just using a couple of functions in the hope that it works. This is not the correct approach. I think it would benefit you greatly if you just tried out the most common vulnerabilities (eg XSS and SQL injection) yourself, so you know how they work, and what can defend against them. Regarding the various functions you use: 
+
+A naive approach to the actual refactoring would be to find all elements that differ in the methods. These are: 
+
+If you want to change the spec, I would comment on it in the Java doc (something like: . Also, sometimes you use to compare strings in your tests, I would replace it with . 
+
+I wouldn't say so. I would only use a constants class for things which are not part of the state of any objects, and which do not expose the inner workings of objects (eg a debug field, database credentials, fixed strings for user output, etc). The numbers in (which should be all upper case) seem to be random numbers (as in, they are not numbers a musician would recognize, but numbers that are specific to your program). They also seem to interact with , which is not good (see below). isn't really needed at all. is the only value that I might leave in a constants class. 
+
+View: Possible Bug / Security Issue The method of the class sets arbitrary fields. The problem here is that you already have a field - - which is later passed to . This means if you ever assign something with the name , you will overwrite this field. If this is done accidentally, you will get buggy code, if is ever user-supplied, you will have a security issue. For example: 
+
+Large Methods Your methods are definitely too long. As a rule of thumb, if a method doesn't fit on the screen, it becomes hard to understand and maintain. Try to extract code to their own methods, so that each method only does one thing. As an example, your method does: 
+
+Wouldn't amazon handle ddos attacks for you? And regarding security: currently it would be extremely easy for a player to submit any highscore they want. As you say that you have some more plans for this game, that might not be ideal. 
+
+[*] This basically means that you have to use the exact same function when registering users and when writing the username to the database. 
+
+I wrote a class which can format input so that it is properly aligned. I'm interested in all suggestions (regarding structure, usability, style, naming, comments, etc). I'm especially wondering about:

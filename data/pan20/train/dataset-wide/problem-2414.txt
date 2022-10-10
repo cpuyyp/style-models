@@ -1,0 +1,63 @@
+XtraDB replaces InnoDB (it's compatible and a drop in replacement), so just add However, it should be the default in MySQL 5.5.x onwards 
+
+Or use Red Gate SQL Search which is completely free Do not use syscomments or INFORMATION_SCHEMA.RUBBISH 
+
+This way the scope of a screw up is limited to the database and/or schema. ALTER SCHEMA is very useful for limiting changes and I've done this before. Do these folk needs to modify security for example? Most likely not. I'd also implement some kind of DDL auditing (I have a server level DDL trigger) that writes to a DBA-only database. This way all DDL is logged 
+
+Safety Most important, snapshot isolations are not safe in many cases by default. Read "Snapshot isolation" (Wikipedia) for more on write-skew anomalies. The next section is "Making Snapshot Isolation Serializable" to get around this. 
+
+Restore is overkill. I'd use history/change tracking within the database/application itselF: then "rollback" becomes a standard day to day business or support actions This would be with history tables, or Slowly Changing Dimension type 2 tables, to store "old" versions of rows. Perhaps with some schedules clean-up to purge older versions 
+
+Edit, attempt 2: Check this. I've seen this at a previous company (I wasn't sysadmin there) and can't remember what teh DBAs had to do for us to get our linked server to work (also Sybase) $URL$ 
+
+UPDATE then INSERT usually. Simply, it's less work. In this case, you have an ID columns (IDENTITY): I'll assume this is the clustered index You delete rows, you leave gaps in pages = fragmentation. You add rows, you probably need more pages allocated. Other processes are doing this too. An UPDATE will update in-situ and you'll have a less expensive INSERT because there is less rows. Saying that... If your new:update is 100:1 then it doesn't really matter of course. And the EXISTS is required too. However, from a raw "shifting data" perspective UPDATE..INSERT would be my choice 
+
+Following on from chat in "The Heap"... Visio can reverse engineer a database. However, I assume thus needs to read metadata or system tables to get everything (keys, DRI, datatypes the works). This old MSDN article may help "Migrating Btrieve Applications to MS SQL Server 7.0" too 
+
+It will break applications that expect port 1433. Some apps can be configured to deal with this but this has to be deployed. I'd just leave it. If they "hack" your default instance on port 1433 then you're already bollixed. You can specify the port for named instances but then port 1434 needs opened to resolve instance to port... 
+
+Execution plans do not last for the duration of a connection: they are shared across all connections. It has to be specified per query because any plan cache/reuse issues affect only that plan. What are you trying to do please, and why do you think it would help? Edit, after comment The plan must exist in cache to be used (and reused). When it's cached, it uses memory. Recompiling would use the same memory and use extra CPU etc to recompile. You said "tons of commands" and "thousands of databases": this is your problem. And probably no "dbo." etc to help plan reuse Thoughts: 
+
+"peculiar reason"? Only that ntext is deprecated and damn difficult to work with? It's a lossless conversion. If you are unsure, use the SSMS GUI designer to generate scripts for you. 
+
+No. From an "on disk" organisation perspective the fact it is a constraint doesn't matter. That is, the physical and logical table layouts are separate And PK when not clustered is just a unique non-clustered index with some rules 
+
+Edit, May 2013 The link in lucky7_2000's answer seems to say that hotspots can exist and they cause issues. However, the article uses a non-unique clustered index on TranTime. This requires a uniquifier to be added. Which means the index in not strictly monotonically increasing (and too wide). The link in that answer does not contradict this answer or my links On a personal level, I have woked on databases where I inserted tens of thousands of rows per second into a table that has a bigint IDENTITY column as the clustered PK. 
+
+I prefer restricting to unrestricted. If some process goes awry, then I don't want the log file to grow and grow and fill the disk up. I'd rather the DB stopped working than the entire Server/SQL Server Instance. However, in this case you have a different issue: most likely "FULL" recovery and no log backups. Change to simple, shrink the log to, say 500MB, allow growth at 250MB, set a maximum of 2GB. 
+
+You won't see other folks connection unless you are sysadmin or have VIEW SERVER STATE permissions because of MetaData visibility Anyway, force it like this with ALTER DATABASE Note: sp_dboption is deprecated, back to SQL Server 2000 
+
+I've used SQL Server Agent to run jobs every 10 seconds. It's OK. If you don't have it, you can use the Windows Scheduler to run osql or sqlcmd as required. Or say Quartz.net in your app. Or anything that can call a database on a schedule (AutoSys etc) 
+
+If the SIDs change on re-imaging then SQL Server will regard them as new Windows logins. They'll have to be dropped and re-added: as you are doing. You can test for changed SIDs by using SUSER_SID('domain\somelogin'). The results should b e different before and after. What you can do is to use a Windows Group instead. So the Windows group contains the 2 users. SIDs will change but you only have to drop and re-add the single group. Now, you may be able to use a start-up stored procedure to test for SID differences using sys.server_principals and SUSER_SID. If different for a given name you can automate the DROP LOGIN, CREATE LOGIN, ALTER USER Note: "logins" at the server level are expected to be static. SQL Server provides tools to remap a database-level user to a login via ALTER USER 
+
+You mean "concurrently". The answer is yes, with caveats that are too broad to discuss here. The whole point of RDBMS is concurrency... "Parallel" has a precise meaning in SQL Server: "a single query is distributed over more then one processor core" 
+
+So "JOIN" in the client does add any value when you examine the data. Not that it isn't a bad idea. If I was retrieving one object from the database than maybe it makes more sense to break it down into separate results sets. For a report type call, I'd flatten it out into one almost always. In any case, I'd say there is almost no use for a cross join of this magnitude. It's a poor example. You have to JOIN somewhere, and that's what RDBMS are good at. I'd not like to work with any client code monkey who thinks they can do better. Edit: after comment To join in the client requires persistent objects such as DataTables (in .net). If you have one flattened resultset it can be consumed via something lighter like a DataReader. High volume = lot of client resource used. 
+
+Multiple filegroups can distribute some load but often it is about recoverability with partial restores, read only filegroups etc Transaction throughput is mostly determined by the log file anyway because of "Write Ahead Logging". Multiple secondary files add no value often. Remove them 
+
+ThisWebServer access ThatSQLServer Both ThisWebServer and ThatSQLServer are in the same MYDOMAIN Any process on ThisWebServer using "NETWORK SERVICE" will access SQL Server on ThatSQLServer as "MYDOMAIN\ThisWebServer$" 
+
+Do you have (or ) set to ON for the databases? These are nasty options (Google searchresults) best set to off in any situation. Neither has any real world use case In this case, when the database is closed then all plans and cached data will be evicted. Then the database needs to start up. Another option is SQL Server crashing. Check the logs. For example, we recently hit this bug KB 2980395 in our data warehouse 
+
+The SSIS service doesn't actually do much and you can run packages without it or with it disabled. It's used by SSMS amd SQL Agent for example. See the KB article "Description of the SQL Server Integration Services (SSIS) service and of alternatives to clustering the SSIS service" What you need are the base SQL Server binaries which are installed with the DB engine. So you need a SQL Server Instance of some flavour to have dtexec running. Whether it's the DB Engine or the SSIS service installed but disabled. Running packages in BIDS is a special case. Run the package on the same PC as BIDS via dtexec and it will fail unless you have installed server components (= a SQL Server Instance) 
+
+Most settings that can't be done via sp_configure are registry based So, you can use etc to change them. You'll have to find a list of registry keys yourself sorry but most are under One examples , protocols is under 
+
+None of them. You can learn standard (-ish) SQL for any RDBMS. Standard SQL isn't used in the real world for paying jobs on successful projects... Saying that, MySQL is a good place to start and here is a tutorial 
+
+I'm surprised everyone mentioned clustering. Database mirroring avoids the shared nothing cluster disks. This is simpler than full-on clustering but still requires 2 SQL Server instances. As for cost, either your data is worth something or nothing. If you lose the server, do you need it back ASAP? Or can you wait to rebuild a server and restore from a backup? If "ASAP" then you have to spend money 
+
+Generally, I don't add redundant columns unless I really need too. Running a COUNT over a set of data is quite efficient in any RDBMS. Consider this is a read over indexed (hopefully) cached data to get the count will beat the the 2nd write in to maintain the denormlaised column. This write requires more resources/locking/longer transaction etc which impact reads more If performance becomes an issue over time, then you can pre-calculate the COUNT more efficiently using an indexed (aka materialised) view 
+
+This pains me... I've had to use temp tables with InnoDB before. Load them with filters, create an index, join these temp table. The problem as I reckon is if that InnoDB only has Nested Join algorithm: the grown-up RDBMS query optimisers have more to use. This is based on trying to run Data Warehouse type loads on InnoDB. Temp tables drags the overall complexity down the MySQL query optimiser's level... 
+
+You'll have to work through this "SQL Server – Missing Performance Counters: A consolidated list of known issues" sorry. I'm surprised this still happens: I last saw this with SQL Server 7/2000 years ago. 
+
+Pull the time from the highscores table separately MySQL doesn't respect ANSI standard aggregations by default: hence your dodgy data 
+
+SET ROWCOUNT has side effects on intermediate counts which gives misleading results, which is why it is slowly being deprecated. The frst MSDN example demonstartes this Luckily, SQL Server as a grown up RDBMS has database snapshots and on-line consistent backups giving point in time recovery in case you foobar it... 
+
+SQL Rockstar's answer is how to fix it: I'll add an explanation. A stored procedure parameter can be either a constant or variable: not an expression. CAST is an expression. (This is different to udf parameters that can accept expressions) EXEC on MSDN states

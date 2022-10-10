@@ -1,0 +1,45 @@
+I had implemented a kludge which worked, but it required continual updating a couple of files. I have written a script, which makes the change easier. It works on Raspbian and Ubuntu MATE. If is not already present you should edit to include and it can then be toggled with the following script. 
+
+The "documentation" for is rather obscure. I have used to implement a shutdown button (although I use GPIO5 - pin 29 as I use the default for I²C). The "documentation" does not explain what happens in another pin is used - it does state "This overlay only handles shutdown". Pin 5 USED to perform a restart on older Pi - See Will pulling pin 5 low will make the pi boot up again but this does not seem to work. 
+
+The statements "220V power" and "I'm very new with electronics" raise concerns. The only responsible advice I can give to anyone who isn't a licensed electical contractor is DON'T. Try something involving lower voltages first. 
+
+Okay, I've managed to get your code working between a Pi2 and an Arduino Pro Mini. The Pro Mini is meant to be a 5V device but seems to work quite happily when powered from 3V3 which means I didn't need a level shifter. 
+
+The root problem is that the activity LED moved from being attached to gpio 16 to being attached to gpio 47 on the B+. You need to update the code to reflect that change. There are a number of changes you need to make. It is more than just changing 16 to 47. Gpio 47 is controlled by different registers. See this thread on raspberrypi.org which covers the same problem, 
+
+I am fairly sure it is a bug in the RPi.GPIO module. Look through $URL$ As a workaround I suggest you do not use the and methods in a loop, use the method instead to set the duty cycle to zero to stop PWM. 
+
+I was the author of one of the articles you mentioned (which I wrote in sheer frustration at the number of questions about setting up networking). There are a few objections to static IP addresses. 
+
+This is not strictly an answer, because I frankly don't know, but my observations. Shutting down the Pi, using any of the commands SHOULD do the same thing. I have occasionally noticed that the display continues to function, indicating that the system has experienced some problems during shutdown. This is only obvious with a connected hdmi screen. My conclusion is that the (which is independent of the CPU) is continuing to function. As the is responsible for Pi booting this may explain the problems. This view is supported by visible error messages on screen after shutdown. NOTE my experience, while uncommon, is NOT specific to Stretch, as I have noticed it on earlier releases. I now always use on the rare occasions when I need to shutdown one of my Pi and have not experienced this problem recently. I normally only poweroff when performing some "surgery" on the Pi. (Theoretically there should be no difference.) 
+
+No, it is not possible to build a supercomputer with Raspberry Pis (some people have made clusters as an exercise in making clusters). No, a Raspberry Pi will add no meaningful processing power to a recent lap top. 
+
+I'll mention my pigpio library and daemon as the daemon was designed partly with other language use in mind. You can manipulate the GPIOs from Ada by using the socket interface. If you want a pure Ada interface have a look at $URL$ which shows the sort of code you'll need to port to Ada. 
+
+See $URL$ for a different implementation. The Python smbus module doesn't have any useful documentation (in my opinion). 
+
+Edited to add. The wrong gpios are being used. For the standard SPI device MOSI is pin 19 and MISO is pin 21. 
+
+Here is some code I have used to control servos with potentiometers being read with an ADC (the 8 channel MCP3008). 
+
+"Should I send power to the Pi simultaneously via the 5V pin on the GPIO header and the Micro USB cable?" No. If you are supplying via the 5V pin on the GPIO header there is no need for any other connection. "Should I build a modified USB A male plug (or splice the connection in such a way) that will pass the data pins through to the Pi but divert the Wifi module's 5V USB power straight to the same source of 5V power as the USB cable?" This would work - make sure you connect the ground to both the power and data. If you are going to do the 1st, you might as well just bypass the polyfuse on the Pi and use the Micro USB cable. NOTE1 5.3v exceeds the specification for USB (and the Pi). NOTE2 the Micro USB feeds all the 5v via the polyfuse. Bypassing this effectively prevents the Transient Voltage Suppression Diode from functioning. 
+
+It depends on what you mean by a modern Pi. You can not (see later for the proviso) usefully backpower a Pi with the 40 pin expansion header from the USB ports. The Eben Upton post is from late 2012 and is referring to revision 2 of the original Pi B. On the Pis with the 40 pin expansion header the USB ports are enabled in software. Until they are enabled they can not backpower the Pi. So to boot a Pi with the 40 pin expansion header you need to supply power via the microUSB or via the 5V pin on the expansion header. Once it is booted and the USB sockets are enabled you can then remove the original power source and backpower. That is why I say you can not usefully backpower. 
+
+All the Pi's gpios are digital, you can not write analogue values to the Pi's gpios. What you can do is use PWM to achieve the same effect. There are several types of PWM supported on the Pi 2. 
+
+The circuit quite clearly shows that it runs off 5V. It also appears to have provision for external power. The link is quite old (it was obviously designed for a Model B) and the Pi has changed since. The 26 pin header should fit over the 1st 26 pins of the Pi2, although the later Pi changed the physical position of the pins (by a small amount) so it won't fit neatly on top. It will probably work, although any software may be out of date. 
+
+At least you have given some detail, but what you are trying just introduces too much complication. You should try (from a terminal on the Mac):- 
+
+This could be done more elegantly by writing a simple program, using the functions provided by . These are well documented, and the source is readily available. 
+
+If you are getting nothing it suggests a wiring problem. It would be useful to know which connections you have made between the Pi and the MCP23S17 and details of what is connected to the MCP23S17 gpios. That monitor (possibly my software) should be capable of monitoring the gpios if properly configured. For a more visual and possibly simpler approach I suggest you download my pigpio library and piscope which is how I tend to debug these sorts of problems. To use piscope you'll have to temporarily drop the SPI speed to something like 50000 bps but that shouldn't affect your program logic. 
+
+To do this simultaneously you probably need to assume each Pi has a common time reference. If they are networked one can assume that they may all be synced to network time. Rather than propagating a do now command which will be subject to random network delays I would send a do at time X command, where X is some time in the future (say 60 seconds). E.g. do at 1.00 p.m. Each Pi could then do a busy spin waiting on that time to arrive to execute the command. That method should eliminate random network delays. 
+
+Finally, copy the keyfile to ~/.ssh/authorized_keys on the Pi (there's a few different ways to do this, I used Transmit to copy it over SFTP, since I'm a Mac user. Windows users have WinSCP, and Linux users probably already know how to do it ;) ). This file contains all of the keys authorised to connect to the Pi, so will probably be blank or non-existent on a new Pi. If so, just copy id_rsa.pub to this location. If it already exists, add the key from id_rsa.pub to the end of the file. 
+
+connections timeout after a period of inactivity. This is unlikely to be the Pi, but the client timeout, although the network connection may timeout on inactivity. (My Mac remains connected to my Pis for hours - until the Mac goes to sleep). You can set on the Pi, but you would be better to do this on your ssh client (you don't tells us which OS or client you are using). This causes to client to send a keep alive message at regular intervals, and it will only disconnect if no response is received.

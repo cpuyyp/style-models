@@ -1,0 +1,69 @@
+To be 100% confident, a restore of database is required. You need a seperate server to do the restores. Since you are using Ols's backup solution, the entire restore and verify process can be automated using dbatools - esp specifying parameter e.g. Below powershell script Scans all the backup files in stored in an Ola Hallengreen style folder structure, filters them and restores the database to the folder on 
+
+Short Answer is : NO. Unless you have running a server side trace or some monitoring, you would not get much info to do a root cause analysis. Since you restarted sql server, all the DMV data is flushed out. You should have connected via DAC and then gathered useful data and then restarted sql server (though I would consider this a last resource). 
+
+Just run the scripted out version (from 2005 servers) on the new sql 2008 server. You need to manually key-in the passwords as when you script out linked servers, passwords are not scripted out - they are grabbled - . You can check the linked server properties on old server and then match them on the new server using below t-sql : 
+
+You should not be concerned if the query is just "ONE OFF". If you feel that you will need to run more "AD HOC" queries, then look for turning ON the option. Reference : Plan Caching and Recompilation in SQL Server 2012 
+
+Though SQL Profiler is not available in Express Edition, still you can leverage trace functionality with any of the below mentioned approaches : 
+
+Depending on what you are doing with calling a file, you should look into using PowerShell as an alternative. 
+
+The error is self explanatory .. you cannot drop a database if it is part of DB mirroring, AlwaysON or replication. I normally avoid using GUI when I have option of doing same thing using TSQL ... For future readers, you can break database mirroring using below TSQL command (run it on the secondary server) 
+
+SSMS behind the scenes uses to populate the data in the Properties page . Note that the SSMS properties page does not give info about filegroup backup. It only gives info about full, diff or log backup. You can use this script to retrieve SQL Server database backup history and no backups details 
+
+You cannot copy individual plans form one server to another. You can copy statistics - generate script and run it on the test/staging env. Mainly, you should focus on - 
+
+A rare scenario, but its good to have it backed up as part of best practice. A SMK () is the root of encryption and is generated automatically the first time it is needed to encrypt another key. If SMK is corrupted, then you might need to restore it. For 3 and 4 .. You can, but why would you do it ? You have to turn off encryption, create a new cert with new Private key and then turn on encryption. Depending on your database size, this can take some time. Remember that a DEK is the one that does the encryption and decryption of the database. As a side note, refer to this script for info on the databases, encryption status along with other useful information. 
+
+ExpressProfiler available at CodePlex Or You can install developer Edition and then use profiler to trace the sql statements. Use Trace Flag 4032 that will log all the sql from all clients to the errorlog. 
+
+The rest of the query in your fiddle looks fine. To get you the results that you have shown, below will work: 
+
+This is because, this settings is least tuned (people just set it to default), instead max memory is what is generally tuned as it is the "ceiling" for the buffer pool. A good value for max memory will ensure that windows and other processes runing on the server will have enought physical memory to perform their work without forcing sql server to trim. 
+
+(since this is longer than a comment .. so posting this as an answer) In sql server enterprise edition, you can leverage database snapshots. If I understand your question, you want to do some changes on a standy (not live) copy of your database and then discard those ? If that is true, then you can create a database snapshot of your main database using : 
+
+If above does not work, then for sure open a bug report with Microsoft. It works for me - I have tested (Microsoft SQL Server 2017 (RTM-CU4) (KB4056498) - 14.0.3022.28 (X64) Feb 9 2018 19:39:09 Copyright (C) 2017 Microsoft Corporation Developer Edition (64-bit) on Linux (Ubuntu 16.04.3 LTS)) and for me it works using both (restore filelistonly and using undocumented sp) 
+
+Remember that T-SQL should not be used to do file maintenance. Instead you should use Powershell to delete /move / copy etc files. Tsql way: use command along with the command e.g Delete all .sql files in the C:\Backup directory and its subfolders where the file modified date is more than 30 days old. 
+
+Not really as maintaining an index - it costs you for modifications like insert, update and deletes as well as disk space. Also, low cardinality indexes might be ignored by the Query Optimizer as it wont help generate an efficient query plan - its not just selective enough.Try to look into Filtered indexes. 
+
+I would not recommend using service broker for this scenario. Transactional Replicaiton is the best option. It even has the ability to filter only required tables, columns, etc as per your need. T-Rep is asynchronous and since it is the same server, there would be near to zero latency. Out of Curiosity: what is the purpose of sending same data to 2 other databases on the same instance ? Reference: Stairway to SQL Server Replication 
+
+This might be part of restore steps that are performed internally by sql server. You can look into the restore phases using DBCC TRACEON(3604, 3605, 3004);. Use it only for educational purpose on a NON PROD server. 
+
+No this is not possible to prevent changes to ServerA. You have to resetup mirroring from original primary ServerA to ServerB What you can do is : 
+
+If you want to disable check constraint, then when the wizard asks you to save the package, save it and then edit the connection manager as below : 
+
+One option would be if you had a running while that incident happened or you have to dig into the transaction logs using (this is undocumented and unsupported). Below query might help if the data is still persistent in DMV: 
+
+You could set the owner of model database as and then any new databases that are created will automatically be owned by . I normally tend to set the database owner to . Our applications are not using (should never use) :-) so there is no harm in setting the db owner to . 
+
+These logins are members of the sysadmin fixed server role, so they can do anything in the Database Engine. Keep them in role even if you are using Domain account. See SQL Server Per-service SID Login and Privileges section. A really good answer detailing above stuff - Service/Database Accounts - NT SERVICE\MSSQLSERVER & NT SERVICE\SQLSERVERAGENT … what are they for ? 
+
+best is to use sp_whoisactive -- by Adam mechanic. It can be used to log to a table as described here Depending on your requirement, you can schedule a job to run every 15 mins or so and then you will be able to see how your server is doing. 
+
+Can you check the article property -->Statement Delivery --> Update delivery format -- what is it set to ? One more thing to add -- please verify if any column that is part of a unique constraint is updated. If this is true, this means SQL Server is implementing the Update as a Deferred Update, which means as a pair of DELETE/INSERT operations. This "deferred update" causes replication to send a pair of DELETE/INSERT statements to the subscribers. refer : here To make sure that the Updates are NOT executed as a pair of Delete and Insert statements you can enable trace flag 8207 on Publisher Server. 
+
+The problem is with your variable declaration . The is or so define your variable along with proper length to avoid string truncation 
+
+Static Port Allocation : If you configure an instance of SQL Server to use a static port, and you have not yet restarted the instance of SQL Server, the registry values are set as follows: 
+
+Again completely baseless or you might have misunderstood it. Stored procedures can have their plan complied and stored in procedure cache and the plan can be reused. I don't think you can have priority of the kind you have mentioned. 
+
+I think I might have a legit answer .. and its a bug. (similar was found when running checkdb in 2014 & fixed in SP1 + CU1) When I run the query as is, SQL Server crashes 
+
+This might happen if someone have done a reseed on the . From table definition : --> --> To fix that error : 
+
+The link that you pointed out gives a good starting number, which in most cases is sufficient enough as a good configuration. I would suggest you to leave min memory as DEFAULT and adjust the max memory. Also, best is to baseline your database server usage during your full business cycle as that will give you the best number based on your workload using below PERFMON counters : 
+
+Backup operations do not take locks on user objects. ... see my answer on Backup internals - What happens when a backup job is running - in terms of locking and performance overhead in SQL Server? 
+
+I would suggest you to leave MIN Server memory to DEFAULT. Min server memory controls the minimum amount of Physical memory that sql server will try to keep committed. When the SQL Server service starts, it does not acquire all the memory confi gured in Min Server Memory but instead starts with only the minimum required, growing as necessary. Once memory usage has increased beyond the Min Server Memory setting, SQL Server won’t release any memory below that amount. Bob Dorr explains this settings as : 
+
+I would suggest you to look into Log-shipping as an alternative solution for your scenario. It is easy to set up and is a good old proven DR technology. Minimum it allows is 1 min to take log backups. Logshipping does not have any hard limitations on the number of databases being logshipped. Logshipping allows you to logship your databases to more than one destination which is a very good advantage over database mirroring. Also, logshipping has functionality to delay restoring of log files on the secondary server to protect against logical errors. Mirroring does not allow this. Logshipping as a part of process provides you full backup and subsequent log backups (depending on the frequency you configured - minimum is 1 min) to allow you to have backups so that you can easily setup your environment form them. Mirroring does not. At the end, a good Disaster Recovery strategy is totally dependent on -

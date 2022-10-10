@@ -1,0 +1,37 @@
+A stylistic note, and maybe a result of copy-paste, But I think having eight spaces for each indentation is a little overkill and makes your code hard to read. I might suggest four spaces if you are not locked into this particular style for some reason. 
+
+Your search query will not be able to leverage an index on the fields you are searching within. This is because you have a wildcard at the beginning of the search string and a default B-Tree index only works for prefix match use cases. So when the LIKE condition has a wild card at the beginning, you will need to perform a full table scan. Full table scans are REALLY bad from a performance standpoint. It looks like you use case would work best with natural language full text search (MySQL link here - $URL$ ). This would require change to both your query and the database schema. You also do a lot of individual single table queries here. My guess is that you can possibly optimize this by utilizing joins to get date across table with a single (or fewer queries) vs. reading data from one table, then another based on that result, then another based on that next result, etc. 
+
+This eliminates should simplify things greatly as opposed to your approach of using regex to break apart the string and then iterating over every single string, evaluating it. 
+
+By the fact that you are using field instead of or similar, I am wondering if you are not properly hashing your passwords. This should be considered mandatory for storage of password data. 
+
+Your style is inconsistent. For example, in JS, sometimes you are ending lines with semicolons, other times not. 
+
+Consider adding some parameter validation anytime you have public methods. Ideally this could be a combination of type hinting and/or variable inspection to make sure you are being passed a valid parameter. What happens now you if your method is passed an integer, array, object, empty string, etc.? 
+
+I admit I don't understand the need to stand up the dump and compare it with the production database, especially if you are not going to retain the dumped database as a hot standby or similar. The tools give you significant flexibility in how you can log/handle errors that may come up during the dump process, as well as various performance, consistency, and table selection options. What value are you REALLY gaining from just matching a list of tables? For a large database you could be consuming a lot of resources and time to go through this step. If that is your case, maybe you perform this test at some sampling interval as a sanity check. If you find that your daily backup is THAT critical to your system recovery plans, then I would suggest your overall architecture might need revisiting. Why not have a read replica of master you could dump every X minutes/hours (depending on dump time) without impacting performance on production (and also giving you point-in-time recovery capabilities). Or, better yet, why not begin thinking of cloud-based solutions like Amazon RDS that can basically abstract away all of this logic and effort from you, allowing you to use single command to take database snapshot, restore from snapshot, etc. The technology in this space has evolved pretty far past daily database dumps for use cases where you need high availability and/or more robust recovery capabilities. That being said, I think you have put together a very well thought-out script. It is simple, well-documented, and clear in presentation. I think this could be useful for you for basic dump operation. I would just encourage to think about whether some of commentary above is more applicable to your use case. Some more specific thoughts: 
+
+I am having significant struggle understanding how a caller is to operate against these two classes. It is just not clear from reading this code. Let's look at two use cases - one where you are creating a new vote and one where you want to read out information on an existing vote (i.e for rendering on page). In the insert use case, it looks to me like you would need to so something like this to work with answer class: 
+
+Based on your comment that array entries could have multiple words, I would suggest using to build all array of all words across all entries that do not have have the needle character in them. 
+
+Note that the outcome here is very reusable code that could be pretty much dropped anywhere within a larger application to implement your quiz. In a real application you may also add something like a quiz rendering class to be able to render the quiz using javascript (and to separate display of quiz from core quiz objects). It also makes it much easier to modify your code in the future. You need to change how questions are scored? - well just change the scoring logic within the answer and question classes as implemented in those class properties and methods. As long as you keep the contract (i.e method calls) with the quiz, the quiz class itself would likely not need to be modified. 
+
+Rather than writing HTML strings and having to hold the aggregated string in memory, you should give some consideration to actually creating the DOM Nodes and appending them. Along with suggestion on removing redundant iterations over options, might have you function looking like this: 
+
+I frankly don't understand the parent child stuff in your hide function. Are you expecting multiple nesting levels? 
+
+The last three methods might also be considered for separation into their own factory class (i.e. ) if you need to expand on the means by which you instantiate favorite objects. The takeaway here is that favorite class(es) represent the data model and own the means for how they are persisted into and recovered from the database. Your simple in memory store/cache does not and should not need to know or understand this. Your cache would just need to utilize this methods like: 
+
+The following are all acceptable ways to set/get values to/from localStorage (or sessionStorage for that matter): 
+
+Consider building this as object rather than associative array, as this really seems to be more of a set of object data rather that a hashmap type of data structure. You might over time also find a need to add behaviors around these properties such that having your own class or similar makes sense. Passing around an object dependency with known properties and behaviors might be preferable to just passing around a data structure. 
+
+Stylistically, you have some problems. I think the answer given by @Sumurai8 addresses several of these. I would add that you have no meaningful comments. Oftentimes, well-written code with meaningful variable, class, function, etc. names only needs minimal commenting around logical considerations. Here you lack both comments and well-chosen function/variables names. 
+
+When you get to a usage pattern like this, the need for interfaces becomes more clear. You might for example have your model classes that implement interface or similar, where Model or inheriting class would need to implement methods like: 
+
+I would suggest that you might ultimately want to consider splitting this functionality into different classes. Perhaps with classes such as: 
+
+You are not showing your code. Are you setting any or options? Typically you should not set salt (just let it be generated for you), and you should tune (with value between - 04 & 31) to make sure that the hash takes sufficient time to be calculated (the default cost factor of 10 can oftentimes be considered to be "too fast" to calculate).

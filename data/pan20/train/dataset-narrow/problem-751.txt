@@ -1,0 +1,55 @@
+Neither one of these statements is correct in their current form. If you want to insert values from the output of a statement, you need to remove the keyword. Once that's done, we are left with: 
+
+The semi-colon is a statement terminator, and you haven't correctly escaped your attachments. In other words, you've done this: 
+
+All this considered, we can make the following observation: All things being equal, at 12 bytes per row, we would be able to fit 674 rows in a single 8KB data page. That works out to be 741,840 pages in total, for 500 million rows. No doubt, this is where your 6GB figure comes from, or more specifically, 6,077,153,280 bytes. However, there's an overhead per row, as you discovered. Summarising from Paul's Anatomy of a Record: 
+
+Even if it is, go with fewer cores. On a virtual environment, this is preferred, especially with Standard Edition. Final note: if you do share the host with other VMs, please be wary of something called CPU lag. This can happen when VMs with different numbers of vCPUs are running on the same host. 
+
+As Shanky implied in the comments, your Max Server Memory value is probably not changed from the default. SQL is designed to use everything at its disposal. I've written a script, based off work from Jonathan Kehayias of SQLskills, that will let you know the value you should use. Jon advises reserving the following amount of RAM for the operating system: 
+
+If the DBs are big, you can split them out into their own files. The dump command is flexible like that. (Ref: $URL$ To restore, all you have to do is run the dump file as a script, which you can also do from the command line. 
+
+Is this vendor-supported? Probably not. Plus your storage costs will be around four times your current usage, due to indexing and replication. 
+
+According to the official documentation for on 2017 CTP 2.1, the command to export data and schema is as follows: 
+
+You will need to convert your as well, where you have it in the string. Watch out for quotation marks, and casting back to as well. Here's a proposed solution: 
+
+We refer to these as heaps in SQL Server. I understand that Non-Clustered Indexes complicate things, but that's their name. For what it's worth, on many RDBMS platforms, with auto statistics enabled, there's very little chance a table will not have statistics on it. I'd be comfortable calling these data structures unindexed heaps. 
+
+Tough call. Look at it from a transactional RDBMS versus reporting-style OLAP perspective, at a high level. The IQ methodology is column-store, versus a traditional row-store for ASE. Column-stores are very fast when running aggregated queries over them, but that depends on how your reports are run, right? I think you almost nailed it with this: 
+
+The media set name is assigned by the keyword, as you surmise. It is not possible to change the name once you have created the first backup media in the set, because it is set by the first backup operation. You will need to explicitly format the media set if you wish to change its name. 
+
+This is probably one of the silliest processes I've ever heard of, but anyway. After you've updated your data to remove the offensive words, run a checkpoint, and then restarted SQL Server (just to make sure it's all committed), the only way to guarantee that the underlying disk has been overwritten, and the "offensive" data expunged, is to perform a shrink of the database file. This effectively takes the data pages from the end of the file and inserts them into open spaces at the beginning of the file to fill up "empty" space. It's an horrific process for SQL Server, as it causes massive fragmentation, but it will "solve" your problem. Once you've moved your data to the new server, you must run a full index rebuild to defragment the tables, but, hey, it should work. 
+
+You have a basic misunderstanding of what a blank database file is. In our parlance, that just means that there's no user data in the file. It doesn't mean that the file is zero bytes in size. If you create a new empty database using Microsoft Access today, you'll find that it is a certain size, even though there's nothing in it. No tables, queries, etc. However, under the covers, the file itself contains information to make it understood by Microsoft Access. This is called the file format. No file formats for complex applications start off at zero bytes. You'll find exactly the same case with a Word or Excel document. What I suspect is that your downloaded file contains empty database structures. This is the same as a "blank" Excel file containing, say, ten worksheets that are formatted with headers, but no data. It will also be a suspicious size if you're unfamiliar with the file format. Don't delete what's in the file you downloaded. See if it works. I hope that helps your understanding better. 
+
+Max Server Memory should be no higher than 445 GB. This gives Windows enough memory to manage itself. Yes, it really does need that much. Max Degree of Parallelism should be set to the number of logical cores in one NUMA node, up to a maximum of 8. If it's running an OLTP environment, make sure Optimize for Ad Hoc Workloads is enabled. Ensure power saving on the OS is set to High Performance. TempDB should be on your fastest storage, followed by transaction logs. There's a whole lot more you can look at, but these are the main items. As some comments have noted, SQL Server 2008 R2 is out of mainstream support. Extended support ends in July 2019 (not this year), so there's just about enough time to start a project to move to a newer version. I would be looking firmly at SQL Server 2017 or later. 
+
+If I were doing this myself, I'd install the Docker Community Edition for Windows from the Docker store, and then install the SQL Server Docker image that way. If your Internet connection is fast enough, you can be up and running in under 5 minutes, and be able to allocate resources in a much easier way. EDIT: Ah, networking. 
+
+(Full disclosure: I created the Max Server Memory Matrix and associated script that you are referring to in your question.) Per this excellent blog post, which contains a detailed explanation of the issue you're experiencing, you'll find this little quote: 
+
+You need both SQL and Windows patches, as well as CPU microcode updates, to be fully** protected. GDR is meant to be security-only patches, whereas Cumulative Updates are bug fixes as well as security patches. Once you go from the GDR path on to the CU path, you're stuck there, i.e. you can't go back to GDR only. (Confusingly, this latest Meltdown / Spectre update shows up on certain SQL Server versions as a GDR and CU update.) If you are already on a CU, then stick with CU update. ** Note that Microsoft is rolling back the Meltdown / Spectre updates on Windows Update because there are some issues with certain CPUs, so it's hard to tell whether you were one of the lucky ones to get them while they were up. See the warning below. Use this link to check if you're fully patched, using a PowerShell script from Microsoft. The link includes the following statement: 
+
+If you downloaded SQL Server 2008 R2, the ISO you downloaded would begin with . Spanish version would start with . If you're installing off media like DVD, or just have the installer folder, you'll be looking for or similar, in the root of that folder. is the language code, and is the code. If you see that, you'll be installing that language. 
+
+Use from the command line. For example, to dump all your databases to a file, use the switch and a result file for output: 
+
+Change Data Capture is supported in the Developer and Enterprise Editions of SQL Server. Source: $URL$ 
+
+If you have, say, 64 GB of physical RAM, your Max Server Memory setting would be 54272 MB (53 GB), which means your BPE should be a maximum of 848 GB (53 * the ratio of 16) or less, with 424 GB or 212 GB recommended for optimal size. When you configure the BPE size with , that is the size of the cache, and is how large it will be. It will not grow unless you change it. So make sure you pick the right size to begin with, and make sure your SSD is fast enough. In summary (from the comments): 
+
+So, do your analysis on volume of data you'll be querying all round, that is fairly static or slowly changing. If that's going to be queried a lot, look into IQ. Don't be scared of a hybrid solution either. I have several SQL Server customers that have massive warehouses running with columnstore indexes, right in the same cabinet as their highly transactional RDBMS. 
+
+Check out Glenn Berry's Diagnostic Scripts. He includes a whole range of queries in there for accessing server information, including a basic health check. You will need to download the set of scripts appropriate for the version of SQL Server you're diagnosing. 
+
+I think you will be fine using . Assume the following columns exist, and assume dates and times don't test for daylight saving time. This will select all the UserIDs from a table where the time is between 1am and 5pm, since January 1st. 
+
+The index is a data page like any other page in the database. It has a header, a slot array, and data in the middle that points to other data pages, and eventually gets to the leaf node where the data sits. You can read more about data pages here. Once you understand that, you can read about index pages here. 
+
+The point is, there's a lot you can do before considering purchasing more RAM. Figure out what your queries are doing, and help them make better life choices. Brent Ozar has just open-sourced his course on how the database engine works, and I reckon you would benefit from that, as well as many other free online resources. 
+
+The answer by SqlWorldWide is good for future reference, but my guess is one of your developers had caused blocking, meaning that nothing could be changed on one or more tables because of a long-running transaction that was locking a resource. Things that cause blocking include index rebuilds, a long-running , a big , and so on. In future, along with the great resources in the other answer, you can make use of (get it from $URL$ to look at the blocking chain, and see which query is causing blocking. From there, you can then kill that particular query yourself, or ask the developer to cancel their query, which avoids going into Task Manager and using a bigger hammer.

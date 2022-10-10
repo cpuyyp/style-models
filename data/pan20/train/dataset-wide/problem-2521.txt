@@ -1,0 +1,83 @@
+Size Vs Capacity Having only a size dooms you to re-allocating a new buffer every-time text is added to the string. It can be more efficient to allocate a buffer slightly larger than you need () and only reallocating when () exceeds capacity. 
+
+Also this does not have the disadvantage of a macro. Which is a really confusing message if you add a comma anywhere in the code block. It does not compile: 
+
+If you know how much data you are going to push into an array. Use the method to prevent reallocation several times. 
+
+Is it safe? To a point. Naming I hope the name is just for illustration purposes as otherwise that is a pretty terrible name. The changes I would make are: Accepting pointers must indicate ownership. Your current interface does not indicate that it is taking ownership of the pointers. So as a user of your class I need to dig inside and find out if you are taking ownership or not before I can use it. 
+
+And I will go yes. But show me a coding standard that allows you to define two variables on the same line. Nobody allows this in modern standards. Its one line per variable; 
+
+Most algorithms we use tend to use iterators, so get used to using them. So I would re-write the above loop in terms of iterators: 
+
+This also goes to the point of declaring your variables as close to the point of first use as you can. This is not ancient C where you need to declare all the variables at the top of the function. This has several benifits 
+
+Const Correctness Any method that does not change the state of the object should be marked . This allows the method to be called from a const context (ie when passed as a parameter as a const reference). 
+
+Otherwise your are testing the memory manager code. Which is very complex and will give you different results (because memory has all ready been messed with in a previous test). So pre-allocate the size of the vectors (so they don't reallocate during the test). 
+
+The first code review of this code can be found here: Nisse Server: Part 3 Stream Layer After the bugs and points made by @Deduplicator (thank you) the code has changed significantly enough that a subsequent review is needed. Hopefully more people can help me out by providing input. SocketStream.h 
+
+It makes no difference for integer types. But when using other types (iterators) the default implementation for increment usually makes the prefix version more efficient. So when it makes no difference to your code prefer the prefix version. This allows the types of your objects to be changed without having to update the code and it will still be the most efficient version. Prefer to If you know that your access to an array will always be in bounds then prefer as it performs no accesses checks and is thus quicker. Note: throwing an exception that is not caught inside a thread will cause the application to terminate. Throwing an exception inside an async will catch the exception and transfer it to the future object allowing the main thread to detect it. Don't know why you are using r-value reference here 
+
+It is changing the state so its not really a const method. Commit There seems to be no way to call commit!!! 
+
+But you don't even need to be using pointers. Texture is not polymorphic. Just create the object in the container (not the pointer). 
+
+At first I thought this was just all part of the class declaration. It took me a couple of takes to realize this was code. Readability is the key to coding. Learn a decent indent style and use it. My chosen style: 
+
+Passing by pointer is very rare in C++ (very common in bad C++ written by old C programmers). The reason for this is there are no ownership semantics associated with the pointer and thus potential for misunderstanding the interface and thus leading to memory leaks. In C++ we want to very clearly define the ownership of pointers as it is the owner of the pointer (and nobody else) that is responsible for deleting the pointer. The language has introduced smart pointers that allow us to specify ownership so that when the pointer is passed we are explicit in passing ownership with the pointer. In other situations were ownership is not passed we use references. If I was using your function for the first time I can not tell if I need to dynamically create the vector or not. Is your function going to call delete on the passed pointer. I can't tell from reading the interface because pointers have no ownership semantics. If you change your interface to pass by reference then it works just as well and there will be no confusion. If you want to pass ownership you need to use smart pointers to indicate the type of ownership that is being transferred. Prefer prefix increment. 
+
+What is this obsession with passing pointers. Stop it. In modern C++ code you should practically never see a RAW pointer. The only time you should see a RAW pointer is when creating a container or smart pointer (or something very similar). In this case you could have used references. No need to dynamiclly create the lock guard! 
+
+This should improve performance considrable as you are not re-calculating string length all the time. Note 3: Always do timing after you have compiled the optimized version 
+
+Also don't specify unless you have too. Members declared inside the class are automatically inline so no need to add the keyword. PS. I assume you are not doing it to force inlining because the compiler will completely ignore you. If you insert the same value you don't reuse a slot in storage: 
+
+xsgetn/xsputn eof I think you return result of these functions can be incorrect. You should only return if you did not get/put any values. You return if you have filled/emptied all the data. 
+
+Or am I reading your intention here incorrectly? Is it some sort of randomizing feature? Either way you should have probably documented this to explain what you are trying to achieve! Here is a more C++ like version 
+
+This is not doing what you expect. With your code both list share the underlying list of nodes. If I modify one of these objects then the other one is modified in parallel. This may be deliberate and feature but it and thus should be clearly documented if delibrate. Note I: Same applies to assignment operator. Note II: The compiler automatically generates the copy constructor and assignment operator. I will assume the above was a mistake. Basically I believe you are using the wrong smart pointer. The list of nodes contained by the list is solely owned by the container and there is no shared ownership. A more appropriate smart pointer would have . If you would have used this the compiler would have complained when you tried to build as the default copy constructor would have not worked. The reason for using a smart pointer to control memory management is that it can get quite convoluted in normal code. But because your code hides the link object internally the number of use cases is limited (nobody can abuse your object just you). So this makes memory management simpler and you can quite easily implement it yourself (but std::unique_ptr is a perfectly valid alternative in this case). Note 3: Implement the Copy constructor. Implement assignment in terms of copy construction by using the idiom. Edit: Based on question comment Adding an element to a list that uses std::unique_ptr 
+
+The above code is not exception safe. If the part throws an exception then will not be unlocked and other threads will become stuck waiting for it. The simple way to solve this is to use RAII (and the class I wrote above). 
+
+Methods that return information about the state of the object without actually changing the state should be marked const. 
+
+Thread A. Reaches point A Thread A is de-scheduled and is not currently running. Thread B. runs through the above code and works Thread B. destroyes the node it poped off the front. Thread A. Is re-scheduled to run. Thread A. Any use of is invalid as it points at a node that was deleted by Thread A. Even if the node was not destroyed it is no longer the head of the list. Thus any usage of next is suspect. 
+
+As a side note: This is the kind of reason why underscore is reserved for the implementation to allow for little shortcuts like this without having to re-invent the language. Rather than using recursive templates. I would have used an iterative aproach. With you can do quite a lot that is evaluated at compile time. 
+
+That will work. But its a bit slow if you get a lot of 'T'. We can optimize that if you want with a lookup table; 
+
+That's a perfectly good design decision. It is just not the same decision that was made for the standard library. 
+
+Remove that line. It is not needed. Note: Here you are returning a copy of the value in the your stack. 
+
+You should write self documenting code. This basically means breaking your code up into logical well named units. Units are functions and classes. Classes should represents objects in your system. I would have layed out main something like this: 
+
+You are tightly coupling your code to where it is being used. This may or may not be a problem but it seems to be excessive here. Leave all your members private and don't expose them via getters. Provide methods that modify your objects state without exposing it. Here again you are passing by value: 
+
+This will fail if a previous library call set to . Don't like the extra indention of you r function: 
+
+Then you should also have a virtual destructor. As it currently stands your code will call the destructor of but because the destructor is not virtual it will not call the destructor of . Overiding virtual functions When you override a virtual function its a good idea to mark it as overridden. That way if things in the future change your compiler will catch any changes and prevent compilation until you fix the update. 
+
+Seems like you are re-inventing the wheel. That's what move semantics is all about. As it stands I can't see this as real code. It requires some initialization method that is not provided. Alos it is just a PIMPL around a container class. What exactly do you want to get reviewed? 
+
+Zero sized arrays is a C trick but not valid in C++. You can use a vector (or an array here). Then use the constructor to initialize all the members. This means your code will change a bit as the buffer is not local to the Arena object. 
+
+This is dangerous (if T is not a POD). If destroying an element results in an exception you are left with an object that is in an invlid state and have leaked memory. The standard order to avoid this is: 
+
+I would go with the circular list (using sentinels). Also each time you add a value you must traverse the whole list to find the end. It would be easier to keep track of the last value using two pointers in List object; (points at the sentinel) and (points at the last inserted node (or at the sentinel if empty list)). Using a sentinel the insert becomes. 
+
+Use one line to declare each variable (and put some more meaningful names on them). Also there is no reason to explicitly call the method as this is handeled by the constructor: 
+
+No it is not safe (It is undefined behavior): The called function may put stuff on the stack (or somewhere else) as the return value. Expecting the caller to deal with it at their end. If the caller does not deal with the return value appropriately then you have undefined behavior (the returned object may have a destructor that needs to be called for example). This line is probably not doing what you expect: 
+
+In C++ (unlike C) the or the tend to be placed with the type not the variable (its part of the type and the type is much more important in C++ than C). Placement New is not needed. 
+
+Hashing Not sure I would require two functions for hashing. If its a good hash you should just be able to do the modulus of the number of slots. You should also provide a default hash function. Most people don't know how to write hash function and making them do so will cause lots of problems. Using C function pointers for the functions is also a bit old school (and prevents optimization). Use functors (or lambdas (fancy functors)). Always use the initializer list rather than setting the values in the body of the constructor. 
+
+I prefer the second one as it is easier to see what is actually happening. C++ Old School This was how you removed the copy constructor and copy assignment operator in C++03 (but you did it wrong). You are not supposed to have just put the . In your technique you can actually still use them in some contexts that the compiler can't catch. If you don't provide definitions (by using the ) then it still compiles fine if you don't use these operators but if you accidentally do use them in contexts where they are allowed you get linker errors. 
+
+When the type is not an integer (say you are sorting strings). This is not a very efficient way to do it. In C++11 we introduced move semantics which allows an object to be moved (in the case of a string that means moving its pointers and not the string). As you can imagine this makes it much more efficient than a copy.

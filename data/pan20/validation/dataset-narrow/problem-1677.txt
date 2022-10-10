@@ -1,0 +1,95 @@
+Yes, you can connect a Pi GPIO to another Pi's GPIO. As you say you do also need to connect the grounds (so they both agree about the levels). One GPIO should be set as an output, the other should be set as an input. (If both are incorrectly set as outputs with one high and one low that becomes a possibly damaging short circuit). 
+
+Software timed PWM is not the best idea for servos, the jitter when the system is more than very lightly loaded, or more than one servo is being used, will cause the servos to twitch, get very warm, and shorten their lifespan. 
+
+You need to stop the pigpio daemon if you run a program directly linked with the pigpio C library. In effect your program becomes the pigpio daemon and only one may be running at a time. So sudo killall pigpiod Then run your C program. While your C program is running it acts as the daemon, so you can still run gpiotest and any of the pigs commands, e.g. pigs pigpv (software version), pigs hwver (hardware version), pigs t (current tick). 
+
+The general solution to drive brushless motors is to use an ESC. ESCs are controlled in a similar way to servos. Send 1000 µs pulses for off, 2000 µs pulses for full throttle, and vary the speed using the intermediate values. The Pi can generate the needed ESC control pulses from (any of) its GPIO. 
+
+There appear to be 14 characters not 15. The datasheet says there should be 16 but the CR and LF do not appear to be present. So try reading 14 rather than 15 characters. EOT and SOT are ASCII characters with the values 2 and 3. Look at an ASCII chart to get the idea. They are distinct from the stop bit. Each ASCII character is sent as 8N1 (as defined in the datasheet) which means one start bit, 8 data bits, and 1 stop bit. The hardware converts the bits to characters so your software has no visibilty of the start and stop bits. If you want a robust solution to reading the data you should be reading character by character to accumulate the data between the SOT and EOT. Just reading x characters at a time falls over as soon as there is a lost byte or if the read starts mid data transmission. 
+
+The performance seems perfectly reasonable to me for a userland solution. Occasionally there will be inconvenient reschedules. I'd expect better figures if the Python was running on the local Pi. I repeated the test on a local Pi and all the sent messages were received error free (100%). 
+
+The Pi3 has two hardware I2C buses only one of which should normally be used (one bus is reserved for HATs.) Additionally there is device tree support for software I2C buses on arbitrary GPIO. For both the above you need to make configuration changes in as documented in . Additionally there are many software I2C implementations which may be useful in special circumstances (e.g. my pigpio library with bit bang I2C). 
+
+The pigpio daemon needs to be running on each Pi to be controlled. It may be started at boot with the one-off command . 
+
+The Pi's GPIO are to set logic levels (on or off). They are not designed to be a voltage reference. The 3V3 rail is regulated. You'd have to see the specs for your Pi model to find the actual regulator used. I doubt if it is calibrated or particularly stable. 
+
+I don't understand device tree well enough to say if this is intended behaviour or a bug. Device tree loads the driver (i2c_bcm2708) but does not create the devices. You need to modprobe i2c_dev to create the devices. Normal procedure is to have the line i2c_dev in /etc/modules so it is modprobed at boot. 
+
+You can use RXD, or TXD, or RXD and TXD. I.e. you can use any combination you choose. You also need a ground connection. 
+
+Put the text in a file called getip and make it executable with chmod +x getip. The method of sending e-mail will depend on what mail packages you have installed and any mail servers to which you have access. 
+
+I'd just use multiple GPIO, probably 4, and use a resistor per GPIO to limit the current from each GPIO to 9 mA. Then just switch all the GPIO on or off. That would give a little control of brightness, even though it's not needed in your application. You could also use PWM to control the intensity, it's just a little more complicated with 4 GPIO. I have a spot red laser which is rated at 20 mA. I just connect that directly to a single GPIO. I have measured the current flowing through my 20 mA red laser. I used two meters one not so inexpensive, one inexpensive. 
+
+If you have a keyboard attached press ctrl+alt+f1 to get a login shell. Press ctrl+alt+f7 to return. 
+
+You need the global statement so that the global current_energy variable is used rather than a same named local variable. Read up on Python globals. You also need to change 
+
+The number of gpios needed per sensor depends on the sensor. You can use use multiple devices on the I2C buses (the Pi has 2, each of 2 gpios). All sorts of sensors support I2C. The Pi has no analogoue gpios so you can't connect sensors with analogue outputs to a Pi gpio. 
+
+There are many ways. I'd say the simplest is just to ignore the slave select signals used by the SPI driver and use your own. E.g. say you have 6 DACs. Find 6 spare GPIO. Let's say you use 22, 23, 24, 25, 5, and 6 (chosen as they are not used by SPI). 
+
+There are hundreds of links available by googling. Google for the sensor + raspberry + language (where sensor is one of ADXL345, HMC5883L, ITG3205, or BMP085). 
+
+I have taken some liberties with your code. In particular I changed from BOARD mode to BCM mode as it was easier for me to test. I tested by changing the GPIO levels outside the script. Notes 
+
+It may be simpler to use raspi-config sudo raspi-config Select the internationalisation option and change keyboard layout. 
+
+The Pi3B will operate in exactly the same manner as a Pi2B, Pi B+, Pi A+, and Pi Zero when used with the Sunfounder kit. 
+
+I suppose a safer way would be to hold the Pi in a reset state as you pull the power. More recent Pi models have two points you can bridge with a wire to reset the Pi. If you hold it in reset it will be safer to pull the power. See $URL$ Frankly unless you can see SD card activity (flashing LED) I'd just pull the plug. Frankly, frankly even if I saw SD card activity I'd just pull the plug (I keep nothing important on the SD card). 
+
+You need to use I2C multiplexors. Typically each multiplexor lets you connect 8 devices. Typically multiplexors can be assigned 8 different addresses so you can connect 8 multiplexors to an I2C bus. This means you can have 64 devices with the same address connected to an I2C bus. For a typical I2C multiplexor see $URL$ 
+
+My pigpio library Python module lets you clear multiple GPIO or set multiple GPIO at the same instant. clear_bank_1 will set multiple GPIO low. set_bank_1 will set multiple GPIO high. Example To set GPIO 5, 10, 23 low. 
+
+As explained by lornix it's because the shell handles redirection before the command is executed. I prefer this type of invocation sudo sh -c "echo 4 >/sys/class/gpio/export" In your case sudo echo heartbeat >/sys/class/leds/led0/trigger would become sudo sh -c "echo heartbeat >/sys/class/leds/led0/trigger" 
+
+The datasheet will specify if the chip generates an interrupt or not. I don't see why it would. The normal procedure is assert SPI slave select and send command (which triggers a reading) then read result and de-assert SPI. I guess you could poll ten times a second or so. The load on the Pi would not be measurable. Why not just use a rotary encoder like most other users? 
+
+Yes, the 5V and 3V3 power rails may be used to power multiple devices. The power rails are not switchable, power is always available while the Pi is powered. The amount of power available from the 5V and 3V3 rails is determined by the amount of power you can feed in via the microUSB power socket (or via the 5V power rail if you are powering via the expansion header). Different Pi models have different microUSB polyfuses which limit the current. You can use the residue of current after that needed to power the Pi and its peripherals. Early model Pis have a limited amount of 3V3 power because of the chips used, perhaps only 50 mA or so. Later model Pis have upgraded chips and you may be able to draw 500 mA or so. The Pi3 has a two amp polyfuse. Provided you have spare power you should be able to draw up to almost an amp from both the 5V and 3V3 power rails. 
+
+I use UBECs to power several of my Pis. You can get UBECs to switch anything in the range 9V-26V to 5V at 3 amp for a couple of UK £. If you are worried about no protection then just feed the UBEC output into the microUSB power input. 
+
+If all you are doing is manipulating the GPIO there is no reason to be using root privileges with Raspbian. This is a common use and is provided for in the permissions system. Add the user to group gpio and you will not need to use sudo. To add the pi user to group gpio use the following command. 
+
+There is a Virtual Wire module in the Python examples for my pigpio library. Have a look and see if it can read your Arduino messages. It should use a lot less than 98% CPU. If it still uses too much I did do a quick port to C which uses a lot less CPU but I have not bothered to post that to the examples. 
+
+No, you can not get Windows 10 to work on the Pi. Note, I use Windows 10 to mean what you mean when you ask the question. There is no relationship between the abilities of the similarly named Windows 10 IoT and Windows 10 as you see on an Intel/AMD PC. Windows 10 IoT is intended to be used, perhaps with a tiny dedicated GUI, on internet connected gadgets. 
+
+I doubt there is an easy answer. You may need to look at the wiringPi source code and the wrapper you are using. If the gpio is in balanced rather than mark/space mode (pwmSetMode) there will be no fixed PWM update frequency. It will vary with dutycycle, clock divider, and range. If the gpio is in mark/space the update frequency will be the source clock frequency (probably 19200000) divided by the clock divider (pwmSetClock) divided by the range (pwmSetRange). You'll need to check the defaults in the various wrappers you are using. 
+
+Wiegand is quite straightforward. It is not a particularly onerous interface. For an example of transmitting Wiegand codes see $URL$ 
+
+I have no idea how you might minimise the changes. I would use the following command to update the firmware. 
+
+Pretty much correct. Connect battery +ve to VIN, battery -ve to GND. Don't connect +5V to the Pi, leave it unconnected. Do connect GND also to a Pi ground. Connect IN1/2/3/4 to four gpios of your choice. It won't do any harm to have a in-line 1k resistor for each if you are paranoid. Leave the ENA/ENB jumpered to 5V so each motor is enabled. Set IN1/2 to 0/1 to drive motor A in one direction, to 1/0 to drive in the other. Similarly for IN3/4 to drive motor B. 
+
+A plot showing the returns from two sensors mounted on the same platform as the platform is moved to and fro between two walls. Nominally ten readings per second are being taken with each sensor. Horizontal axis time, vertical axis reported distance in centimetres. 
+
+By default wiringPi's gpio utility is installed in /usr/local/bin. It is unlikely to be in the path of the root user when init scripts are run. Rather than gpio use /usr/local/bin/gpio. 
+
+Personally I'd dump 90% of that circuitry. Assuming the PICAXE is 5V. The Pi is 3V3. Connect the grounds. Connect the Pi's TX to the PIXAXE's RX (use a series resistor if you want). Connect the PICAXE's TX to the Pi's RX using a pair of resistors to cut the PICAXE 5V to a Pi safe 3V3. Use to set the Pi's baud rate to x. 
+
+Okay, you are using GPIO 8 to power the DHT22. GPIO 8 is actually the chip select for channel 0 of the main SPI device. So choose another GPIO, or power the DHT22 from 3V3 and set the power parameter to None (or omit it completely) when starting the DHT22. Note, if the SPI port was not properly closed it may fail to initialise properly at the next SPI open. From the command line you can use pigs spic h to close SPI handle h. for ((i=0; i<32; i++)); do pigs spic $i; done will close all open SPI handles (giving error messages for those not open). Alternatively kill and restart the daemon (sudo killall pigpiod; sudo pigpiod). 
+
+Without add-ons and using the Pi's gpios 26 (or 28 if you are happy to forgo HAT compatibility). If you buy something like a MCP23017 (port expander) you can have 100s. They provide 16 additional gpios each and 8 may be connected to an I2C bus (the I2C bus is Pi pins 3 and 5). 
+
+You define a global variable, perhaps called breakout_of_loop. You test it in the while loop and stop if it is set. You set it in the alloff function. 
+
+All the gpio libraries which talk directly to the gpio hardware have to be updated for the Pi2. The hardware is at a different address. This includes, but is not limited to, my pigpio, wiringPi, bcm2835, RPi.GPIO, RPIO.GPIO, servoblaster, pi-blaster, pi-fm etc. etc. Make sure you update any third party gpio libraries you use. 
+
+Any automated system is likely to be dangerous if you don't limit your data files to known directories. Suppose you keep all your data files under /data then 
+
+Code snippets are rarely conclusive. We have to guess at the missing parts. All the Pi's GPIO are digital. They return 0 or 1, which is what I guess your GPIO.input() function is doing. 
+
+I think your best chance of success is to find a small LIPO. They are typically used for powering radio controlled aircraft such as quadcopters. As long as you feed more than 3.3V into the 5V pin a LIPO of large enough capacity will provide the current needed to power the Pi. Some Pi's have proection mechanisms which kick in at 6V, so I suggest any LIPO you use should be configured to provide less than 6V. 
+
+You will get a little rainbow square in the top right of your screen if the power supply is inadequate. It switches on when the 5V rail drops below 4.65V. 
+
+You need to know there are marked differences between Python 2 and Python 3. A script which works in one language may not work in the other. Python 3 specific packages have names starting with python3. python3-pymysql may be what you want. Try sudo apt-get install python3-pymysql 
+
+There is no way to achieve what you want under Linux. Linux handles all interrupts. That being the case you will need to go bare metal or find an operating system which gives you control over interrupts (I doubt one exists).

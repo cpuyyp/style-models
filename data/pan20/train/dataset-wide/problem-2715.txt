@@ -1,0 +1,77 @@
+You use of whitespace is inconsistent. For instance, there's a space after the name of the function, but there's none after the name of the function. Whatever style you choose, you should always be consistent with it (according to the PEP standard, there should be no space after the function name, but there should be one after the comma. I would stick to it unless I have compelling reasons not to). It's also a good practice to write doc comments for all your functions and classes. The comments inside the code should be more about telling why the code does what it does or why a specific design decision was made. Redundant comments that just tell what the code does create noise and actually make it less readable. For instance, this comment is self-evident: 
+
+The smallest divisor of any natural number greater than two is a prime. Let's assume that it is not the case and , where is the smallest divisor of . But then and is a divisor of . Thus, is not the smallest one. This statement also shows why your original solution is correct, even though the list is contains some composite numbers. Any composite number has a divisor that does not exceed its square root. The proof by contradiction is very straightforward so I will omit it. 
+
+That's pretty weird. It makes no sense to continue the computation if the throws. What is the point of having a finally block that throws the same exception? I would rather let the exception pass through instead of catching and rethrowing (the original exception is likely to contain a more meaningful message, too). Variable scope Try and use the narrowest possible scope. For instance, here: 
+
+For another perspective in addition to the existing answers, here are my thoughts. I've made a github repository which goes through each of the changes I made step by step. I've linked to the corresponding commit for each of the points that follow. (There are a few relatively minor commits in the repository that I left out of this answer.) Code clarity issues 
+
+All told, the changes you need to make to the code to use indices everywhere wind up hurting, not helping. Here's the timing result: 
+
+The most important column is the second one, , marking the total amount of time consumed by each function (but not the functions it calls). The largest entries in that column are for the function and the function, so those are the spots you should focus on optimizing. To keep track of our progress, I coupled your class with the following driver program which prints the execution time for 10000 runs: 
+
+I'm not quite sure what you're asking for, but I was bored so I typed this up anyway. Hopefully it helps. ;-) Working from the outside in: Invocation 
+
+If it's faster to avoid computing a substring in your replacement, you might think of doing the same thing when you're finding the suffixes in the first place. In other words, instead of calculating all the suffixes of a string in , just make a list of tuples to represent the suffixes. Then whenever you need to actually compare two suffixes, instead of taking a substring of the original string, you just start comparing characters at the required indices. There are two problems with this in practice: first, Python isn't well suited to iterating from an arbitrary point in the middle of a string. In a language like C, where strings are character pointers, this would work out quite well, because you can jump into the middle of the string by advancing a pointer. But in Python, iterating from the middle of a string requires you to either start from the beginning and just skip the first several characters, or bypass the whole iteration mechanism and use a loop with an integer index to access characters inside the string by their indices (which typically involves more Python code that is relatively inefficient). And besides, the other reason is you need to create the substrings anyway to sort them. If you try to do it so that you use the substrings as comparison keys without actually storing them, the program spends a lot of time converting between a substring and its index. 
+
+from now, we can check that we don't break anything when modifying the code. We can also accurately measure the performance gain... 3. Results We can see a clear performance improvement with the new code: old code: 
+
+All errors (type error, required flag missing ect...) are handle directly by the library Now the complexity of the function is 3 
+
+2. Make sure that arguments are valid if is <= 0, the program will panic. A little check after could prevent this: 
+
+Work on []byte rather than on string This is a general advice regarding performances: always prefer working on instead of working on to avoid extra allocations. The regex package has methods to work on string or on byte slice, so instead of 
+
+Don't panic The code shouldn't panic on every error. For example, if the user running the program don't have the permission to read a file in , the program should not crash but rather log the error so avoid method like this: 
+
+I prefer joining errors with a line return () instead of a comma, but it's just my personal taste. Multiple errors would be printed like this: 
+
+1. Readability It's always a good idea to run and on your code to detect common style mistakes, here mainly comment/error message formatting. The name might not be clear enough. Maybe is enough? The function is not a good way to initialize a . Instead of 
+
+I'll go for the second method as there is a simple way to handle all connection in the main goroutine: instead of , let's handle incoming connection synchronously. There's no need for channels here, we can rewrite it like this: 
+
+That's very inefficient. You rebuild the heap every time a new value is inserted. A good implementation usually has an time complexity per insertion, not . 
+
+You can delete the class. You don't use it anywhere. Error handling looks weird to me. I suggest throwing an exception if the input is invalid. You also don't check all possible cases. For instance, you code prints a tree for the input , which is clearly invalid. I'd recommend either adding proper error handling or just dropping it altogether (the problem statement says that the string is a ternary expression, anyway). Comments should not repeat the code. If you have something like , it's a good indicator that the following check should be moved to a separate method with a proper name (something like . 
+
+Implement a slow but obviously correct solution (in this case, it would just generate all subarrays, compute their sums and choose the best one). Generate thousands of small test cases and compare the output of your solution and the naive one. It's quite likely that you'll a test case your code fails if it's actually wrong (that's exactly how I found a counterexample to your algorithm). 
+
+I don't understand how this is related to move assignment. Making private members public is an awful idea, anyway. It breaks encapsulation. Keep them private. And did I say anything about not logging anything inside the constructor and member-functions? I think I did. Keep your class focused one thing: the string itself. Tests I'd strongly recommend to write proper automated unit tests instead of checking a few things in the function. Other notes That is completely pointless. It's just . 
+
+Do tokenization the easy way Your input strings consist of tokens (numbers, operators, functions) separated by whitespace, right? There's a built-in method to split a whitespace-separated string: . You don't need to bother with a buffer, or with iterating through the string's characters. 
+
+If you think about it, you don't even really need the common prefix itself, except for the one string you actually return from . You only need its length, so you can decide which substring is the longest. So instead of using a function that finds the full common prefix, just write one that will give you its length. You store the length, along with one of the strings, and at the end of , use the length to trim the stored string. 
+
+Speed issues Since you indicated an interest in speeding up the program, the first thing to do is set a benchmark for how fast it runs. You can do this using the module's function: 
+
+But I don't see any major disadvantage to the way you're doing it. It's just that other programmers will probably find it kind of odd. 
+
+I leave it to you to figure out the best way to put / blocks around this code. Actually, the way I've done it here has a problem dealing with the case where is zero (this would happen if you include constants or zero-argument functions in the list of operators). To get around that, you can use the following: 
+
+I have no idea what's in the code (well, I could look, but I'll leave that as an exercise), but it's clearly heavily optimized for this kind of task. It's another 25% faster than my best version of your program: 
+
+Instead of using local anonymous classes and duplicate code, you can create a class that implements the interface so that you can reuse it(it can have a constructor that takes a interface to customize the behavior of the method). In general, you should try and improve the modularity of your code. 
+
+It is also much more concise. The idea behind it is to prove two statements first and then write a very simple code based on them: 
+
+and using a generic procedure for all other numbers (including 2. It works for . There's nothing special about it). It'll make your code easier to follow. You can make it more efficient by checking the divisors only up to inclusively. If a number is not a prime, it must have at least one divisor not greater then its root. 
+
+It is necessary because deleting an array of pointers does not delete the objects pointed by this pointers. It looks like the size of the is not correct, either. You allocate an array of pointers of size , but then you use it as if it had a size . 
+
+and should be s instead of constants. Returning an array from the method and using constants to get information out of it doesn't look good. I would create a separate class for this purpose. I would also rename the method into a. It is conventional for a method to name an action(if it does not check a predicate). Something like this: 
+
+Almost two order of magnitude faster ! And the code is way easier to understand Also added a small test to make sure that all implementations have the same output: 
+
+Your implementation is really nice, however you could get way better performance with an array of bool! generateSieve with a : 
+
+There is no need to create a new string at each iteration. You can directly append the subslice to the array like this: 
+
+The function should not exists either. Intead, as @Josiah already said, intantiate the generator with a seed: 
+
+Possible improvements: Currently, if an error is thrown somewhere in the code, the program does not stop but just write the error to . It may be better to return this error and then call 
+
+Your program works fine and you are correctly using goroutines, but the code isn't very idiomatic. Producer/Consumer architecture What we have here is a typical producer/consumer scenario. The producer is wich returns a list of files, and the consumers are goroutines executing on file content. So instead of the method, we could just have a : the producer sends file names to the channel, and the consumers loop over it and parse the file content. This have two main advantages: 
+
+Some results on my machine (ubuntu16.04) , with a similar dataset ( 100 000 000 docs in data, 20000 in datagroup) New script runs in less than 5s : 
+
+It's easier and nicer to read 2. Use range loop instead of switch Instead of specifiying behavior for 3 cases ( 0, 1, default), we can use a simple range loop So this

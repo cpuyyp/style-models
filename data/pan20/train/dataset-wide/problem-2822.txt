@@ -1,0 +1,81 @@
+Your approach on finding the th element relies on being able to construct a with the first types being some predictable thing that you can match against. But the types you chose for were, for index 1, . But we don't actually need to introduce this thing to do this, we can simply turn it into . That way, 's specialization instead of taking a , we can simplify to: 
+
+Don't. Seriously. No no no. Everything about this is bad code design from the bottom up and you can object to it for every reason. Even allowing for the idea that you should use getters and setters (which you shouldn't), this is an especially poor of way of implementing them. It's slow. You're adding an unnecessary indirection on your getters and setters through . That's going to take longer than a simple It's unreadable. Anybody can look at the above getter and understand what it does. People will look at your properties and be confused for a long time. It adds a lot of bloat to the class. should be 4 if it just has an . Adding your properties makes it 72!! (Looking at just your ). It's unreadable. I'm repeating this. It doesn't even save you keystrokes! 
+
+Note the removal of the unnecessary local variable (you already get passed in the index, why copy it?) and the simplified check against bounds. Rule of Three/Five/Zero This is a big one. Anytime you need to write a destructor, you should write the copy constructor and copy assignment operator. With C++11, add in the move constructor and move assignment operator. The problem is: 
+
+If you follow where I'm going up to now - you'll see I've made a great deal simpler. It doesn't deal with inputs. It doesn't deal with calculations. It's just a triangle. And for simple classes like that, Python has : 
+
+A different approach Another non-recursive way to do this would be through an inheritance tree. We basically take and turn it into a type that inherits from , , and : 
+
+Of course is now pretty bad for non-random access iterators since we have to keep doing lots of distance and advance related calls, so I would simply default to the trivial comparison algorithm in that case. That is: 
+
+As-is, if fails, you're returning 0, which seems pretty misleading! Also, people know what is, so you can just do . main() I'd move the whole body into a separate function just so you can remove one layer of indentation: 
+
+Additionally, the argument should probably be named - since that's the one that doesn't change. Avoid code that looks like: That's an extremely verbose way of writing Altogether, this becomes: 
+
+Use a mem-initializer list When you construct, construct the members with the target values directly: 
+
+† I'm not convinced that you can necessarily be sure that the goes first in the inputs. It's not stipulated in the problem and this approach does require that to be true. 
+
+So if we're doing , as an example, we will divide by until we're no longer divisible by (that is, ). All we have to do then is multiply out all the s: 
+
+where each would define whatever valid operations via function pointers. We could have policies like or or . Fun project. This is sort of how does it. 
+
+Cool problem! Your approach is \$O(n)\$ for each pair. There are several comments I could give about your code specifically, and we could make several performance improvements based on how we generate - but all of that will still fall into the \$O(n)\$ category. And, as you can tell, \$O(n)\$ here is too slow! Let's try to do better. Back to the drawing board. Break it down to first principles To start with, let's take a really simple example. Sum the number of zeros from (just arbitrary random numbers under 100). In fact, let's simplify even further and let's pretend that 25 isn't a power of 5. So our zeros are: 
+
+Use the right loops Don't use with iterators - just use a range-based for-expression. It'll save on the typing and add to clarity. Improved solution 
+
+which, going back to my initial point, is exactly what I would have to write with the standard library: 
+
+You can't call that with rvalues. If I tried to do , it wouldn't compile. Which is better than not working! But it'd be great if it could in fact be supported. If you're not going to support it, you should change the signature to make that obvious: 
+
+This looks pretty solid. I have only some minor comments about your current implementation, and just a thought for an alternate one. First the thought. Boost.Any In case you don't want to reinvent the wheel, you can accomplish all of what you need with a . The main difference in implementation would be in your , which would look something like: 
+
+It would be better to flip the namings here too, and call the function and the variable . Similarly, does too many things. Ideally, you'd want to structure your main like: 
+
+You can get around that by making a linear inheritance list of all your optional bases. I'm not sure if it's worth it, but I'll present the idea just as an option. At its core, we have which will inherit from all the optional bases and provide a getter so that the derived class can actually use them: 
+
+yield! You're way overthinking the problem. Python has . This is one of the coolest things in Python (IMHO). When you want to iterate over a container like this: 
+
+However, this is less efficient than necessary simply because there are 210 things you're iterating over. It'd be better to iterate over just and and select as a result: 
+
+Which would then be provided by either a "any functor" holder, or a "pointer-to-member" holder, or a "pointer-to-const-member" holder, or "pointer-to-rvalue-ref-qualified-member" holder, or ... Point is, lots of partial specializations. This has a use-case. Type erasure. Give me any callable that meets this signature. The original solution can't solve that problem. 
+
+So the will return a list of size 1, so you can drop the outer-most entirely. Secondly, what are you getting here? Just the first element right? Which is to say... 
+
+Sequence should generate the sequence . That will make it much more useful. Otherwise, you will end up calling a lot. Also, you should provide an alias template from , so that you can simply write: 
+
+That's it. Just implement in the right way. Deal with the busting logic elsewhere. Don't remove the aces and replaces them with 1s, just handle that in the function itself. This way, the function reads like the rules of the game, and makes it easier to understand. Booleans Python has for boolean logic. Don't use . 
+
+So let's use a function template. Furthermore, having both and is redundant. Let's do away with the offset: 
+
+Since the last container always gets -ed as one, this is a serious issue. Both have the same root cause. The overload of that takes a single argument has the wrong return type: 
+
+is a bad variable name for this, prefer something like , but that's not important. Consider the bounds. At this point, we know that \$i\$ is prime. We also know that this is the first time we've gotten to it, so every multiple of \$i\$ is still marked as being potentially prime, except for those divisible by some other prime \$p < i\$. So \$2i\$ we already know isn't prime, because it's divisible by \$2\$. \$3i\$ likewise. And so on. The first composite number that we have to cross off will be the first one not divisible by any such prime \$p\$... which is \$i^2\$. 
+
+Has too much going on, and the double- doesn't help. Don't Be Afraid of Overloading Your code is reliant on various substitution failures to get it to do what you want to do. That makes it brittle and hard to read. Just use overloading. It's muuuch easier. For instance: 
+
+This makes your algorithm very difficult to understand as you keep referencing external variables to it. I barely know what any of these are for. Definitely is an unnecessary typedef (since is clearly signed already), and it's an interesting contrast in the verbosity for and your , which is apparently the number of steps you've taken thus far. The reliance on globals makes your code structure odd too. The problem is: find the minimum number of steps to make a monochromatic grid. That is crying out for this signature: 
+
+does the right thing here - it gives you all the references, so the type of that expression is . But that isn't what you're returning! So rather than yielding references, you're yielding values. This means you're copying every element on every iteration, and you're not allowing any kind of modification. But the lack of modification is hidden. Your original example compiles fine: 
+
+signature Your function is returning 3 things: the total weight, and the two aligned sequences. So it should return 3 things. C++11 has tuples, and tuples are much better than reference out parameters: 
+
+None of 1275, 425, or 85 were in the table. 17 was the first number we would have found. Consider the alternative, we are instead finding the prime factorization of: 
+
+That'll get us the pairs for which the first element changed from the previous one. Now we just need to make sure we're yield-ing the last element. Which will only NOT be yielded if the last group has size more than 1, hence: 
+
+Never write multiple lines of code on one line (your line with the ) It'll be hard to even see that the second line exists! I also don't understand your line. Why are there 15s? So anyway, with this deck, we have: 
+
+Don't Reinvent The Wheel A lot of the metafunctions you wrote are unnecessary as they already exist. At best, this is just extra code you have to deal with. But also some of the choices you made make some of the code unnecessarily complicated. Take your . All of that can be replaced with . is , and is . It's just less code and easier to understand. Also exists as , and is . Hierarchy There is no reason for and there is no reason for a specialization for (which isn't a ??). Even if you don't use , there is no reason for . It's just code that doesn't add value. should just be: 
+
+Again, leaving out the base case details where , , or since those are less interesting. As always, with template metaprograms, is your friend: 
+
+We're just chunking the range into pieces. That implies a simple for-loop. We need things. Each one is approximately of size . There will be remainder, which we will allocate one at a time as we go until we run out of remainder. When we already added things, we just can add the rest as the last chunk (since there's nothing else to do at that point). This is all you need: 
+
+I'm going to assume little-endian here on out. The advantage here is that writing a short is really the same thing, the only difference between what the cast is and what the byte swap function is: 
+
+Since everything is printed in order, the "obsolete" ones are all but the last version for the first word. That's tricky. But if we looked at the text backwards, we're printing all but the first one. And that's easy with awk: 
+
+This choice makes the class noncopyable and nonassignable. But why? There's nothing inherent about a multidimensional array that suggests it shouldn't be assignable or copyable. You make some members public. There's no reason to do that. Particularly bad is - which is redundant with . You should strive to make your class as generic as possible. To that end I suggest you simply have two members, both private:

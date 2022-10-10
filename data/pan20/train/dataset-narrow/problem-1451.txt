@@ -1,0 +1,71 @@
+2. Tests / benchmark First thing to do is to make sure that the code works as expected. Test should make sure that value weight are correctly taken into account, and that two generators with same seed and same value always generate the same sequence of values. After that, we can add a benchmark to see how our solution performs, and more importantly how it scales: 
+
+2. Make sure that arguments are valid if is <= 0, the program will panic. A little check after could prevent this: 
+
+I'll go for the second method as there is a simple way to handle all connection in the main goroutine: instead of , let's handle incoming connection synchronously. There's no need for channels here, we can rewrite it like this: 
+
+There is a better way, but this assume that you have an index on vid field (for example, ). If you don't, you can create one using . This can take several minutes to end. The fastest solution (option 2) use after a Here the stage only add overhead and does not speed up the stage, so we can get rid of it. Currently, the operator can't take advantage of index, so it can be quite slow for such big dataset. A better solution would be to use instead 
+
+Don't use a to get the number set, because iteration order is not garanteed from one iteration to the next (see go maps in action for details) This can be a problem if some value have the same weight: the order of randomly change from a run to another. Intead, use two slice of A new version of the could could look like this: 
+
+An other easy optimisation would be to create an array with the correct capacity to save an allocation at each iteration, as we know that will have the same length as : 
+
+You should definitely rely on a library to achieve this. The package from standard library is nice, but go-flags is even better With this library, the equivalent code is: 
+
+It's also better to use the package to parse arguments instead of relying on Here is the final version of the code: 
+
+I prefer joining errors with a line return () instead of a comma, but it's just my personal taste. Multiple errors would be printed like this: 
+
+1. Readability It's always a good idea to run and on your code to detect common style mistakes, here mainly comment/error message formatting. The name might not be clear enough. Maybe is enough? The function is not a good way to initialize a . Instead of 
+
+It's easier and nicer to read 2. Use range loop instead of switch Instead of specifiying behavior for 3 cases ( 0, 1, default), we can use a simple range loop So this 
+
+Some results on my machine (ubuntu16.04) , with a similar dataset ( 100 000 000 docs in data, 20000 in datagroup) New script runs in less than 5s : 
+
+Before addressing your concern, a few things on coding style: Coding style This can easily be detected with tools like golint and go vet 
+
+Then, the datagroup collection is filtered using and . On really big array, this can be really expensive as javascript is quite slow. Instead, we can let mongodb do this operation with a simple query using : 
+
+3. Improve hash computing: First, each worker only need a single instance of hash.Hash, as you can call on it after each file: 
+
+There is no need to create a new string at each iteration. You can directly append the subslice to the array like this: 
+
+Possible improvements: Currently, if an error is thrown somewhere in the code, the program does not stop but just write the error to . It may be better to return this error and then call 
+
+Don't panic The code shouldn't panic on every error. For example, if the user running the program don't have the permission to read a file in , the program should not crash but rather log the error so avoid method like this: 
+
+Your program works fine and you are correctly using goroutines, but the code isn't very idiomatic. Producer/Consumer architecture What we have here is a typical producer/consumer scenario. The producer is wich returns a list of files, and the consumers are goroutines executing on file content. So instead of the method, we could just have a : the producer sends file names to the channel, and the consumers loop over it and parse the file content. This have two main advantages: 
+
+A simple view to implement would be the digital timer view. We already have the and utilities. Let's decide that the view should show the total elapsed time regardless of lap-times and it should indicate how many laps have been recorded: 
+
+¹ I am aware of the usual implementation in hardware stopwatch devices where the operation modes form a state machine. I also realize that the implementation in code tried to mimick this. Unfortunately, not only did it fall short, it also conflated things with the UI side of things. Consider this answer a finger exercise on my part. 
+
+The remainder is the setup for the DemoApp, which includes rather boring stuff like generating random view positions. 
+
+Exposition Of Cleaned Up Code Taking the above suggestions to heart, I'd start by cutting unneeded headers: 
+
+While cleaning up the code (remove globals, duplication, unused code, bad naming) and running some benchmarks using the supplied input file, I found: 
+
+As you can see, we made the intent of the loop clear: we swap the contents of the queue with an empty one. We then loop over all previously queued nodes (the ). At the end of the step there might be new queued items, but none of the originally queued nodes will be. If there weren't any items to begin with, we return . 
+
+Using Memory Mapped Files And Spirit Taking the approach from my answer over at [SO]: $URL$ I changed the implementation of into the equivalent: 
+
+That's because, as mentioned above, the digits know where they are. The constructor actually initializes their positions, as well as the location of the dots for the colons: 
+
+The BFS State I've defined this as simply the "grouping" of things you have prefixed in and flavours. 
+
+What happened here? I extracted the logic that was in the loop. I will admit I only did this after implementing a non-bidirectional version of the BF search. The looks like your original code: 
+
+Big ideas I noticed that "Stopwatch" was a bit of a "God Object" antipattern. It does too many things (you can't really usefully do a countdown and a lap time simultaneously).¹ I reckoned it would be nice to simply have tasks (without any UI) that expose duration measurements, and views that can display them as they update. This is akin to a publish/subscribe pattern. To demonstrate this, I made not only the views generic, but also the tasks. The UI will be an interactive terminal application that supports the following short cut keys: 
+
+Post Scriptum These are random notes. Specifically, I didn't mention important things (like brace style, const-correctness, use of raw arrays etc.) 
+
+Behold, a thing of beauty. One should never underestimate the value of self-explanatory code (if only the constants here). The Main Application All that remains to be done is the demo application itself. It sets up some factories, and starts an input event loop to receive keyboard shortcuts. Handling them is pretty straightforward. The stopwatch-specific operations ( and ) are the only mildly complicated ones because they will have to filter for any running tasks that might be stopwatch tasks. Launching a task without selecting one or more views to connect up will result in a and nothing happening. Note how clearing the or automatically destroys the right subscriptions (due to the use of ). 
+
+Okay, after I worked my way through the original code, a few things have become clearer. Since I have never done programming with I was eager to try my hand at a better design. Here it comes. It's a sketch only in the sense that I didn't create separate translation units. That is basically a tedious exercise and left for the reader. However, it does implement stopwatch (including lap times and reset), countdown and a bonus "random timer" task. 
+
+Implementing the various timer operations on this is peanuts. Let's for example do a random durations generator in 3 lines of code: 
+
+A bug in your line 97 (the should be ); your code might never complete, for some inputs The birectional search does not in practice improve the speed (note; worst-case behaviour will be improved, but at the cost of complexity) yields significant speed up (on average, there are <=10 relations per vertex) Destructing the maps takes significant time. This is one of those rare occasions where I'd suggest purposefully leaking the memory since you know the program will be terminating anyways. 
+
+The isn't actually much more complicated. I dropped the in favour of more obviously readable code. It has the added benefit of making the code short (except for the constants of course). Functionally, we show

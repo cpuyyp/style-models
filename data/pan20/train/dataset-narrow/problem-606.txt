@@ -1,0 +1,75 @@
+You need msdb.dbo.sysjobhistory and a few JOINs of course to read the data To change how SQL Server Agent uses this table, use this stored procedure with suitable values 
+
+Just change ownership for starters. Database ownership (the owner_sid in sys.databases) not have really have much impact on day to day operations 
+
+If you can, restore the original master database as "loginsource" and sys.server_principals has enough info to generate all SQL Server and Windows logins. That is, the SIDs and encrypted password If you use Windows logins only, then you can run this per database to generate a script 
+
+Option B is correct. Quite simply: each row/column stores one and only one item of information A multiple table design is quite normal: it comes out of the normalisation process which starts with option A as your business data model. 
+
+In addition to Martin's answer (which is the superkey/subtype pattern), I'll ask the obvious... Why not use a single table and two views? I wouldn't normally consider two separate tables... two partitions, maybe, if I had bazillions of rows and proved it adds some value. But this sounds like an unnecessary optimisation or pointless complexity. Not least, rows have to be moved between tables 
+
+The subscript 2 is not part of the varchar character set (in any collation, not just Modern_Spanish). So make it a nvarchar constant: 
+
+In this case, only EXCEPT and NOT EXISTS are always correct. NOT IN will fail in t2.c2 is ever NULL. And you need DISTINCT in the LEFT JOIN. Note also that the LEFT JOIN filter is in the ON clause. To remove this you'd need a derived table or a CTE. I would also say that the subqueries these days don't matter too much given the sophistication of the query optimisers (unless abused of course) Personally I almost always use EXISTS and NOT EXISTS (maybe INTERSECT or EXCEPT for clarity) so my code is consistent and works in every case. I don't have to worry about bollixing a LEFT JOIN into an INNER JOIN, or NULLs in an NOT IN. 
+
+With a CTE? This assumes that you get one row from Dolar and Euro. If you get more then one, add a TOP 1 ..ORDER BY: your original query is wrong too then 
+
+It doesn't really in any measurable fashion Statistics are stored as histograms, with at most 200 entries per index/column. This is trivial, compared to the actual column or index. See $URL$ 
+
+KILL Sometimes, ultra violence is the answer Anyway, a block is just a lock that goes on for too long. "Too long" is variable of course. if you see blocking via sysprocesses or the DMVs then it's almost always "too long" as blocks should be transient and very short If you do have measurable blocking, then you need to investigate why eg long running transaction 
+
+It also depends on size: will this be char(1000) for a few billion rows? Or tinyint for 100k rows? If the latter consider the added complexity of point 2: not worth it. 
+
+One of the easiest ways to use a full backup to prepare, a differential to migrate. First off, you do a full backup and restore to prepare the files on the new server disks, but use the option to allow more restores. At the time of migration, you do a differential backup/restore. This is far quicker and you use this time. 
+
+Did you use RAISERROR with severity 16? This is "user defined error" and should be picked up by SQL Server agent Did you set the job step to retry ( and ) Finally, is the error terminating (severity 20) such that the CATCH block isn't hit? 
+
+Use the better version of the undocumented sp_MSForEachDB to iterate through the databases in a SQL Server Agent job. Or simply use a WHILE loop yourself on sys.database entries if you have a naming pattern. 
+
+You'd have use the Import/Export wizards in SSMS to migrate everything There is no "downgrade" possible using backup/restore or detach/attach 
+
+A non-unique clustered index will add a 4 byte uniquifier to remove ambiguity of ClaimId because it is the clustered index. Why? One reason is all NC indexes refer to it: so how to know ClaimId is which? It was demonstrated (some time ago, maybe not valid now and can't find it) that non-unique clustered indexes break when you exhaust 2^32 values of the 4 byte uniquifier Edit : Question states ClaimId is not unique so assumed that uniqifier exists. No need to comment that it may not exist in the context of the question 
+
+The sniff comes from the NULL or the empty string. The addition of is ignored. You can fix this one of 2 ways: 
+
+The optimiser will ignore this because it's an identical JOIN. SQL is declarative, not procedural, and the query will be evaluated in toto, not line after line. 
+
+I haven't done it myself, but there are several articles on using SSIS to transform the data. The principle will apply to other ETL tools I guess 
+
+The GUID identifies the job in the ReportServer database too. So don't change it. That is, the schedule uses uniqueidentifier datatype in the table: the value matches the job 
+
+To run it with a SQL login, just need to specify User ID and Password in the connection string (called "init string" in BOL) 
+
+Now, you have safe+tested change and rollback scripts to apply whenever. And of course you backup the database before any change because statistically shit will always happen eventually. The Red Gate tools can also compare against a folder which is under source control. We then capture the ALTERs etc in our source control separately to the actual change scripts. 
+
+There is no order, subject to standard operator precedence. SQL is a declarative language. You tell the engine "what to get", "how to do it". So the engine does not evaluate left to right in code order, nor does it generally short circuit. For example: 
+
+Where xxx is, say, 50000 A modification of this, if you want to remove a very high percentage of rows... 
+
+Assumed convention states that the ProductHistoryID becomes the PK, but you can leave the PK on (ProductNo, CreatedDateTime): it will just be non-clustered. Which leads to indexes: 
+
+Pretty much yes. Generally it means the files are bollixed or missing or a disk error or some such (I've seen a bad sector cause this). My steps: 
+
+Yes ServerB will just replicate all databases to ServerC (ignoring replicate-ignore-db for now). There is no setting that limits ServerC to getting data that exists only on ServerA That is, is unrelated to and A and C have no knowledge or replication dependency on each other 
+
+This is one (of many) downsides of EAV designs. You can't really improve the JOIN: because of the necessary complexity, a cost based optimiser won't get to the perfect plan. It finds "good enough" Suggestions: 
+
+InnoDB will be slightly slower because it is ACID compliant, has MVCC and does useful things like actually check foreign keys etc. As an example, Oracle's own whitepaper for MyISAM vs InnoDB they actually say 
+
+This can be a client error, not a server error. That is, the server responds (as you note) to other clients but not a certain one. Summary 
+
+Do all tables have clustered indexes? Without this, rebuilding indexes won't help you. If you haven't and don't want to add them, your only option is to use DBCC SHRINKFILE with NOTRUNCATE to force the data pages to compact 
+
+If I understand, you have a single VM running under Win 2008 Host OS on a single box? If so, there is no advantage is having multiple SQL Server instances. Data separation of dev vs prod doesn't matter because you'd only end up using resources for dev that should be on prod. And with a single server you have a single point of failures (no matter how you configure disks). If you have do it on the cheap, one big instance. If you can buy more kit, get a proper physical production server. 
+
+is implied by because means you need to see the table structure. So it can't be blocked. The same applies for = = anyway, which is the same. So no, it can't be done via MySQL Permissions if you want the developers to run queries 
+
+It makes no difference: the optimiser evaluates the query and will work out predicate order for itself, matching a suitable index and all the other good stuff it does. This is because SQL is "declarative" not "procedural": you say what you want, not how to do it. It's nicer to read though... 
+
+Isn't in master enough? This is implied by MSDN (I think, can't test) in GRANT Server Principal Permissions Failing that, one quirk that may be useful for SQL Server 2005+ This may give no rows 
+
+You'd have to do it outside of the transaction For example: Spool the data in a table variable which don't participate in transactions and write once at the end (after commit). Or use Service Broker to decouple log writes. Any logging otherwise is subject to the transaction semantics eg locks, can be rolled back etc 
+
+No, you won't lose data. SQL Server will do an in place conversion, as a transaction. This means if anything fails, it will rollback. Note, this is more than a simple metadata change so it may take some time because data has to be moved around 
+
+Generally, I don't add redundant columns unless I really need too. Running a COUNT over a set of data is quite efficient in any RDBMS. Consider this is a read over indexed (hopefully) cached data to get the count will beat the the 2nd write in to maintain the denormlaised column. This write requires more resources/locking/longer transaction etc which impact reads more If performance becomes an issue over time, then you can pre-calculate the COUNT more efficiently using an indexed (aka materialised) view

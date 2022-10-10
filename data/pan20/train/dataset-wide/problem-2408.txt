@@ -1,0 +1,57 @@
+Create an XML index on the column, you will have to create a primary index and then a secondary index on the path or value you are querying. 
+
+Well, you cant. So your only option is to backup msdb, model and distribution rebuild the system databases from setup and then restore the backups. If that is not an option, i.e. the sql server does not start you can rebuild the system databases, then install all patches until your server is on the same build level as before, turn off the sql server service and copy the database files for the other system databases over the current ones, remembering to take a copy of them first. 
+
+As Explained at WindowsItPro " When there are only two nodes left, one of the nodes loses its DynamicWeight so only one of the nodes now has a vote (this is chosen randomly). This assures that if the second node crashes (the node without a vote), the first node can stay active (giving you a 50/50 chance of surviving an unplanned failure of a node). If the first node was taken down cleanly, then the second node would be given the vote and the cluster would stay online." 
+
+First make sure that replication is not causing this, as stated in the connect item the "log_wait_reuse_desc=XTP_CHECKPOINT does not necessarily mean that the XTP checkpoint worker is holding up log truncation." so start by running and make certain that all data has been distributed. Then there is this little snippet here: 
+
+You want to use a minimally logged inserts. If your temp/scratch database is on the same instance you can simply do. 
+
+If the instance name is .\SQLEXPRESS you have an instance of SQL Server Express but not localdb. The default install will give builtin\administrators permissions on the database so you will have to start the Managment Studio (SSMS) by right clicking the shortcut and select run as admin to have an administrative token and be able to create databases. When running the SSMS as admin you can add your user account to the sysadmin role in the database server and after that run things using your user account without elevation. 
+
+The following change to the code - setting the option gets around the error. The unchanged code will not crash SQL Server 2012 on Windows Server 2012R2 with the same language settings but does so on SQL Server 2014. 
+
+No, the query optimizer will not create statistics for a view unless it's an indexed view, you can create an XML index on the xml column itself to speed up the view, 
+
+Will grant the domain\account full permissions on the root of the drive mounted at j:\data, I still haven't leard to do this with and a comment how to do so will be well appriciated. As you have found out creating a subfolder on the mount point makes it possible for you to create an accesslist for that folder but there still seem to be issues with setting permissions on the root folder of the drive using the GUI. Usually I dont bother with the calcs command and if I need to set permissions on the root I'll add a driveletter, set the permissions using the GUI and then remove the drive letter. 
+
+Which will help but will scan on the ProductID - which makes sense, you can also create that index like this 
+
+Why not use a master server for the SQL Server agent? You could even use a third server to create and schedule the jobs on both the servers and you get a central repository and log server for the jobs. A small check in the agent job will make certain that it's running on the active server. 
+
+Yes this is possible, but is not a good idea. You can theoretically run a web application anywhere and punch firewall holes so that the web application can access a database on prem. This opens up a whole lot of issues as the database will have to be on a secure network segment and can wreck havoc on security policies. You can make this more secure by using SSL for the database connection and use strict access lists on the firewalls, use Site2Site VPN and so forth but you are accessing the database over wide area network which can affect other users. But in any case you will have to re-route all traffic from this customer to a different server, which will make the application more complex so it's probably easier to install the application on-prem for this customer. 
+
+Sort of, you will double the resources but every instance will only be active on one node at the same time. Any SQL Server instance will have exclusive access to it's storage on the node where it's currently active - If all the storage for multiple instances comes from the same SAN one instance can affect the others No you cant, sorry 
+
+Managed service accounts are supported in SQL server 2012 onwards to run it's services. There is no 'correct' way but managed service accounts on the application server are normal domain users as the SQL Server is concerned so as long as you can use them for the application they are a nice option. You might have to type the name in (domain\appuser$) as older versions of SSMS don't know the object type but you can add them manually To minimize the configuration changes you can do the following: 
+
+You will need exactly the same disk space for your mirrored (secondary) database as for the primary database. They are the same and the secondary database will have the same growth rate as your primary database and should be provisioned the same. SP_SPACEUSED will show you how much space your primary database is now using (you should make it larger and not rely on autogrowth), and you can grab growth information from the default trace to give you some limited information about how often the database has grown, you can then infer the growth rate from the autogrowth parameters. 
+
+First things first, I hope you have a backup, this is a serious error and you should do a restore, even if you lose some data as that way you will end up with a consistent database but the second best option would be this. You can peek into the data pages to see what is stored there and maybe, just maybe you can get most of the data from the non damaged tables. Now before we start you should at least read Paul Randal's Inside the Storage Engine: Anatomy of a page and How to use DBCC PAGE. and you should really watch his video on Advanced Data Recovery Techniques First to make sure what is on the damaged page. 
+
+Short of restarting the SQL Server service or the box this is enough. If you want to be absolutely fresh you might want to drop user created statistics from your last run. 
+
+For this to work for you, you will need to setup the trace to start with the server. For that you need to make sure that the filename is unique each time the trace is started, create a procedure from the trace definition and make it a startup procedure. 
+
+This will give the permissions you want. You could also create a specific database role with the correct permissions, or grant the user permissions on the schema so you should check the msdn article suggested by @randolph-west 
+
+This will dump the page header which you can use to decipher what is on the page. From the error message posted there seems to be errors in the GAM/SGAM/PFS for pages 72792-80879 so you can look at which object is stored there by dumping the headers and check the object_id. The syntax for DBCC PAGE is dbcc page (database_id,File_id,PAGE_ID,0); The zero is for dumping the page header but you can dump the whole page by changing that last flag 
+
+and the text for the sp_LogPurge with Your question is bit to generic as it is about application behavior without knowing anything about the application and if this is it's normal behavior or not. 
+
+The servers are using Dynamic quorum which is the default setting on Windows Server 2012. You can check the current votes of the cluster by running 
+
+Disabling the service will not impact the cluster configuration. I would disable the node in possible owners as well to make sure that the server will not try to failover. 
+
+First of all grab Ola Hallengren's scripts to do the backups ($URL$ and drop the maintainance plans. Ola's scripts have much better retention settings and will allow you to set a mark in hours how long to store the backups and know how to take the backups of the secondaries. And for your questions: 
+
+and for each page find to which object it belongs When you have that information you can hopefully copy the non damaged data from the database into another. 
+
+You have to change the collation settings either in your queries or in SSAS. There are several different options so the important question is do you use SSAS for other databases than the Croatian_CI_AS one. If so you can pepper all your queries with collate Latin1_General_CI_AS to make sure that you get the data in the Latin1 collation into the cubes. If you are only using SSAS for the Croatian data, then change the SSAS collation to the same. 
+
+OS error 23 is "Data error (cyclic redundancy check)." you can check those by running executing on the command prompt , this basically means that you have a serious error on your disk. As the database is running what you need to to is to 
+
+There are two possible ways to ensure that you encrypt connections from clients to the SQL Server. The first option is to setup IPsec either manually on both clients and server or by using a IPSec policy or you can setup SSL encryption. The simplest way to do so is to use the self signed certificates from the server but as those are exchanged during the connection handshake their security is limited so it's recommended to use certificates from a trusted root. You can create a test certificate with MAKECERT.exe by following TheSQLDude instructions and copy the self created root certificate to all the clients. So to set up SSL encryption over the wire in SQL Server you either need a certificate signed by a trusted provider, which means that your SQL Server needs to have a valid FQDN as no certificate providers create certificates for invalid Fully-Qualified Domain Names (eg .local). Or you can also install your own trusted PKI infrastructure for instance Active Directory Certificate Services (ADCS). This is needed as all the clients need to trust the root certificate that signs the certificate you install on the SQL Server. When creating a certificate for SQL server the certificate needs to be created with certain extended properties most importantly it needs to be setup as Server Authentication (1.3.6.1.5.5.7.3.1) which means you might need to create a template in ADCS or you can create the certificate CSR using certreq For this you need to create an csr.inf file 
+
+Axapta 2.5 was not supported on SQL Server 2005 or later versions so you are out of your depth there. To support later version of the database engine you will need to update the axapta application itself. 2.5 predates SQL Server 2005 by years: $URL$ Any problems you have with incorrect statements are most probably due to the axapta server getting confused over the database version, you could try to change compatability level to 8.0 but I would recommend that you contact an Axapta certified partner and migrate to newer version of the application

@@ -1,0 +1,75 @@
+As always: it depends. However in most cases the default values are adequate. The business requirement of handling 50 concurrent inserts (transactions) alone does not imply the need for setting INITRANS 50. Are they really that concurrent? Will the duration of the transactions overlap each other so they really happen at the same time? All the 50? INITRANS specifies the minimum number of transaction slots (ITL slots) in a database block. Of course, the number of ITL slots can go higher if needed, the database manages that. The maximum number depends on the database block size (as the ITL entries are not allowed to occupy 50% of more of a database block, and 1 ITL entry takes 24 bytes), and MAXTRANS (=255 from version 10.2). So, if: 
+
+This however will not have any effect on the sessions opened after this point. For that, you have to use ALTER SYSTEM as above and restart the database. 
+
+I do not think it is possible. The table contains all possible actions in the audit trail. There is a action, but that refers to . The column in contains this information though. 
+
+AUDIT_SYSLOG_LEVEL You can send your audit entries to syslog with the above parameter, and configure syslog for remote logging. 
+
+You can easily confirm this by enabling the errorstack trace for the error 12838 (it is fine in a sandbox environment for this short demo, but this is not how I would do this on a real database): 
+
+More details you can find in the documentation referenced above. Possible workarounds involve granting the privileges directly (as you already did) or define the PL/SQL program unit to execute with invoker's rights. Another possibility starting with 12c, you can grant roles to PL/SQL program units. So if you create tables with the procedure called using dynamic SQL, you can grant the above role to it as: 
+
+Another method would be an index fast full scan (INDEX_FFS hint). If you force the usage of your index with hints, then compare the cost of the plan with full table scan and the plan with index access path. It is simply a cost based decision with a simple example like this. If you can not even force the usage of your index, I would search the problem somewhere else. For example your index is in state (check ) or it was made (). 
+
+was a 16-bit application and 16-bit applications don't run on 64-bit Windows, therefore it is not included in 64-bit Windows. 
+
+The listener is an independent entity, can run from a different Oracle Home or even another machine. All the database knows about it is its address. 
+
+The source of the above procedure is not wrapped, so one can browse it and find how the database detects Data Guard usage. 
+
+With the above, only those rows are exported from the employees table, that have department_id > 10 AND salary > 10000. More information in the official documentation: $URL$ Another way to transfer the data: create a database link, and just simply run an INSERT ... SELECT statement. For example, on the target database: 
+
+Double check this, because you get the above error, when you are not a member of the ora_dba group. Check for the following line: 
+
+The scripts for installing sample schemas is a seperate download and they are not installed by default. Download Oracle Database Examples Follow the instructions there. 
+
+SQL*Plus is not part of the basic Instant Client, it is an additional download at the Instant Client download page. Once you have downloaded and installed it, you can use it by setting the ORACLE_HOME and PATH envrionment variables, for example: 
+
+Oracle database does not understand ANSI join syntax internally (except ), it rewrites such queries to its own, old join syntax. If you enable optimizer trace, for example: 
+
+ASM metadata describes the location of the password file on the ASM disk. With that information, even you can read it directly from the disk, with the help of (which is installed with the Oracle binaries) and OS specific tools for reading the disk directly, for example , without using ASM. Same goes for the SPFILE (since 11g). More about this topic: ASM spfile in a disk group The ASM password directory And you do not need a password file to start the ASM instance, that is needed only for remote connections. 
+
+Simply put, they are the parsed SQL statements in the shared pool related to the table. When they are invalidated, they need to be hard parsed again the next time they run. A typical use case for this: the database generates a suboptimal execution plan because of stale statistics on a table. The database fails to recognize this mistake on subsequent executions, but you notice it and decide to gather statistics. With , this will not have any effect on the SQL with poor performance, the database will continue to use the old, suboptimal plan. That is why you should gather statistics with the option in such cases. 
+
+These are minimum values for those components. $URL$ "If these automatically tuned memory pools had been set to nonzero values, those values are used as minimum levels by Automatic Shared Memory Management. You would set minimum values if an application component needs a minimum amount of memory to function properly." 
+
+Instead of using simply text based replace, you can do this with the metadata API, which is a more robust solution. Lets say you have a table X.TABLE1: 
+
+Added aliases everywhere + inside the subquery, so it can be joined to the outer query based on that column. 
+
+Variables you define with the keyword can be used as bind variables, not like PL/SQL variables, so you need to add a colon (). 
+
+Notice how it still failed, because I did not define the function, I did not tell the database how it can compare two user-defined objects. Now try again, this time with defining (and here I assume objects have unique identifiers and two objects equal if their identifiers equal): 
+
+There are built-in, non-documented simple list types, so you do not need to define your own types at all circumstances, but relying on non-documented features is generally bad practice, as they may change in newer versions without warning. If there is a reasonable limit for the number of arguments: 
+
+It is a requirement for EPG (which is suitable only for a development environment). Better use OHS (or a J2EE web server for newer APEX versions). 
+
+I do not have access to a 9.2 database currently, but this is the method for doing this: Using RMAN Incremental Backups to Roll Forward a Physical Standby Database Basically, you can issue a to create the desired backup. However I suspect this feature is not available in versions before 10.2.0.1, as there is no reference of it in the 9.2 Data Guard documentation nor the 9.2 BACKUP reference, and the related MOS notes also specify the lowest version as 10.2.0.1. Try the above syntax, but if it does not work, you will need to rebuild the standby. 
+
+You have created a CDB (Container Database), and connected to the root container. There you are not allowed to create regular users, you can create common users whose name starts with . If you do not care about or want to use pluggable databases, I suggest that you drop your empty 12c database, and create a new non-CDB with DBCA (Database Configuration Assistant). 
+
+There is no such thing. Unfortunately you can not create fully customized filters, you can use only the predefined ones. Even if you could, there is no reliable way of filtering built-in objects. Starting with 12c, there is a new column in the views, called , but we can not rely on that, because its is not accurate (for example, AWR objects or some built-in directories and queues are not accounted as maintained by Oracle). As it was already mentioned, do not use , that is for administrative tasks. Create your own user, and log in as that user. 
+
+If your TNS entry is incorrect for your current configuration, for example you specify in your connection descriptor, but you have not configured shared servers, you will receive this error. But since you said you had not changed anything and this error had occurred suddenly, I am going to assume your configuration is correct. In that case, the database instance may have reached the limit for the processes it can start. You should check the alert log for errors, and query the highest ever (since the last restart) process utilization of your instance: 
+
+This is definitely possible both with and and any other mainstream virtualization product as well I guess. On my sandbox, I have created an additional virtual switch that is not mapped to any physical network adapters. This network is not visible/reachable from the outside world, but VMs attached to it can reach each other through interfaces using this switch, so it's perfect for a RAC private network with 1 host machine. In , I use (available since version 4.3) for RAC private network. It's a similar concept, a virtual network not visible/reachable from the outside world, but VMs with interfaces in this network can communicate each other through it. You can use the above for RAC public networks as well, so you don't need to allocate any IP addresses on your real physical network. For example, in , you can use 1 network interface as "management interface", and define port forwarding rules on it, so you can access the VM from your local machine thorugh RDP/SSH without using the VM console. Then use another interface for the RAC public network, and another interface for the RAC private network, so 3 interfaces in total. I would not bother with , both and support shared virtual disks. 
+
+This returns a where the item is not on the list, otherwise it returns the . The actual value does not matter, just the fact that it is not null, so providing the desired output: 
+
+There are 4 types of Text indexes in Oracle, owned by the user (installed optionally), so you can simply query and filter rows by the and columns: 
+
+I have a dispatcher listening on . If I request a shared server connection, and the listener tries to forward the request to , but can not resolve that address, that will result an as well. 
+
+The below makes it possible to overcome this, but I do not recommend it, as it is neither documented nor supported (it even allows creating a common user without the common prefix): 
+
+Checking if OLAP is in use (note that, this works with sampled data, the sample interval by default is 1 week, it does not represent the real-time situation): 
+
+You can convert a physical standby to a snapshot standby during the period required for running reports. Then after you can convert it to physical standby to catch up to the primary database. This does not require additional licensed options on top of EE. 
+
+The second one can not use the existing index on the column , so it will perform much slower. For the second one, you would need a function-based index on . 
+
+If you have a primary key, you don't have duplicate rows. In Oracle, you do multi-table UPDATEs by using MERGE, and not UPDATE, because that is inefficient. 
+
+File 1 belongs to the SYSTEM tablespace. Objects with such low id as 39 are dictionary objects. For example in my database it is an index of OBJ$ (I_OBJ4). ORA-08102 also points us towards an index, which seems to be corrupt based on the error you get. Find the index name by:

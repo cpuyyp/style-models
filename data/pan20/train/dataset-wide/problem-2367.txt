@@ -1,0 +1,53 @@
+What I am trying to understanding is what the purpose of the other key lock(5ebca7ef4e2c) is and what its locking. 
+
+And now the , Scan is gone and it has to scan the entire table to get that value. Why do you do this SQL Server? 
+
+What I am trying to understand are the key locks on the non-clustered index(indid 2). Why are there two key lock on non-clustered index? If I check dbcc page on page id 248, I could locate the obvious one((1bfceb831cd9)) which is the lock for the entry for the record 6 which got changed to 7. Output of DBCC PAGE below 
+
+This might be dumb and feel like I am going back trying to understanding basics. So I create a test table like below and create a clustered index on it 
+
+I get OK results from from server to both instances on , and I can connect to a non-dba user from server to both instances. I recreated the Oracle password file using on server instance and that did not help. Instance names are and on server . Here are my password files on that server: 
+
+In the above example, compressing the index at level 3 would save 28% space. So if it is a good amount, you would 
+
+If disk space is not at a premium, you could be able to create a "work" copy of the table, say , using CTAS (Create Table As Select) with criteria that would omit the records to be dropped. You can do the create statement in parallel, and with the append hint to make it fast, and then build all your indexes. Then, once it it finished, (and tested), rename the existing table to and rename the "work" table to . Once you are comfortable with everything to get rid of the old table. If there are a bunch of foreign key restraints, take a look at the PL/SQL package. It will clone your indexes, contraints, etc. when using the appropriate options. This is a summation of a suggestion by Tom Kyte of AskTom fame. After the first run, you can automate everything, and the create table should go much quicker, and can be done while the system is up, and application downtime would be limited to less than a minute to doing the renaming of the tables. Using CTAS will be much faster than doing several batch deletes. This approach can be particularly useful if you don't have partitioning licensed. Sample CTAS, keeping rows with data from the last 365 days and : 
+
+So the first one is querying from a source database and inserting into target staging table. Staging table is truncated every day before loading. Below is the plan. $URL$ Now the target table and the source table have the same primary key which is an identity column. About half of the time the SSIS package fails with primary key violation on the target server. I am not sure why this is happening. What are the scenarios when a query would read duplicate primary key. Or is it some issue in the way SSIS is loading data? Initially I was thinking that a scan combined with page split is causing the duplicate read but the table which is scanning has an identity as primary key and its mostly inserts. 
+
+Is this a one-time update, or are you planning on running that query after inserts, where the insert statement is not setting SSC.NUMAR_CHEST? If you want ascending numbers, it sounds like you need to use an Oracle sequence; your subquery will return the max value at the point in time of the start of your query. To use a sequence, create it once (using the name in the examples below), then reference it in your update; every time you access you will get a unique number: 
+
+You can use the clause on an alter table statement for things like partitioned tables, or tables you know will not have any rows. 
+
+RMAN command to see what can be deleted. Then do a to delete them. Do you have any guaranteed restore points defined? 
+
+I think its the same as this But I was upgrading to SP2 CU7. Anyway I disabled and re-enable the CDC and the log reader agent resumed. 
+
+I mean SQL know its partitioned by date so I would assume it should just do a , Scan on each partition which would be much more efficient. I remember vaguely reading somewhere that ordered scan is not supported in partitioned tables, is that correct or is it something else that is causing this behavior ? 
+
+On the other server though, I can get the high throughput numbers from the diskio tool but using SQL server method I am not able to get the throughput numbers. the SQL numbers are close to what I get if I run diskspd in single thread, even though the plan is running in parallel. So I was wondering what are the things I can check to see why SQL Server's IO is slow or why SQL Server is not able to push more IO's through. 
+
+You mention you have tried SQL*Plus and Toad; what is your client operating system, Windows? Unix? See NLS_OS_CHARSET Environment Variable that is an environment variable set on your client to a value that your client understands and supports. If you are on Unix, invoke the 
+
+I would guess that there is a weekly maintenance job that is running on that one day a week, that is affecting something that is forcing extra reads of the index. Is your daily batch job always run long on the same day of the week each week? If so, look at the views and to see if any jobs are scheduled. Now the bigger question is, is why not fix the UPDATE statement to include criteria to avoid updating rows where the value is already the correct value? 
+
+All of the scenarios work if I . So does XACT_ABORT has any kind of restriction when it comes to linked server? Edit - Did some more testing and looks like it has to do something to do with the number of rows also Possible Repo On ServerA 
+
+I was trying to create the drive through Server manager, when I create the drive through Drive Management it worked fine. 
+
+I am having a situation with linked server which I am not able to understand. So we have a linked server from a 2008R2 server to a 2014 server. The below sample query is executing from 2008R2 server and it works fine. 
+
+In your $ORACLE_HOME directory, there is a sudbdirectory Opatch and there is the command Opatch there to run with a couple parameters redirected to a date/timestamped file that should satisfy audits of Oracle software: 
+
+Unless your development or testing team already has a set of regression test cases, you are out of luck. The possible things to test are astronomical. Now, as others have pointed out, there are some things to look out for, like more restrictive privileges, and reviewing the "What's New" for both 11g and 12c. One big example from the past that burnt a lot of people (including me) was upgrading from 9i to 10g; where developers relied on a "group by" clause in a select would always return the results sorted by the group by columns in 9i, but not always in 10g. Not a bug; the SQL standard for group by says nothing about ordering of results; so a lot of code broke. But again, only way to flush out those types of things are good regression test cases. Now, after all that, I have not seen or heard about any 10g to 12c surprises, but there are a lot of wonderful new features that should be used when moving to 12c. 
+
+I have a transactional replication which was initially synced from backup. Now I need to add a new table which is really big so we have decided to backup and restore a fresh copy of the db to subscriber to re-intializing it. My question is, in this scenario should I be dropping the subscription, backup restore and then re-add the subscription? is that the correct way or is there any other way of going about it? Thanks 
+
+So just trying to understand what the industry standard is around DBA's being able to see card number. As per PCI document 
+
+But when I execute the same thing with the it does not return any results. Second case - If I replace the with and no also I dont get any results out. eg 
+
+The Oracle database instance has several background sessions it creates in order to function, and those count against the number of sessions. For example, here is an Oracle 12c instance, one user connected: 
+
+Invoke the SQL a few times; the first time will likely cache the data and subsequent runs will reflect that. Then do the same queries via your client. If you had DBA access you could turn on tracing for a session and see exactly how much time is used for each part of the query. 
+
+You may need to add additional fields to the group by clause, depending on what your definition of a location is. (Does HoleID uniquely identify a location? Or is it a combination of HoleID and SampleID?) For your sample output, you would need to include as your group by fields.

@@ -1,0 +1,61 @@
+Make sure no one but one sysadmin has access to the restored database. Put the db in single user mode after the restore is completed. Check the code inside all stored procedures and functions and triggers inside this database. Perform a dbcc checkdb to make sure there are no integrity issues. Check the users which used to have access to the database and remove all of them. Start allowing access, very restricted to specific objects checked by you. 
+
+the script I use will show you all objects (SP, Tables, Functions) for a specified Database name and all the users that have rights on them, but you can narrow the search and extract exactly what you need. 
+
+You can prevent creating a procedure with invalid objects before executing the Create Procedure statement like that: You will see a red line under the invalid object which underlines the error when you go with the mouse over the red line. I am not aware of other method, because the SQL will parse the procedure before executing it considering only the validity of the SQL syntax. 
+
+Considering the EventSubClass number you can find out what happened with the Query Plan and take specific measures. Additionally you can add other columns to Stored Procedures and TSQL Event Classes if you are interseted in HostName, WindowsUser or other info from Profiler trace. Also the trace can be stored in a SQL table making the analyse more easy and much more customizable. Here is a link describing more the Performance Statistics Event Class. 
+
+Following Gaius post: You can create an .SQL script which does what you need with use db in front of the script -> create a SQL Agent job of Operating system type which calls the script: sqlcmd -E -S SERVERNAME -i"c:\YOURSCRIPT.sql" -o"C:\YOURSCRIPT_LOG.log" Add new step and use msdb.dbo.sp_send_dbmail procedure to send email. This feature can be customized to display inside the mail a specific query from SQL tables to confirm the execution of the script... for example dbcc showcontig of your rebuild indexes. 
+
+Looks like the disk subsystem on Server B is performing worse than on Server A but, I used to see disk issues not entirely related to disk specs. You could collect some other performance counters such as physical disk --> avg disk sec write (> 25 ms very slow), memory --> page file usage (> 70% bad), cpu --> processor queue length (> 12 very bad), memory --> pages/sec(> 600 slow, > 2500 very slow disk subsystem), sql server: buffer manager --> page life expectancy (< 300 memory issue). You can also limit the growth of 6 tempdb data files to the size they have now. See what happens. You should check the waitstats as well on both servers. If you see a lot of PAGELATCH_XX then you will know where to dig more. Jonathan Kehayias has a good article on this theme. And Paul Randal has also a lot of analysis which could help. 
+
+To answer the question in the title, whether the B-tree rebalanced during a delete, the answer appears to be no, at least in the following minimal test case. The following demo runs commands that are best left for a test environment. 
+
+This demo shows that a delete can produce a very unbalanced b-tree, with practically all data on one side. 
+
+Now let's build some procs that will DROP/CREATE or REBUILD, plus log (approximately) the time taken: 
+
+Here are my own results: average time in ms for DROP/CREATE: 2547, for REBULD: 1314 It looks like in my contrived example, the winner is REBUILD. Constraints What if the index was created to support a constraint? In this case, a simple DROP and CREATE will fail because you have to drop the constraint first. Let's look at the clustered index from the previous example. 
+
+I'm fighting against NOLOCK in my current environment. One argument I've heard is that the overhead of locking slows down a query. So, I devised a test to see just how much this overhead might be. I discovered that NOLOCK actually slows down my scan. At first I was delighted, but now I 'm just confused. Is my test invalid somehow? Shouldn't NOLOCK actually allow a slightly faster scan? What's happening here? Here's my script: 
+
+The most promising exploration comes from removing the trash variable and using a no-results query. Initially this showed NOLOCK as slightly faster, but when I showed the demo to my boss, NOLOCK was back to being slower. What is it about NOLOCK that slows down a scan with variable assignment? 
+
+According to this link, turning the Parameter Sniffing option off in 2016 is equivalent to setting trace flag 4136. You should read up on that trace flag. Especially important information from that trace flag link: 
+
+But appeals to authority are boring, so let's test it ourselves! Performance: Set up a table with a non-clustered index, load it with junk, and build a table for logging time. 
+
+This is an application issue more than a database issue. Navision treats datetime entries as UTC, and is adding the hour in its display (assuming your local timezone is UTC+1). I have run into this myself since I work with Navision. If you have a client application, you can look at displayed datetime for a record and compare it to what you see by querying the table. 
+
+Short answer: start SQL Server with the -m flag from a local admin account. Step-by-step instructions here: 
+
+Understanding 1 is correct, and spaghettidba and Joe have good explanations. If you're interested in testing for yourself (on a test instance please), you can use the below script: 
+
+It matters only related to disk space and character length. Of course search on char data types and indexes on these type of data will act slower than integer but this is another discussion. Varchar data type is a "variable" data type so if you set up a limit of varchar (500) than this is the maximum character length for that field. Minimum length can be between 0 and 500. On the other hand the disk space claimed will be different for 10, 30 or 500 character fields. I did sometimes a test for data type varchar (800) and for null values I had 17 bytes used, and for each character inserted it added one more byte. For example a 400 character string had 417 bytes used on the disk. 
+
+Like Shawn said, the code will not execute by itself unless some stored procedure which seems vbalid has an exec of another malicious code. This is the reason of checking the code inside each one of them before putting it multi user mode. 
+
+Have you tried executing this, both of the scripts? Because this is not a correct syntax.I will assume that the first script intended to be something like: 
+
+once the filter is activated, slave server will skip all the statements which meet the given pattern. but before doing any change read how MySQL handles replication rules because you can skip important tables if you don't understand the rules. 
+
+I remember when working with clusters that the port change from dynamic to a static one doesn't take effect if you don't disable the checkpointing of the quorum. Here are more details: How to Change the Dynamic Port of the SQL Server Named Instance to an Static Port in a SQL Server 2005 Cluster Also, applications managers should be notified about the port change because there are places where this can be used. As well, the port of SQL Server Instance is used in Firewall settings in many types of network configurations. 
+
+Check to Show all columns and select each one of the columns under Performance: Performance statistics event only. The rest of events can be left with default setting. Next, Select Column Filters and filter by DatabaseName and/or LoginName/ApplicationName/HostName etc.., if you know them. The purpose is to limit the number of rows dispalyed in Profiler and concentrate only on your needs. Next, press Run and let it run for a while (2-3 min as long as you need). Analyse the results dispalyed looking primarily at: Performance statistics event. If Performance Statistics will occur often it means that the plan of a query was cached for the first time, compiled, re-compiled or evicted from PlanCache. From my knowledge if a query does not have its query plan in Plan Cache - you will see 2 rows of PerformanceStatistics event and followed by SQL:BatchStarting, then SQL:BatchCompleted. It means that the Query Plan was first compiled, cached and then the query started and completed. Look at following columns under Performance Statistics event: 
+
+Note how the first open transaction (Transaction ID 0000:000002fa for me) isn't committed until the end of the REBUILD ALL, but for the index-by-index rebuilds, they are successively committed. 
+
+Of course, like Erik alluded to, your actual problems probably have nothing to do with fragmentation, but hey, this was fun. 
+
+I see no difference when using TRUNCATEONLY when compared to regular SHRINKFILE on the log file. Here's the script I built for testing (2016 dev edition, note the DROP IF EXISTS syntax): 
+
+According to Paul Randal in his Pluralsight course "SQL Server: Logging, Recovery, and the Transaction Log" the LSN is composed of three parts: 
+
+So by adding a recompile, you're telling the optimizer to build a plan based on whatever parameter is passed, but not to reuse the plan. With Parameter Sniffing off (and no recompile), a plan is built based off of statistics on the parameters and will be reused, even for values that would otherwise generate a different (perhaps better) plan. 
+
+OPTION (RECOMPILE) allows constant folding of @Step and @FindNo in your second query. Since @Step is known to equal 1, the line will be optimized away. Notice that this affects estimated rows. If you want to see a more drastic example of this, try the below code. Notice how constant folding (enabled by option recompile) allows the second query plan to completely avoid the union, since the optimizer knows no rows could be returned. 
+
+Bad news: the plus approach in your script completely flattens out the XML document, and will need to be reworked if you have any multiple-X-per-Y structures in your document. If the dynamic SQL is a requirement, then please provide an example to test that aspect more easily. Another approach might be to build queries you need manually. If your fundamental problem is including parent info, then you might modify my demo SELECT query below. (N.B. Mikael Eriksson's answer has an improved query. Please refer to that.) Key ideas: is the context node, and gives you the parent is a different kind of XML function that belongs in the FROM section of the query and is usually seen with CROSS APPLY. It returns a pointer per match, and is what allows working with multiple rows. Read more here. is one of several methods for letting SQL Server know the value method only has one piece of data to work with (fixing the "requires a singleton" error) 
+
+1) Log flushing: the SIMPLE recovery model does not clear the log after every transaction, but at checkpoints. (link for more info) 2a) REBUILD ALL: yes, REBUILD ALL works as a single transaction. The index rebuilds within have their own transactions, but the overall operation isn't fully committed until the end. So yes, you might limit log file growth by rebuilding individual indexes (and possibly issuing CHECKPOINT commands). 2b) Proof! Here, have a demo script. (Built in 2016 dev) First, set up a test db, with table and indexes:

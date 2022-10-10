@@ -1,0 +1,107 @@
+Noticed the discrepancy between the dump and the instruction's immediate? If you copy/pasted this code then there's something amiss with the disassembler, else it's a typo. 
+
+By popping exactly 80000000h, you guarantee that the will produce the desired 80000001h. I've used because it's 1 byte shorter than . 
+
+This procedure must process bytes (you raise the addresses by 1), but you read and write words! The test to see if 16 bytes were processed is too complicated. All that is needed is testing with 15. 
+
+The part where you copy the filename can be much improved by using the string primitive instruction. You load the desired amount in and then repeat () the operation. The direction flag (DF) is cleared beforehand to force the CPU updating the and registers moving up in memory. 
+
+Avoid redundant operations. In your most inner loop you keep checking if CurrentPrime exceeds 2000000, but you forget that the value of CurrentPrime does not change within this inner loop. Best move the test above the next_prime_test label introducing an additional label MAYBE_next_prime_test. 
+
+What you're saying here is that it is all about the colors that make it to the screen. Then why don't you put the ASCII's 0xCE for double line cross and 0xCD for double horizontal bars directly in the errortext? This will avoid using as an argument ( remains of course) and will save a lot of bytes on many occasions throughout the rest of the program. 
+
+The way you find out about the number of left over bytes is too complicated. It's correct but needlessly involved. Basically all it takes is anding the original counter with 7 to extract the lowest 3 bits. Simpler, shorter, and using one register less which in future programs will always be handy: 
+
+In stead of preserving the dword , which uses 4 bytes, you could content yourself with just and because the high word is never in danger of modification in your code. This saves another 2 bytes. 
+
+This is a very nice approach! Although for reviewing purposes I had to read it a few times over, it is definitely better here than the simpler would have been. 
+
+Currently your program depends on the zero stored in number. In future you might want to re-use number several times and then the zero-terminator might not be there anymore. I think it will be more robust if you wrote 
+
+As you can see I combined a pair of settings in a single instruction. This saves space, can be a bit faster, and the comments make it absolutely clear what is going on. The same applies to drawing the gray bar, although it's not clear: 
+
+This is where your program has its first error. You trust the user at the keyboard to actually input a digit, but your program should make sure it indeed got a digit! 
+
+With the instruction you're avoiding to have to write the much longer . Very understandable but the 1 byte would still be shorter. There's also some danger lurking in this code snippet. Who is to say that Intel/AMD in future iterations of the processor will not be returning non-zero values in EAX[8,31] ? Already today some leaf numbers aren't used. 
+
+Loading a sector. To calculate the CHS values you had to resort to writing a special division procedure DIV32 that can divide a 32-bit number by a 16-bit number yielding a quotient that does not necessarily fit in a 16-bit register. Your solution is correct but could be optimized in quite a few places. Rather than showing all of these, I'll present my version of the CHS-translation. As you can see it's much shorter and can use the normal division operation without risking any divide exception. I've also added a much needed retry system because especially disk operations have a tendancy to fail for no reason! 
+
+You'll agree that much that was said about the 16 bit version also applies to the 32 bit version. To be honest, I found it lacks so much on comments that I hesitate to actually review it thoroughly. I will however point out the next optimizations: 
+
+This way of UCasing is dangerous! You neglect bit 7 and thus p.e. the user could select abort by typing ALT-193 or ALT-225. Similarly for ignore and retry. Best write or even . A third possibility is 
+
+This procedure is the natural continuation of the Example 4 that I wrote for How buffered input works, a Stack Overflow Q/A. Features include: 
+
+A directly above a can safely be replaced by a . But since the target immediately follows, you can just not write the . 
+
+Currently your calculation shifts the BPB_RootEntCnt 5 times to the left immediately followed by shifting it 9 times to the right. Can you see that this comes down to just shifting it 4 times right? To get code that won't fail on exotic BPB_RootEntCnt values use next calculation: 
+
+All of these instructions are correct. When the first instruction is being executed the PC is at x3001. Adding x001F to it will correctly address location x3020. When the third instruction is being executed the PC is at x3007. Adding x001B to it will address location x3022. From the manual we learn 
+
+You've used a WHILE-loop here. A REPEAT-loop would have been more optimal. Also a better way to zero a register is by -ing it with itself. Furthermore by using the register you eliminate the need for the and : 
+
+You don't need the instruction because the 4 instructions in a row already leave the high nibble empty. This shaves off 2 bytes from the program and reduces the number of cycles by 2. These benefits double because you used this construct twice throughout the program. 
+
+This is a misleading comment! Since the premise states that the results are to be below the inputted number, the line conflicts in the usage example given. 
+
+This is a misconception. The following only depends on and for its operation. It will leave a result in DX:AX, but does not have to be initialized beforehand. 
+
+There's little point in first moving the contents of the variable d to a register and then doing a subtraction between registers when there's a possibility to subtract the variable directly from the accumulator writing . 
+
+You should test for overflow on the multiplication! You are printing results from the register only, but look what happens when the square exceeds the 32 bits of . You should use this overflow ( <> 0) as an extra reason to exit the loop. 
+
+Cleaning up the stack is done by ing to . Because the stack on X86 grows downward, cleaning implies going upwards. You make this mistake several times! 
+
+I've moved the higher up in the code so SetFinalBytesLoop can benefit from using the register vs the immediate 0. 
+
+Some speed measurements. All of these numbers relate to the first part of the program where the hundreds digit gets calculated. 
+
+Lookup table. The lookup table (LUT) is filled with classification bytes. No need to have the data in this table repeat itself. There's more to gain from re-using the same lookup data (caching) than that there's to loose on the additional instructions to fetch it. The LUT can either be created at run-time with an initialization routine or at compile-time. It's easy to fill the LUT by hand. For the simple FizzBuzz a mere 15 bytes. I chose to let the assembler do the work. Lookup tables are powerful instruments. I wonder if ever any applicant when confronted with the original FizzBuzz task has used this approach. Not sure about what the recruiter would have said either! 
+
+5) Easier date arithmetic You have a case for spring and fall that performs some ad-hoc computation, that can be simplified. Also, since @Year is computed before the cycle, all those boundaries can be precomputed. You did not specify version, so I hope for the best (): 
+
+This last function is particularly useful to debug some persistence errors which are quite hidden. 5) Base service (optional) Since almost all your services use unit of work, it would make sense to spare unit of work factory and assignment, by having them in a . 
+
+Besides great performance improvement due to 's suggestion, the code can also be improved. I have put comments to indicate changes: 
+
+Your models project should contain only functionality related to data models such as: data models themselves, data context, repositories. Provided code does a simple thing: gets a model based on its identifier, so this can be included in a Repository. E.g: 
+
+An alternative to this approach is to have custom map these properties when transferring data model -> view model and vice-versa (so, this also supports data persistence, not just data fetch). Actual mapping As already suggested, AutoMapper was specially designed for this kind of chores. Its usage is simple as: setup the mapping: (this is deprecated in the last version, as described here (and also mentioned by the compiler, if last NuGet package is referenced)) 
+
+Things that just pop up in my mind when seeing the code (more of the architecture and robustness rather than language constructs): 1) Harcoding path to ini file The path might have a meaning in your development environment, but it will mean nothing in a test or production environment. I would set it in an included file and use it from there. Something like: 
+
+where contains definitions for all public methods in the class above, thus allowing the repository to be injected. So, your service layer should not work directly with EF data context, but rather using the appropriate repository: 
+
+However, logic for the dates is unclear for me, even after reading operator precedence (AND takes precedence over OR and BETWEEN). It is strongly recommended to use parenthesis when using multiple operators with close precedence. 6) Set based logic WHILE and other looping constructs are intruders in T-SQL language. They will usually behave (much) poorer than set based approaches. So, your WHILE can be converted into something this: 
+
+Just what pops in my mind seeing the code: 1. Variable names should be or simply an (small context allow simple variable names) the same for yPositions 2. Constants Some things are constants so they can be declared at class level: 
+
+Generally, it is easier to think your program logic top-down than bottom up (doing little things and merging usually requires more skill): 
+
+2) Variable declaration closer to usage C++ allows you to declare your variables anywhere before they are actually used and it is a good idea to be as close as possible. The first part of your program may look like this: 
+
+It is also recommended to use enums for your units, so that unitConvert caller cannot provide an invalid unit: 
+
+and call this function by providing / to your parameter. Also, functional scalability might be an issue: what if you have to handle 11 eleven floors in the future? (0 -> 10). You will be forced make several changes to handle a simple request like this. In order to accommodate larger values, I would dynamically define your array and not base my condition on char (which allows only one character). Something like this (not tested): 
+
+Your code is very small for a good review, but a few things can be mentioned: 1) naming - it is better to name your variables by what they represent. E.g. , , should can be named something like , etc. Also, can be adjusted to Pascal/Camel notation used in C# (they look to have C++ naming style) 2) passing parameters to instances - providing many parameters to a constructor works, but it may render maintainability problems in the future: 
+
+This allows for future types of attacks. E.g. magic attacks Here, the are already some refactoring done, as explained in the steps: 3) Avoid hardcoding values, especially when they meaning is hard to guess. So your comparisons should be made against meaningful constants (I tried to guess their meaning): 
+
+Also, table is not required anymore and the whole block is slimier. 7) Proper data types suggests that Sales_Closing_Date is not a DATE (maybe a or ). If possible, use the most appropriate data type to avoid explicit or implicit (silently occurring in queries) casts. 8) Comments It's a matter of taste, but I like comments written as normal text, not using CAPS 
+
+Besides 's suggestion and based on 's comment, it makes sense to log more detailed information. This can be provided using a formatted exception string or using a logging library. The second option has the advantage that can be customized to log only some levels (e.g. one usually wants less verbosity on production). The code using NLog (but this can be replaced with any other library or a custom one) would look like this: 
+
+So, error on saving changes will have consumed the sequence numbers and thus you obtain gaps. On the database side, this thread approaches the generation of gapless incrementing identifier, but I am also thinking about generating identifiers within the application layer and restoring the value on save failure: 
+
+I would also mention a little about your naming. C# uses a CamelCase notation for most identifiers (class names, public methods etc.), so you should try to use also for your structures: 
+
+4. Tests - it is a good habit to accompany a function with a test suite. It is particularly efficient when the code changes much (regressive testing) and helps to cover scenarios that are usually missed when developing (developers have a tendency to think in terms of making it work, not making it fail). 
+
+3) getLine requires a before, as it will catch a newline for a previously entered phone (at least when testing manually) Finally, a version of your program with all improvements made: 
+
+Question: Can any of the above be improved in terms of architecture? Performance-wise, the initial Excel package creation and other initializations may take even 2 seconds, but after that, getting changes usually takes 100 ms (send changes, process + get changes back in browser). There will be only a small number of users to access this functionality (maximum 20 concurrent users), so I do not expect any performance issues. 
+
+4) Defensive set If by any chance, the select for year returns more that one year, set statement will fail. You might consider assigning with and/or using , just to be sure it does not fail (however, it may return an incorrect value). 
+
+HashMap operations have a complexity of , so function's overall complexity is , where n is string length. [edit] Based on correct observation, a HashSet is a better choice (elements only, no key and values):

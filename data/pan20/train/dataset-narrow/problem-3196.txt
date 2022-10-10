@@ -1,0 +1,83 @@
+You haven't lost console log - the screen has been cleared, which is normal (and desirable). If you don't want this to happen just start a new session. 
+
+resolution does work on some Windows systems, and there may be alternate solutions using the on Windows. 
+
+As in the other answer the Pi has a unique ID, which is related to the MAC. In practice it is more convenient for networking to have a unique . I use the following script to set the names based on . 
+
+is the address from the command above (or another unused address on the same network), 255.255.255.0 corresponds to network size. is the address of your router (or gateway). You can also specify , but this is generally not necessary. The is automatically derived from and and need not be specified. For more detail see $URL$ You can set either or both , or one of the predictable network interface names Then disable the DHCP client daemon and switch to standard Debian networking: 
+
+You should be able to mount the SD Card in a reader on any Linux machine, including the Pi. Trying to do on a Windows or Mac is a lot of trouble. You can mount an image on any Linux machine. You can use a Linux bootable CD. I suggest you get a new SD, install Raspbian and copy the files. 
+
+If so what is the reference? The electrical capabilities of the SoC have not been released, although there is an unofficial GPIO pads control Extracted from BCM2835 full data sheet Gert van Loo 2-August-2012 which shows the equivalent circuit programmable from 2-16mA. The Pi 3.3V rail is widely assumed to provide 50mA, but AFAIK this is not officially documented for the Pi2 or the other recent Pi. The original Pi has an on-board linear regulator which was limited, but the B+ and later have a switch mode regulator which supplies more. The regulator chip (which supplies both 3.3V and 1.8V is rated at 1A). 
+
+Provided you update to the latest the answer is Yes. I am doing so now. It is sensible to ensure unique hostnames if you plan to use both on the same network at the same time. There are certain settings which might change this e.g. static IP addresses. These are generally not best practice. 
+
+In fact, while this question if not specifically Pi oriented, it is (marginally) relevant to using the GPIO on a long cable. The wire gauge is irrelevant. You are in fact connecting an antenna to the GPIO, so you should minimise interference. Twisted pair is a good idea, but a pair like speaker wire is acceptable. You should avoid running the wire parallel to any other circuitry. The most important is to use a low impedance circuit - i.e. a low value Pull up (say 470Ω) near the Pi itself. 
+
+You have not specified what MOSFET. Most will NOT switch reliably with 3.3V. There are a few models which will work. NOTE You should check the SDG, as there is no standard. You should ALWAYS include a resistor (~100kΩ) between G and S. See $URL$ 
+
+NOOBS will only install the latest Raspbian, if you need an obsolete version you will need to install Raspbian, which you can find on $URL$ You might get away with an old NOOBS from $URL$ Mind you PHP7 has been the standard release on most distributions for 2 years; it is only Debian which has not changed until recently. 
+
+If you are using WiFi and the GUI set up by following the Foundation Guidelines $URL$ If you are using WiFi from the Command Line set up by following $URL$ This is the only way to set up a network which does not broadcast . 
+
+The in-build UARTs on the Pi support a maximum of 8 bits. The mini UART (default) on the Pi3 has the following features: • 7 or 8 bit operation. • 1 start and 1 stop bit. • No parities. It may be possible to find an external UART which supports more, although I am unaware of any. It is always possible to write a bit-banging emulation to support more (and there may be available libraries to do this). See How-do-i-make-serial-work-on-the-raspberry-pi3 for more detail. 
+
+If you want to use the GUI on a remote machine you can use . is available for the Pi. There are hundreds of tutorials on this. You need on your computer, again there are lots of options. 
+
+You are making life difficult for yourself; backup the whole SD Card. It is possible to also backup the "boot" sector , or generate a new one (using fdisk). Unfortunately your backup will not work! You need to backup to an external device, or perform on another system (in which case mmcblk0 is wrong). Also your restore will not work. You cannot restore over the mounted partitions, and need an external device. 
+
+You should be able to access the Pi with - default hostname is raspberrypi. Each device should have a unique hostname. 
+
+You don't need to install anything. Assuming you are using Raspbian it is already installed, however on recent releases it is disabled for security reasons. There is a shortcut, creating a file on the boot partition, but this ONLY works on initial boot. See $URL$ Your remaining option is to enable using 
+
+You are correct that you can use 8 pins in a multiplex fashion to produce more outputs, but the complexity of this, and the fact that the Linux OS is not really suitable to do this make it inappropriate. You would be better to go with a GPIO expander. The MCP23017 is an I/O expander chip which has 16 GPIO pins which you can control using an I2C interface using two pins from a Raspberry Pi. As you actually have more than 8 outputs already (an additional 7) this would give you 16 + 8 + 7 - 2 = 29. There are many add on boards using this chipset available at low cost. 
+
+An inspection of the published schematics will show that the 3.3V is directly connected to the camera. Inless the camera module includes some power control, there is no way of controlling it from the Pi. 
+
+If you run with the same group as this should work (I haven't tried this). As per the comments above this is the hard way to solve your problem. Just give each Pi an unique and they should be easy to distinguish. It is preferable to have the same username on each machine if you want to move files around. 
+
+If you are going to install Raspbian (which I strongly recommend over NOOBS) there is NO NEED to format the SD Card, just overwrite the old image. Again, I strongly recommend you use rather than . It neatly avoids the possible problems with installing on the wrong device. 
+
+I don't know why you would want to make your own OS. There is far more to making an OS than constructing a kernel. Assuming you want your own kernel, why not follow the procedure you referenced on top of a standard install. If you really want to, the following describes how to structure the partitions (and the 8K offset of the 1st sector is critical). 
+
+Connect the LED, in series with its current limiting resistor from 5V or 3.3V to the transistor Collector, Vcc -> LED -> 100R -> C This assumes you have your circuit wired as in Output Circuits 
+
+should set into NTSC mode 4:3 aspect ratio. You can switch the other way see $URL$ will show options 
+
+There is a submenu in to enable . Depending on exactly what you are interfacing and what you want to do there are MANY options in Device Tree. 
+
+Try it and see! $URL$ suggests 400mA so (10,000 / 400) * (3.3 / 5) ~ 16 hours. Unfortunately Power Banks differ widely in their ACTUAL performance. 
+
+Despite many horror stories the Pi is quite reliable. Mine run for months at a time, and many others have similar experiences. If I was to do this, I wouldn't bother about detecting when power goes off; just power the Pi from the battery (via GPIO pins or µUSB power) and run the battery on a float charger. Depending on your project you may need to take other steps. No computer is 100% reliable, and the Pi uses a SD card - which is NOT recommended by manufacturers. You may need to implement a watchdog timer, commonly used for remote systems. The Project Curacau article discusses some of these issues. See $URL$ 
+
+The B+, Pi2 & Pi3 all have similar power circuitry, which is also more efficient than that in earlier models, but no more reliable. The vast bulk of power issues are due to lousy power supplies and the lower current requirement of the B+ may make them SEEM more reliable. The Pi2 & Pi3 draw more current, which means they have more issues with poor supplies. In 3 years, with 5 Pi I have had one SD failure (a new card which was replaced under warranty) and one corruption (during an upgrade) - plus a few "operator error" issues. I do not believe the power supply affects SD failure, as the SD Card runs off 3.3V (well regulated on all models) and the SOC runs off a combination of lower voltages. Poor supplies mainly affect peripherals. As for over-clocking WHY? Have you an application which you have benchmarked which indicates over-clocking is effective. You would be better using a Pi2 or Pi3, which have multi-core processors and more memory as well as a higher clock rate. 
+
+In addition to other possible issues, you are using cables with round pins to connect to an IDC connector. IDC connectors have a flat blade, designed to connect to a square pin. Using round pins often results in unreliable contacts. Use proper DuPont connectors to connect to the Pi directly, OR use one of the boards designed for IDC connectors on your breadboard. 
+
+Removing libraries will NOT make it "make it snappier to boot, efficient to run". Libraries are only loaded if called. The only thing it will do is save a (very small) amount of space. In general disabling services will make very little difference to boot time on a computer, although not enabling services you do not use is not a bad idea, if you want to save memory. If you want to explore boot time 
+
+contains indicating the root partition. I assume that if you used a with a suitable partition you could use (or whatever). I have not tried this (and don't share the paranoia many seem to have about using SDCARDS). It is not clear whether Raspbian contains the trim support needed to ensure reasonable lifetime on a . It would be interesting to see if this works. I might even give it a go with a HD. 
+
+There is no support for parity and the throughput is limited, but the latter should not affect most uses. There is one killer feature "Baudrate derived from system clock" which makes the miniUART useless as the this clock can change dynamically e.g. if the system goes into reduced power or in low power mode. Modifying the removes this dependency by adding the following line at the end:- 
+
+I have several Pi, some of which run continuously for months at a time - even then only restart when I need to make some changes. It is thus possible for the Pi to run without interruption. Obviously a power interruption will interrupt any running program, but the Pi itself should restart. The first step is to ensure you have a reliable power supply, and using a good quality SD Card helps. If you want to run an application which needs to run continuously (on the Pi or any other computer) you need to take measures to recover from the problems which can occur on any system. The traditional approach is a watchdog. This can be dedicated hardware or in software. Raspbian has a which can be activated to detect problems and restart. 
+
+I have never seen the procedure you suggest, but have you tried as suggested in $URL$ This should work for passphrases from 8-63 characters Storing passwords in is not really a security risk, as the file is only readable by root. 
+
+This isn't really a question about the Pi; it is an Electrical Engineering question, and would be better asked elsewhere. I am always worried by questions about connecting the Pi to the mains, which then proceed to show little understanding of circuit design. Your primary concern should be YOUR safety, not just the Pi. Some form of mains rated isolation is essential. It is also unclear what you are asking. The title talks about measuring frequency - if this is your intention the mains is of higher accuracy than the Pi; you could use the mains to measure your Pi clock! If you want to detect zero crossings then this is easy. Search for zero crossing detectors. A Schmitt trigger is the simplest, and the Pi's GPIO inputs can be configured to do this. 
+
+There are a number of possibilities. You can install support for on OSX and plug in the SD Card. A better solution would be to install on the Pi which will allow you to connect from your Mac using Finder over your LAN. Search this site for for more detail. 
+
+I am planning to use a bluetooth keyboard and mouse. shows and shows no Devices. Is there anything else needed to activate the on board bluetooth? I recollect reading that there are no drivers yet, but cannot find this again. Some users seem to indicate that they have it working. 
+
+Do NOT type (unless you are trying to change the password of another user). The command to change your password is 
+
+Simple answer NO. It is theoretically possible if the devices share a ground, and polarities are correct (which assumes you have the circuitry of the device), however good (safe) practice would isolate the circuits. Use a relay. 
+
+If you run the green activity LED will flash 10 times at 1 sec intervals, and then SHOULD extinguish - although the latter depends on model and OS version. You can use Device Tree to set the state of a pin on shutdown. 
+
+will leave the process running in the background until it completes. You will have little access to it, except to kill. Use if you want to start another console session. NOTE whatever you do you need to specify FULL PATHS to all files. 
+
+The Pi has only one dedicated serial port (although there are software libraries to make soft ports). Your question is too vague to give a more detailed answer. 
+
+The official answer is NO. My experience backs this up. The USB ports are (said to be) powered by a AP2553 Current-Limited Power Switch (U13). $URL$ As well as controlling current to USB these chips prevent back-powering. NOTE The published schematics for the B+ and Pi3 are incomplete, and do not include detail of this part of the circuitry and the designation on the chips on my boards are BK4.F BK5.0 so this must be regarded as informed speculation. The Pi3 visibly lacks the MOSFET used on the B+ & Pi2 to switch the current limit from 600mA to 1200mA.

@@ -1,0 +1,121 @@
+I'm not sure of the details of why the implied predicate fails here - the appears to play a part however. For the -ed predicate 
+
+Finally just for completeness with the trace looks as follows. It can be seen that system spids are used to perform the operation and they are unaffected by the query timeout as would be expected. 
+
+You cannot parameterise object names so would need to use dynamic SQL for this See Dealing with Dynamic Table and Column Names for more. 
+
+As you are on SQL Server 2012 you could also create a sequence object per table and apply it to the desired auto incrementing column with a default constraint that calls . The two methods have some differences in behaviour which you may or may not find desirable. 
+
+My understanding from the SIGMOD paper Hekaton: SQL Server’s Memory-Optimized OLTP Engine is that it gets handled the same as other types of garbage. A couple of relevant sections are 
+
+SQL Server doesn't randomly set integers to -2147483648. In any event it is clear that you have a constraint that should be being checked, negative prices are not good. First clean up the rows with invalid values then you can add a check constraint 
+
+Also you should probably use if you are only allowing values exactly 7 characters long (especially if this column is mandatory). As the space appears predictably between the third and fourth characters arguably storing this is redundant and it should be added at display time instead. If you decide to go that route then use and remove the space in the middle of 
+
+I can reproduce the plan that you describe on SQL Server 2012 (on prem) by running the DDL in your question and then fiddling the stats so SQL Server thinks that the table is much larger than reality. 
+
+The plan shows a sort operator with an estimated sub tree cost of nearly and erroneous estimated row counts and estimated data size. 
+
+And if taken up on the repair option unceremoniously deletes the whole row as it has no way of telling which column is corrupted. Attaching a debugger shows that the is being evaluated twice per inserted row. Once before the expression is evaluated and once inside it. 
+
+Showing that the procedure with of was executed 36 times for example. The is memory only so it would be best to set up something that polls this every so often and saves to persistent storage. 
+
+They satisfy different queries. The first one will be useful for queries that seek on and return (without the this would require a lookup back to the base table) The second one will be useful for queries that seek on Both of them can be used for queries like but the second one will do this more efficiently as the first index would require a seek on then the residual predicate be evaluated against all matching index rows. 
+
+I speculate that in the cases where it fails the (implicit) is just done once and this is evaluated as a runtime constant (more information). However the reference to this runtime constant label, instead of the actual string literal value itself, prevents it from matching the computed column definition. This rewrite avoids the issue in your query 
+
+(as long as you are on a reasonably recent version that supports the parameter embedding behaviour.) Or you could do 
+
+You could evaluate using explicit or hints but given that you are presumably using these tables again later in the trigger you are probably better off just inserting the contents of and tables into indexed tables and being done with it. They do not get useful indexes created for them automatically. 
+
+But this only sets the default for new partitions. You still need to go onto the partitions tab of the cube designer and set any existing partitions to the desired configuration. 
+
+The position of the on clauses means that the outer join is carried out between the two virtual tables resulting from and rather than just on a single table. In your second query conceptually the virtual table is left joined onto B preserving the entire cartesian product then the result of that is joined onto with the predicate . This eliminates any rows from the final result that do not inner join between and meaning it is equivalent to 
+
+So you are looking for Employees that earn below the average in their current department but above the average in their prospective new department. One possible way of getting all employee transfers that would meet this would be 
+
+This is not true for datapages. See Myth #6b: The null bitmap only contains bits for nullable columns. There is a slight difference for indexes in that if all the columns participating in an index are not nullable the null bitmap is omitted. However the difference is negligible and you should be choosing the option that gives you the desired semantics. 
+
+The plan for this can have a seek on the table specified to the left of the like. i.e. would not be able to make use of the index on that was used above but could seek one on . The suggestion in the other answer of indexing a calculated column on both sides is more flexible however. As for a nested loops plan either table can be on the inside and it would also allow a many to many merge join without requiring a sort. 
+
+I imagine as firstly it updated all rows in the table. I'm not sure what the execution plans for this would be like in Postgres too. In the worst case it might have been selecting all rows matching the from , passing in the correlated parameter, then performing on the result for each row in the outer table. 
+
+And that your existing code that references the table just performs basic DQL and DML commands against the table (i.e. /,,,) And that isn't referenced by a foreign key anywhere. Then possibly the best way of getting up and running quickly (if you can't afford the downtime of rebuilding the whole table in one go) would be to rename that table (e.g. as ) and create a new table 
+
+You don't specify any specific RDBMS. A method that should work in all/most would be to use a derived table. 
+
+and look at the estimated number of rows it is rather than and this error propagates throughout the plan. currently contains 1 row. The statistics would not get recompiled for this table until 500 row modifications have occurred so a matching row could be added and it wouldn't trigger a recompile. The reason why the Join Order changes when you add the clause and there is a column in is because it estimates that columns will increase the rowsize by 4,000 bytes on average. Multiply that out by 1048580 rows and it means that the sort operation would need an estimated 4GB so it sensibly decides to do the operation before the . You can force the query to adopt the non join strategy with the use of hints as below. 
+
+If you do see of 3 returned then something is definitely using it. If you don't I'd probably try attaching (copies of) just the mdf and ldf to another instance and test to see it all works correctly (with and selecting all rows from all tables). If all of this works without error then it is possibly OK to backup everything then go ahead and delete that row referencing the file from (will need ad hoc updates to system catalogs enabled). I, of course, accept no liability if this all goes horribly wrong however! 
+
+This would make the window of opportunity wider but, whilst a transaction could potentially read the "old" value from an index yet to be updated, it would not be possible for a read committed transaction to read the "new" version of the value until the transaction was committed. It is certainly possible for a read committed statement to read two different committed versions of the same value though. In one connection run 
+
+No it isn't. Or at least not in its entirety. Part of the transaction log will be included though reflecting concurrent activity during the backup. This is to allow the database to be restored to a transactionally consistent state. Much more detail in this article by Paul Randal Understanding SQL Server Backups 
+
+Then renaming the table as T2 and scripting out the trigger returns the following so I assume you are referring to the second table reference. 
+
+Because if that would incorrectly bring back duplicate rows. So it would need an operator that removed duplicates from these first. From a quick test this end it appears to be dependant upon the size of the table whether or not you get that. In the test below / rows is the cut off point between plans (this was also the cut off point between the index fitting all on one page and it becoming 2 leaf pages and a root page). 
+
+In your case resolves to and so returns a result of datatype with value When passed to the operator this result is implicitly cast to string and the result output to the client. 
+
+As you are on Enterprise Edition and version >= 2012 then the information in Online non-NULL with values column add in SQL Server 2012 should apply. 
+
+It is probably reasonable to expect the accuracy of costing models to improve over time but point 2 looks trickier to solve and point 3 is inherently insoluble. Nevertheless probably the vast majority of installs are not in this idealised situation with skilled staff who continuously monitor, diagnose, and anticipate (or at least react to) changes in workloads. The AutoAdmin project at Microsoft Research has been running since 1996 
+
+I have an SSDT project containing tSQLt unit tests. I always find when working at home that publishing this and running all tests (from a post deploy script) is problematic (against both localdb and SQL Server developer edition). The publish hangs indefinitely and I eventually have to kill visual studio. The wait type is and an example of a statement hung waiting for this (from ) is 
+
+According to this article referencing Paul Randal the reason for taking this shared HOBT lock is to prevent reading of unformatted pages. 
+
+That would imply that the simpler WHERE clause is evaluated in its entirety and only if that fails is the second one evaluated. For 
+
+I presume that on the source machine these were on the drive and you just copied them over lock stock and barrel to the drive on the destination? One other option now you are in this situation is add startup parameter to tell SQL Server not to start any database except . You can then use to fix up the paths for and to the new location. 
+
+This uses a common table expression (CTE) because it is not permitted to reference ranking functions such as directly in the clause. It is allowed to update data via common table expressions in the same circumstances as for updatable views (basically the data being updated must be able to be mapped back straight forwardly to specific items in a single base table). If you are not yet familiar with ranking functions you may well find -ing from the CTE first to be beneficial. 
+
+In general it is not possible to use an index seek on a condition and . With an index on the best you can do is convert it into two range seeks ( and ) with a residual predicate on (and this wouldn't be able to use additional index key columns to avoid a sort) For a column as it can only have three values. , , logically is equivalent to but seems SQL Server doesn't take advantage of that here and convert the to conditions for you. Adding a couple of check constraints does the job though even though these are apparently redundant in that they don't actually restrict the allowable values for the datatype in any way (for if a check constraint evaluates to it counts as passing) 
+
+A composite index with any order of would work here. The query you have shown in the question would be able to perform three seeks into it for the three or-ed predicates. To determine the best order out of the 6 possible permutations I would first look at other queries, or alternatively you could look at the missing index DMVs. Quite likely you will find that the choices you make optimising this one query can help optimise others too. If you have queries that perform equality seeks using just two of the columns then put them first so the same index supports those queries. And similarly if one of those columns is often used on its own in an equality or range predicate then make that the leading one. Though if any of the columns is not particularly selective you would need to verify that the index is actually used for the query identified by the process above and consider whether it is worth adding included columns to make it covering if not (or considering a different index order that would benefit a different query). 
+
+Behind the scenes this gets saved as an extended property with as the property name. It would be extremely pushing it to claim that this is "standard" or common practice though. 
+
+The single quote character has no special significance to You need to double them up to escape them inside any string literal. So the two consecutive single quotes in the string you are trying not to match become four as below. 
+
+The clustered index is partitioned on so it couldn't use the PK as you describe. It would need to find the for each partition and then find the max of those. It is possible to rewrite the query to get such a plan however. Using an example based on the article here a possible rewrite might be 
+
+This means you may get the results in key order but equally may not. Specifically see When can allocation order scans be used? 
+
+I've not used policy based management myself so am not entirely clear what this means. Through the UI I couldn't see any way of denoting a policy condition as having any particular severity. I've made this answer community wiki in case someone more familiar with the subject area wants to expand upon it. 
+
+Nothing so easy. You would need to use and look at the histogram, taking into account that the statistics might be filtered or multi column. Probably easier to just let SQL Server do it and generate an estimated execution plan for the statement SQL Server will then use appropriate statistics if they exist or create them if they don't (assuming that the auto create statistics option is enabled). You can then look at the estimated number of rows going into the iterator (This shows up as in the XML for purposes of parsing programatically) Example code 
+
+Three rows were processed before one was found matching and there were two ensuing scans on Rewriting as follows... 
+
+You will see that in the screenshot below SSMS manages to display all errors fine. Are you missing some context in your question? 
+
+The best way would probably be to create a CLR function and use .NET framework libraries. A TSQL attempt is below. 
+
+The advantage of this is that it will deal correctly with the case that is itself and not incorrectly treat it as a total row. 
+
+You could create a stored procedure that invokes another stored procedure asynchronously either by spawning a SQL Server Agent Job or using Service Broker. It would still be possible for someone with sufficient permissions to stop the procedure from executing though (but not via the "Cancel Executing Query" button as your first procedure would return immediately with execution of the main procedure being carried out on a different spid). 
+
+You can use row_number and the modulo operator Tables don't have any inherent order. You need to define an ordering expression (e.g column names) to define what "first" and "next" mean. 
+
+You can't. You just need to disable it again. There is no syntax that prevents this. The disable trigger topic explicitly calls out that 
+
+It isn't absolutely guaranteed to be more efficient however. There are occasionally edge cases where adding a causes a worse overall plan than that for the query which simply brings back the whole result set. 
+
+These system table rows only end up getting deleted when the table is dropped in the next statement. A full break down of the logging carried out by vs is below. I've also added in for comparison purposes. 
+
+You need not join. The definition of table expressions involved in joins must be stable. I.e. They can't be correlated such that the table expression means something different dependant on the value of a row in another table. 
+
+contains 1,000 rows. The , , and are identical in all of them. The only value that differs is with values between and 
+
+SQL Fiddle Following discussion in the comments about how this could be extended to get the per partition. This would be possible 
+
+The execution plan for this has one scan of . The plan is in fact the same as for the 2005 compatible rewrite that uses 
+
+The first query has reads and the second so it is reading an entire additional day then discarding it against a residual predicate. The plan shows the seek predicate is 
+
+When I run your script to create a statistics only database and the query in the question I get the following plan. 
+
+The query you posted contains variables. SQL Server doesn't do variable sniffing so without it will compile a general plan as it would for . I don't really follow your question though. At one point you seem to be saying that the version without the hint is "much much faster" and then later you say the version with the hint is "much better". So which one is it? Both are explicable however. If you find the version with the hint is better than this is because SQL Server can use statistics to estimate the number of rows that will be matched by the date predicate and choose an appropriate plan for that case. If the version without the hint is better the statistics themselves may need updating. Perhaps when they were last updated there were few or no rows meeting that predicate and so SQL Server massively underestimates the number of rows that will be returned. See Statistics, row estimations and the ascending date column for more about this potential issue.

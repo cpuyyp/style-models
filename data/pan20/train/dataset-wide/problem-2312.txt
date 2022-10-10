@@ -1,0 +1,53 @@
+This also explains why locking the table outside the function in a wrapping plpgsql block (as suggested by @ypercube) prevents the deadlocks. 
+
+Maybe, maybe not — this question is based on a faulty premise, which is that a set is ordered without an explicit clause. Even if you could show that always returns the array elements in array order in every possible edge case with the version of Postgres you are using, there would be no guarantee that a future version would not change the behaviour. In other words, even though in JSON an array is an ordered sequence of zero or more values, the output of is by definition unordered, no matter what you see in practice, without an explicit . Of course, you may consider the risk worth taking. One (very inefficient) way of guaranteeing the order would be to use a recursive query: 
+
+Note the estimated and actual cardinalities in the above plan. In some cases 100 seems to be used as an estimate, I'm not sure the exact logic behind the guesses. In my real world problem, the poor cardinality estimate is preventing a fast 'nested loops' plan from being chosen. How can I 'hint' the optimizer cardinality for a recursive CTE to work around this? 
+
+This only means something if you have in mind a certain order that the rows in will be processed (otherwise what is "the most recently generated value but not a new one"?). I've assumed they will be processed in descending order so that we hit an even number first (otherwise is undefined). If you are prepared to use PL/SQL this can be done simply: testbed: 
+
+but there will only ever be one due to the nature of hierarchies. If you really want to get all immediate children nodes of a given node: 
+
+The only way to guarantee a gapless series (assuming no deletes) is to serialize - almost always a bad idea With a sequence or identity you cannot assume your series will be gapless as @a_horse mentions - but it looks like you are assuming that even with gaps, there is some relationship between sequence order and insertion order - this is not true either! A higher sequence number could be inserted before a lower. Therefore trying to join "consecutive" rows is a meaningless concept example: 
+
+Here is an excellent essay on the subject from a postgres perspective. Briefly summed up by saying nulls are treated differently depending on the context and don't make the mistake of making any assumptions about them. 
+
+No locks are held while the transaction is rolling back It is handled by a low priority background process 
+
+The SAMPLE BLOCK is operating on the index — which has far fewer blocks and is distorting the sample: 
+
+In any recent (ie 8.x+) version of Oracle they do the same thing. In other words the only difference is semantic: 
+
+MySQL lacks common table expressions but you can achieve the same goal here with the multiple-table syntax: 
+
+Deadlocks are a fact of life on all databases, and Oracle is no exception. There is no magic that can be done in this situation - it is a fundamental consequence of concurrency (letting multiple users access the data at the same time without harming integrity): 
+
+I'm not clear is this is a question about modelling or the hierarchical query itself - but assuming the latter. 
+
+The other side of the warning refers to 'set' operations not 'SET' operations - that looks like a message bug to me - for example it is also produced with windowing functions: 
+
+However I tried and failed to get the RTM Linux version of 2017 installed on Debian Stretch, ultimately using Ubuntu. 
+
+I am fairly confident the same would be true for DDL changes but did you mean DML? The long and short is that Oracle is not going to allow an inconsistent result. 
+
+Ignore all the comments shouting about normalization - what you are asking for could be sensible database design (in an ideal world) and perfectly well normalized, it is just very unusual, and as pointed out elsewhere RDBMSs are usually simply not designed for this many columns. Although you are not hitting the MySQL hard limit, one of the other factors mentioned in the link is probably preventing you from going higher As others suggest, you could work around this limitation by having a child table with , or more simply, you could create a second table to contain just the columns that will not fit in the first (and use the same PK) 
+
+After quiescing a replication master group, RESUME_MASTER_ACTIVITY resumes normal replication activity. 
+
+or wrapping the XID around would cause things to break. To prevent that, postgres will start to emit warnings, and eventually shut down and refuse to start new transactons if necessary: 
+
+Regarding faster IO, you need to look at hardware or configuration changes. Parallel query was mentioned in the comments, but this could be faster or slower and isn't a magic bullet for IO. Regarding reducing IO, note that your query does not necessarily need to look at the table at all — it could use an appropriate covering index instead: 
+
+If is leaving an entry in , then you are hitting a bug - perhaps the one described here As you do not have a support contract, you can't raise a TAR. However the first question Oracle Support would ask you is whether you are running the latest patchset, 11.2.0.3 - I suggest you consider this option first as the root problem is an Oracle bug. Note that "it is a full installation" If that doesn't solve the problem, you'll need to try and work around it because as far as I know there is no alternative to for . The linked article suggested dropping indexes before dropping the MV which would perhaps be a good place to start. 
+
+It looks to me like you are trying to 'pivot' the data, which can be done with multiple case statements: test data: 
+
+You already know what order you want your data in and how to do it - in particular, your ordering does not allow ties You have 1 bit field in each row You want to concatenate the bit fields in each 'set' of 3 'adjacent' rows Your version of SQL Server supports windowing functions 
+
+The Instant Client is easier to install and more lightweight. It doesn't even need to be installed, you can just unzip it and use it. You don't need an Oracle Home either. On the other hand, it does not support deprecated features like Oracle Names. If you don't need any feature the instant client omits, I suggest you use it. It looks like you are covered by the list of what is supported: 
+
+That's really all you need to know about getting the absolute time from anything of type , including . Things only get complicated when you have a field. When you put data like into that field, it will first be converted to a particular timezone (either explicitly with or by converting to the session timezone) and the timezone information is discarded. It no longer refers to an absolute time. This is why you don't usually want to store timestamps as and would normally use — maybe a film gets released at 6pm on a particular date in every timezone, that's the kind of use case. If you only ever work in a single time zone you might get away with (mis)using . Conversion back to is clever enough to cope with DST, and the timestamps are assumed, for conversion purposes, to be in the current time zone. Here's an example for GMT/BST: 
+
+Is there anything there that gives a clue as to why the procedure failed when it got to table 12? Or is there a limit to how long a procedure can run, or a query can run against a linked server? All tables except 12 and 13 have <2,000,000 rows, and 12 and 13 have about 70,000,000 each. Here is the stored procedure: 
+
+This is just intended to demonstrate redo usage of various operations rather than answer the whole question. Results on my 10g instance are not 100% deterministic, but the broad picture remained the same each time I ran through. For the heap tables, I do not know why the generated more redo. testbed:

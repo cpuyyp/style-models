@@ -1,0 +1,67 @@
+The first two lines together create a 0/1 vector corresponding to whether the value in was (1) or (0) (and uses the fact that it must be one or the other of those values). This can be done as one statement, using the fact that and become and when converted to numbers. 
+
+Your approach seems reasonable, but there are some simplifications you can make. First, your construction of is needlessly complex. This works just as well: 
+
+Here is another way to structure the inner loop. It builds off of @djhurio's solution but is slower. However, I think it is conceptually clearer. Also, global assignment is removed to instead return a vector of results. 
+
+Second, you can call on each element of at the outset which eliminates the need to specify an value to (and thus reducing all the calculations by one call to ). It also shortens the arguments to since duplicates have already been eliminated. 
+
+Results Using the above short helper methods, you can rewrite your method to be much shorter and more readable. 
+
+Generating Permutations In the Haskell snippet you referenced, is generating the a list of all the possible permutations of the numbers 1 through 9. I'm not aware of any nice way of doing this in C# other than hand rolling it. You can write a pretty short generic recursive function to do this. 
+
+The equivalent C# then becomes . Equation Depending on what you are doing, you might want to consider creating an class with a method and override . Failing that, you can at least pull the equation logic out into separate methods. 
+
+Note that I have assumed you are wrapping inside a here, however you could choose to make behave similarly to your and return an if that is what your application needs. 
+
+This change alone would probably speed up your code a lot. You could aslo pull the computation of outside the loop, but that will be a much smaller improvement. The sample of data you gave is too small to do any reasonable benchmarking on. 
+
+This last is important; if you don't know where the code is slow, you don't know where to apply effort to speed it up. My comments are that, if you have a function that is doing some work, all the information that it needs should generally be passed in as arguments. It took me a bit to figure out what and (after I overcame the cognitive dissonance of thinking was itself an error). 
+
+Your interpretation of the code is correct, but I think that it could be written more idiomatically. But before getting into that, the textual description of the output and the example output don't agree 
+
+Cool question! In addition to t3chb0t's great comments, I would suggest using a instead of a . It has additional support for blocking and bounding so you don't need to poll the queue manually, and you can limit the number of "in-flight" files. This could be used to make sure you don't read too many files into memory at once. 
+
+Streams implement IDisposable, and should always be disposed of when used. Typically this is done with block. 
+
+There is a lot of room for improvement here, both in terms of performance and readability. You should start to worry when you see code forming an arrow shape - there is almost always a nicer way. The solution below is one way of tackling this, and also offers a large performance improvement (around 19.4s to 3.2s on my machine). 
+
+You can avoid appending to vectors (which can cause re-allocation of space and can considerably slow things down in principle; though in your case of only a length 10 vector that shouldn't be noticeable) if you allocate them to the needed size initially and then assign within them. 
+
+As you did not provide example data, I was not able to benchmark these alternatives (nor, for that matter, even run them). 
+
+Second, you replace with , and then test against . That means you are replacing both 's and any 's in the data. If you only want to replace 's, just replace those without recoding them. 
+
+The last simplification uses the fact that a function returns the last evaluated expression by default. I don't necessarily recommend doing that because with compactness comes a loss in being able to see what the computations are/mean. (To understand it, you must essentially reverse the steps and break out each transformation separately to see what it does and to figure out why.) Looking at it again, the conversion to numeric is not a necessary step to determine ; you can operate from directly: 
+
+Once you have finished adding all the files to the collection, call , and from the other thread, your while loop becomes: 
+
+EDIT What I think Mat is getting at, is that this solution is localised to this usage, and may not be suitable in an application that frequently needs to generate parallel lines. If this is the only place in your app that you create parallel lines, then keep using it (YAGNI). If however you need to create parallel lines a lot, you could make your implementation a little more general. One way of achieving this could be through extension methods. Consider the following 
+
+Assuming that you do indeed want a mutable triangle class, then you could extract validation into a method and re-use it from your constructor and property setters like so. 
+
+If a streak must have at least one , how can you have a streak of 0? The example here (and the following example) are consistent with a definiton of streak of "the number of consecutive 's preceding each ." I'll continue with this interpretation so that it matches the existing code. Now to improvements to the code. The initialization of can be simplified because is the default numeric value, so the first line can be re-written as 
+
+That is, generate all the answers and guesses, check for each one (vectorized) which (staying or switching) would be a win, and then accumulate those results. The rest is just to put the data in the same format that your function already had. 
+
+Finally you can eliminate some single use intermediate variables. This may not appreciably speed up the function, but it does make for cleaner code. 
+
+You have implemented dependency injection correctly. is injected into . In terms of the correctness of your example however, pretty much everything else is completely wrong! Don't worry though, we all have to start somewhere, so I will offer some tips. These tips might help you with this example, but if you want to improve, you should probably do some personal training/studying. Pluralsight is a really nice place to start. They have some beginner C# courses that you can do with a free trial. Anyway, on with the code review! 
+
+There is an abstraction that will automatically have any config updates when injected, so you don't need . I believe it is scoped per request, so changes to the config will not affect in-flight requests (you may want to double check this). To deal with updating the , you can write a small, thread safe that will always return the same client for a particular base URL. This would be registered as a singleton, and could be reused for all the clients in your app. 
+
+The vector has a added to the beginning and the end which is equivalent to adding a to the beginning and end of the baskets. This makes the first streak start at the beginning and the last streak stop at the end. is a vector of indexes of where the misses ("M" in , 0 in ) occur. The lengths of the streaks preceding them, then, is just the difference in successive indexes (minus 1, since you want to count the number of spaces between, which is one less than the difference of the positions). Now, since the intermediate results are just used once on the next statement, they can be rolled up. Here are successive versions of doing that: 
+
+I make a vector of all the indexes higher than , and use that most functions are vectorized. For example, with equal to 1, (and picking equal to 2) working the statements from inside out: 
+
+Another thing is that you are performing blocking IO when you call , and you may want to consider using an equivalent instead, freeing up more threads as you are reading. Also can be used instead of creating a . The TPL Dataflow library could be used to achieve something similar, or for a simpler approach that kicks off parallel tasks for each file, you could use something like this: 
+
+should almost always be avoided. Try to return from async methods so they can be awaited by the caller. A should be returned from and have it's method called. 
+
+The point of an interface is to abstract away the implementation details from the client. has the method which publicises exactly what the implementation is. This is called a leaky abstraction. When writing an interface, think about what other implementations might look like. One thing that you do know about all implementations is that they are going to need a file path. An alternative interface might then look something like this 
+
+Then determine what the algorithm is that you are trying to do: Looping over each element of the first column of z, skipping any missing values, compare that value to every other value to the end of column. If the current value and some subsequent value differ by more than some threshold (in absolute difference), set that subsequent value to NA. R is a vectorized language, so explicit loops are often not the most efficient way to perform an operation. Let's vectorize that inner while loop. 
+
+The comments are good; I copy them here so this question has a "proper" answer, and add some my own: 
+
+The key difference is the computation of the vector inside the function. First, is restructured from a (n*rep)x2 matrix into an n x 2 x rep array (3 dimensional array). This gives the benefit of generating all the data at once, but also gives a data structure which more easily operates on each piece/repetition. The function from is then used to iterate over the 3rd dimension and operates on each n x 2 matrix separately. Advantages of using is the availability of progress bars simply as well as being able to split the processing into parallel processing with not much additional effort. Since the values for are returned rather than assigned, the calling semantics are slightly different:

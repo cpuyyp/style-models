@@ -1,0 +1,83 @@
+Don't like it. But it may work. The principle of "Separation of Concerns" your class should either "business logic (card stuff)" or "Resource Management (card container)" The question you need to decide is if is doing business logic or resource management. 
+
+If you are copying something and not going to use the original again. Then try and move the object to the destination rather than copying it. 
+
+As you can see your mechanism does not stop all three threads from doing something. The only real use for the counter is to print the count (and even that may not be accurate but at least it wont break anything). 
+
+If the function you are calling supports move (and push_back() supports move) then it will use a move operation. If it does not support move it will perform a copy. Why clear. 
+
+Macros don't obey scope rules and have no type information (they are simple text substitutions). Prefer to use const variables (or constexpr in C++11); 
+
+Its an implementation file. Stick to the header files defined by the standard (they don't have on the end). You covered this yourself: 
+
+Now that we have re-arranged it. It becomes more obvious that you are leaking . You create in the first half but don't use it till the second half (and there is an early return in there). 
+
+OK some fixes to stop you getting trapped: You were getting stuck because you could and wake the threads in the condition variable. Then after the notification another thread can set to false thus trapping the threads in the condition variable. Example 
+
+Only do one print: Then use the expression to decide what to print: The expression is overkill if is zero then it is already false. 
+
+Here if realloc fails you have just leaked memory (as is still valid). The standard usage pattern for realloc is: 
+
+Overview The first point I would make is that all the containers can be customized to use alternative allocators (like Pool allocators). So rather than write something exceedingly custom I would try and write a standard allocator that uses a pool. The second point. C++ is highly optimized for small object creation and destruction. Unless your class is very special the standard allocators will pretty darn fast and beating them will be hard. Design Review: Your allocator does a linear search across the whole pool in both allocation and deallocation. To be blunt that's pretty bad and your allocation time is just going to get worse as your pool gets larger. Also you return already constructed objects. When the objects are released they are not destroyed (so the state you get an object can be indeterminate). Most allocator systems I have seen give you some correctly aligned raw bytes and expect you to return raw bytes (ie the destructor has been called). You can't call the destructor before you return the object as the get returns an already constructed object. Code Review Don't write comments like this 
+
+There is no requirement for bidirectional iterators to have a less than comparison. Unless you really want to store iterators in a sorted container I would leave this out. Note: A random access iterator does have a requirement for a less than operator. But it has a precondition that it can only compare iterators that are reachable from each other. see: $URL$ 
+
+Sentinels You create your list with an initial 'Sentinel' value. This is a common technique to remove the need to check for NULL pointers in your code and can make the other functions easier to write (as you don't need to check for NULL). BUT to use it usefully the list needs to be circular (last element points at first) and you must always have this unused 'Sentinael' node. When you use this technique you should never use the sentinel as a value holding node. You should always skip over it. Your loop then is always from (as the first node) until begin (when you reach begin again you have gone one past the last node (hence the need for a circle). Unfortunately your code is a mix of using sentinel and using NULL terminated list. You need to pick one and stick with it. Using a sentinel makes the code much easier to write (as you don't need to check for NULL and special case the empty list). Need a tail pointer You currently only have a head pointer. This means when you insert into the list you always chain all the way to the end before inserting. This makes an operation that could be O(1) be O(n). Most list implementations use head/tail pointer or use a doubly linked list (one chain for each direction). This makes finding the tail trivial and maintaining the extra pointer has practically no cost. Other comments: The rest of the code assumes you were trying to use a sentential value to make the use of the list more efficient. If you want to use NULL to indicate the end of a list rather than a sentinel the comments will change slightly (but using sentinels is the better solution so I will move ahead from there). Not all types have a default value (or are default constructable). So you need two versions of your node class. One to use as the sentinel and one to use that holds the data payload. Let us assume that Node is the version that holds the payload and inherits from the base class that just contains pointer information: When construing Nodes: 
+
+Standard conventions indicate that the input and output files come last. Flags are modifiers that appear first. Both input and output should be optional and if not supplied be replaced with standard in/out. Note the by itself instead of a flag should indicate standard input/output depending on its position. Thus I would write it like this: 
+
+Single letter variables names is again slopy. Your variable names should be descriptive. So readers can see your intention. As a side affect it makes looking for the variable easy. Especially if you use an editor that is scriptable and want to automate some task on the variable. 
+
+You can use this to cache results and re-use them in later calculations. Pre compute the following array and compile it into your application. 
+
+But there is no indication you are passing ownership. The person reading the code has to know how the internals of how your class works. Otherwise they do not know if the pointer passed should be dynamically allocated or not. You need to make this knowledge explicit in the interface. Here I would pass a unique_ptr to indicate that you are passing ownership of the pointer into the node. OK. Parent is allowed to be a pointer. 
+
+Here you assume that last node is NULL terminate. But in the copy constructor you assume that the list is circular. 
+
+You bet yea :-) Having a quick look at the code. The size worries me. A BST is a simple structure and should not take this much effort. NULL is not a magic value This is showing a lack of understanding of the type system (are you coming from a Java background?). 
+
+Then why not provide ? Not sure it is a good idea. but it is a question you should ask and answer for yourself. Style Check your local style guide. I personally don't like this as I think it makes the harder to read. But your guide may allow it. 
+
+Do you have a timing bug in your code or is there a specific requirement that you are implementing here. If there is some limitation you should document it with a comment. If it is a BUG (timing or otherwise) that you are compensating for then you also need to document that. 
+
+I have been bitten a couple of times were macros expand to more than a single statement. Which renders the block incorrect. As a result I always use '{}' for sub blocks. I recommend it for everything it will prevent those impossible to find errors. Since we now live in 2014 (nearly 2015). You should be using the modern version of the compiler. So add override to functions that override virtual functions. 
+
+Also if you are doing anything complex it is TYPE SAFE. *Unlike C code using . This is one major area that C falls down in and is the cause of some of the major bugs in C code. You check for an invalid number. But you are not checking for completely invalid input. What happens if somebody typed "Fred" 
+
+Of course this has the same problem as the first version of the algorithm above. So if we take that into account you can re-write like this: 
+
+Use they have everything you need built in. Here you forgot that can fail. In which case you will end up leaking a lot of memory (if it is not the first new that fails). ###Is this test not redundant. while (!q.empty()) { if (visited.find(q.front()) != visited.end()) { q.pop(); continue; } If you have entered the loop. Then is not empty. If is not empty then will not be . 
+
+Creating two objects and checking for equivalence seems to be overkill. There seems like there could be a much simpler test for empty. 
+
+The whole point of the constructor is to put the object into a valid state so it can immediately be used. And here is the bug caused by that misuse. 
+
+If the size of the dictionary is not huge (couple of Meg). I personally would just load it into memory and let the standard data structures handle it. Alternatively You could map the file to memory and do a more standard search. 
+
+You are explaining the language to me now. I am pretty certain I can tell what that the next statement does. Heap Interface 
+
+Consistency Always use the same technique when doing the same thing. Do use multiple ways to do the same thing. You use in half your code and in the other half. Be consistent and move to the modern . Design Not sure I agree with creating a container by using a smart pointer. These are both types of memory management. Using one to implement the other seems a bit counterproductive. But others have done it so why not. Design Semantics Your design does not do what I would expect on a copy. 
+
+All these are guaranteed not to be NULL. So why have pointers. Reference are a much better metaphor for what you are trying to achieve and there is no need to validate they are NULL. Public Interface These are all part of the public interface? 
+
+Looks Good to Me. You missed the rule of three (this is a big deal). So you will need to fix that. Otherwise good code. If you want super extra credit (and you are allowed to alter TNode) then you could automate memory management by using 
+
+Explicit bool cast The current cast to bool is a bit dangerous as it the compiler will use it when trying to get types to match for some operations. Consider: 
+
+But here you may be forcing the vector to re-size (which will force a copy of all the data from the original buffer to the new buffer). Which the array version does not do. This is a potential for your speed problem (a hidden array copy). It looks like these two lines are causing your problems. But I think you may have a bug in your code. I see why you write your loop like this now. You have added an element onto the end of each range to make sure you always have an element to compare against. OK. So this is not a bug. But see below for a better way to write it. 
+
+Ignoring the memory problems with cache invalidation (which will slow the code down). Creating a thread is relatively expensive (as you have to allocate a stack and maintain it). So rather than creating and destroying threads it is better to maintain a thread pool and reuse the threads. The number of threads to put in the pool should be slightly larger than the total number of cores you have (as a rule of thumb * 1.x (where x is in the range 2=>5) is the number of threads you should put in the pool). 
+
+Well to be blunt as it stands it is totally unreadable and thus unmaintainable. You should break that up into multiple variables that are combined in a way that is readable. 
+
+No I don't think that is idiomatic python (though I am not the perfect person to answer the question). I think it is more idiomatic to split the string (into an array). Then use the parts of the array to build the result. There also seems to be a bug in your for short paths: 
+
+But honestly its like 6 of one half a dozen of the other so I would not bother changing your code it's absolutely fine. Iterator Comparison 
+
+You find the delimiter. You copy the token into another object. Which would clear it (so the above clear is usless). You manually allocate memory You manually clear all the memory. You do a second copy. Note this second copy is wrong (as you don't copy the terminating '\0' to make it a real C-String and thus you loose all information about its end. 
+
+You have just released the pointer so that other functions can use it (and potentially free it). But all other members in the ring still have it (the pointer). What you should do is set the pointer to NULL in all members in the ring. I just spent two minutes and found two bugs. Implementing Shared pointer is not as simple as you think. It took them a while to get the boost version working correctly in all situations. So though it is a nice project implementing it safely is not as simple as you think. SharedPtrBase base is used to implement the underlying ring. But users can now potentially use it as a base class pointer: 
+
+To be honest I am having a hard time following your code. So I can't comment on the efficiency. But as an engineer I will make comments on maintainability (which I think is much more important (because if you understand the code you can optimize the slow parts once you have measured it)) I am not sure I understand the difference between "vertex_type" and "edge_type"?. 
+
+Don't worry. With RVO/NRVO and move semantics. This will become just as efficient as the original. But now is much more readable. Which is nice as we can now spot mistakes easier. Seems like we are special casing in two sub expressions but not the third. Which is odd looking. Why not modify the meaning of p (it always point to the start of the next section (or end).

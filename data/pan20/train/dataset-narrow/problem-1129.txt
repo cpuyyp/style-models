@@ -1,0 +1,73 @@
+What's ? I'm guessing this was just a mistake, but don't leave variables lying around that aren't being used. It's worth noting that generally, you should give variables more descriptive names than this, but in purely mathematical contexts like this, sometimes and really are as descriptive as you can be about the role of a variable! 
+
+You require a in your constructor, but then let be set publicly. This doesn't really make much sense- somebody could just pass default(T) to the constructor, making the constructor meaningless. You're giving two different ways to set the value, for no particular reason. It's not a big deal, but is needlessly confusing. Consider whether you actually need to be able to change for an existing instance. If so, remove the constructor. If not (and this is probably better!), make the property . This makes the value immutable, which makes it much easier to reason about the class. For example, if I hold an instance, I know I can pass that instance to whoever I want without having to worry about them changing the value without me expecting it. 
+
+The first line matches when a factor is found, the second when no factor is found, and the third when the collection is empty. Note how matching on the collection makes it very easy to recursively loop through it by matching against . This helps avoid your issue of looping by index. Now that we know how to find the next prime factor, it's easy to find all of them: 
+
+I'd also suggest having a method to get the item at the next level, which would have this serve as a singly-linked list. Algorithmic I don't know whether you will ever be using this with a high enough volume of items, or with items where the potential upgrade paths are long/complex enough, for performance to matter. But iterating over every possible combination of crystal usage is needlessly inefficient, and also imposes unnecessary constraints on how you structure your main loops which might make the program harder to alter later. It's easy to calculate whether or not to use shiny crystals at an item level. The condition is: 
+
+Notice that by taking advantage of the call stack, isn't needed at all, we just remove the last character from the builder before exiting the method. This means that we can actually get rid of the class altogether and use directly instead! After applying that, the next thing that stands out is this line: 
+
+Gluing it together So that's a bunch of methods! But now putting it all together is very easy. Let's look at how they'd work in . First, I'm going to fix the thing. This is pretty confusing, as it's never used. Instead I'm going to have the time elements actually passed in and used. 
+
+This is a bad name. A class isn't the same thing as a method, and also this name has no useful information. 
+
+IEnumerable Okay, the above is a bit ugly- lots of fiddling with enumerators, and unhandled error cases (what happens if you reach the end of a finite collection of integers?). But this is because we're missing another trick: itself is a box you can pull s out of, so it should itself be an . The structure of just repeatedly asking for a "" value very closely matches how is laid out. So that aforementioned ugliness is a code smell specific to C# hinting at this to us. So, making that adjustment, we end up with: 
+
+Something as simple as for your method might be more appropriate. Going by LINQ conventions, is also a more idiomatic name than . 
+
+As always, before you ask "how do I do this?", you should ask "has anybody already done this for me?" 
+
+Now, as a bonus from our refactoring we get all the power and expressiveness of LINQ extensions for our color generator. If we want 10 colors, instead of: 
+
+I'd second TopinFrassi's answer, that this is a more or less sensible approach, and the implementation is excellent. However, there are some potential issues, which I'll expand from craftworkgames' comments and your response. Because I can't really find anything that needs criticism in how it's written, this will be entirely design focussed. There are two central issue in passing an interface that claims it can provide 
+
+Allowing you to completely remove your s (they're also used in , but I'll go into that later) Creating s There are a number of issues with how you create jobs: 
+
+I have a relatively simple problem: I have an , which takes considerable time to yield each term. This is then used by another piece of code, which takes considerable (but not identical) time to process each term. As I understand it, this is a classic producer-consumer scenario, so I'm choosing to use a so that I can produce and consume concurrently. To support this, I have a simple wrapper: 
+
+Due to your locking in the methods, this requirement won't be met, each execution will have to wait for the previous to complete to free up the resource. Depending on the situation, this could be a serious performance issue. Multiple circuit breakers may be required if the pattern is used in multiple places where the expected reasons for failure are unrelated. The simplest way to make this possible is to avoid static members on any of the relevant classes. I'm sure there's more to be said about concurrency and asynchronicity- in particular how to achieve effective locking- but I'll leave them up to another answerer. Misc 
+
+Repeat this for the rest of them and you'll probably find you'll have some repeated behaviour which you can pull out into one or more base classes. There's definitely additional rejigging that can be done after that. For example, consider should the fields you currently have on your class be on the same interface, or elsewhere? But this would be a very good start, which would allow you to massively cut down on the logic in that method. 
+
+(In both cases, would be a initialized outside the loop) Putting it together And just so you can see how nice it is with all those changes, here's roughly what it would look like: 
+
+In terms of areas for potential improvement, reviewing is made somewhat difficult because of the nature of the made-up requirements this code is fulfilling. To demonstrate why, here's my train of thought: It's not very realistic that you always want to get all this information together, so the first thing might be to think how to extract each piece of information individually. The first step in doing this would be to extract out the individual counts into their own methods, like: 
+
+And now we find the method is so simple that it probably doesn't need to be its own method at all. For example, if in the middle of some other method I wanted to count how many characters in a string were letters I could just do: 
+
+Both of these create common situations where you'll have collisions. Fortunately, though, you probably don't really have to worry about this problem, because .NET already gives you a way to create a hash code from multiple objects: 
+
+Only if this presents a noticeable performance issue should you worry about trying to implement your own- premature optimization is still premature optimization even inside a method! 
+
+Of these, the latter is far more situational, and in the example in your question, is likely not to be a concern. The former, though, is the key distinguishing feature between the first exception and your "why not also" example. The answer, then, to "where should we stop" is when you're no longer providing significant value through one or both of the above reasons. 
+
+Naming Some of your names don't mean much. What's "" or ""? These should be replaced with clear, descriptive names. Similarly, don't abbreviate names. There's no reason to write instead of . 
+
+This reduces the amount of code to write a bit more, and it helps remind people to use it by being on their intellisense. I'd say it's somewhat a matter of judgement whether this is more or less readable than the helper method version. It is also less flexible if, for example, you need multiple different explicitly resolved resources inside a single factory method. But, as far as I can think, this kind of approach is likely to be the only fruitful way to achieve what you want. UPDATE Another alternative using the decorator pattern, which allows you to deal with multiple explictly resolved services by decorating the kernel: 
+
+Or similar (apologies for any syntax errors with the above, Java isn't my main language) Expressive names The names are generally good, but there are places where they could be more expressive. In , and seem like they should be the other way around. Once those get passed to , they should definitely be interpreted as the more meaningful . Similarly, in doesn't tell us much. I'd suggest , but this would be a bit confusing between your 0-indexed array and the 1-indexed actual question numbers. So would probably be a good compromise. Magic numbers Another minor one for this particular project, but generally a good habit to get into. Instead of hard-coding magic numbers and into your methods, these should be put into constants with expressive names. In fact, the 8 could instead be taken from the length of , so that you're not expressing the same information in two different places. 
+
+Separating Responsibilities As I said before, you have two pieces of functionality. The first is given by these lines: 
+
+DRY Let's start with your methods , and so on. From the title of the question, I think you're already aware these are problematic. Remember that while at its core your program is going to be made up of branches and loops, high-level languages like Java allow us to write in a way that the source code captures the structure of the task it's achieving. It helps to say in plain English what you actually want to do here: 
+
+Plus the repeated individual checks in . So forget all that, we want a super-simple way to ask "do I need to round up my minutes?": 
+
+This makes a nice unit of functionality itself, with a single, simple purpose: Get a color from an integer index. So put the above in a method (say, , with as a parameter replacing ). The other ingredient is generating unique integers. This is what you really want to separate out into its own class, implementing an interface. That way, you can generate numbers however you want to get different patterns: increment by one, increment by an offset, use the numbers 1 to N shuffled randomly, whatever you can think of! By using polymorphism, instead of being limited to one way of generating numbers with some potential for parametrization (like ), you will be able to use whatever algorithms you want. Fortunately, an interface already exists for exactly what you want: . You can often think of an as a collection to iterate over, but in some situations I find it more conceptually useful to think of it as a box that I can just keep asking for a new (though it may eventually reach the end of its s). In this case, that's exactly what you want- a box you can just keep pulling integers out of. So let's pull this together: 
+
+That's a start, but a good general idea with programming is to say what you're doing, not how you're doing it. So the above might become: 
+
+How much money, and what the new index changes to, depends on the make-up of the queue (which is constant), and the previous index. This, I think, is the basis of your updated solution in your answer, but I think it can be done a lot more cleanly. From the description above, you can see that what you have is a mapping , so the data structure we're going to want is something like Based on that, we need two things: to populate the dictionary, and to iterate over it accumulating money. The second one is easy: 
+
+This isn't bad, but seems perhaps a bit redundant, since exceptions already have messages. A more idiomatic option might be to wrap the exception in another, with the custom message you want. However, if a "contextual message" conceptually serves a different purpose than the message on an exception, what you have may be fine. 
+
+These are judgement calls you need to make, but in this particular case, I'd suggest that the first point is persuasive and the second two are probably not. An example of state you might want to preserve is if you take a dynamic programming approach to Fibonacci, where you cache the results of previous calculations. This probably could be done with statics, but when dealing with static vs. instance, generally the best guideline is err on the side of instance. It costs very little and it's the safer option. Unneeded A small style point, but one that can be important. If you exit a method- either by returning or throwing an exception- inside an statement, there's no need to then have an . By the time you've hit the line, you already know the condition wasn't true, or you'd have exited out of the method by then. So you can cut out some unneeded lines and indentation, neatening up your method: 
+
+and are okay names, but not great. Both seem to put too much focus on the data-types involved. This method is simple enough that that's probably not a big problem, but in general your emphasis should be on what you're trying to do, not how you're trying to do it. I can't think of better names than and from Heslacher's answer. 
+
+As a more general design note, it might be preferable to do this validation at a different point in your process. For example, s can be set to require a particular , and can also be told whether or not to accept null values using the property, meaning the table will largely do this validation for you. 
+
+All of this makes reading the code just that bit harder than it should be. On to the main point: To me, this looks like it's screaming out for the behaviour to be moved out of the current method to the filter class. Classes, after all, exist as containers of related data and functionality, and what's more appropriate functionality for a filter than to do the actual filtering? So I would suggest that you create an interface like: 
+
+And there you have it! Of course you wouldn't really include those comments, those are just for in-line illustrations of how directly each line- in code- corresponds to what you're actually trying to do- in English. The fact that each line so clearly describes what it's doing without comments is a sign that you're on the right track.

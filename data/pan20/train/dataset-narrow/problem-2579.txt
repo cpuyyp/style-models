@@ -1,0 +1,47 @@
+You can either work with pointers, but make sure that they were correctly allocated/destroyed. This way your Get and Remove method will be simpler. You can just return nullptr/NULL/0 instead of constructing and returning dummy object. If you do not want to use pointers than you can have dummy static object inside your scene class and return it. But you still need to make sure that your ordinary objects are not going out of scope. As an example, Get/Remove could look like this: 
+
+For this you need to identity what mesh is currently being processed. If you need to draw many same meshes (say a lot of stones, or grass) you should look into Instancing (e.g.Efficiently Drawing Multiple Instances of Geometry) there you basically have one stream which has mesh data similar to all objects(vertices, tex coords etc.) and another which has per instance data (like object positions in the world). Both OpenGL and DX have support for instancing. OpenGL (since 4.3) also has very cool function glMultiDrawIndirect (or chapter 1.3 here) which allows to do what, I think, you want - draw several different objects using only one draw call. This is "more advanced" instancing, you pass array of structures describing how many instances to draw and where to get data for them in your buffers. See the description it is quite clear. However, you need to use same shader for all of the objects because you cannot pass "shaderid" in your per instance buffer. But you may write a generic shader and based on gl_DrawID (passed to your shader by OpenGL, has unique value for each instance) do stuff that you want. E.g., you may construct uniform array and index it based on gl_DrawID. You can do the same if you need different textures per instance. In this case you can create texture array and index it (note that in this case all textures have to have same size and format). You also may try to use bindless textures (OpenGL 4.4 :P). 
+
+Make sure the ground layer is set to ground on the cubes layer. Drag the groundCheck object to the new slot on the platform controller script that is visible when selecting the hero object. Also make sure the hero has his rigidbody2d not set to kinematic. And that the ground cube does not have a normal collider and is replaced with a 2d collider edit - or fix a typo from to 
+
+It seems to keep looping thru because it is heading back to Look then it finds you again and then goes right into the first attack over and over. so in the chase state at the top of private void Look() add something like 
+
+to answer your comment. you would drag the game object that has the script with the method to fire to the button click slot and as long as it is a public method you can scroll in and find the method to fire on click it will execute the code in that method. It looks like your button is set up properly was it not firing? if it does not fire right click and create a UI EventSystem to solve. 
+
+If you are running the x64 bit version of unity on a PC you will need to run the x86 version for your webcam to work correctly in the editor. You may also have to set some of the plugin files to run x86 also for your project to run correctly. 
+
+Basically, what Xnafan told is one of the possible ways to do it right. What (I assume) he wanted to say is: 
+
+If you create it once and will not move a lot of stuff around each frame, there is nothing bad in it. It all depends on you usage. 
+
+If you use same semantic for SemanticName, then you need to increase number for SemanticIndex. I also see that you are increasing InputSlot. This may be correct or not depending on how your data is layed out. If you really have 4 vertex streams (vertex buffers) then it's fine, but I assume that your instance transform is stored in one vertex buffer. Then you need to set same stream number to InputSlot in every instance binding. assume that: 
+
+Using only stencil will not help you if you want smooth fading of your clouds. Stencil (as the name suggests) is used to reject pixels which are masked out by it. When you draw your b/w alpha tile you probably setup stencil test so that if alpha!=0 then stencil passes, otherwise - fails. So you get what you asked for. When you later draw your clouds they will be hard-cutted according to the stencil mask. I do not know all details of your code, but it could be easier to just draw alpha-transparent clouds only over unexplored tiles, but also multiply them by your b/w color tile. This way your unexplored tiles will have fading borders. Drawback is that there will be fading borders also between any 2 consequent unexplored tiles. To avoid this you can have several types of b/w textures (depending on type of neighbour tiles), but then you'll have to issue separate draw call for each tile (or unique configuration, if you sort them by b/w texture). I am not familiar with Unity, so unfortunately cannot say how to exactly do it there. But if you got the idea, then it should be easy. More proper solution would be to generate distance field texture. 
+
+make a private bool isGrounded variable and in FixedUpdate() you can have it detecting the ground. Physics2D.OverlapCircle() can also be useful for detecting many layers such as ceilings, ropes, ice, ladders ect. 
+
+If I was using this as a background image for instance. I would use a larger resolution so it would scale down on devices with lower res rather than up and pixelate. 
+
+You can achieve this without any code using the UI Add a additional slot to your button click event and drag the Image to the slot. Make sure editor and runtime is set. Then simply scroll to GameObject.SetActive Checking the box will enable it when you click. and no check in the box will disable it when clicked 
+
+There is several different ways to accomplish this task, I found the best way for me was to use a bool and if statement like if(!PauseManager.paused) You could do something like if(!LoginPanelActive) or something then if it is paused or active the buttons just won't trigger and will not until you want them to again. This will also block drags across mobile amongst other bugs you may encounter going a different route. 
+
+you can also use the same method to detect other things like your barrels or ladders, ect.. or in your case you could just set any object that will end the game to a killLayer or something. then when the player touches within range of the checkRadius it will execute GameOver(); 
+
+Not sure if composition will solve all the problems. Maybe can partially help. But if what you want is to decouple classes I would look into more events driven logic. This way e.g. you'll have OnLoot function which needs to have player position and info about loots available to find the closest. Then function sends event to the looted item. Looted item in its event process cycle handles this event so item only needs to know how to update itself. OnLoot function can also update player inventory or item itself may send updateInventory/*OnLootSucess* event and player/inventory will handle it in its own process events cycle. Pros: you've decoupled some of your classes Cons: added events classes, maybe unneeded code overhead. Here is one of the possible ways of how it may look: 
+
+Quad tessellation is similar to trianlges. The difference is that instead of barycentric coordinates gl_TessCoord.xyz which define point on a triangle (tcPosition) you have 2-component coordinate gl_TessCoord.xy (they also span in [0-1] range). Hull shader (or Tessellation Control Shader in OpenGL terminology) looks pretty straightforward: 
+
+Looks like you have some problems with references. Strictly saying, you cannot return local object as a reference, nor you can bind non-const reference to a temp object like this: 
+
+Orientation of quad vertices is clockwise. Note that zero vertex (u=0, v=0) is located in left bottom corner, that is different from DirectX, just in case you are porting code). Basically, your UV space looks like this: 
+
+You can enable and disable the collider on the player to get the desired effect. For example my player is climbing a ladder and I would like him to move through the grounds box collider while he is on the ladder so I create a bool isClimbing and when he connects to the ladder and is climbing is true I would 
+
+You can Create a Animation folder and put them in it for Organization purposes. The animations you create will be associated with the animated controller you use while creating them. After you point it to the Animation Folder the next time you go to create one the directory should be showing the same as in the tutorial. When dragging multiple sprites at once it will automatically create the controller and name it the first sprite of the bunch then will prompt you to name the animation. 
+
+If you have trouble getting a good blend in between your animation states you could break it up using Invoke() within your OnTriggerEnter(). I don't normally like to do this but it will most likely solve your state issue and give it time enough to show the idle before your jump. 
+
+if you are not fond of a slerp then you could also do a Rotate pretty easily like so. you could add a check if you need to make sure it is exactly 180 each completion. 
+
+you may also have to put that in the attack state also or setup the state update checks differently so you don't have to clog up the rest of the state scripts.

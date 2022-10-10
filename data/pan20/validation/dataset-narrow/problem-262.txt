@@ -1,0 +1,45 @@
+The key here is to allocate range sizes large enough to accommodate for the amount of inserts that may occur between syncs. You can specify the range sizes in article properties when adding articles to the publication. 
+
+OS error 5 means Access is denied. Instead of using SQL Server Agent service account — use pass-through authentication. Create a local Windows account on both Publisher and Subscriber that has the same username and password. Add the Windows account to SQL Server logins on both Publisher and Subscriber. Use this account for the Distribution Agent process account. Ensure the account is a member of the db_owner fixed database role in the subscription database, a member of the PAL at the Publisher, is a login associated with a user in the publication and distribution databases, and has read permissions on the snapshot share. Replication Agent Security Model 
+
+Somehow you are ending up with orphaned replication metadata after deleting the subscriptions and/or the publication. This can happen when using the GUI to drop subscriptions and publication. Instead, try using T-SQL replication stored procedures to delete the subscriptions and publication. How to: Delete a Push Subscription (Replication Transact-SQL Programming) How to: Delete a Pull Subscription (Replication Transact-SQL Programming) How to: Delete a Publication (Replication Transact-SQL Programming) After deleting the subscriptions and publication, verify the replication metadata was removed. If not, use sp_removedbreplication to remove all replication objects from the databases. 
+
+At the moment, replication is not supported on Linux. However, according to the release notes, replication support will be added in a future release. Release notes for SQL Server 2017 on Linux 
+
+Republishing data Serve as alternate synchronization partners (This has been deprecated) Resolving conflicts according to a priority 
+
+No. With Merge, a Subscriber can be any version no later than the Publisher version. This is covered in Using Multiple Versions of SQL Server in a Replication Topology. 
+
+No you cannot change the default UI settings but you can create your publication and add articles via T-SQL script using sp_addarticle and set the appropriate @schema_option. 
+
+Merge Replication is bi-directional by default so if you delete a row at the Subscriber, that change will replicate and the same row will be deleted at the Publisher, and vice versa. 
+
+Yes - you can shrink the transaction log without it breaking replication. You can also move the publisher files to a different HDD by using ALTER DATABASE MODIFY FILE syntax, setting the publication database offline, copying the files to the new location, and bringing it back online. I would start with shrinking the transaction log and see if that helps. 
+
+The Snapshot Agent (snapshot.exe) runs on the Distributor. From Books Online: Replication Agents Overview 
+
+You will need to do something like utilize Change Data Capture but you will need to roll your own sql statements. I'm confused why Merge Replication won't work for you here. If you set the retention period high enough, it can go disconnected and pick up where it left off once connected again. 
+
+Yes - With Merge we can copy the snapshot files to the Subscriber and apply the snapshot locally using the Merge Agent -AltSnapshotFolder parameter. 
+
+Will transactions be safely cued on the Subscribers - I imagine this will potentially cause transaction log growth? Transactions will be safely cued on the subscribers and transaction log growth will be negligible. Merge Replication utilizes DML triggers along with change tracking tables in the publication and subscription databases that contains metadata to determine which changes need to be propagated. So you might see some growth in the Merge metadata tables while the publisher is offline. What is a reasonable time period for the Publisher to be offline - do I need to worry about expiry? Subscriptions will expire if the they do not synchronize with the publisher within the publication retention period. The default retention period is 14 days. You can check what your current publication retention period is by executing sp_helpmergepublication at the publisher on the publication database and inspecting retention and retention_period_unit in the result set. Another way to check your publication retention period is to right-click the publication in SSMS -> Properties. On the General page there is a section labelled Subscription expiration. If you restart the publisher and it comes back online within the publication retention period then Merge Replication will pick up where it left off. 
+
+From your description it seems as if you require bidirectional replication. You may want to consider using Merge Replication, Bidirectional Transactional Replication, or Peer-to-Peer Replication. I suggest reading through Selecting the Appropriate Type of Replication to see what type of replication best meets your application requirements. 
+
+According to Release notes for SQL Server vNext on Linux, under the section Unsupported features and services, Replication is not currently supported. 
+
+Jeff - Have a look at the parameters for sp_addarticle. Notice the parameters @ins_cmd, @upd_cmd, and @del_cmd can be configured to replicate inserts, updates, and deletes as either stored procedure calls or straight SQL. DBA number 1 likely setup the production publication to replicate inserts, updates, and deletes as SQL. DBA number 2 likely setup the development publication to replicate inserts, updates, and deletes through called stored procs. 
+
+If you are using Transactional Replication then yes, this configuration is supported. This is covered in Using Multiple Versions of SQL Server in a Replication Topology: 
+
+This is known as the republishing model. It is usually used for balancing distribution loads over slow or expensive links although I have seen it used in the scenario you described as well. The republishing topology you propose is supported which can be found near the bottom of the page Republish Data, Transactional publication -> Transactional subscription/transactional publication -> Transactional subscription. If I recall correctly, the challenge with this topology occurs if you ever have to reinitialize COPY_DB, you will also have to reinitialize NEW_DB. 
+
+If you attempt to bulk insert more rows then available identity values between syncs you will get an error: 
+
+You will need to manually merge the existing databases and initialize from that source. One challenge you might face in manually merging the databases is conflicting primary keys. If so, this is typically handled by adding a location-specific identifier column and extending the primary key to include this column. This is known as partitioning your data. 
+
+Go with Transactional Replication. As mentioned in Data Warehousing and Reporting, Transactional Replication is well suited for reporting scenarios by offering: 
+
+This is a permissions issue, the Distribution Agent process account does not have rights on the distributor. Verify the Distribution Agent process account is a member of the PAL, has read permissions on the snapshot share, and is a member of the db_owner fixed database role in the subscription database. 
+
+You need to inspect the Conflict Viewer and observe the conflict types and the conflicting row values. Something to note is that the Conflict Winner column will display the winning row values which are pulled from the base tables. If you think about it, these values are volatile and can change, so the values you see in the Conflict Winner column may not be the values they were when the conflict occurred, keep this in mind. The Conflict Loser column will display the losing row values which are pulled from the MSmerge_conflict_publication_article table and these values are static. If you are unable to determine the root cause of the conflicts based on the Conflict Viewer, you may need to implement an auditing scheme. I have provided an example of how to do this in Auditing Changes in Merge Replication. There is a small chance you are getting false conflicts but auditing should reveal whether or not that is the case.

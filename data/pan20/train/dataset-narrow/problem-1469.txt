@@ -1,0 +1,53 @@
+In addition to what others have mentioned (good points raised by others), I'd like to talk about function pointers and vtables for a moment. The first suggestion would be to not use them in this case. I would avoid using function pointers in the struct unless you really want the behavior to change at runtime from one buffer to another (i.e. the allocation strategy of buffer subclass A is different from B -- seems unlikely that you'd want this). Otherwise using the function pointers will cost you in CPU time, memory overhead, and source code readability. If you did want to go the "function pointer in the struct" route, you can save memory by using more of a "vtable" approach. This pattern is used extensively by the Linux kernel, by COM, and by many C++ compilers when they implement virtual methods. Instead of: 
+
+This also brings to mind... Why a vague name like ? C does not have namespaces and this is a name that could clash with others. Maybe it should be . Also more consistent with some of your other function names. 
+
+If you hit that you will leak the allocation of . Now, you could introduce a inside the block... But many C programmers (myself included) prefer to avoid early statements, because what happens is you end up with repetitive "free all the buffers" cleanup blocks. Instead of doing an early , I like to let the scope own the allocation, meaning I insert the whenever something like goes out of scope, having the same cleanup block run in a success or failure case. (This sort of imitates C++'s RAII pattern, but with C and more manual.) 
+
+If you are not religiously opposed to (this probably makes more sense in C than C++), this approach is also common: 
+
+2. must be > 1. (I'm guessing the standard guarantees that but I'm not certain.) After the update: Now realizing that the allocations are not necessarily zeroed, I'd say it all depends on whether or not the local variable can be used uninitialized, as the only assignment I see is based on that value. Note that , which calls , which calls , seems to initialize the members that the assignments to depends on, notably . It looks like there are lots of size checks for overflow as well, eg: . I haven't given it a thorough audit but I'd say everything I've seen so far looks safe. 
+
+[ln 60] Single responsibility: if 's purpose is to get news, it shouldn't also be dealing with notifying the user if there is none. Make this method return if there is no news to be had because of the , and do the check in the UI code [ln 55]: 
+
+What sorcery is this? You've conjured a string from thin air! Where did that come from? You should avoid magic strings where possible, instead assigning them to a or of commonly used phrases within your application. The same can be said for in the call: what is 1987 and where did it come from? Assign it to a resource list. Client.cs Code Analysis Says: Implement correctly. Your class nominally implements , but you've only written half the implementation. You also need a method, called by . If called as , it should also clean up managed resources; if it's you should only clean up your class' resources. You also need to tell the garbage collector not to run the finalizer on your class because you've already implemented . In this case there's no difference that I can see, so a few simple modifications: 
+
+and its equivalent on the next line, is redundant: you should only use when you're passing in a delegate, and even then not always. Rewrite those two lines: 
+
+Running Code Analysis in Visual Studio on this code throws up a few issues, with which I shall combine some of my own remarks. Program.cs 
+
+[ln 179] Folder !== Directory. Be consistent throughout: if this is a setting that a user needs to understand (hence why you used Folder instead of Directory), convert it to Directory code-side. 
+
+Why is this here? If it's because you're waiting for the client to connect, this is a bad idea because you don't know if the client might actually take longer than 1 second to connect. Instead, you should execute the next line inside the event handler: 
+
+is technically safe, and is fine for your current script, but if you want to adapt it for another script, it'll break. A more general, equivalent one-liner is: 
+
+This function takes the encrypted string and breaks it into parts of 6 (Because every encrypted character is equal to 6 characters) and reverses all of the randomizations that I did during encryption to return the string: 
+
+So you can pass any array as the first parameter that you want randomized, then the 2nd parameter determines how the data is returned, then the 3rd parameter tells the function how many times to shuffle the array. I've written this because I think it will be useful for people on StackOverflow, I see a lot of questions trying to figure out how to get a random value from an array. The parameter tells the function to either only return a single array element if false, or return the whole array (with keys in-tact) if true. As you can see in my code, I have to check for the 2nd parameter twice to do actions before and after the actual array shuffle. I wanted to see if anyone had any advice or knows of any ways I can improve my code. I've been posting a lot of my code here lately, and I really enjoy how much I'm able to learn from answers. Thanks in advance! 
+
+I've written a simple helper function for my helper class that allows me to check if a substring is in a string. With my function, you can supply either a single needle to check for, or an array of needles to check for. There is also a parameter that allows you to select if you want to check word boundries or not, and a parameter to allow you to choose if the search should be case sensitive or not. 
+
+The flat array you want to group (array) The key you want to group by (string/int) Option to preserve the group key in the output of each sub array (Boolean) Option to preserve sub arrays. If only 1 key exists in each sub array, the function will store just the single value for each row instead of an array (Boolean) 
+
+At the moment, I'm updating the record if there's already a vote by this user on this post, but I wonder if that's the most efficient strategy. Would destroying the old row and creating a new record be faster? I'd particularly appreciate efficiency comments - at the moment, this is a very server heavy action, which I'd like to minimise. 
+
+I've created a voting system that's similar to Stack Exchange's in a Ruby on Rails web app. It's working great - as far as I can tell, all the edge cases are caught. This is the action to cast a vote. There are some conditions I've had to satisfy: 
+
+I've written a userscript that pops up a dialog before you take a moderation action (closing, deleting) with some pro-forma comments, so that you can add one of those before you cast your vote. I'm pretty happy with how I wrote it, but what's clear to me is unlikely to be so to others. Is there anything in this that I could have "phrased" better, or that could be optimized more? Comments on style (or, for that matter, anything else) are also welcome. It also occurs to me that this isn't as extensible as it could be: it's not easy to add new comments. Is there anything I could do to facilitate this? I've also put this code in a gist, if you want to see it there. 
+
+ServerManager.cs This class is generally good, apart from naming. Rename your variables here and you're OK on this class. 
+
+String replacement If you've got a lot of replacements, or you plan on adding more, try an extensible solution instead of all the calls: 
+
+Where is declared? I can't find a field or property called in this class. If is a type, it needs a variable identifier after it; if it's a declaration and identifier, it needs a type before it. Were you trying to assign to ? I stand corrected: the property concerned does exist. Naming - the same points apply here as to Client. 
+
+This will encrypt the string, whereas every character will become 6 characters. The 1st 2 of each character are keys that are required to decrypt the letter, and the 4th character is the actual character being encrypted except masked by a random digit (Basically the letter is converted to its ASCII number and a random number between 0-9 is added/subtracted from the letter). The 1st key (labeled prefix) lets the decrypt function know if the random number needs to be added or subtracted, the random number is passed as the 2nd character in the encryption, and characters 3, 5 and 6 are random noise characters. Note: The prefix is generated depending on the ASCII number of the character that is being encrypted. If this ASCII number is below 44, the random number is always added to the character being encrypted, else it is always subtracted. The prefix itself is a character in a certain range, if the ASCII number is below 44, a random character between ASCII and is generated, any of these characters tell the decrypt function to subtract the random number from the encrypted character, else ASCII between and will always add the number. For example, the string "Never roll your own encryption functions." may encrypt to: 
+
+I've written a function that allows you to pass an array of values, which is then shuffled and returned based on a parameter . This is the code: 
+
+I've recently written a function that allows me to take a flat array and convert it into a multidimensional array by a specific key in the array. 
+
+The first parameter is the array itself, the second parameter is the key that you want to group by, and the 3rd (optional) parameter is a boolean that tells the function if you want to preserve the group key in the sub arrays. Examples Let's use this dataset for examples: 
+
+My question(s): What shortcomings will I have with these functions? Another question I have is; how can these functions be improved?

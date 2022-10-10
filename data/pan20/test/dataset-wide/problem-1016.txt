@@ -1,0 +1,103 @@
+This specifices as a service name. The JDBC syntax you used specifies a SID. Service name identifies a service within a database. SID identifies an instance within a database. Those two are not the same. Instead of this: 
+
+I do not have access to a 9.2 database currently, but this is the method for doing this: Using RMAN Incremental Backups to Roll Forward a Physical Standby Database Basically, you can issue a to create the desired backup. However I suspect this feature is not available in versions before 10.2.0.1, as there is no reference of it in the 9.2 Data Guard documentation nor the 9.2 BACKUP reference, and the related MOS notes also specify the lowest version as 10.2.0.1. Try the above syntax, but if it does not work, you will need to rebuild the standby. 
+
+This is a known bug, and it will be fixed in a future version. Use to generate the index scripts, and create them manually. 
+
+This however may not be feasible for you, as a customer can have multiple different with your original design. This works without the unique constraint (but not the same result): 
+
+Create the procedures with option (this is the default if you skip this clause) in a schema who has the privilege. Them simply grant execute on these procedures to NOC. NOC does not need any other privileges, as the procedures will run as if their owner would have called them. 
+
+Why? You do a nearly complete recovery to get as close as possible to the current state, not the state on 3/9. Restore the controlfile from the latest backup taken on 3/14. 
+
+Above statement produced just a tiny amount of redo. But there are other aspects: the required locks and invalidation of related PL/SQL objects. 
+
+You can use the above to check the actual usernames when logged in (or if your client does not support ). Your trigger in its current form does not work with the first user above, and does work with the second user above. 
+
+PMON registers to addresses defined in and parameters. If you have an invalid address defined there, then it will not be able to register the instance in the listener. If you have nothing defined there, then it tries to register on the local machine using the default 1521 port. You could also try to set your as: 
+
+Unless you have a storage snapshot, restore point or backup of the database before the testing started, is a way to go. You may need to disable FK constraints for that. Another way is to run with , drop the schema, and import the metadata back. 
+
+You need 2 network interfaces, 1 for public network, 1 for private network. (1 is also enough with seperate VLAN support, but it is not common and goes against the design.) The public IP is to be set on the public interface, and the private IP is to be set on the private interface. These 2 addresses are managed at operating system level and must be set before installing Oracle Grid Infrastructure. Then you have a virtual IP, at least 1 for each node. This address will use the public network interface and it must be in the same subnet as the public IP address. This is managed by Oracle Grid Infrastructure, and this address must not be set at the operating system level or reserved by other systems. While this address logically belongs to a specified node, this address can be used by other nodes as well when a node goes down (vip failover). Finally we have SCAN from version 11.2, which is a single name that is resolved to at least 1 IP address (but typically 3 addresses in the documentation and other examples) from the subnet of public network. It does not belong to any node, it belongs to the cluster. This behaves similarly to the above virtual IP. The above is the minimum, you can have multiple public or private networks and multiple VIP and SCAN addresses over them in newer releases. 
+
+shows units in database blocks, not bytes. 4 MB is not enough for a SYSTEM tablespace. Most likely what you saw was 4M blocks, which is 32 GB with a 8K blocksize tablespace, and that is the maximum size of a datafile in a 8K smallfile tablespace. That is why your attempts had no effect. You can add a new datafile to the tablespace, for example: 
+
+At least 14 GB. Maybe more if the dump file is compressed. Maybe less if the tables are compressed. A bit more or lot more if there are indexes. Even Data Pump will miscalculate the required space in case of compressed tables. Index data is not stored in the dump file, only index definitions. You can have a 14 GB dump file with 14 GB table data and 0 index definitions or hundreds of index definitions, and building those indexes may consume a lot more storage than the base tables, or just a fraction of it. So the correct answer in my opinion is, test and measure it. 
+
+Have a look at the TIMESTAMP column of the ALL_TAB_MODIFICATIONS. $URL$ Also, keep in mind this part: 
+
+Yeah, it is recurring problem.Starting with 11.2.0.2, the default segment size of partitions was increased from 64K to 8M. This means, even if your partition is empty, it still consumes 8 MB space right after its creation. Initial Extent Size of a Partition Changed to 8MB from 64KB After Upgrade to 11.2.0.2 or Later (Doc ID 1295484.1) You should specify the parameters you mentinoned when you create the new table, for example: INITIAL EXTENT 65536 NEXT EXTENT 65536 Alternatively you could set a hidden parameter, so the database reverts to the old behaviour, session or database level: 
+
+No such thing in Oracle. The installed software does not need any license authorization. The CSI number is used for contacting support, downloading patches, reading support articles, browsing bug database, etc. Go to $URL$ register an account if you do not have one already, log in, and add the CSI to your account. 
+
+A similar effect could be achieved by setting the format to the location of FRA, but it will not be the same, as these files will not be accounted in the space usage of FRA. 
+
+That is the typical error message you get on Windows without properly setting up the environment. While the steps in the manual may work flawlessly on Linux/UNIX, on Windows you need extra steps. On Windows, you need to create a service with , start it (if it was not started), and after that you can use . The bare minimum is: 
+
+Usually, is used the other way around, single column compared to multiple constants, but you can also compare a single constant to multiple columns: 
+
+say everything is OK. Well, does not check the specified service, it only checks the address and port. Still, it is a valid TNS entry anyway. If I try to connect using this TNS entry, it will obviously fail with the infamous 12514 error, as I do not have any service like this, as you could see from my output. I do not even need to specify a valid username and password to get the error. 
+
+If your database version is 12.1.0.1, the above feature is not available, and you need to open the pluggable database each time manually, or create an after startup trigger in the database, for example: 
+
+The database uses Join Factorization in the 1st one, but not in the 2nd one. Below are some excerpts from the optimizer traces: 
+
+First of all, people often fall for this, but high waits do not necessarily mean I/O problem. Second, this could be really troublesome, if you have many physical devices in the ASM diskgroup where your redo logs are, because the extents of your files will be evenly distributed on several disks. Anyway, you need to find the ASM diskgroup number and file number for your redo logs. For example my redo logs: 
+
+You move tables, not indexes. You rebuild indexes. However, when you rebuild indexes, you can specify a tablespace, not a datafile, so no difference in that aspect. Since you have to rebuild the indexes anyway, instead of rebuilding them immediately (and not having control in which datafile the new extents will be placed), you can just simply make the indexes first. That drops their segments, and when the second datafile becomes empty (you can check this in ), drop the second datafile, and finally rebuild the indexes. First, make the indexes unusable: 
+
+Asking the database to do the impossible. You changed the TAG, so you created a new initial set of image copies. 
+
+This is how you reference the new val in the trigger, not with a select. Your original trigger would run into the infamous "table is mutating" error. 
+
+OMem - Estimated amount of memory needed to perform the operation in memory only. This is also called the optimal execution. 1Mem - Estimated amount of memory needed to perform the operation in one pass (write to and read from disk (temp) only once). This is called a one-pass execution. A multi-pass execution is where the same data is written to and read from disk more than once. Think about sorting, where the database has to sort large amount data in a small PGA/sort area. Since you query plan statistics with ALLSTATS LAST, some extra columns: Used-Mem - The amount of memory actually used for this operation. Also there is a number in brackets in this column. If the number is 0, then it was an optimal execution, used only memory and no temporary space. If the number is 1, then it was a one-pass execution. If the number is greater than 1, it was a multi-pass execution, and that number is the number of passes. Used-Tmp - The amount of temporary space used for this operation. Here is a presentation about the execution passes starting at page 28: $URL$ 
+
+The typecodes of built-in types are hidden in the dictionary views, but you can query the dictionary directly and find the type based on the OID: 
+
+What makes you think you need to rewrite it? SQL Tuning is more than just trying to rewrite your query. If you do not understand what happens behind the scenes, then how will you rewrite your query? The estimated cardinality in step 10 and 21 is 1. Still the database decides to scan the whole table. Twice. Is the above estimation correct? Would those steps really return just 1 or a few rows? If you run this query (with actual values), will this return 1 or hundreds, thousands, millions? 
+
+You did not mention it, but this is quite typical when using PL/SQL. Privileges granted through roles are disabled for named PL/SQL blocks that are defined to execute with definer's rights. How Roles Work in PL/SQL Blocks 
+
+And stop here, don't run any scripts. You have a "functioning" database, you can create tablespaces, users, query views, create tables, indexes, insert and query data. You can even create user-managed backups. Now try to run PL/SQL code, query views, start RMAN, use AWR or jobs. They will not work, because the objects they need were not created. Can we use the database without running the above scripts? Yes we can, but some feature may not work, and life becomes quite uncomfortable. For example, the view is created by the above script, but that view is not mandatory for the operation of the database. Can we use RAC without running ? Yes we can, but some feature may not work. We can view the content of , but to be honest, I don't know what features depend on the objects created in there, so I just follow the documentation, and run the script. 
+
+There is no such object as , because is a public synonym. Because of this, there is no need to use a schema specifier for it. The actual view is called (same for other V$ views as well). If you want a user to be able to select from that view, grant the privilege on that: 
+
+Just select the union of the query and the 'none' constant if the original query does not return any row: 
+
+The column was added to a few dictionary tables, including , in version 12.2. The EM templates are for version 12.1.0.2. The download page clearly states that the template should be used with 12.1.0.2. $URL$ 
+
+There is no for the instant client, but even if you had the full administrator client, may not return anything useful. 
+
+Ok, that error ( is related to corruption. Normally a DBA would go to My Oracle Support, follow the notes (for example ORA-600 [6006] ORA-600 [6856] During Startup Instance, Followed by Termination by SMON (Doc ID 549000.1)), identify the affected objects then try to repair them, recover corruption, or restore a valid backup. If you can not do that, and this is a sandbox/development database with no important data, in my opinion the easiest and fastest solution for you would be recreating your database with DBCA (Database Configuration Assistant). 
+
+You have to specify the format string twice, once for database backupsets, and once for the archivelog backups, for example: 
+
+You most likely have with an unresolvable name, or with and invalid network address. You can try fixing it with: 
+
+Having a physical standby in read-only open mode while applying redo requires the Active Data Guard option. 
+
+Maxbytes is the maximum size of the datafile, it can not grow beyond that. If bytes = maxbytes, you have two options: 1) increase the maximum size (maxbytes) as (15 is the file_id from above query), for example to 10G: 
+
+If it is set to , that disables logging in with , but would result in a error. Finally, password is stored outside the database, in a file, on Windows it is . You can recreate it (give new SYS password) as: 
+
+TABLE ACCESS FULL and INDEX FAST FULL SCAN use multi-block I/O, other kind of access paths use single-block I/O. 
+
+Above setting doesn't necessarily mean tracing, sometimes just enabling/disabling features if that is implemented. As far as I know, 1461 is not a diagnostic event, they are mostly in the 10000-11000 or higher regions, so I wouldn't expect anything from the above. If you want trace files to be created on specific errors, enable the trace: 
+
+First you need to set the preferred credentials for the targets. After that, you can use for this. In the below example I have a group called containing 3 databases: 
+
+When the O7_DICTIONARY_ACCESSIBILITY parameter is set to false, users with SELECT ANY TABLE privilege can not access tables such as SYS.USER$, unless they have direct privileges to them. 
+
+The cost of an index depends on its clustering factor. Clustering factor measures how well aligned are the rows in the table - in respect of the columns of the index in question. It is calculated as: inspect all the rows from table in order (order is defined by the index columns). Every time a row is found to be in a different (not the currently inspected) block, increase the clustering factor by 1. If consecutive values in a table are near each other in the same block, the clustering factor of the index will be low. If consecutive values are scattered across the table, the clustering factor will be high. Simply put, the lower the clustering factor is, the cheaper the index becomes. Despite the myth, the clustering factor can not be decreased by rebuilding the index, because it depends on the table data distribution. However, you can set the clustering factor manually by: 
+
+I will not repeat the section any more to save space. Let's calculate a new field, called as: If , this field becomes . If , this field gets the value of the previous 
+
+It bypassed JF on all possible places (note the different decision at query block SET$1), and that is it. It did not consider using JF at all. As to why the 2nd one is slower, well, the optimizer works with statistics, those statistics may be inaccurate, but even if they are a 100% accurate, it can still just estimate the cost based on them, and sometimes it makes mistakes. 
+
+Unless you have a special case, an with 1.2 million rows should be completed in seconds or minutes at most. Yes, direct-path insert may significantly reduce execution time. The above hint in has no effect without the necessary prerequisites. Enable Parallel DML Mode 
+
+You can start running your report from the application, and follow the contents of the trace file (even , but it will not be human-friendly). After you have finished, disable tracing: 
+
+As you can see, the creation of table statement, that was issued with the module set to , was not audited. 
+
+The listener is an independent entity, can run from a different Oracle Home or even another machine. All the database knows about it is its address.

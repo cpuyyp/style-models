@@ -1,0 +1,45 @@
+Here provides the method, whereas provides both and . However, as I said before, all this CRTP stuff is unlikely to be useful if your code operates in terms of "one kind of Data, one kind of View". 
+
+You wrote a generic constexpr function, but the only thing you ever use it for is , which can already be written in constexpr form as . Use the simpler form, both for clarity and to reduce your compile times. If you were going to keep , it should have gone in your namespace anyway, to avoid cluttering the global namespace. 
+
+I was initially skeptical that this would provide a unique address for , on the grounds that is an empty object of a very distinctive type; so I wondered whether it would be rolled into the same memory address as the following object, a la the Empty Base Optimization. It was not rolled into the following object. This makes sense in retrospect; the Empty Base Optimization applies only to bases, and that's because the base object and the derived object are literally the same object; there's no "following object" going on in that case. However, this code is still broken. Reason #1: Clang refuses to compile a variable with no initializer. You need a pair of empty braces after the word . Reason #2: This variable declaration is not , and therefore you get a separate copy of in each translation unit. (Try it out!) In C++17 (and later), you can just mark the variable (or just ; the here is unnecessary). In C++11, you'll have to use an function. 
+
+It might be an interesting research project for you to figure out what you'd have to change to make no longer required. 
+
+The main problem with your original regex is that the first instance of could reasonably match a whole lot of the string; if you're not going to split the lines apart first, then at least you'd want to change to and so on throughout. As a micro-optimization, you may find that ing your regex first produces faster results; and if you're not compiling it ahead of time, I wouldn't be surprised if 
+
+'s constructor should not call ; that's mixing high-level business logic ("when the object can't be constructed successfully, log a message to stdout") with low-level implementation logic ("when the file can't be opened, the object can't be constructed successfully"). What you should do if you can't construct the object successfully is throw an exception; that's how you report failure in C#. Your higher-level code can then catch that exception and log a message to stdout, or try again, or switch to a different algorithm, or pop up an alert box, or terminate, or whatever high-level business logic the high-level author wants to implement. 
+
+I would argue that the lines marked are an improvement in the logic; they allow for the possibility that the longest string in the program might be in the second column, in which case (I claim) you'd want to extend the all the way out to the end of that column. Anyway, if the maintainer disagreed, at least there'd be a single obvious place to change the table-printing logic now. Then your main would be just something like 
+
+Done right, this could ensure that , , and all play together in a natural way. (You might even look at how the C++ STL defines and to work on arbitrary arrays.) So we could have an API something like this: 
+
+For more on and what it means exactly (and why it's the proper default when you don't care about the details), see Stephan T. Lavavej's N3994 "Ranged For Loops: The Next Generation". Basically, it'll make a reference with the proper degree of constness and rvalueness for whatever the thing is that you're trying to iterate over. or would also work in this case, but not necessarily in all cases. The big thing in this case is to stay away from reference-less , because that makes copies. 
+
+to pick up the correct through ADL. (But this opens the whole customization-point can of worms, which is still a mess even in C++17.) No, the real reason is a red flag is because invokes undefined behavior (source). You should never call on untrusted input. The usual hack in this domain is to say 
+
+where "month_data.c" would consist of the same pieces of code you wrote, just rearranged to put the module boundary in the right place: 
+
+With this modification, your C code runs in 0.572 seconds and produces the mathematically incorrect answer . (The correct answer is , and as v5r suggests, you can get that answer by changing to throughout your code. The revised code runs in 0.402 seconds on my machine, i.e., the 64-bit version runs faster — but I suspect that's partly due to getting to skip over all those error-reporting s that were slowing down the 32-bit code. Code runs faster when it doesn't have any errors to report. :)) 
+
+Seems like instead of , you should be using on each line of the input individually. Something like this: 
+
+Can they be reworked into functions? — No. :) Befunge-93 has no concept of the (non-) , and as a corollary it has no and no . I can imagine a programming idiom that applies a binary search tree of "line numbers" down the left side of the program and can "GOTO" a line whose number is specified on the stack; but this would be way overengineered for FizzBuzz. Can this be condensed? — Yes. :) Do other people understand the steps I've taken? — Yes. It's pretty straightforward. :) 
+
+This function call makes a copy of , which might be expensive since contains an arbitrarily long . You could fix this in either of two ways: either by changing the function signature to 
+
+As far as improving your C++ skills to the point where you can translate Python line-for-line as I did above, the best advice I can give you is go to cppreference.com and study the standard library! The STL is way better today than it was in 2003, and it takes ideas from many other languages. So for example the C++ equivalent of is this humongous ugly expression (and I'm not actually saying you should write that ugly expression in production code!), but it does exist, and translation from Python to C++ is just a matter of being able to remember vaguely what it's called and look it up. And that just takes a lot of practice. 
+
+The advantage of this approach is that it's hardly any more lines of code, but it's more correct, and it doesn't rely on running at runtime — it just generates the correct code directly inline. Writing an efficient is left as an exercise for the reader. 
+
+Actually, $URL$ exists, and it has a good example right on the first page above the fold. So just go read that whole site. :) 
+
+The line I ed above was . Why on earth are you using manual memory management in this class? Remember the Rule of Zero. Use and get rid of the member variable (because you have for that now). This not only protects you against memory leaks (e.g. consider what happens if one of those copy-assignments throws an exception) — it will also make your code more efficient, because the vector will track its own capacity separately from its length, and use geometric resizing to make sure that a sequence of calls to results in only reallocations, instead of reallocations. It will also make your source code shorter, because you can get rid of those and functions. You can also get rid of all your special member functions (as the Rule of Zero suggests), which will shorten the code even more. 
+
+Some of these names match the STL containers very well (e.g. and ), but some of them are completely opaque to me (e.g. , ). It would be nice if behaved more like an STL container, wherever possible. 
+
+I see you use (all caps) but (camel case). This suggests to the reader that something really subtle (and thus dangerous) is happening here — or else of course you'd be consistently using or (both of which are provided by the underlying library). But is the reader's inference correct? Are you really doing something subtle and dangerous? Or are you just mixing styles because you felt like it? 
+
+where the "hell" expresses itself in the form of a big triangle of whitespace along the left margin. You'd typically see this with API functions that take an "on success" callback and/or an "on failure" callback. 
+
+The biggest reason you flunked was probably that you wrote two identical functions: and . You didn't realize that since their code was identical, you didn't need to write both of them. Just writing

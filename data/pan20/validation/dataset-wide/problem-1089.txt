@@ -1,0 +1,107 @@
+Here is the final script that I have, after integrating the feedback from various respondents (just wanted to collect it all together for future readers): Disable Constraints and Indexes 
+
+This table will have more rows than your original table, but each time you query the table should be faster because the query can go straight to the correct rows rather than reading the whole table and evaluating the filter each time. 
+
+When you created the clustered index with the rows in the table were shuffled to be in that order. When you dropped the index the rows were not reshuffled. There is no guarantee that the rows will be returned by a query in the order that they are stored, but often this is what happens. If the order is important then you would add an (and would be well advised to cluster the table on that field too to avoid sorting every time). But don't choose a clustering key just because of that. For a more thorough discussion of clustering and heaps see $URL$ 
+
+If you have 6 entity types with different attributes then they should be stored in 6 different tables. If they have attributes that are largely overlapping then you might consider storing multiple different types of entities in the same table. 
+
+This is probably not the sort of case where filtered indexes really shine - typically that is when the index represents only a small portion of rows in the table (like, a quarter or less) and in this case the filter predicate matches about three quarters of the table. That's not to say that you wouldn't get gains here, but it might be a bit of a tricky research project to get good designs. (Then again, indexing is always like that.) What about the current indexes on the table. Are they being used at the moment? Are they only being used in queries that have the predicate that you mentioned? If so, then it might be an easy win to convert some of your existing indexes to have a filter condition (instead of adding a new, filtered index). You probably already knew this, but filtered indexes won't be used by where the predicate that matches the filter uses a variable or parameter. $URL$ 
+
+Every character has one and only one , right? So it seems like that field should be on the table: (?) Each character could have multiple classes so that should probably be in a one-to-many relationship in the table which has the primary key of both and tables. As for the (), each character can have zero to many proficiencies so they must be stored in their own table, but if you want to produce a 'report' which shows all the proficiencies as a delimited list, then you could do it like this: 
+
+We can insert some data to this table to see what it looks like. Note that the third insert will fail because it is prevented by our constraint. The doctor can't have two appointments starting at the same time. 
+
+I'm going to assume that has a data type of therefore it would be more correct to convert to a string before concatenating it to other strings. It might not give an error in Access, but you're taking your chances that you'll like the date format that Access chooses. 
+
+The with some modification the view should be updateable, but not in its current form. $URL$ gives the rules for Partitioned Views Some things you would need to change: 
+
+Add two fields to the table: , Add a generated field to the table which is stored and indexed with a descending sort on the index key. Add a trigger to the table so that when row is inserted the respective is incremented by one and the value of the vote is added to the . (Likewise for or .) 
+
+Try the following solution. Note that in your question you group by the field in the table, but that won't be possible because a single channel might be included in multiple purchases and if you group by then you won't find the maximum across all purchases, you'll just get the maximum for each single purchase (which is really not a maximum at all). 
+
+If a user can have no more than a single role, and this will ever change, then put directly on the table, then the relationship between table and table is a single role to many users. 
+
+Of course, you may not have permission to do 2 or 3, in which case it's a question for the person that does have permission. 
+
+So consider your situation in regards to CPU, RAM and storage capacities. Don't forget to consider columnstore indexes which offer both good compression and query performance. 
+
+Note the use of , partitioned by and sorted descending by to get the final value, and the use of to get the running total of the discount. You can uncomment the commented select statement to view all rows, not just the final row for each . 
+
+This second approach would be easier to extend to accept an arbitrary number of tags, though the first approach would not be impossible. 
+
+If the purpose of the unique constraint (with its associated unique index) is simply to enforce uniqueness then you should change the column order for your unique constraint to and then your index will be redundant and can be dropped. Otherwise there may be some benefit from having another index on your table with different leading columns, you should consider your workload, if the table is often accessed with a predicate on or on both and and maybe that is a good case to have those columns first in the key. Also @srutzky comment about the clustered index has merit and is worth considering. 
+
+I think this is probably a good design that you proposed. Just make sure that the table is indexed properly. Consider that every query to the table will probably filter by content_type so that should probably be the leading column in a multi-field index. 
+
+Or you could use a to find people with both tags. (Note that the was added to handle the case that a person may have the same tag twice. If that is impossible, it's safe to remove.) 
+
+Please note that depending upon your data type, you may need to cast some of your strings to Unicode/non-Unicode types to get everything to work smoothly. The syntax uses the ternary operator $URL$ 
+
+I don't know that the query could be refactored much and still be logically correct. And since I don't have your dataset it is difficult to test possible solutions for performance. This query should still be logically the same, but may be executed in a more efficient way. 
+
+Then you could also add some constraint to the table if you want to enforce a rule that two courses can't be timetabled at the same time. If a course has multiple sessions during the week each will be a row in this table. 
+
+It is not necessary to distinguish between measures and dimensions when defining your columnstore. All columns are stored in the same manner. All columns included in any query should be in the columnstore, in most cases it is best to put every column in the table into the columnstore. 
+
+The following will work on sql-server 2012+. Note that there were a couple of inconsistencies between your supplied SQL and the sample schema that you provided and I think I have followed the names in your SQL. 
+
+Let's assume that you have a numbers table. If you don't many other people have described how to create one. If all else fails, this could create one for you but it's probably not the best way. 
+
+Basically, you're scanning the table once for each of the values, and then doing an on the results to only get rows back where all three exist. 
+
+You could deal with the issue by specifying the style and doing an explicit from string to datetime rather than an implicit conversion. $URL$ 
+
+Sometimes, perhaps due to some maintenance task which doesn't respect compression settings, indexes and tables have compression turned off so carefully consider any routine tasks you have which rebuild indexes. Space saving can be significant When a query against a compressed table/index reads data from disk it was quicker (in my experience) than a query reading an uncompressed table due to the I/O limitations of disk. When the pages were already in the buffer pool, though, the query was slower than when compared to uncompressed data because of the additional CPU involved in uncompressing the data. 
+
+Edit As per discussion about the proper way to handle revisions with this is an alternate version which does not consider a revision with when looking for the latest revision. The has been moved into the inner subquery. 
+
+Add a column to the table which flags whether the row has been summarized into the summary table Add a partial index to the table for only the unprocessed rows, this could include all columns Now when you go to load yesterday's data you are only looking through rows which you know have not been processed Identify yesterday's rows as part of the load process and insert them into a temp table, then insert the summary of the rows into the summary table Join the temp table to the source table on and mark the rows as processed (should be quick as you have the ids and aren't doing a scan) 
+
+I have some tables in the staging area of a data warehouse that I'm filling with data from some flat, comma-delimited text extracts from another system. When the data comes in the hierarchy of parents for each element is presented in columns labelled ... where the immediate parent of the current node is in and the top level parent could be in any column ( is mostly ). 
+
+It looks like you are attempting to give the value of back to the caller, but that is not the purpose of . When you give an argument after it must be an integer which indicates the status of the procedure. Better off declaring as an output parameter or . Ref. $URL$ 
+
+Test this and see if progress is being made. Further steps may be necessary but hopefully this is in the right direction. 
+
+So to get to that format I have a query which grabs the distinct values of and by generating a of the values in each level, like this: 
+
+You need to specify which columns you want to insert into in the insert statement. In the statement you wrote, the engine doesn't know which 7 columns out of the 8 to put the data in. $URL$ 
+
+You mention that you added single-column indexes for each foreign key in your fact table. Often at least some of the foreign keys have low cardinality so they are likely not useful in an index on their own. $URL$ They may be more useful as part of a multi-column index which you can design based on the way that you expect users to query the table. If your workload suits it, then non-clustered columnstore index should be considered on large dimension tables and fact tables. They are ideally suited for data warehouse workloads. $URL$ Since you are using 2014 then non-clustered is the only option if you want to keep constraints and other indexes. 
+
+That looks a little awkward, so if anyone can improve that date logic happy to take suggestions. If a doctor wants a break, then enter the break as an appointment and it won't be available for booking. Note that the table constraints don't enforce non-overlapping appointments. This is possible but it's more complicated. If this were my system I'd think about some system (e.g. trigger) to finally verify that the appointment doesn't overlap with an existing one at the time of insert, but that's up to you. 
+
+As mentioned, the leading % makes things tricky, but if the event_details field contains a list of delimited items and you are searching for one of those items then you could create a child table event_history_details that contains one row for each item in the event_details field for each event. Such a setup would scale well and be SARGable. Unfortunately it involves changing more than just the query. 
+
+If I understand correctly, you are doing two separate statements. First check to see if insert is okay, then second do the insert. I wonder if a trigger might be a solution to your woes. I haven't any experience with creating triggers specifically in Azure, but try something like this: 
+
+In the flat-file connection manager, in the General pane, there is an option to set a . If you set this to double quote (") for your file then SSIS should ignore any row delimiters that are contained between the double quotes. There is also an property that could help. See this msdn page for more. 
+
+Now if we want to see free slots for a particular doctor, all we need to do is specify which doctor, and how long the slot is that we're looking for: 
+
+The query you wrote is basically asking the database to give you any two rows of data (any two orders). If you wrote the query with an clause then your results should be the same each time. 
+
+A second option which may have more merit in your case is a filtered index which you could add over the old part of your table and include a large number of columns so that it covers the queries that you do on the old part of the table (this would serve to speed up reads to the old part of the table but wouldn't slow writes in the recent part). 
+
+The standard approach is to use a table for all customers. Storing data in row in format would mean that the data is only readable by your application, not by other client software that accesses the database. It may also invalidate built in protections that databases have relating to the ACID properties of transactions. A properly designed table should have performance no worse than storing transactions in each row. 
+
+The drawbacks to this approach are that now your writes take longer so that you can do faster reads, and this might not be suitable if the filter that you use in your query on the column isn't predictable. 
+
+After the data is inserted, it counts how many rows in the table overlap the time range of the inserted row. If there are more than 1 (remember, the row has already been inserted so it will overlap) then the transaction is rolled back. 
+
+One way to achieve that would be using to stuff all the products for each order into one line, then match up all of the orders that have the same products and use again to stuff all of them into the same line. See example: 
+
+When I load this data into my data warehouse I load it into a table that has a parent-child relationship like this: 
+
+This is an alternative scheme to the ones already proposed, it's a bit like the summary table, except that it isn't aggregated, just 'partitioned' by player. 
+
+This may be ugly, but it doesn't require multiple steps, or knowing the number of products up front. Edit Should be easier to get the output that you now describe. Just remove the final and : 
+
+This would give you the two rows with the lowest and you will still get the same two rows even when you add other fields to the list. You might be thinking that means that the database will give you the first two, but it actually means that it should stop returning rows after it has returned two rows. And since you didn't have an it could just return whichever two rows are most convenient. 
+
+It could go something like this. Grab the old data into a temp table. Insert it into the history table then delete from the live table. I'll leave the error handling as an exercise for the reader. 
+
+Having multiple fields that reference another table doesn't make it a many-to-many relationship. You simply have multiple one-to-many relationships between the tables. Your diagram is correct. 
+
+Storing in mysql table should be fine. You need to consider how the data is going to be accessed and retrieved when you're designing the table and indexes on it. I'd say that you're likely to be doing queries which return all of the past searches for a particular user (or perhaps even just the most recent by user) so it would probably make sense to cluster the table by and . This design should also help reduce contention if lots of inserts are happening at the same time since each user will be inserting into a different part of the table.

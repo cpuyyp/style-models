@@ -1,0 +1,73 @@
+No wont show info about filestream data. You have to use a custom solution modified as per your needs. Remember that with shows data about filestream. 
+
+AlwaysON is different from Database Mirroring especially when sending the log blocks to the secondary replica/s. The difference is how the log block gets send to the mirrored instance (for mirroring) or replica (for AlwaysON). For Database Mirroring 
+
+You can use Dynamic sql to set it for all tables described here. If the db is large, then I would suggest you to script out schema and create the shell / skeleton DB and then use bcp out and bulk insert data into it. You can automate this using powershell or sql agent job. ALternatively, you can just kick off a copy_only backup and use copy-dbadatabase (part of dbatools - powershell based) to backup and restore the db from source to destination. 
+
+It is related to Full text catalog. You can find out more info using e.g. from Pro Full-Text Search 2008 book, Below will give you the Number of Full-Text Index Population Batches in progress 
+
+Take full backup on primary (server 1 ). Restore full backup on server 2 and 3 using no_recovery option. Take log backup on server 1 Restore log backup on server 2 and 3 using no_recovery option. Using GUI wizard, add secondary servers (server 2 and 3). 
+
+Have a look a the fragment_count - that's one of the fields in the sys.dm_db_index_physical_stats view. You should really be rebuilding indexes with a certain page threshold and as per best practices, it is best to rebuild an index having more than 1000 pages. some reference can be found $URL$ 
+
+Your best bet is to change the default datatype mapping in SSMA to NVARCHAR for sqlserver since the default mapping for text is nvarchar. Make sure to save the settings... Choose Tools, Project Settings, Type Mapping from the menu. See $URL$ 
+
+Using ssms, Right click the database .. tasks.. generate scripts and export the database as schema only. Schema only does not have data. See reference : $URL$ 
+
+You can achieve this with Transactional replication. Below is how you can do it. Note : You have to change slightly your table schema to achieve this as you have to uniquely identify that rows when you are replicating to the subscriber. As a prerequisite of T-Rep you need to have tables with PK defined. Below is your sample table on Publisher servers that is on all your 8 servers that you want to consolidate rows on the reporting server : 
+
+Remember that the schedulers are not bound to cores and SQL Server does its own thread scheduling. For some reason, if a non SQL process maxes out CPU 1 which is running a thread on scheduler 1, then SQL server has the ability to put that scheduler onto any available CPU e.g. CPU 4. SQL Server has its own load balancer that will move a thread from one CPU to another. If you set processor affinity, then you remove the ability from sql server to switch scheduler. So scheduler 1 is bound to CPU 1 and it has to run there only. Some Excerpts from my book library ... From SQL Server Professional Internals and Troubleshooting Book : 
+
+You have to look into error log or job history (provided its not purged or recycled). See my answer for T-Rep .. how to activate the subscription : $URL$ 
+
+Unless you are using SSMS to just present the dates, your presentation layer should handle the part of presenting the date in whatever format you want to display. I normally use the date-format help to find out the style :-) 
+
+I dont get what you mean by wait conflicts. I have not see any conflicts on a very busy OLTP system handling 60K trans/sec. 
+
+Navigate to Start -> All Programs -> Microsoft SQL Server 2012 -> Configuration Tools -> Reporting Services Configuration Manager. In the RS Configuration Connection dialog, make sure that your local report server instance (for example SQLExpess) is selected and click Connect. 
+
+Remember that T-SQL should not be used to do file maintenance. Instead you should use Powershell to delete /move / copy etc files. Tsql way: use command along with the command e.g Delete all .sql files in the C:\Backup directory and its subfolders where the file modified date is more than 30 days old. 
+
+Transaction log is the most important element in SQL Server. It is like a sequential journal that logs all the changes made to the database and contains enough information to undo / redo the changes in the event of crash recovery to keep the database in a consistent state. Highly recommend to read : Understanding Logging and Recovery in SQL Server All your question are just because you dont have proper understanding of how transaction log works. To keep transaction log in shape, you should take regular log backups (more frequently) on the principal server. Check - How do we handle transaction log maintenance for a mirrored database? 
+
+Looking at your code on SQLFiddle, you are on the right track with only a key point missing. The syntax (from BOL) of a recursive CTE is : 
+
+This way, UserA is not able to see SchemaB's tables, but still can execute procs from SchemaB. Below will explain the permission hierarchy : 
+
+Converting my comment to answer .. If the value is actually updated, then it will log changes. If you update the same value, new versions for every row will be recorded, but the column values will remain the same. Below is the working example : 
+
+If your database is in full recovery mode, it is actually in pseudo simple recovery mode until the log backup chain is established. You can find the script to check here - written by Paul Randal. 
+
+Lamak has answered the question. The reason might be that during the package run time, the OLEDB will process the first resultset. So when the command contains a variable, the messages will be returned as empty resultsets. So the OLEDB source will take the first resultset and will proceed further which will lead the package to succeed but without any rows. As Lamak pointed out the will suppress sending the DONE_IN_PROC messages to the client. 
+
+You should explore setting mirroring between DC1 and DC2 leaving the AlwaysON bit separate. This way, you just cutover from DC1 to DC2 and point your application to the new listener in DC2. This will be more staright forward and easy to rollback since both DC1 and DC2 are decoupled and failover and failback (point to old DC1) will be more manageable. This is an upgrade as well (2012 --> 2017). I have written very detailed steps in my answer here. 
+
+A SID is a mechanism that assigns privileges to the service itself, rather than to the account under which the service runs. For Clustered installations: It enables you to use a domain account with minimal privileges on the box, which also improves your security because people end up knowing the domain service account credentials. For non-clustered installations: Per-Service SID, it allows you to use Network Service as the service account, improving security by getting automatic password management, but without the traditional downside of having Network Service accumulate excessive privileges from multiple services. Refer to : 
+
+Your best bet is to use : Discover, Diagnose, and Document ALL Your SQL Servers On Your Coffee Break using SQL Power Doc written by kendal vandyke This is written in Powershell. 
+
+click to enlarge has been around since SQL Server 2008, so start using it instead of . For your situation, you can use with precision of 3 decimals e.g. . Benefits of Using : 
+
+The job LSAlert_XX where XX is the instance name, run a job to check if the restore of the log has fallen behind N mins. You can edit/configure it to send out emails in case where it has fallen behind N mins. 
+
+Yes, you can do that once the backup is finished. Note: Make sure you are using T-SQL as opposed to GUI which has limited backup options exposed. 
+
+Highly recommend to use latest SSMS. You can download the latest version of SSMS from $URL$ Previous versions are $URL$ 
+
+You are out of luck (since you do not have any backups). Also, it is not possible to use the undocumented command in Azure. It is only supported in SQL Server. Also Transaction logs are no longer managed by the DBA in SQL Azure; this is automatically managed by SQL Azure's infrastructure. check out : Supported Transact-SQL Statements (Azure SQL Database) 
+
+Yes, you have to use . It is called reverting the database to a database snapshot. You would use it to reverse a serious error e.g. drop table, deleting data, etc. This is important : 
+
+You should use SQL Server's DMV to tune your indexing strategy or even use sp_BlitzIndex to get more insights. Refer to : 
+
+The performance of Azure databases will depend on what service tier you are using and relies on DTU (database transaction unit) which represents relative power of databases based on database transaction. Azure databases are logical databases created on logical servers on different nodes within same data center, so you dont have a physical server that is dedicated for your database instance. catalog view will give you a good overview of your resource usage on Azure. From BOL : 
+
+When you do locally, sql server will honor it, but when you use Linked server, sql server has to initiate a local transaction and promote / esclate to a distrubuted transaction. From --> How to create an autonomous transaction in SQL Server 2008 
+
+Your application should use 3 part (dbname.schema.tableName). Also, make sure that Instant file initialization is enabled to cutdown the restore time. 
+
+if you are not on Enterprise edition - as Partitioning - switching in and out is only supported in Enterprise edition, I would suggest you to create and ordered view on the top of table that you are deleting data from. This will incur less I/O and generate minimal T-Log. Founded the link written by SQL CAT team about Fast ordered delete technique of using a view or a CTE. e.g. 
+
+Try downloading from AdventureWorks Databases – 2012, 2008R2 and 2008. This might be due to corrupt installs. 
+
+What RDBMS are you refering to ? MS SQL Server does not have "Incremental backup". It just have full, differential and transaction Log backups. You can equate (loosly) transaction Log backups as Incremental backup as it will require a FULL backup and all the increments (which are nothing but transaction backups) until the point-in-time failure. Differential backup works differently, as you only need a FULL backup and the last differential backup and the database can be brought to the point when the differential backup was taken. After that you have to restore T-log backups, so that a point-in-time recovery can be performed. Considering above facts, most DBA's or server admins prefer Full backups and subsequent Incremetal backup (T-log backups) to a. conserve disk space b. Time required will be less as compared to restoring a FULL backup. Note that, the recovery model (e.g. BULK LOGGED, SIMPLE, FULL) also plays important role when you go for T-log backups (Obvisously, SIMPLE recovery is out of picture when it comes to taking T-log backups). The only problem with Incremental (T-log) backups is that if you loose any of those, the database can only be restored to the last unbroken log chain. Imagine someone deleting files, etc. Also managing them is an extra overhead as well.

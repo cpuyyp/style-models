@@ -1,0 +1,113 @@
+Assigning an entire array to zeros is not needed - albeit useful to debug buggy code. For strings, simply assigning the first to 0 is sufficient. 
+
+Order of complexity higher than needed With , which execution time varies linearly with , inside a loop which iteration count can depend on , this algorithm is at least \$ O(n^2) \$ and a \$ O(n) \$ is possible. Use separate pointers to read from and write to can accomplish \$ O(n) \$ - still in the forward direction. See below. What if arguments overlap? could exist at the end of , and so must account that may change anytime changes. To inform the compiler this situation is not relevant employ . 
+
+When making a collection of routines to handle a type, strongly advise to create a create and destroy function. Rather then the below, consider some initialization function. 
+
+Array sizing and indexing are best handled with type . may be insufficient for large applications. Code did use in 
+
+Use of does not certainly use a consistent type as the types of and may differ. An would be better anyways. 
+
+is too generic. Consider and More C idiomatic to pass by address than value and looks like a good place for . 
+
+Style: Prefer the explicit function signature vs . Style: The spacing used in the below adds little clarity, but adds typing. Suggest simplification. 
+
+For unsigned problems, consider using unsigned types. I see no need for unsigned math here and IMO, using unsigned types would simplify code. For learners, pay special notice of decrementing 0 and making sure various constants are unsigned. Mathematically, only need to test candidate divisors up to the square root of . Avoid the FP function as 1) the result may be slightly less than expected and the conversion to an integer suffers truncation 2) often lacks the precision of wide integer types which invites errant functionality. 3) Often not needed as modern processors typically compute the quotient and remainder at the same time allowing the quotient to be used as the exit condition an no extra computation cost. 
+
+Name space: The names of functions, variables and macros in share no cohesive naming scheme. This makes it unclear of their source when used. The use of and is something that easily could collide with other libraries. Suggest something like with ,, etc. Rather than , make it a function: to prevent user code from changing it. is not standard C, yet implementations I find use , thus the cast is not needed. Also parens not needed with 
+
+Note that the type accepted by is . It possible that * overflows even though mathematically the product fits in . To prevent that, simply re-order. 
+
+in serve no purpose. Code can be simplified to and retain the same functionality. Code that does not exceed the presentation width is more clear and easier to re-view. (Code should not need horizontal scroll bars.) I'd expect for pointer to data that is not modified by the code. better conveys code's intent and allows for select optimizations. 
+
+is missing the include of . This is important to maintain the consistency of the declaration and definition. should include for . 
+
+Design: "I also put in effort to make the functions as concise as possible." is a worthy goal, but the conciseness and cohesiveness of the functions/type declarations in the .h file trumps the implementation details - that is good OOP. Hash performance. I see value in widening the pre-hash function to at little cost. If is a high cost, then code should use , rather than . Suggest rather than . Let the compiler optimize. 
+
+Naming convention inconsistency. Suggest below (spacing added for clarity here, not needed for code.) 
+
+Format inconsistency. This implies you are not using a format tool before committing code. Recommend using automated formating before review. 
+
+Was the zero count correct in the constants? Easy to mess up. Could use . Be sure the lead constant is the width of the target type. 
+
+"... later I'd like to add a "shrink" function.". In that case, may shrink the array and surprisingly may return even when shrinking to a non-zero size. In that corner case code could choose to not return an error, but continue with the existing allocation. Pedantic code would detect overflow possibilities like in . 
+
+The approach fails in 2 places. Say the input was a serial device, either may simple fail. For a text file, fails the following: 
+
+Oops now see in the end: "Also let us assume it is for positive numbers." Making answer wiki as a reference. Too bad as it is not difficult to make the code work for all . 
+
+Recommend to avoid declaring variables of different types on the same line. Instead consider initializing as part of the declaration 
+
+Wider, but not arbitrarily wider math needed To reach , 80 bit math is needed. Suggest using a complier that supports or equivalent. 
+
+is passed around by value. This larger structure should have its address passed. With , suggest passing in the address of the and return success . 
+
+A simple test harness would help in evaluation of this code. is not valid without . Other include files missing too. 
+
+Minor 0 corner leads to UB due to . Suggest code gracefully handle this corner. Maybe return . unsigned math wrap-around Watch out for underflow of unsigned math with . Both below should work for OP, yet the 2nd form is more resilient to unexpected , pairs. 
+
+Profiling will tell, yet I doubt reading a file twice is faster than reading a file sequentially once and performing as needed. returns . Code should be . is a signed integer whose positive value might not fit in a . But more importantly, may be insufficient for a file's size. Consider and instead. It is important to check the returns of , for errors. Rather than , consider or . As the intention is to return a pointer to a string, needs termination. negates the need for , but that is subtle and likely deserves a comment that the string is properly terminated. I could see an update replacing with and not then explicitly terminating the string. Curious that code does not save the . With this code running in binary mode on various machines that use an alternate line ending like , maybe the entire file would then be 1 line as the is no . Or in Windows with , each line ends with . Recommend amending this code to work with more line ending than or insure only text mode is used. 
+
+Consider that the greatest difference of the following 2 sets exceeds the range. For a more robust solution, return a wider type or detect failure. 
+
+The compare function is wrong for . Values like and would return which is 0. (equal). Avoid unnecessarily cast aways -ness. 
+
+Avoid a hacker exploit. The null character is not special when reads it. So if the first character read is the rare null character, then is UB. is a nice alternative. 
+
+Missing functionality - CVectorInit_RightSize(). Assume this routine set became very useful. As code uses many array, some arrays may be stable and so a re-allocation based on the size used would be memory efficient. Naming: and are too distinct. I'd expect the errors to be or (if used with other sets) Rather than taking the sizeof the type, take the size of the object. Less maintenance should code change form to , etc. 
+
+Or far better, use a random number generator with a far longer period and initialization state. Example Mersenne Twister 
+
+Including .c files can be done, yet forming .h files with the global functions and variables and using separate .c compilations is more idiomatic. 
+
+Note that binary constants are not standard C. Consider using a decimal/hexadecimal constant and simplified code 
+
+The below could use or . These functions are typically optimized for speedy execution, especially long strings. The key performance assessment should be based on long strings and with sufficient space. Little need to optimize for undersized values of . 
+
+Comments in .h do not details what functions will do when items compare equal. Stable? Non-deterministic? If N items were inserted, all at the same priority, is the order in which they determined? A classy would return these in a way to prevent a stale item (one that sits in a long time). Perhaps if 2 items have the same priority, favor the one with the lower array index? 
+
+Failure to insure is a string. does not insure that a is written. Since does not initialize the elements of the array, by the time code gets to , may lack a null character. Code needs to add it. 
+
+Use when referenced data is unchanged This allows for wider applications, convey to users of the function of data involatility and may allow additional optimizations. 
+
+Rarely are micro optimizations worth the effort, yet this may be one of those exceptions. Functions like or may be used a lot and so warrant "tricks" (AKA micro-optimizations) not meant for normal code as they are higher maintenance yet may provide meaningful improved performance in select cases. Use with caution. One is to take advantage that the usually 256 different values are mapped to a smaller than 256 set. So by using two functions: perhaps 256 byte look-up tables that differ only in , then the compare for a null character is not needed, simplifying the crucial inner loop. Further, I found many compilers perform pre-increment faster than post increment. 
+
+Sample lightly tested \$ O(n) \$ code following OP's lead of (Really \$ O(strlen(str) * strlen(word)\$ vs. OP's \$ O(strlen(str)^2 * strlen(word)\$). 
+
+Use a temporary head node. This also handles cases when by returning , unlike OP's code that leaves the head node uninitialized. 
+
+Some modern compilers can make additional optimizations if the pointers are known to not overlap - use and where applicable. 
+
+is not necessarily sufficient as there is no limit on "word" length. To handle requirements, a new approach is needed. Pedantic: Using with negative values, aside from , is UB. Not a concern here given "All characters are ASCII.". 
+
+Did not notice any limit in code to incrementing . suggest adding test to insure before access arrays. 
+
+Since code it to be portable to C with minor mods, suggest demarcating that which is sort code from test code. Its appears the sort code is only these 3. Do not mix test code with the application code. Better in separate files. 
+
+malloc() style Rather than , consider . It is easier to code right, review and maintain. Leading with insures correct math for more complicated computations. 
+
+The in serves no purpose. The in format consumes any 0 or more white-space characters including and . So these is nothing left to consume by . Further, if the file begins with a white space like , that character will get saved in . Not likely code's intent. If there is not enough data, code could be reading uninitialized data with , which is undefined behavior (UB). Consider validating results before using by checking, at least, the return value. 
+
+Seek clarification or state functionality on edge cases "program needs to find the min element in each column. Then it needs to multiply the row in which the element is, with the difference of its indexes". What should happen if the min value occurs twice? Fold like functions together Only difference between and is the header text. Pass that in. 
+
+Progressive use of compound literals - good. Key Handler function names, being so short, should be as they certainty are not needed out their source file - once code is segmented. Expected , for consistency with . Cast not needed here as must be positive. is scary. I did not deduce from code that this is always valid. Hmmm. 
+
+Code is reasonable. The larger issue is how to handle errors. Detect them is one thing, but them what? At least the code sends a message and quits. The function can fail a corner case: . Returning in that case is not an out-of-memory. 
+
+should be . 24 and 31 are magic numbers that useless in C for this purpose. C does not define an to be 32-bit 2's compliment. In C, s are at least 16-bits and 64-bit `int are not unheard of. 
+
+Nomenclature. size is the size need for the array. length is the length of the string (not counting the null character). Suggest . 
+
+Code is using and leaving the user in for some other function to cope. Better for each function to get the user input and not leave trailing in for some other function. 
+
+There is no need for a and . Alternative, only store and have the tail point to the head of the list. End of list detected when . This makes your head node one field smaller. Important if code uses lots of queues. Unclear why code uses for the queue size type. A signed type is not needed (could use ) and on a system where could be much wider than , a queue size like is more prudent. Robust code would check for a queue exceed the max value of in . Good use of for . Good error checking for . Good to have test case. IMO, a commented sample usage in the file is nice. ; the being the public interface to your good code. Pedantic: Robust would check for in as that negates the correctness of the checks which should be . A little documentation goes a long way. suggest a line or two of comment preceding each function declaration in . Functions like that do not alter should be declared . This self documents the unchanging nature of in the function to users and allows some optimizations a compiler may not otherwise employ. It is a check on the implementation of the function too. For completeness, suggest in . Change order. Put first as a check that does not depend on the 3 include files - unless that file is coded in . 
+
+Unavoidable out of range. has "If the value of the result cannot be represented, the behavior is undefined." Your could do better by preventing overflow. A simple method is to use a wider integer type. Of course that does not help if there is no wider type. If interested in code that prevents that without a wider type, let me know, as it is not technically needed, your function could have UB too if it is like . Proper use of Recommend use of . The list of charcters used in OP's code lacks the standard and other spaces characters that are locale dependable, functions are curious in that they are defined for values and . Avoid if may have a negative value. Similar idea for . 
+
+Design The below set codes in C functions for types: . Each function calls a "wider" function when is large. Should the widest math prove insufficient, a slower bit-by-bit version is called. 
+
+Invalid C code OP’s C compiler may support various language extensions, but is not supported in standard C @Ben Steffan. This makes the code less portable and harder to review. 
+
+No functional implementation problem found. Lots of review-able issues (format, lack of supporting code, etc.), but OP did not ask for that. 
+
+Use same case prefix for type "Stack" and functions "stack" --> "gStack" or whatever. Use correct print specifier. This implies that either OP does not have all warnings enabled or is using a weak compiler. Suggest remedying that.

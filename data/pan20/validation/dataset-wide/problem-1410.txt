@@ -1,0 +1,59 @@
+The component receives a as a string and a as a string. The contains key-value pairs or just the values. The describes how to turn that into a Java object. Firstly, we parse the into a Java object (schema format is known in advance). There is an with possible , which imply the format (it can be XML, JSON, or something custom). So, the contains this value as well as some additional information (like the keys if the only has the values, so we can later map already known key names to values and we don't need to send the keys every time over the wire). Now, that's how it works: 
+
+That way I can just completely delete the and the classes. If they are present, however, each Parser in lazy-initialized and as soon as it's initialized, it's kept in the memory for the rest of the time. If I have all of the Parsers inside the enum then for each message an object gets declared and then discarded. But what happens with the performance when the application obtains 150 messages of 5 different types within a short period of time? I'm concerned that it would be really slow and the memory will bloat until the garbage collector comes and cleans it. I also don't have the way to load the schemas at the start-up, so I may choose the option with putting the s inside the just for the reason I will parse them once. But several data providers may choose the XML schemas, so, I that case I will instantiate the XML parser twice but that isn't a big deal, because there will not be more than 10 data providers. 
+
+Result: msgJson is now: {"Metrics":{"agentId":"12230","callsPerDay":"15"}} Now, I'll explain the classes briefly (too much code to fit here): Serialized: Has a private field, sets in the constructor, there is a getter. Deserialized Serializable: just an empty interface. Should I implement Serializable? I don't really know much about it, just seems appropriate. Schema Deserialized: represents an abstract Java Object for any kind of . Has a getter for FormatMessage value. Message Deserialized: represents an abstract Java Object for any kind of . Has a toJSONString() method. Parser: empty. Because for a message I need 2 parameters, for schema one. ParserMessage Parser: has a method ParserSchema Parser: has a method Format: empty FormatMessage Format FormatSchema Format For each FormatMessage value, there is a concrete class for Message and ParserMessage. For each FormatSchema value, there is a concrete class for Schema and ParserSchema. Obviously, ParserSchema returns its corresponding Schema and the same with messages. Now, the main part: Deserializer: has 2 methods: and . For both he accepts a Format (for message in a form of schema). Inside those two methods this class uses a by calling methods named and . Inside those methods, there is a call to a ParserFactory which holds all the concrete Parser static instances and gives away references to them by by the given Format on the appropriate . The problem is that I'm afraid that the Deserializer class abstracts everything too much that I have to cast a lot, even the caller has to cast a little. My team accepted this design, but I just want to make sure :) UPD: The code for and the as requested. 
+
+That is much more natural. You can also drop the overload. If you don't want to go the proxy route, you can still imply this: 
+
+The Small Algorithms These are very straightforward and I will omit them here for brevity: , , , (variadic!), , and . 
+
+When you find yourself having a lot of duplicate code, you should factor out the commonalities. In this case, we have four separate directions we need to consider. So let's write one function that considers one direction: 
+
+C++, not C You tagged this question C++, but you're not really taking advantage of what C++ has to offer when it comes to this problem. Specifically: the containers. Strongly prefer to use containers over raw arrays (and even then, is better). As a first go then, we can have: 
+
+Yeah, that's pretty dramatic right? Everybody knows what and means. Nobody knows what is. Checking lots of conditions When you find yourself writing: 
+
+But this is error-prone (and relies on global state). Instead of modifying , what we can do is provide a new object to each recursive instantiation. This leads me to... Your algorithm Now, you want this to be entirely self-contained. You're right in wanting to avoid global variables - and you have most of the right idea in that we want to recursively call down with the next word. The one change is the last argument. isn't really meaningful here. What you want instead is the path you've come so far: 
+
+BUG Your program gives the wrong answer, yielding 53 instead of 55. The reason for this is you over-eagerly exclude rotations in if anything ends in an even digit or . But and are prime, yet end in a digit that you exclude! It turns out that the exclusion check (in addition to giving you the wrong answer) doesn't actually help you anyway. Timing your function run ten times: 
+
+That is, something that does not do anything with memory allocation whatsoever. It does not own the data, it merely views it. This will be a very cheap abstraction that you can build on by adding all sorts of useful members (, , , , etc.). Your class isn't a cstring wrapper class. It's actually an implementation of string. But one that is strictly less useful than . For one, yours is copy- and move-constructible, but neither copy- nor more-assignable? That seems fairly arbitrary. Also simply because your class is smaller than doesn't mean it'll perform better. For one thing, has SSO which means it may not even need to allocate memory at all. On top of that, you don't provide or store the size, so to get the length of the string you'll have to call - which inefficient, especially since you construct the string via which has to know the size anyway. Some Specifics If you are taking ownership of an array, prefer . should be named to be consistent with people's expections of what a string class should be like. There should be a method, which will be inefficient since you don't store the length at the moment. You should also make your class container-like by providing a and . Whenever you implement and , you really should implement all 6 comparisons or at least inherit from . With this implementation, you could also implement a helper function: 
+
+Then you can create another map to map header names to column (field) numbers and process the mapped fields: 
+
+Note: You could use reflection to assign values as well, but I figure it is worth the effort to build the lambdas since you presumably will be assigning to the fields often (once per CSV file row). Now you can annotate the class with CSV information: 
+
+Since I was looking at similar functionality for runs of sequential numbers, I thought I'd offer my LINQ solution to this. Using an extension method based on the APL scan operator, which is something like an that returns the intermediate results, which I also have modified to use to pair the scan value and matching element so you don't have to use s and keep up with it manually: 
+
+Here is another answer, using Reflection, and to create a more automated solution. First you create a couple of custom s to mark fields or properties with the CSV Header Name when it doesn't match the class member name, or to indicate a class member isn't initialized from the CSV: 
+
+That is a good definition for an but I believe it is better to implement the operation directly for an (note: I don't use VB, so translated from C#): 
+
+I think the concise version is longer and more confusing, and emphasizes the wrong return (assuming the value of SomeProperty is what is really of interest). For the verbose, I don't like returning the same value more than once, even if it is a constant - so a variation on the verbose: 
+
+Part3 will have the same issue and you can create an explicit type if you want to refactor out the query into another method in the same way as part 2. I run into this quite a bit and have yet to find what I think is a satisfactory solution, so I end up creating explicit types instead. 
+
+I don't really like the burgeoning arrow or the fall through else, but it is how I often solve this pattern. 
+
+I am not sure if Reflection wouldn't be the ultimate solution (you would need to use a custom attribute to indicate non-matching CSV headers), but one possibility is to manually create a map for column names to fields in the class: 
+
+Then you can create a static method to build the PropertySetters for you by Reflection. You need a couple of extension methods to make easier to work with: 
+
+You can create a group number for each matching sequence of keys, then group on these group numbers: 
+
+First, you're taking your by value. That's incurring an extra copy, which you don't want to do. Secondly, your resize policy is increasing capacity by one. This means that your is expected \$O(n)\$. There's an easy explanation for this too: once we reach our capacity, we will have to on every subsequent , which means we're copying \$n\$ elements every time. The right thing to do is to increase capacity by a constant factor. The next issue comes from indexing: 
+
+That strikes me as extremely expensive to start out. Furthermore, consider all the extra work we're doing. The sequence in the problem example is: 
+
+ADL This can be improved. First - you're requiring a member function, it'd be better to make that more of a customization point. Second - you're putting all the operators in global scope when it'd be better to hide them. Both issues can be solved with some ADL. The advantage of making an operator a non-member friend declared inline is that it can only be found when comparing precisely what you want. The downside to what you're doing right now is the following compiles: 
+
+This overload will not throw, and will return a null pointer if you're attempting to cast to the wrong type. Now, the overload you're using will throw if it's the wrong type - but you're explicitly checking that first. Effectively, you're re-implementing what is doing under the hood, which is bad. If you used the other overload, you could let the internal implementation remain private. And the code ends up looking more direct: 
+
+This looks pretty good. I'd propose the following. First, you use in exactly one place. It's a pretty unnecessary function, and just this would suffice: 
+
+It's a couple more characters than your solution, while also not having to be a macro. I think that's worth it. Also, let's use some C++11 features, which are way easier to use with the introductions of and and . , as a function If you wrote it as a function, it would look like: 
+
+And have a member of class instead of a . This will give you all the benefits (checking if is ) without any of the downsides (wait, what's the mean? What's ? Why does my completely unrelated program break when I try to use ?) But there's a lot more to say than just that. Interface Your public interface for is: 
+
+Which brings me to the main compare. We have two null-terminated strings. Both are null-terminated. So what happens when the first one is shorter than the other? Well, if it's a strict prefix, we'll eventually get to the and that char will compare smaller. That's all we need to know:

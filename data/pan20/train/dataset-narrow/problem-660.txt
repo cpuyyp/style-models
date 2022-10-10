@@ -1,0 +1,95 @@
+Understanding Logging and Recovery in SQL Server Managing Transaction Logs SQL Server Transaction Log Management - free book by Tony Davis and Gail Shaw 
+
+Using SSMS : To do so, open SQL Server Management Studio (SSMS) > Right click Server in Object Explorer > Properties > Advanced > Check the ‘Default Language’ property and make sure it is set to the one you want. 
+
+If you are creating package from scratch using BIDS, then in the execute sql task editor, in the sql statement 
+
+You have to really read up on AlwaysON. AlwaysON ships only log blocks. So there is no fileshare concept. On the windows cluster, you can set a witness as fileshare. So, the witness (disk or fileshare) is not AlwaysOn specific. It is required by the Windows Server Failover Cluster to maintain quorum during node failures. Check What exactly is a File Share Witness and when should I use one? Some good references to get you started : 
+
+Azure SQL DB is different ! The column from (dont use <-- its deprecated) will remain the same for the database. The is a function and the value will change if the Azure DB is failed over. Best is to use <-- database name column. People have reported that here and here. 
+
+Above holds true even today for sql server 2012 or 2014. Note that T-Rep on sql 2005 and up has improved a lot, but the argument your DBA has made is baseless. We even has some legacy applications running on sql 2000 and we use replication heavily and is stable in sql 2000 - no issues at all. 
+
+These methods are just overview of what each technology can achieve. There will always be downtime when you have to re-point your applications/users to new server. 
+
+Rather than trying Opensource or free tools, I would highly recommend using Redgate tools for schema comparison. (note: I am not working for or affiliated to Redgate, but have and is using the schema and data compare and trust me they are life saving !) For sql server : SQL Compare. Useful resource for automating using Powershell or command line. If you want to code the solution by yourself using Powershell, then look at Deploying Database Changes with PowerShell Note: Just to mention, there is Data compare to sync data as well. 
+
+So the bottom line is that, if we disable the Clustered Index, then Data in the table still exists, but will not be accessible for anything other than Drop or REBUILD operations. All related Non-clustered Indexes and views will be unavailable as well as Foreign Keys referencing the table will be disabled and there by leading the FAILURE for all the queries that are referencing the table. Note: There is no option to ENABLE the Index. You have to REBUILD it. 
+
+Need help with below code, as it fails with truncation error Truncation error occurred. Command has been aborted. 
+
+Here is the SQLFiddle with some sample data. Can someone with a T-sql expertise guide me on how to achieve the final result ? I know that (with dynamic columns) will be the right approach, but cant figure it out. Expected results : 
+
+I dont see a need for 1. You can use below script to move logins from one server to another. It uses SQLCMD and xp_cmdshell. You can also look for a PowerShell option if you dont want to use xp_cmdshell. 
+
+Method 2 : Using Third Party Tools Create a blank database on destination server. Use Redgate's schema compare and data compare to create and load data into the destination server. Note: I have used Redgate's schema and data compare and they are the best tools for such type of task and hence if you are using 3rd party tools, then my recommendation would be Redgate. 
+
+The above will result : (click here to enlarge) Note: As Aaron commented, you should remove CityID if not required in output list. 
+
+I would highly recommend you to ditch tsql and adapt PowerShell. It specifically adds more value to what you are doing .. Make sure you use Backup compression and instant file initialization on source and destination server instances. from dbatools.io e.g. Usage : 
+
+Note: This will not limit what gets logged. It justs stops logging in Windows Event log. There are some stuff that you can prevent like - successful completion of log backups using Trace Flag 3226 Have a look at -n startup parameter. From Database Engine Service Startup Options : 
+
+It all depends on what functionality/features you are referring to. Collation is storing and sorting of data. 
+
+You actually do not need two backup sets in two different places. To make sure that you can restore your database to a point-in-time, you have to test - test and test your RESTORE strategy. By duplicating your backups without testing your RESTORE strategy, to me its just waste of resources esp Disk (even though you may disagree by saying that disk space is cheap now :-)) Imagine a scenario where you have all the process inplace for taking backups - full and log backups. And someone took an ad-hoc T-Log backup. This will break your Log chain and you wont be able to restore your database to a point-in-time - UNLESS you have tested your restore strategy (you wont know that it does not work). Refer to : Backups: Planning a Recovery Strategy by Paul Randal. Also, depending on your database size and your business requirements, you should workout if you want 
+
+Its up to your business what RDBMS they want to use. We are a Microsoft shop running majority of our software on Microsoft stack and so we move our Sybase Clients to SQL Server. If you have any specific step that you find hard to proceed further, let me know and I will help you out, but above links will give you a good start. 
+
+Since you have downtime, best is to use this powershell script- with backup restore option This script will take care of moving databases, logins, jobs,etc on the new server. make sure to use backup restore switch as opposed to detach/attach. 
+
+Yes, if you know what data to insert after corrupt data pages are deleted, you should be fine. make sure you find out the root of corruption to prevent it from happening. also, once everything is fixed, then do a full back and restore it on a different server to make sure everything is fine. Your plan sounds good to me. 
+
+Logshipping is an automated process of doing FULL backup, copying it to secondary server and restoring it in NO-RECOVERY state and then taking consequent log-backups from the primary server, copying them to secondary server and restoring them. Depending on the size of the database backup (whether you are using compression or not) and the network bandwidth, it can take from mins to hours. Other way is to initialize secondary database from the FULL backup of primary database - restore an existing backup of the primary database to the secondary database 
+
+is for client application e.g. in SSMS when you press CTRL+T, you tell the client application (SSMS) to show / render the results of the query in TEXT format. Similarly, CTRL+D in SSMS will show the results of the query in GRID format. 
+
+so to drop all the metrics from the default group 1, you have to run As a side note, you can recreate the view using below sql 
+
+Since you have different schema and different table structure, SQL Server transactional replication is out of scope. Any alternative? As an alternative, you are better off designing your own custom solution using : Microsoft Sync framework and change tracking (CT) (not Change data capture (CDC)). Note : The source should be SQL Server 2008 and up as CT was introduced in sql server 2008 and up. You can also look into Service Broker as it is optimized for uni-directional data flow and it is MUCH faster than writing to a table, even a heap. In addition, you retain the transactional consistency of SQL Server, so once data has been written to a queue, it is guaranteed to be in the queue, and will only be deleted from the source server has it has been received. Also refer to : 
+
+Unfortunately, does not have any parameters for specific database or objects. Best is to rebuild the index. 
+
+I agree with Martin on running to make sure that you do not have corruption. Relying on does not tell you the full truth if was ran clean on the database. For VLDB, people just run . This will update the along with . From SQLSkill's blog - Note that will : 
+
+When you want to change collation, then such scripts are useful. I have found myself changing collation of databases to match server collation many times and I have some scripts that does it pretty neat. Let me know if you need it. References : 
+
+You have to select in properties --> DELAY VALIDATION = TRUE. By default it is set to false. That will take care of the issue you are facing. UPDATE : Also, in conditional split Editor, you can put an expression to skip blank rows : e.g column1!=""&&column2!=""&&column3!="" or you can use Row Number Transformation and using conditional split you can take first few (e.g. 10) records based on the variable created by the component. 
+
+You can use Ola Hallengren's - SQL Server Maintenance Solution This is much flexible than maintenance plans. We have 300+ servers and we are using it for all our backups. It just works flawless. To get you started : 
+
+As a side note you can refer to Top 10 SQL Server Integration Services Best Practices by SQL CAT team. 
+
+Instead of reinventing the wheel, just use dbatools - restore-dbadatabase it has extensive coverage of all the scenarios that you might ever need. Note: dbatools also has a better version of invoke-sqlcmd --> invoke-sqlcmd2 with a to parse scripts with batch seperators and is more optimized version. 
+
+Remove the current table from replication. Do you data update and (To speed up things, you can truncate the table on Subscriber if the table is massive - so when you do a snapshot, replication wont have to perform delete on subscriber table) Add the table back to replication with nosync option Snapshot the publication, but this time only the snapshot of the table that was added will be generated. 
+
+As per BOL - Defines period for regular flushing of Query Store data to disk. e.g. how often the data from memory is flushed onto disk automatically rather than you running sp_query_store_flush_db manually. 
+
+I would suggest you to leave MIN Server memory to DEFAULT. Min server memory controls the minimum amount of Physical memory that sql server will try to keep committed. When the SQL Server service starts, it does not acquire all the memory confi gured in Min Server Memory but instead starts with only the minimum required, growing as necessary. Once memory usage has increased beyond the Min Server Memory setting, SQL Server won’t release any memory below that amount. Bob Dorr explains this settings as : 
+
+Turning my comments to answer : SSMS is just a tool to connect to SQL Server. You did an inplace upgrade, but were connecting to SQL Server 2012 using SSMS 2008R2 and SSMS 2012. Using T-SQL - will give you the correct version: 
+
+Now that you have reverted to old CE, your next steps in troubleshooting are finding out/isolating queries that are poorly performing - using XEvents or server side trace. You should tune those queries. My Suggestions : 
+
+During Hurricane Sandy (natural disaster) and recently when moving our data center (managed failover), I was in your situation. I have implemented Logshipping and was able to efficiently failover during the above scenarios. The technique that I used was reverse logshipping (swapping roles between primary and secondary) - which allows you to swap the log backups. Below steps can be scripted with Powershell or TSQL script (I used sqlcmd and xp_cmdshell) FAILOVER Process: 
+
+I would not set the value to (limitless). I would instead find out the max datalength of your lob data and set it accordingly with a 10% buffer. This way you have more control of what and how much gets into distribution. I can see that in an unlikely situation, setting of can cause high network latency if the blob data to be replicated is of a much larger size. 
+
+Paul White has explained in an excellent lucid manner the reason behind - sql server behaviour when running on servers with more memory. Also, a huge thanks to @swasheck for first spotting the issue. Opened a case with microsoft and below is what was suggested. The problem is resolved by using trace flag T2335 as a startup parameter. The KB2413549 - Using large amounts of memory can result in an inefficient plan in SQL Server describes it in more details. 
+
+You can refer to Paul Randal's blog (the guy who wrote DBCC CHECKDB) : CHECKDB From Every Angle: Complete description of all CHECKDB stages : 
+
+EDIT: Announced and demoed in PASS Summit 2015 - As of SQL Server 2016 CTP 3.0, SQL server supports Advanced Analytics (RRE integration): 
+
+Transaction log is not written along with full backup ? This is not correct. In FULL recovery mode – the database backup contains all the log necessary to make the restored database transactionally consistent as of the end of the backup operation. Refer myths around full database backups from Paul Randal. Below is an excerpt *A full database backup, when restored either explicitly using WITH RECOVERY, or when a recovery option is not specified ALWAYS results in a transactionally-consistent database. The point-in-time at which the database is restored to is the point at which the data-portion-reading part of the backup operation completed. All database backups include transaction log, otherwise there would be no way to rollback transactions that were active at the time the data-reading portion of the backup ended.* Do I lose transaction log on a database when I do full backup ( is log truncated on full backup ) ? No you do not loose T-Log when you do full database backup. Refer to Misconceptions around the log and log backups: how to convince yourself for understanding how log backups work. If I want to have data backup and transaction logs backup what should I do ? If you want to have data backup and T-log backups, you have to first perform FULL database backup and then take subsequent T-log backups. So when you restore your database, you can restore a full backup and then subsequent T-log backups to do a Point-in-Time recovery. 
+
+I would ditch Azure Sync by all means .. buggy and still in preview since ages. We have exactly same requirement and what I did was create SSIS package and load the data from Azure to OnPremise on a nightly basis. It works just fine once you set it up. Make sure to load the data as per FK relationship. On other side, you can explore Windows Azure SQL Database Import/Export Service. 
+
+This is a really good idea to delete in small careful batches or chunks. I would add a small and depending on the recovery model of the database - if , then do a and if then do a to avoid bloating of transaction log - between batches. 
+
+Its very difficult to reverse engineer and interpret SQL T-log records. As mentioned there are 3rd party tools like APEX SQL Log , RedGate's LOG Rescue, Log Explorer Also, there is an undocumented command fn_dblog that can be used as below, but you wont have the flexibility like 3rd party tools. 
+
+Yes, stats created on Primary replica will replicate to secondaries. The secondary is a strict replica (copy) of primary database. So, the stats are created in tempdb linked with the readonly database. SQL server will maintain statistics of read-only secondary databases in tempdb. Your secondary workload (readonly) will be different from the primary workload (will be mostly writes (more) and reads). From : AlwaysOn: Challenges with statistics on ReadOnly database 
+
+Dont just blindly go for rebuilding all the indexes. There is a much intelligent way of doing it. (hint: SQL Server Index and Statistics Maintenance by Ola hallengren) This is an official guideline from Microsoft (and its a good starting point - instead of blindly rebuilding all the indexes): click here for enlarge Also, if you are using sql server enterprise edition then Rebuild is an ONLINE operation (REBUILD ONLINE = ON) Also, read : Online Index Rebuild - Can Cause Increased Fragmentation - when it is allowed to run with and directives. As a side note: Paul Randal has a nice checklist of VLDB Maintenance best practices from his MS days :-)

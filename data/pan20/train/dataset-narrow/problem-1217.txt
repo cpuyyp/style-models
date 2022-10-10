@@ -1,0 +1,55 @@
+Start with the technique as described above for a 10x10 grid, then introduce some logic to precompute edge cases. Create a finer line-of-sight grid. Your character may move in a 10x10 grid, but the light-of-sight grid could be something like 100x100. The Discrete Hough Transform technique describe above works for (arbitrarily) large grids, but that requires steps to break the main grid into smaller grids and then combine results. 
+
+The technique above would allow both for move dynamics and for checking line of sight from any pixel. If you want to check the line of sight such that it can slip between pixels--meaning that the digital line connecting a pixel and its termination at a wall can touch a black pixel corner, for example--then you have a few additional options: 
+
+A lot of this may be overcomplicated for what you want to do, BUT it's worth knowing some of the techniques for future use. Given some complicated method that can be used to precompute lines, you can find a way to simplify the technique to fit your application. To summarize: 
+
+Since your scene is static, at least until another scene is generated, you can perform all of your raycasting at the time of scene generation. You shouldn't have to recalculate rays every cycle. Though you'll have to adapt it to your purposes, there is a method for precomputing line fits that you can read about in the paper "A Fast Rule-Based Parameter Free Discrete Hough Transform" by Genswein & Yang (1999): $URL$ Briefly put, your code would calculate all possible lines of sight before the maze or game appears on screen for the first time. You could almost certainly simplify the line-fitting technique mentioned in the paper above, but the general technique is worth knowing as a means for precomputing fits in a 2D digital image. 
+
+There are other ways to handle precomputation that you might like better, depending on how you want to purse the problem: 
+
+For each and every pixel, assign a binary representation of all the digital lines that pass through that pixel within some NxN grid of pixels. (You may be able to use your full 10x10 grid; breaking down a grid into subgrids introduces some complexity.) In your case, rather than representing a line as simply the edge-to-edge representation using the numbering scheme described in the paper, keep track of both the edge-to-edge line segment as well as the valid end points within your white/black (open/closed, available/blocked) grid. For each pixel, maintain a container (e.g. map, hash, list, array) of allowed moves. On keyboard input, check for validity of the allowed move. (UI nicety) If a move would be disallowed because the character would bump into a wall, allow the character to move just a little bit but then snap back to the original position, and briefly show the bumped wall lightening in color. This helps indicate that a move was attempted but disallowed. 
+
+Same value computed multiple times You compute multiple times which is not as efficient as it could be (which is sad for something meant to be an optimisation). 
+
+You are not done yet because there is another bug in your case which does not always appear (depending of the order of the element in the list). Indeed, the idea is to check for each element in if it is in . This is NOT what you are doing at the moment. Indeed, if is shorter than , you won't check every element of . Once this is understood, the bug is quite easy to fix. 
+
+Don't Repeat Yourself You are doing the same thing multiple times. You could try to see what is similar and what changes and see if you can use a relevant data structures for the changing parts. Here I stored the articles in a list to be able to iterate over them. 
+
+Couldn't send this answer yesterday because the site was down for some reason. First thing you can fix is to add a guard before calling . This is the usual way to do things in Python so that you can import you files without running the code corresponding to : 
+
+Now, for the actual comments. It would probably be worth writing a function to get the new letter. Something like : 
+
+Enumerate As pointed out in comments, you could (and should) use enumerate to keep track of the current index during an iteration. In your case, because it makes sense to start from index 1, you can use the parameter. 
+
+Tests It's a good thing you've provided tests and expected output so that one can check the behavior, it is even better if one can run the tests without having to check that the output is correct. Only a tiny bit of reorganisation is required to get : 
+
+Another more simple solution Your solution involves both recursion and mutations of data. This can make things very hard to understand. A more simple idea could be to say that from the rank, it is easy to know which element will be the first of the permatation. Indeed, if your list has elements, you know that there are permations of length and so the permutation will have for its first element the -th elements. You can repeat the same thinking for a smaller list consistent of the remaining elements with the remaining part of the rank. This can be written: 
+
+It took a bit to remember where I'd seen this before. Implementing Newton's Method for taking a Square Root was one of the exercises in Odersky's Functional Programming in Scala course on Coursera. Here is an implementation that's mostly based on the hints and suggestions in that assignment. 
+
+Principle of Least Surprise So far we haven't changed how the method actually works. In the possibilities you mentioned for how to handle a failure to close you missed the most important option: mimic the behavior of the Java try-with-resources block. This is important for two reasons: the first is that it's a pretty sane way of handling this case, the second is that it will be the behavior expected by anyone coming from a Java background. Acting in an intuitive manner is a very powerful thing. Java handles failures to close in this manner: 
+
+Pattern Matching The next change moved from to pattern matching. I did this for two reasons. The first is that it allowed better naming that and generally made the logic a bit more clear. The second was that it paves the way for one of the other changes that I had my eye on. 
+
+Ok, now that's out of the way, to the good stuff :) Use interfaces if they are already there Scala's interoperability with Java is one of it's strengths, so re-inventing an interface isn't really needed. Additionally, using gets rid of the structural typing, which is a nifty feature, but it's better to avoid if it's not strictly needed. This simplifies things considerably, particularly the type signature. FlatMap is a Monad, which means a bunch of stuff to category theory buffs - which I don't particularly care about. What I do care about Monads is that they have two methods defined on them that can make life much easier. is the first, and you've basically defined the content of this method in your outermost pattern match. Refactored Version 1 
+
+Along those same lines, became because that's really what it does. I also moved the helper functions into 's companion object. It's a good default organization strategy. itself had mostly structural changes. I changed the visibility of , so that mutating it has to pass through the helpers. It also became a Set, as the OS doesn't generally make guarantees about listing order, so I wanted to avoid implying that the order was something that could be relied on not to change. became just and passes a defensive copy of the internal set. That gives us this final version, with a small driver to make testing easier. 
+
+Typo: You meant "word", not "world" Not much to add here. Handle the last word at the end You can handle the final case the end. Then you can merge the condition check togetherin the loop. Bug found We have the following behaviors: 
+
+More optimisations You could compute the limits outside the nested loop. Your loops are actually loop in disguise and you could make things more efficient by using or you could use the argument of range to use the values you'll actually need : (in both cases, there might be an off-by-one issue but I'll let you check and fix). Final (untested) version of the code 
+
+could just call instead of . This would make much simpler as it shouldn't be its duty to try to handle special cases (see Separation of Concerns) 
+
+You should try to use to let the calling functions (try to) handle the errors instead of -ing from everywhere in the code. 
+
+Purely personal but I'd rather avoid whenever it can be easily avoided. If your case, it's quite easy to put the whole block behind a (or even better : ). However, things could be even more straightforward : and could start at because first iteration won't do anything anyway because condition will be true. Then, as far as I can tell, the guard is not needed anymore. 
+
+will throw the relevant exception for an invalid value. Do not repeat yourself You can try to avoid duplicated values and have a single source of information. In your case, the list of planet is indirectly hardcoded twice : 
+
+Object programming Y'ouve split your code into various classes. Yet, it seems like the way you use them could be improved. Indeed, the various "is_SOMETHING" method are very suspicious, both in the fact that it exists and the way it is implemented. The implementation relies on the name of the class. This is fragile but also wrong if you actually plan to use inheritance. You could have an instance of a subclass of "Deque": its class would not be called "Deque" but it would actually be a Deque. Thus, is what you should be using. For instance: 
+
+Now, you could go crazier and use the fact that all your regexps look the same to define a function to build them. You'd get something like: 
+
+The way you handle in is confusing and potentially wrong. It would be nice if it could be handled in a consistent way across the different methods : either or . That would make everything easier to follow and that would make duplicated code easier to spot I'd change the order of the argument in the constructor and define : AND (initialising trees to )

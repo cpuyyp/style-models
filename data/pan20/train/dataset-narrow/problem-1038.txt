@@ -1,0 +1,95 @@
+This would give you directly the first node of the first node. Internally, it does mostly the same as what you did manually. 
+
+Beware that can have a drift, or may even skip invocations when missing the time window. If you need accuracy for longer runs, instead better sample the system time at every invocation instead to determine the real time offset since the machine was started. 
+
+This however is not what your function actually does. For starters, you implicitly require a valid key/value pair for the primary key. Not provided? will throw a warning and then default to , as you attempt to read from a key which didn't exist before. Neither did your comment describe in any way the "multi update" functionality. Especially the heuristic you are using to determine whether the passed array contains one or more data sets. If only one of the (not actually ignored) additional fields is an array, the heuristic triggers and leads to a wrong handling of the argument. 
+
+In , you are explicitly destroying old , but you are not reverting to a safe state prior to invoking the new constructor. If the new constructor would throw, it would leave on the old value which is plain wrong. Consider adding an method which handles save destruction instead and is guaranteed to set explicitly to the invalid type. This also leads to invoking the destructor on invalid states. 
+
+That recursion in the template of . Not going to lie - that's rather difficult to trace. A comment would have been in place, explaining what you are going to do. 
+
+Just to avoid confusion, the former paragraph isn't applicable for , and alike. However, these are not exactly clean either. Abusing a to pass in the render surface of the parent is a horrible hack. Especially when you then continue to render to absolute coordinates in the parents screenspace. At least have the decency to leave the layout to . That is simply reached by additionally passing and offsets to , so that these components (at least internally) don't need to know the layout. The clean solution would be not to let these components draw directly to the render surface, but to use separate panes instead, completely separating them from the parent component. 
+
+Bonus points for wanting to support *nix systems. All gone for totally messing it up. , if at the start of a path, is already the home directory. is not a valid path. 
+
+You don't have any private methods yet. Just food for thought, in regard to the Separation of Concerns, you could actually structure your API like this: 
+
+Disabling the inputs without any good reason is providing a bad user experience. The point about using the react framework is, that you can recompute all results (in this case the result field) from the state gathered. So why force the user to discard that state? Just continue updating the state as the user continues providing input. What you should have added, but didn't, is a visual feedback which operation is currently active. Trivial, if you had recorded the chosen operation in the state. 
+
+Fetching X and Y coordinates from different vectors is somewhat weird. You should try to group data which is accessed in the same context, rather than attempting to sort it by type. E.g. 
+
+Your handling of invalid inputs is plain wrong. While you did right to disable the calculation as soon as an input becomes invalid, you totally messed up the logic to re-enable the calculations. Test it yourself, enter something invalid into both input fields, fix up only one, and the buttons become re-enabled despite the other field still containing garbage. The problem is wrong use of the . Whether the buttons are disabled or not, is actually a function of whether input a and input b are valid. Whether they are valid or not individually belongs into the state - however the computed result of that combination does not! If you had computed the state of the buttons from the state of the inputs in the method, this problem wouldn't have occurred. 
+
+In fact, we don't need to generate the index and pass it to if all we do with it is put it into later: 
+
+Calling a monadic action a given number of times doesn't need manual recursion, and thus also doesn't need to give the repeated action a name: 
+
+Combining with is a fool's errand. (I don't know where you get and , so I'll assume they start at 0.) 
+
+is . points out some redundant brackets and suggests using in . , and are superfluous once-used one-liners. All the passing can be abstracted with the monad. For example, becomes (I assume reversing the order of adding does no harm) and can be inlined. And s are , so no need for . And becomes and can be inlined. (I note these because it might otherwise look like I'm rewriting the code from scratch as opposed to reviewing.) 
+
+Changing the where to a let allows you to skip passing the secret. Passing guesses in and messages out purifies the control flow part of the program. zip [1..] makes clear: The number of tries during each step does not depend on the control flow. interact, lines and foldr replace the recursion. (Recursion is too powerful for brains to handle in general, so we should avoid it when we have a simpler tool.) Your mileage may vary on any of these suggestions. 
+
+Ignoring what kind of error messages you get, you don't need to handle error cases yourself: (!!) already does that. 
+
+In general, I'd go for the second sort of approach. It scales better. I'd eliminate four names and the hack like so, at the cost of and : 
+
+Successive elements of the list returned by genPositions and xs are zipped together; captures this pattern. i is now not needed in its non-rooted form and I recommend changing the interface to take N as an argument instead. Non-square arguments can currently crash !! anyway. genPositions is only used once, therefore I inline it. 
+
+Edit: Since we've already silently been passing into the last case, we might as well get rid of , which can also be handled silently, for: 
+
+You can make nonpartial by using . Then it turns out that already implements that and calls it . Using it, you can eliminate another case from pull. 
+
+Library functions, particularly Maybe's Applicative/Alternative instances, can make your code more consise: 
+
+Here's how to use to brighten the day a little. You may have hoped for a way to do only once after combining the s with ... but I also don't know how to do that. If went to arbitrary MonadError instances, could have been more concise. 
+
+Your example would then look like . By the way, whereever you're using the Eq instance of Tank, consider pattern matching instead. 
+
+fires when returns an empty list; we'd expect to be able to ask that question only once. and do not deserve names - if you want the reader to be able to tell what the value means, comments are more appropriate. Most of the rest of is about descending into a nested data structure and changing a small part, which specializes in: descends into the board, then each of its elements, then each of their cells. gives you, roughly speaking, the positions of the targets in the original board - it separates the board into a and a for each target. lets you forget there was an . 
+
+Let's use from that comment and inline the once-used (imo if you're only giving a name to explain what something does, use comments) 
+
+While these two are obviously magic numbers, you are being very inconsequent by deriving a lot of other magic numbers in your codebase (essentially all screen space coordinates!) based on the value of these two. Take e.g. the bounding boxes in , every single occasion where you are drawing an UI element at a fixed location, or even the ingame object placement. All of these should have been derived from these two constants! 
+
+Eh, nope. Looks like you actually managed to bake the game state and logic into the class which was only supposed to be responsible for presentation. Well, at least that means the setup of the game state is still in a single location? 
+
+would become already much simpler if it did just add a temporary head to the list, as the special handling for removing a chain at the head wouldn't be necessary in that case. Finally destroy the temporary head again, and overwrite unconditionally. 
+
+Does this actually handle all of the message parsing? As in: Is it really necessary to handle the full netcode in the main thread? At least unpacking and sorting all inputs to a thread safe queues (e.g. lockfree queue from boost) with unresolved, symbolic references should be easily possible inside the worker threads handling the connections. Validation of conflicting inputs, or orphaned references can't be avoided in the main loop. But parsing the packages and preliminary filtering can. 
+
+Well, at least it could if you hadn't called . Because of that, now returns false. Instead of a deadlock you now have something far worse: Use after free! As the thread pool is destroyed, all the mutexes, , , and are destroyed despite being still in use by the worker threads. The next allocation reusing these memory sections, will result in a bloody mess. 
+
+In terms of code style only one remark, and that is on the location of the when working with pointer types. I know, placing it next to the type feels more natural, but it's semantically inaccurate, and it will trip you the first time you attempt to declare multiple variables at once. Placing it where there compiler would sort it helps preventing these mistakes. 
+
+Now might even be an arbitrary of the model instead of a single post, and you get the run time down to what you originally wanted. Cutting down on the number of individual database queries is the key here. 
+
+Yes, or at least mostly "yes". You still have to distinguish whether a method or property should be private by design, or if you are just not using it publicly yet. In the latter case you may ignore the warning, but in the first case, IntelliJ is most likely right. Simple rule: High inner, low outer connectivity. Your classes and packages should only expose the bare minimum to the outside, and keep the implementation specific details hidden. 
+
+That's one of the benefits of PHP, you have always a hashmap at hand when you need one ;) Supporting only a single level of nesting Let's see what happens if we add another generation of children. suddenly lists the child with grandchildren as another regular root. Ups, that did not go as expected, did it? Not using the return statement in a recursion This points out that you have a rather weird understanding of recursion. When you do a recursion, your goal is always to to break the problem down into smaller problems, and to return a partial solution. In this case, respectively for a tree in general, your goal is always to completely construct a single sub-tree, starting at the current node, prior to passing the current tree back to the parent context. So in short, for traversing a tree, the recursion function looks something like (pseudo code): 
+
+This piece of code is, incidentally, the epitome of order confusion and what wouldn't happen if there was a way to bundle API updates with automatic patchers to old code. 
+
+Another thing that comes to mind is that k*k might be faster than k^2 for obvious reasons. looks it up Oh hey maybe you want to look at $URL$ 
+
+Try to put configuration-like parameters to the left and data-like parameters to the right, it composes better. condenses much conversion. lets me improvise a query language so I don't need to unpack the tuple everywhere. You already wrote and then you didn't use it. 
+
+The explicit recursion in can be averted by using library functions that specialize in particular recursive patterns: 
+
+If you used , would be Using , is , except that the list is the right way round. Replacing with allows you to remove the last line, and thus the recursion, in loop's definition. Prepending to allows you to remove the . skips getting system time. 's allows you to require ability to generate random numbers in exactly the upwards call hierarchy of if you use mtl-style type signatures. You won't even need to specify that it is actually provided by (except in ), giving type level gurantees that you aren't using IO except for random numbers. Then you can wholly reduce to . 
+
+The "intermediate array" takes no extra space due to lazy evaluation. is . Yes, swapping the parameters makes sense. Inline and once more. I wouldn't worry so much about constant factors - have you compiled it with -O2 and tested (eg with criterion)? import Data.List (minimumOn) 
+
+One property that comes to mind is that applying any permutation before does not change the result. But what is a permutation? I'd say it's a function that doesn't exploit properties of the element type, has a left inverse and preserves the length. (The first ensures that only input elements are used. The second ensures that no elements can be dropped. The third ensures that there is no space for duplicated elements.) 
+
+Have some rewrite rules applied, combinators used and helpers inlined while I think about your algorithmic question. And make a . 
+
+can be assembled from library functions. To reduce code duplication, turn the parts that differ into the parameters of a function you implement once. The things you happen to be doing here can be written in terms of a few modules. Try to inline everything that's used only once. 
+
+The general idea is to use library code, particularly to eliminate explicit recursion, and inline things used only once. abstracts computations that can fail and abort at some point, and allows you to bind into pattern matches that fail the computation if they don't match. abstracts retrying them until they work, using s instance. abstracts computations that carry around a piece of state to read and write to. defeats the need for to manually loop. Contrary to that comment, abstraction is kinda Haskell's thing. 
+
+<- You want . implements some of your stuff already. I wouldn't introduce the types and in the first place. They just introduce wrapping without extra type-level structural info. 
+
+When you need to reverse afterwards, that's a hint you should have folded the other way. But this can even be written in terms of : 
+
+is from Control.Monad.Random. Stuff that you only ever plan to use once and in one place should usually be inlined. allows us to abstract away the passing around of the blacklist. replaces this recursion. Your into an if is subject to Boolean Blindness and should instead be done via a uniformMay combinator. It's a shame it doesn't exist. Let's make a pull request to MonadRandom and pretend it does. reduces naming further.

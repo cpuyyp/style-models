@@ -1,0 +1,55 @@
+There's something a bit funny about this base case to me. It seems like it's not the most basic one you could choose. If we let the "loop" run one more time... 
+
+Whoa, whoops! Can you figure out which refactoring above was the culprit? =) Now we have to decide whether we like the old behavior better or the new one. I think in this particular case we should like the old behavior better, since the goal is to show a number, and we'd like to show up as rather than as . It's a bit ugly, but we can special-case it. Since we like our future selves, we'll leave ourselves a note about this, too. 
+
+(By the way, a variant of that I have always felt has the wrong type, , is available from .) Finally, I would be remiss without pointing out that there are several good functions that already exist for doing conversions like this: 
+
+but I think that's a bit short-sighted. Ignoring for the moment the inputs we know we're going to call this thing on, we've observed already that there's times when there's no good answer to return, and there's times when there is a good answer to return, so seems like a good start, but there's also times when there are two good answers -- or more! So let's use a type that reflects this scenario instead: 
+
+I have a list of elements (well, nested lists of elements, really) that the user can reorder (using jQuery ). A simplified view of the structure is something like: 
+
+That will do the same thing as your code. Also, please consider using variable names that are not just single-letters. 
+
+Globals; I would prefer using ids on the input fields (or even better, a jQuery selector) to retrieve them rather than going through . Like: 
+
+Globals; Even more than above, I'd prefer not having these globals at all. Instead you could retrieve them as needed in your functions (and/or pass them in as parameters). Event Handlers; If you're just going to use the and attributes, there's no need to bind them programmatically. You can set them up in your markup instead, like: 
+
+Note that this allows you to easily pass the field itself to , instead of just an arbitrary key. Functions; I'd recommend the following style when writing functions: 
+
+Separation of logic and presentation; Instead of composing a big long HTML string in I'd recommend having the basic structure of the output as part of your markup. For instance, contained within a that is set to initially. Then the only thing needs to do is update the parts that actually change and toggle the visibility of the . That will result in less code and be more maintainable than trying to construct the entire HTML snippet programmatically. 
+
+Now, as we all know, building up a linked list by repeatedly appending to the end is a bit inefficient. Probably for such small lists as you'll be using in test cases here it won't matter, but it's a good idea to get in the habit of paying attention to some of the easiest stuff, so let's try to improve this a bit. We have a choice here: either we can keep the interface of this function as-is, that is, always output a list in the right order, or we can choose to change the interface, and change all the call-sites of this function. I think for this case we can keep the interface. The idea we'll take is to build up the list backwards, then reverse it at the very end. The name is traditional for local workers. 
+
+though this spelling is optional. In fact, everything is short enough now that I would even feel comfortable inlining the definitions: 
+
+As with waaaay back at the beginning, I find the choice of base case a bit odd. Let's try the trick from before of letting the "loop" run one more iteration (and this time hopefully the refactoring isn't wrong!). 
+
+This works, but as the notes I found that filtering using is incredibly slow. If I don't filter on , then what happens is that nested instances affect the count, and the numbering is incorrect (numbers jump like 1, 8, 17, 32, etc.). Can anyone suggest an alternate approach that will produce the same results without the performance hit? 
+
+To provide some background context, I'm implementing a web-based solution (Java, Spring, Hibernate) that allows the creation/authoring of task-centric workflow documents. Basically a workflow provides an ordered collection of tasks (and related content) for a user to step through. One of the available task types is a "risk assessment" matrix, in which the user selects a "risk" level (i.e. "how likely is it that this thing will break?") and a "consequence" level (i.e. "how bad is it if the thing does break?"). Based upon their input, some text provided by the workflow author will be displayed. Essentially these tasks are backed by a 5x5 matrix of strings, and by selecting a "risk" and "consequence" level, the user is indicating a position in the matrix. There's one further complication, in that all text provided by the document author must support internationalization. To deal with this I've implemented an entity, which simply refers to a collection of entities, each one of which specifies a language, and a string of text in that language. That all works fine. What I'm wondering about is, what's the best way to store the matrix itself in the data model? I can't just serialize an array of Strings, as each position in the matrix is actually occupied by an instance and not a . I suppose maybe I could serialize an array of ids, but that seems fairly hacky, doesn't it? Under my current approach, I've explicitly declared a field dedicated to each position in the matrix. That makes for 25 getters and 25 setters. To avoid having to deal with that nonsense, I added some helper methods that take advantage of reflection in order to get and set fields based upon their matrix position, in standard notation (I use a two-dimensional to transport the matrix data to/from the rest of the application). What I'm really after is the cleanest, most convenient way of managing the matrix content. I think what I have is fairly reasonable, but can anyone think of a better approach? Here's the code: 
+
+Now, I wonder whether recomputing the power of ten each time is really the right thing to do. One thing we could do is to use and divide by 10 in each recursion. But division is slow, so let's take another plan: instead of computing the length of the list explicitly, let's do it implicitly by having also compute the appropriate power of ten. 
+
+Now, we have this branch primarily because still isn't total (it can't handle an empty input list). Instead of protecting ourselves from calling in this case, we should just let deal with empty lists correctly. So: 
+
+We first need to fix up some typing issues, since we've changed the interface to and this is a caller. As before, we can do that just by putting in a ; as before, we'll spell the combination of and as . 
+
+The test for this one is a bit complicated; since the old implementation is partial, we have to restrict ourselves to those inputs that work. 
+
+Actually, this whole process at the very end is quite roundabout! If you squint, it looks like what we're really trying to implement here is a little function 
+
+Each inside of is sortable, and each inside of is also sortable (independently of the other sections). Each element within these sections is numbered according to its position in its own list. So to continue with the example above, the correct numbering is: 
+
+There's an additional complication, in that each can contain a new repetition of the entire structure, beginning again from . This nested content, however, is essentially spurious and should be ignored for all practical purposes. Anyhow, to apply the numbering to the inner sections (and simultaneously ignore content in the aforementioned nested sections), I'm currently using the following code: 
+
+No, I wouldn't say you're using too many variables (except for , which doesn't appear to be used anywhere). Not enough functions, though. And perhaps too many spurious assignments. Specifically, I'd suggest something like: 
+
+I don't see anything in your code that should cause any performance issues. You're not doing anything iterative, or performing any complex operations; your code just executes linearly and changes some CSS properties. That shouldn't kill performance. Have you seen anything to indicate that this code does kill performance? If so then the only thing I could suggest is changing the events that you listen for (or maybe, adding some logic to ensure that you don't start a new transition while the current one is still running), as perhaps the page is triggering more and events than you expect. Premature optimization is the root of all evil, and all that. Also, you should be able to do: 
+
+(If you haven't seen before, I encourage you to try to code it up yourself! Then check the Report and compare answers.) Additionally, we're going to have to change things up a little, since we've changed how works and calls . Before, we had and hence . Now, we have and hence . Since we expect each of the lists in the output of that to be singleton lists, we can smash them all together with : 
+
+Personally, I often prefer to , and the is complicated enough that I feel like it should be named, so I'd write it as follows. But this is an aesthetic choice that you may or may not agree with. 
+
+My only complaint now is the name, for two reasons. The first is that isn't capitalized, which is inconsistent with the naming of the remainder of the file. The other one is more of a philosophical one: our input is an integer, not a base-ten integer. If anything, the base-ten-ness is being imposed on the output. So: 
+
+This isn't obviously better, since it still fails in all the same situations it used to fail, and it never returns multiple answers. So we should differentiate the two cases that lead us to the branch:

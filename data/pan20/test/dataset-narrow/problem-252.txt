@@ -1,0 +1,33 @@
+I stumbled across this blog post, which while the author didn't have the exact same problem as me, our issues seemed similar enough that his fix might work for me to. I downloaded the SSDT-BI 2012 package and installed it, and lo and behold, things work fine again. I'll just not even consider that somehow things worked fine for a year or more without downloading and installing SSDT-BI 2012, so I might be able to retain some portion of my sanity. 
+
+The thing is, none of the column really need to be LOBs. There's a few that are TEXT types, but could fit easily within a varchar(max). Even stranger, though, most already are varchars, but it seems anything over varchar(128) is being treated as if it was a LOB (in advance properties, the data type is DT_NTEXT). I event tried doing a manual SQL command where I explicitly casted every string type to a varchar of an appropriate length in the select statement, and they're still being set as DT_NTEXT in the ODBC source. I'm not a DBA, so it's entirely possible I'm doing something really stupid. I would just like to know the best way to ensure that the types end up as varchars so I can batch fetch. Any ideas? In case it matters, I'm using SSIS-BI 2014 inside Visual Studio 2013. 
+
+Familiarize yourself with mysqldump command options, you will need to execute two sets of mysqldump backups, one for table structure only without data (--no-data) and another one that includes data for selected tables only. 
+
+Given that the other answer might be a problem for you, I would suggest you try pt-archiver instead specifically using the option, of course in combination with and option you may be able to pull this off somehow. Good luck! 
+
+As far as I can tell, the default users for a fresh mysql server is and , you'll need to create a user and create a .my.cnf under your folder with the following contents: 
+
+Create the server and client cert/key files on the master server and then copy only the client cert/key files to each slave server and configure SSL replication. So basically you have the same client cert and key on all slave servers. If a slave gets compromised change the replication user's credentials. 
+
+I have a legacy PostgreSQL database source (ODBC) that I'm attempting to migrate to new SQL Server schema using SSIS. I'm getting a warning saying: 
+
+Apparently this just boils down to SSIS treating any varchar larger than 128 as NTEXT. Not sure why. I can, however, go into the advanced properties of the ODBC source and change the types back to something like DT_WSTR. Which seems to work for the most part. However, I did determine that a few of the tables I'm dealing with actually are carrying upwards of 4000 bytes in some of the their TEXT columns, so I unfortunately have to leave those colums as DT_NTEXT to prevent truncation (SSIS won't let you set a DT_WSTR type with more than 4000 bytes). I suppose in these instances, I'm just stuck with row-by-row fetch, but at least I was able to fix a few tables. 
+
+Replication. If parts of your database should be replicated to local read servers they benefit from being on different database. I don't know about sql-server specifically but in mysql (and generally) a master can only maintain one binary log per database and if table A and B should replicate to some server and table C and D should replicate to another server than those needs to either be on different databases or the binary log needs to be filtered on the slaves. Uptime and accessibility. If different parts of your data have different requirements on uptime and accessibility it would make sense to put them on different databases. One could have hot standby with all data replicated and the other could have a nightly dump. 
+
+To get the actual differences, you'd need to run and determine the changes by the SQL queries it generates. 
+
+Yes, of course. Standard replication configuration is master and single or multiple slaves. If you use MariaDB Galera cluster you can point your applications to a single node and the other two serves as slaves. 
+
+with --no-check-binlog-format you would not be able to checksum from master to cascading slaves aside from master's immediate replicas, --no-check-binlog-format also sets the tool's session to STATEMENT format but does not change the global status. there should not be any issues when you use the option but we recommend you test them first. 
+
+Yes, you can use ProxySQL for this use case. $URL$ scroll down to the part where it says Read-Write split. 
+
+I've done that on ubuntu, I don't use apparmor but these are the settings I've changed, all under [mysqld] (I think mysql_safe also uses these settings) 
+
+It depends on how you use your database. If it is read-heavy but with few writes (like a blog or a news paper) you could have one mysql for writes and two for reads. You would set up so the write server is a replication master and the two for reads are slaves. All application servers needs to know about both the write server and one of the read servers, that way when you balance the loads to application servers you automatically balance the reads between the mysql servers. It's also easy to add another mysql+application server once the need is bigger. If you on the other hand have a write heavy site (I can't even find an example) you need to do some research on sharding. It's normally not recommended unless you really need it. 
+
+Optionally, run ANALYZE TABLE on the affected table to re-calculate its statistics. Make sure you're aware of the effects of running ANALYZE TABLE on a busy server. 
+
+It is stated in the mariadb and even mysql docs: $URL$ systemd services are packaged on RPM and Debian based Linux distributions. When systemd is used, mysqld_safe is not used and settings in the mysqld_safe section of configuration files will not be read or applied. $URL$ On platforms for which systemd support is installed, scripts such as mysqld_safe and the System V initialization script are not installed because they are unnecessary. For example, mysqld_safe can handle server restarts, but systemd provides the same capability, and does so in a manner consistent with management of other services rather than using an application-specific program.

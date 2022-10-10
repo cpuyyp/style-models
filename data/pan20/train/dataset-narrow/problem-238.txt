@@ -1,0 +1,67 @@
+At the risk of asking an opinion question, are there any guidelines/practices that specify a threshold where the number of pause frames indicates a problem? The ratio of transmitted pause frames to received frames is about 3%. If I assume xon/xoff, that's really about 1.5% of received packets are generating pauses. I'm trying to figure out if I have a serious over-subscription problem. Hardware is Nexus 2232pp, linked to a 5000. Flow control is the default settings (transmit on). 
+
+To expand on @cown 's answer, the reason this works is because King initiated the connection, sending an open request to 2.2.2.2. Kong received the request on that interface, so it responded from from 2.2.2.2. If Kong had initiated the connection, it would looked up the best outgoing interface, (serial1/0 or 1/1) and used that as thesource. In that case, King would have received an open request from 192.168.122.2, and the BGP session would not have come up. 
+
+Most of the networking terms we use -- "firewall", "switch","SDN","IDS",etc., are made up by equipment manufacturers as they introduce new products, and are gradually accepted by the community. There is no technical or authoritative definition for any of them. The distinction you make is fine as far as it goes, but don't expect everyone to follow along, especially if some company has a something that they call a firewall that reacts to in-packet messages. There will always be attempts to blur or combine distinctions. 
+
+Since switches generally do not rewrite the Ethernet frame, you can't tell from inspecting the data. You might be able to infer something based on timing (delays), but I suspect that would be unreliable. 
+
+Both of these are incorrect. Each class has a minimum amount of resources (e.g., bandwidth) allocated to it. Different classes will have different amounts. So for example, Class 4 may have 30% of the link bandwidth allocated to it, while class 3 has only 10%. That means during congestion, class 4 is guaranteed a minimum of 30% of the link bandwidth. Note that class 4 doesn't have higher priority than 3, it just means it has a different amount of resources available to it. Within each class, the drop priority indicates the probability that the traffic would be dropped. 
+
+Your stack switches should be connected to both routers. That way, you will have redundancy if a router fails. If possible, your servers should also be dual-homed to both routers. VRRP will do you no good unless you are connected to both routers. Unless you intend to apply access lists to restrict data flows between user groups, creating lots of VLANs doesn't buy you much. There's no hard and fast rule here -- just don't make it more complicated than necessary. You don't mention what your load balancer will be used for, so it's hard to say where it belongs. 
+
+The frame is forwarded on LAN 2. If there is a device on the LAN with the correct MAC address, it receives the packet. Every other device on that LAAN ignores it. On a LAN, there is no point to point connection between hosts. When host A sends a frame to host B on the same LAN, the bridge looks in its table and sees that the destination port is the same as the received port. There is no need for bridging, so it ignores the frame. 
+
+Some manufacturers have this feature. It is an agent that runs on the host and reports the load back to the load balancer. Some reasons for not using it: 
+
+In an MPLS network, OSPF is not used to route customer traffic. It is only used to provide routing for the internal provider network so that labels can be generated. LDP is used to advertise these labels to neighboring label-switched routers. 
+
+Assuming your DHCP server is on a different VLAN than your users, check that you have your ip helper correctly configured. On the SVI (Vlan interface) of your user vlans you should have 
+
+Short answer: No. The choice to use a bridge or router depends much more on the topology design, type of media used, physical distance, cost, etc. There may be security benefits to create isolated layer 2 networks, but that is still more of a topological decision. 
+
+Q1: Either way would work, and it would likely be dependent on the application. One could argue that pushing the data to the web server might be more secure. Q2: The firewalls also allow connections to start from the inside (trusted) to the outside (untrusted). This is the default policy for most firewalls. Note that the direction (who is initiating the connection) is important here: inside to outside is normally allowed, outside to inside is only allowed for specific hosts and protocols. 
+
+If that is in fact the case, your VM is misconfigured. Subnetting and gateways work the same on IPv4 and IPv6. Your VM knows it's on a /64 because that's how it's configured (manually or otherwise). The gateway address is in the same /64. You may or may not have only one host (VM) on that subnet, but you could have many, many more (2^64, to be exact). 
+
+I'm very reluctant to criticize someone like Jeff Doyle, but I'm reading that very same paragraph you mention, and I think he could have chosen his words better. Remember that an OSPF router maintains the state of each its neighbors from its own point of view. So from R1's point of view, R2 transitions to INIT when R1 hears a hello from R2, not when R1 sends a hello to R2. Quoting from RFC 2328: 
+
+It appears that some of your ports are in VLANs that do not have ip helper addresses on the router. They won't get addresses from your server. 
+
+If you are talking about home routers, which are off topic here, they don't block private IPs, they block client to client traffic. But that is usually configurable-- you can turn that feature off. 
+
+If those are your only two choices, building A should be on 11 for best performance. Access points use CSMA/CA, not TDMA. The CA stands for collision avoidance, so they listen first before transmitting. If they hear someone else talking (over a certain threshold), they will wait until the channel is clear before transmitting. If you use Ch 11, then you will not have any channel contention, since the other AP signal (bldg C) will be very low (I am assuming no other APs than what you've described). If you put bldg A on channel 6, then it will compete with bldg B for channel time, reducing throughput for both buildings. If the signal from the adjacent building is low enough, it won't cause channel contention, but it can still lower your SNR (signal to noise ratio) and lower your throughput due to errors and retransmissions. 
+
+Yes, Cisco supports VRRP. However, you have configured HSRP on your interfaces, not VRRP. The two protocols are not compatible. Here's an article showing the difference in configuration. Side note: You included your login passwords in the configuration file. I took the liberty of deleting them for you. 
+
+The terms are usually used in the context of data centers. Generally speaking, "east-west" traffic refers to traffic within a data center -- i.e. server to server traffic. "North-south" traffic is client to server traffic, between the data center and the rest of the network (anything outside the data center). I believe the terms have come into use from the way network diagrams are typically drawn, with servers or access switches spread out horizontally, and external connections at the top or bottom. 
+
+The question is asking you to take the large network (with the slash notation) and divide it up into smaller subnets, each one using the given subnet mask. So if you have a network 128/8 (or more correctly, 128.0.0.0/8), and you want to subdivide it into smaller subnets using the mask 255.255.255.128, how many subnets can you make? And how many hosts are in each of those subnets? Note that this problem could be asked using all slash notation, or all dotted decimal. The problem uses both just to make sure you are proficient with both. 
+
+Yes, that is the purpose of any routing protocol, including OSPF: to allow routers to exchange information about networks they can forward (route) to. In a simple scenario like you describe, static routing would also be an option. 
+
+If your routers are performing NAT, they are using separate address space. There is sufficient bandwidth at your HQ for the entire load of this site. 
+
+The conditional "In_Table" doesn't exist, but I was hoping someone had another way to accomplish this. 
+
+Putting aside the question of why you are using public addresses in your network for a moment, you would configure this the same way if you were using private addresses: you configure NAT (actually PAT) to translate your inside addresses to the one public address. In other words, it does not matter if your inside addresses are public or private -- NAT works exactly the same way. 
+
+The SG300 runs a different OS than "standard" IOS, and the command is not available in any released version. It has nothing to do with the way you're connected or the configuration. As to "why," only the Cisco developers can answer that. 
+
+Cisco has a guide for migrating your ASA configuration file: Cisco ASA 5500 Migration to Version 8.3 There are also online migration tools which you can find with a quick Google search. I haven't used any so I have no opinion of thm. 
+
+This is only a partial config, as I assume you already have BGP running on the PE routers, and the interfaces are in the correct vrf. Each ASBR treats the other as a CE router: 
+
+You can capture at the edges, where speeds are lower, but then you have many capture points (more equipment). Often, you end up with a compromise, with some captures at the core or data center aggregation as well as some edge locations. The result is a high probability that you will capture the same packet more than once-- once when it enters the network, once wen it passes through the core, and perhaps once and again when it reaches its destination. In a large network, it's nearly impossible not to have duplicate packets if you want to have comprehensive monitoring. Packet de-duplicators are "smart" enough to detect that they have captured multiple copies of the same packet and only send one to whatever monitoring device (IPS, Netflow, FPC, etc) you may have. 
+
+Generally speaking, route summarization hides information about more specific routes. It also hides the fact that you may not have a route to all addresses in your summary. So yes, you can summarize. Whether or not you should depends on what you are doing with your summary. In the case of BGP, you are advertising that you can reach all networks in your summary - but in fact you can't. You will "blackhole" the missing networks because your router will attract traffic for 192.168.0.16/28 (in your example), but you may not actually have a route to that network and you will end up dropping the traffic. If that is OK in your network, then go ahead and summarize. 
+
+Unless you are using special drivers, your laptop can't understand 802.1q framing. Set your switch port 1 to access (VLAN 200), or, leave it as a trunk, but set the native VLAN to 200. 
+
+Generally, each group has its own SSID, and the SSIDs are mapped to VLANs in the controller. You can have different authentication methods for each SSID. 
+
+You are not doing routing. Even though there are two VLANs, at layer 3 they are the same subnet. If you have devices on different IP subnets on each VLAN, they will not be able to talk to each other. 
+
+The answer to your question, "how is this possible?" is simply the obvious: The modem is not acting in the way you would expect a network device (like a Cisco router) to function. Writing the code to route packets is harder than it looks, and many companies, especially with consumer-grade products, take shortcuts. In this case it appears that your modem has a very simplistic routing algorithm, probably because it is not expecting multiple networks on the LAN side (it's a home router, after all). So rather than a routing table and all the other data structures, it simplemindedly combines the arp and routing tables. So the modem learns the MAC address of a packet on the LAN side without having to build a normal routing table. It's also possible, as Mike suggests, that the modem is using classful networks, and the mask is /8, in spite of what you type. I've seen similar behavior in other devices before. Simpler software, cheaper product, works fine in most cases. That's my story and I'm sticking to it. ;-p Topic police: As a side issue, if this is home networking, isn't this off-topic? 
+
+There are many ways to extend VLANs. Trunks are just one way. VPLS is another. The best method to use depends on several factors, most notably, the type of media that link the two locations, the distance, whether the link is under your control, etc. Besides the concerns about reliability, cost, etc., you also have to consider the impact of spanning tree, flooding, loops, storms, etc. Each method has different ways of mitigating these issues. To answer your specific question about VPLS, we would need to know a lot more information. A diagram would be useful, along with some idea of traffic flows, and the kinds of hosts on both ends.

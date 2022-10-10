@@ -1,0 +1,73 @@
+CARP is available in linux. Check out the ucarp project for a user-space implementation and there is apparently a project porting it to the 2.6 kernels: $URL$ 
+
+An SMTP server is just a server that handles the transport of mail. The server you configure in your email client as the "outbound mail server" is an SMTP server. So is the server that receives the mail and delivers it to the recipient's mailbox. They just mean "bypassing your ISP's SMTP server". If you run your own mail server, it can send mail directly to the recipients mail server without traversing your ISP's server. This is good if you're sending bulk as most ISP's would get rather perturbed if you were to suddenly dump 100K outbound messages on their servers. However, note that you do not have to take the server in house to solve that problem. There are many companies that specialize in high-volume mail that would be happy to handle all of your outbound SMTP needs. 
+
+I'm sure there are lots of nice options I'm missing, but that should at least get the basics working. 
+
+When you say you get an ARP response for the wrong interface, are you actually dumping traffic or just looking at the resulting ARP table? It's possible you're getting ARP replies for both interfaces... Anyway, I believe the answer to your problem lies in properly manipulating and . The documentation for each of them is included below. I suggest first trying this: 
+
+Based on the limited information in your question, I can't see any obvious reason to prefer a specific MTA for this task. Any modern MTA will handle this admirably. While qmail is getting a little long in the tooth, it is pretty awesome at raw througput. Postfix and Exim are more actively maintained and have far more knobs to twiddle. They both can manage very high throughput. A much better question is how to manage the aliases, assuming they're each unique. Flat files quickly become a liability. A local LDAP server may be worth considering. Both Exim and Postfix can perform their alias lookups from LDAP. 
+
+If you don't know which channel is your ethernet interface, just page through them one at at time, like so: 
+
+Then re-try your ssh command. If it's still FUBAR, you'll need to check out your global config. Check out and make sure they're normal-looking plain text files. 
+
+The sftp/scp tools start an interactive non-login shell, so .bashrc will be sourced. Many distributions source .bashrc from .bash_profile or vice versa, so it can get confusing. A good trick for testing the cleanliness of your login environment is to ssh in with a command, which simulates the same way scp/sftp connect. For example: will show you exactly what scp/sftp sees when they connect. A simple demo: 
+
+If you're going to run a local DNS resolver on your server, you would point to your local BIND server (127.0.0.1) and let BIND resolve starting from the root nameservers, like any other nameserver. No "forwarders" entries needed in your . Strictly speaking, you would be ever-so-slightly decreasing the load on the root nameservers by leaving the "forwarders" entries in place. If you're just trying to get DNS resolution working on your box but don't need to run a DNS server yourself, then don't worry about and just point at your ISP's DNS servers. EDIT: It occurs to me I didn't answer the question in your title. 
+
+Note that the medium type is "802.3 LAN". That's the one you want. Other channels may look like this: 
+
+According to my Dell guy, yes it should work. However, due to the PERC 5i's lack of NCQ support, you will not achieve the IOPS you would see on a PERC 6i. I have also just verified that the 2950 can be easily upgraded to PERC 6i, which is what I will be doing prior to switching to SSD. Also, I'm really happy with this 2.5" -> 3.5" adapter: $URL$ Its connectors are properly located to slide directly into a RAID chassis. Most adapters I've seen would not work. 
+
+The Ubuntu version is identical to the Debian version, so this is an example of a package that is safe to pull directly from the Debian repositories. $URL$ 
+
+You're listening on one of the ethernet interfaces but talking over the loopback. From the man page: 
+
+The script accepts the VERP address as its command line option, parses it and makes the necessary database updates to record the bounce. 
+
+Can anyone enlighten me as to why the first technique failed? EDIT: As a test, I added an additional path element to the redirected URL for the second . When I requested a URL that should match the second rule and not the first, that path element appears as expected. Just not the result of the lookup. Thanks! -Ben 
+
+It looks like it's trying to find the library in the local source tree. Downloading... Yep. It's expecting to find the library in . I'm guessing you missed a build step somewhere that told it to compile that file first. 
+
+Ganeti is great for this kind of setup. $URL$ Works with Xen and KVM, replicates the disks via drbd. No need for external shared storage. 
+
+Using ssh for this only makes sense if they're opening the ssh session from their end. That would create a proxy on their box that would exit from your box, inside the country. This works great with putty on Windows as well as with normal *nix clients. It would work like this: 
+
+The filesystem is backed up to a tarball on the drive mounted in . Adding the flag tells tar it will be creatinga multi-volume archive. The flag tells it the size of each volume. When the backup reaches that size, tar pauses and asks politely for a new volume: 
+
+Once the appropriate settings have been added to , run to activate the new interface. If, however, the new ip is on a different subnet, you need to either provision the ip on a physically distinct network interface or create a VLAN interface, depending on how your ISP is prepared to hand it off to you. That's a whole new topic. 
+
+The lvextend command you executed would only extend the filesystem by 800MB (assuming default extent size), a rounding error when you're looking at TB filesystems. The flag means "extents" which, by default, are 4MB in size. If you wish to grow the filesystem by, say, 200GB, the command would be: . (Note the difference between and .) 
+
+It's actually pretty simple to get exactly what you describe; the key is ssh's "forced command" option. Essentially you tell ssh that, no matter what command the client tries to execute it always executes the forced command. You set the forced command to point to a simple wrapper script that verifies the command is . If it is, it executes as requested. Otherwise it exits. This is the script I use: 
+
+The problem is having your hostname set to your domain name. By default postfix sets to include . If your hostname were , your config would work. As it stands, postfix thinks that mail for shoudl be handled locally yet local delivery is disabled, so it gives up. In general, hostnames should not be your domain name, but rather a subdomain of your domain name. 
+
+EDIT: Also, you may want to consider setting as a mount option. It's not a specific tweak for large directories, but can offer considerable performance improvements whenever lots of filesystem activity is taking place. 
+
+I manage around 30 Ubuntu servers using puppet. I've seen many references to cron-apt and apticron as approaches to keeping their packages up to date but I haven't been able to find a way to centrally manage the process. With cront-apt/apticron I would still need to log in to each host and run to perform the update. Not to mention review notifications from all 30 machines whenever a core package is updated. There has to be a better way. Any suggestions? 
+
+It looks like ipmitool is available for FreeBSD. Running should trigger the ID light for 15 seconds. If you're running it locally on the box, I believe the full command will be . From : 
+
+According to this guy it may just be faster to use , although I would guess it would be close to as efficient as compressing each file first before transferring. It should be faster than compressing the tar stream, as suggested by others. From the man page: 
+
+The directions you found were probably for building the kernel The Debian Way, which is quite a bit different from the basic process. Building a kernel is pretty straightforward. Here is a good, simple description: $URL$ The executive summary: 
+
+Assuming the new IP address is on the same subnet as the first, add a second virtual interface (sometimes called an "alias") to the primary network interface. This is configured, like all network interface settings, in . The Debian Reference manual has a section on the topic: $URL$ A simple example, assuming your primary network interface is and has an ip of and the new ip is : 
+
+So as you can see, the directory contains a symlink called "cwd" that links the the CWD of the process. The same is true for the open filedescriptors listed in . The hierarchy contains a wealth of information about all running processes. Worth poking around in! 
+
+Use that script as a forced command (either by "command=" in ~/.ssh/authorized_keys or using a "Match" block in sshd_config as noted above) and it will reject everything except rsync commands. With a little tweaking it could be made to only accept specific rsync commands. 
+
+You need a tool that will scan the disk, looking for partitions. The only one I've heard of is gpart. According to the Wikipedia entry you can find more recently updated versions in the package repositories of the major distros, as the original author seems to have stopped working on the project. EDIT: Apparently I've forgotten much of my old Windows lore. It's worth trying from DOS or Windows. Also on Windows you can try from the recovery console. 
+
+The number of reasons why a file transfer could fail are legion. Why treat it like a black box when you don't have to? Fire up tcpdump, trigger the error, and take a look at what's actually happening. If it doesn't make sense to you, post a link where the good folks here at ServerFault can download the pcap file. Also, have you verified that this is a general problem with downloads from multiple locations? Or just the apt mirror? 
+
+I do love , but I think it's overkill for a simple question like this. The filesystem contains everything you want to know. Perhaps an example would be best: 
+
+If you're running a recent version of Ubuntu, the grub config file is now and has shiny new format. Ubuntu has a nice article on configuring the modern version of grub: $URL$ 
+
+Your ssh config may be broken, but I doubt ssh itself is at fault. First question: Are you really running ssh? It almost looks like the shell is trying to execute a public key that's had its x bit set... 
+
+Hmmm... Are you certain it's a 500 and not a 403? if the perms are wrong on the .htaccess file, Apache will reject all requests with a 403.

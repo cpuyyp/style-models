@@ -1,0 +1,81 @@
+If you check kernel log, you should see OoM Killed messages.. Kernel will usually kill the largest offender which is MySQL in ourcase. 
+
+No. For ibdata files you have variable you can specify one or more but not for individual table spaces. 
+
+Though this is very much prone to corrupt your data and/or introduce inconsistency! Not recommended! There can be multiple solutions to one problem, if you could share the scenario you would get a better solution. For eg: 
+
+and I think we have seen a lot of with-power-comes-responsibility thing! Do you know SUPER grant has made them introduce a new variable to avoid accidents -> super_read_only. So if you think "dbuser" shouldn't do what SUPER user can do, revoke it. Ideally you should give the least priv. 
+
+Also loading into/from memory tables is much faster but based on size you've mentioned I suspect we have sufficient memory (you might see table-full errors and issues due to that...)! Anyways, try following commands and share the speed results: 
+
+This has been deprecated and is no longer supported. You will receive an error message like the following: 
+
+The user is a SQL Server login and its password is encrypted and stored in the DMV (Database Management View) in the database. Reference: sys.sql_logins (Transact-SQL) You might notice that these views can only be found in the following branch: 
+
+You then switch to the IP Addresses register and find your first IP address. In this example the settings for the first IP (192.168.0.30) are found at the IP2 section. It will look like this: 
+
+If there are no file limitations on the SMTP (Mail) server ..., open up SQL Server Management Studio (SSMS) and navigate down to Management | Database Mail. When you have reached Database Mail right-click on it and select Confgiure Database Mail. You will be presented with the Database Mail Configuration Wizard for your SQL Server instance. If you have not yet cancelled the wizard (in a previous session) you will be presented with an introduction page. Click on Next > to go to the next window. You are now in the Select Configuration Task dialog and are presented with the following possibilities: 
+
+Thus it appears that your table have more column than the file. You will have to specify the column-names explicitly. Also the remaining columns should be nullable. (You might want to share table definition if below command doesn't work) Try this: 
+
+Also your tests you performed contains multiple parameters for comparisons. You might also want to test with sync_binlog and flush_method changes. Mainly consider variable optimizations for better performance. 
+
+With larger records and data-size you might see increased margin of difference. If those are MyISAM tables then you might want to review following notes from documentation: 
+
+Also if not and you're looking to create slave of RDS slave then, there is an old update blog which says it's possible. Hope this helps. 
+
+Considering all the slaves were in-sync with master while you issued reset-master, it is safe to issue on slaves with newly generated first bin-log. 
+
+This will output a list of corrupt blocks. In most cases rebuilding the index where the corrupt block is located will fix the corruption. Rebuild all the indexes (Script) Run the following script to rebuild all the indexes for the SYSAUX tablespace: 
+
+Security depends on the requirements of your business. Ask the head of IT for SLAs or OLAs and any company-wide security policies, etc. One question you haven't yet asked is: Availability. Will you be required to have Always on Availability Groups? You asked a lot of questions, I hope you have a general starting point. 
+
+You can't bypass the built-in limitation of an Access database. You can however circumvent the built-in limitation by using built-in features like splitting the database objects between multiple files and referencing them accordingly. The Access 2016 Specifications state: 
+
+You don't require at the beginning and at the end A date will not concatenate with a nvarchar without conversion (CAST or CONVERT) Because your table will contain spaces you need to put the table name in square brackets: and . You will be better off with 
+
+but as @greenlitmysql has mentioned you might see performance issues later on as the data grows (and length of column)... 
+
+Notes: - Here HOSTNAME is the hostname/ipaddress of the destination Just to add, if your databases are on same machine, (which is not the case here, but still saying) you can use RENAME operations to move tables: 
+
+Well that appears the correct way as far as you're using right path to binary mysqldump! Can you confirm if you can login (and it behaves well?): Not sure if there are some security issues! Run the command prompt as administrator and attempt to run the mysqldump again. 
+
+Updated answer as per updated question: I'd try to understand your question. You have following table: 
+
+See the MySQL documentation or a Step by step replication setup blog if you need to review. If these doesn't help please share the output of (as such it appears connected) and also output of of master/slave. Mainly you need to worry about server-ids, replication filters (replicate-to-db/table etc) 
+
+References: - Statistics (Microsoft Docs) - Running SAP Applications on the Microsoft Platform If you would adapt that to your 2 Million row table in your SQL Server Azure environment, then the statistics would update roughly after 2% of the data has changed. . So you could be running into one of these situations: Situation 1 
+
+I'm not in a hurry and I do have some time to spend. I'm just curious if anybody has been in the same situation as myself and how you/they came to deal with the situation. Thanks for your time. 
+
+Matching and Mixing Backing up the transaction log is not the same as truncating the transaction log file, and truncating the transaction log file is not the same as shrinking the transaction log file. Oh yes, and backing up the transaction log file does not have to trigger a truncation. Depending on the current load the database engine might decide to set a checkpoint, but to wait a bit with the truncation. Explaining The transaction log file is where the database engine stores modifications made to the data in a database, regardless of whether the database is in SIMPLE recovery model or in the FULL recovery model. (Important) Now the database's transaction log file is not just one continuous storage container, but a collection of Virtual Log Files (VLFs) which are created in a sequential order inside the Transaction Log (TLog) file. The size of the VLFs varies depending on which version of SQL Server you are currently using and also on the initial size you selected during the creation of the TLog file and also which size you selected (if any) for the auto-growth setting of the TLog file. References: - Important change to VLF creation algorithm in SQL Server 2014 (SQLSkills.com) - Initial VLF sequence numbers and default log file size (SQLSkills.com) - Inside the Storage Engine: More on the circular nature of the log (SQLSkills.com) ...and maybe in the reverse order When data is modified in the database, the Database Engine will write these changes into the TLog of the corresponding database to uphold transactional consistency. This is also know as ACID - Atomicity, Consistency, Isolation, Durability. The actual transcations of these changes are stored in the VLFs of the TLog (file). When a VLF is full the newest transactions will be stored in the next available VLF in sequential order. Exceptions However if the end of the TLog file is reached, the modifications will be stored in the first VLF at the beginning of the TLog file. (explained in Inside the Storage Engine: More on the circular nature of the log) When no available VLFs are free to store new transactions and if the auto-growth setting is configured, the Database Engine will grow the TLog file by the amount defined and create additional VLFs depending on the size defined in the auto-growth settings and the formula explained in Important change to VLF creation algorithm in SQL Server 2014. Further transactions can then be stored in the next VLF inside the TLog file. Backing Up The TLog File When you trigger a backup of the TLog file all you are doing is telling the database engine to 
+
+Not sure if you just want to create a read replica clicks away from you? If not then I guess you need to restore from a dbsnapshot. You can: 
+
+Tables are InnoDB: If we have InnoDB tables in the picture then things are not as simple. Considering you have Xtrabackup. You will have to import tables one after another. Refer Importing-Exporting-Tables-using-Xtrabackup OR how-to-recover-a-single-innodb-table-from-a-full-backup (For this to work you should have used xtrabackup as backup option.) Splitting mysqldump If you want to extract only one database from full mysqldump then you might want to extract single database from mysqldump and load it (saves you from loading full dump). 
+
+If this condition fails, you can conclude your backup is a failure... Another mode is to using which should tell you "Backup completed successfully" So if only worry is if-it-was-successful, then you can use above methods to determine. Xtrabackup is physical while mysqldump is logical, which is mostly a decisive factor in choosing one over other. In case you need to restore individual table/database, with mysqldump it is possible but not with xtrabackup (unless you do complete restore). Physical backup is fast comparatively but also asks for frequent restore tests like data corruption is not easily identifiable (I think so) for hot backups. There are more pros and cons you can consider looking around but if you think this time is too much and you have identified your restore requirements fit in with Xtrabackup, go with it. Here is holland-xtrabackup setup steps if you'd like to configure it that way. If you're worried about speed and still want a logical backup, go with mydumper. If you're fine with physical backup go with Xtrabackup. 
+
+Reference: Password Policy (Microsoft Docs) So basically you could program your web form to check for the complexity of a given password according to the above rules. There are a couple of questions over on Stack Overflow that summaries possibilities of using REGEX or Java to check the password complexity: 
+
+Solution Run your query with and see what the query optimiser tells you. Then proceed from there. If you have an index on the table it might retrieve the data according to the index. If you don't have an index, then it might fall back to the algorithm. The conditions dictate the ORDER BY Optimization. Reference 
+
+I would search the system tables in your restored master database directly, that contain the data you are looking for. You can then access for example the sys.sysxlgns table without having to rely on the sys.server_principals view which actually accesses the master.sys.sysxlgns system base table. sysxlgns = server_principals For a list of system base tables read the following MSDN article: System Base Tables Microsoft states that ... 
+
+Note that APP2 will read eventually consistent data and it will have to handle writes to DB1 itself. (I do not tend to like master-master replication setup and writes to both ends due to past experiences but it is also an option.) You said no links but below this link includes steps for setting replication, you might want to refer. 
+
+Last line explains the case. Referred: Dealing with MySQL case-sensitivity Update: For views and case-sensitivity, refer this bug report. 
+
+You have few options to consider but first I hope you're not troubling your production server but may be a slave of it to dump out things? (things may get bad there.) 
+
+Before doing any changes and attempts, take complete backup of your databases. If you have physical backup of your database: 
+
+Consider the source database name is databaseA and destination is databaseB. Step-1. Take dump of tables to be loaded to new host: 
+
+You will receive a list of SQL Server logins for your SQL Server instance. Note: These are the SQL Server Logins and not the database users. Database Users Database Users can be queried by querying the system catalog view of each user database by issuing the following query: 
+
+If you go ahead and install the AdventureWorksDW database from Github and have a look at the two tables in question you will find the following: Query 
+
+See: dbfiddle for the example In your case, you must be using an older version of MySQL which will store the maximum allowed value which is . Fix If you create a table with or as pointed out in the accepted answer, then it should work. Table Definition 
+
+To come back to your example with the sys.colums view: You have been granted the permissions to SELECT from the view, but you do not have permissions to actually execute the sysconv function directly, which is the definiton of a column in the result set. It has been hidden from your prying eyes.

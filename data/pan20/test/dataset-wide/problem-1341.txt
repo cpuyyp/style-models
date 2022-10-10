@@ -1,0 +1,107 @@
+lookup is constant time, and sticking with integers means that we can save time on the hashing too. With a few million lookups, that's going to make a big impact. 
+
+That way, the determination of "adjacent to u" can be done as follows: take all the tiles adjacent to our position. Drop the walls. Drop the doors for which we don't have a key. If we step onto a new square that is a key, turn on the appropriate flag in . That simplifies the code dramatically. No exceptional cases - no unnecessary copies or recursion. Now we're back to a normal breadth-first search. This actually has additional benefits in that you don't need your or either. Add Heuristics Consider also adding a heuristic to your queue. Rather than simply effectively sorting by path length, we can also add Manhattan distance as a lower bound. This will make our search more focused on the best candidates remaining. This approach is the search algorithm. Code comments 
+
+What does that line of code mean? Very little. You never use this array like an array - it's not a collection of like things. Instead, you should move these values into a struct: 
+
+You don't actually need your list to be . You just need an indicator of whether or not it's true or false. So it's simpler just to start with: 
+
+Comparing against (e.g. ) is bad practice. Simply say . It would also be clearer if the name indicated that it could fail somehow. Since already checks for null, could just be . Avoid declaring multiple things on a single line. This is especially egregious when you declare multiple things on a single line that is split anyway: 
+
+If you want bounds checking, you can provide a separate member function called . Other Issues You're missing a lot of other nice features that provides: 
+
+It's more of a guarantee-one-at-a-time container. A queue would be much more useful, so I'd consider actually implementing one. This is a pretty major design flaw. 
+
+An alternate implementation, just throwing it out as an idea for thinking about the problem completely differently is this. A BST is valid if it's in-order traversal is actually ordered. An in-order traversal would be: 
+
+Moving is cheaper than copying (no need to incur reference counting). Checking You don't need to use , you can directly check the shared_ptr: 
+
+Then, you call , which deletes . Now we have a vector of one element, which isn't even a valid element, and we will have leaked . If also needed to be erased, at this point becomes 1 so we decide we're done, and don't it. The correct way to erase elements from a vector which match a certain condition is the Erase-Remove idiom: 
+
+Also, you don't need to explictly provide the types to this function. Let the compiler deduce your types for you: 
+
+Let's start over. With English number words, the way to do it is to divide the number into blocks of 3 and do each one. So I would expect a helper function like; 
+
+First, this avoids an unnecessary copy when users don't pass their strings in by rvalue (which seems more typical?). Secondly, this allows for copy elision on the returned object, as you can't have copy elision from a function parameter. So if I called with an lvalue, I just saved two copies. Also, note the name change. Either use or or function names, don't just . It's much harder to read. The new signature makes some of the other code easier. 
+
+Lack of modifiability Your , and return copies. This means that once you construct your , it's permanently const. Also, for some s, this makes these functions unnecessarily expensive. Prefer instead for to return a reference: 
+
+But there's no way to pass in as a template. Typically, for algorithms, strongly prefer lambda unless (1) the algorithm call is a small part of the function and (2) the functor is very long and complicated. I say both must be met because something like this is still perfectly acceptable in my opinion: 
+
+Bring back the bug I love deliberately provocative headings. Anyway, you had the right idea of checking for the even digits, but we can be more aggressive with it. Before we check any of the rotations, let's check for the presence of any of those digits first: 
+
+So nobody wins and Jane Austen loses. What we need to do then is find all the voters for Jane Austen, and just adjust their votes. There's on such voter (), so we just "transfer" (hence "single transferable vote") that vote to the next ranking: Given the losers function, that would be: 
+
+String Concatentation String concatenation is slow. Also it reads terribly. What we want to do is call for every letter in and then join them all together. That's what is for: 
+
+Oh I get it now, we're finding the max of all the children. Also is a very confusing function here. to most people means , so my initial thought as that obviously at every iteration. And then I found your implementation. Let's not do it this way, and use the compare directly: 
+
+Parenting A node in a tree either has a parent or does not have a parent. It is never its own parent. You default your values to: 
+
+Although that gives us numbers and metaprogramming is all about types. Anything that isn't a type is usually a real nuisance to deal with, so let's write something to instead give us a list of types: 
+
+If , we fall into case A. If we're not in case A, only then do we continue onto the next condition checks (because we're using and not ). As such, if we're even in the path that checks the condition which leads to , we already know that . Thus, that check is redundant and can be reduced to simply . The whole body can become: 
+
+The bracing makes the locking intent clear and takes advantage of RAII. A similar construction can be used for : 
+
+The thing wrong isn't so much the code as the algorithm. Your approach to finding the next first digit is inefficient. What is the right way to approach this problem? This is actually one of the few Euler problems that I've been able to do on paper. Let's start with just establishing the constraints. We know what digits have to go before other digits and thankfully there aren't any repeats. We can turn the input text into a graph, where a directed edge indicates that a digit has to precede another digit. Behold, the power of pictures: 
+
+This will be found by ADL and nothing else, and then you also don't have to worry about some of the other issues that writing function templates leads you to. It's just simpler. rotateCoordinates This seems like it should be a non-member to me. 
+
+It's shorter and more readable. Combine the last two checks I would write a helper function that returns the first element of a single-element list: 
+
+I lined up the three clauses - and cleared up the fact that the and both belong to the . As-is, it kind of looks life the is part of . Make a swapper function This is more for fun than it is necessarily a valuable suggestion (I have no idea if this is good or not). But one thing we can do is take and and turn those into a swapper function - one that takes an elem and returns the correct substituted result. The code to build up such a swapper is pretty similar to your already: 
+
+This will default-initialize and , copy the input parameters into and , and then copy them again into your member variables. You can save a copy and an extra initialization by direct initializing them from references to const: 
+
+I question the validity of this exercise. I wouldn't really expect the percentages to line up for a long, long, long time. Possibly never. Running a few times I got anywhere from 290k to nearly 8 million. That's a lot of die rolls, and a pretty wide range. 
+
+Roughly 10x each time. Yay predictions. So what can we do to speed this up? When our times are this bad, it's either because we have a really stupid bug or we're using a bad algorithm. There isn't anything I see that will save this particular algorithm. At best, we can improve by changing the iteration to avoid multiples of 3 and 5: 
+
+This ensures that you get the correct strings in your . Looping Since this is tagged C++11, you definitely want to use a range-for expression to do your loop. It's less code and clearer: 
+
+and have an instance of , instead of just referencing variables. Reading further, there are other attributes that correspond to the player's character that should also get added. That's a LOT of variables At some point while declaring all your , you should pause to realize that this is excessive. You only ever need one of these at a time, and you only ever need them for a local instance. That is, all of these variables are unnecessary. You need to separate your one giant function into small pieces. Since a lot of your questions are yes/no, that strongly suggests a: 
+
+Never use There are times where you have a compelling reason to use . This really isn't one of them. Either make your function recursive, since it is in all but name. Or rewrite it to be iterative. Both of those would be preferred solutions. The reason I say this is because your logic is sort of logic a binary search, except the two different changes in range occur in different places and use different mechanisms. This makes it difficult to understand and, I imagine, debug. A Better Algorithm Add a helper function that will count the number of elements in your given range, breaking out early if you hit the amount you're going for: 
+
+You don't even need the constructor - you could make your class an aggregate by making public. This is what does. 
+
+Normalize I suspect the typical case here might be for valid vectors, so prefer to take the length first and compare that against zero, rather than invoking : 
+
+This greatly simplifies the logic, and makes sure that we're not stuck counting votes for candidates that have already lost. 
+
+Also introducing and is very confusing there. Just use and . print Your is doing a lot of unnecessary copies. The outer loop should be: 
+
+Counting from 5,000 to 10,000, this is roughly 11x faster than your implementation. So I suspect your professor did something along these lines. 
+
+Use Dictionaries We are basically just mapping from one letter to the next. The most naturally way to do that is to actually use a map: 
+
+Specify Requirements Up Front The whole point of binary search is that it's . If you're going to check that the array is sorted first, you may as well do a linear search. Not to mention that you're doing even worse here since you're checking that the array is sorted on every recursive call, so now we have an search. Binary search should assume a sorted list. If the user doesn't provide one, it's garbage in garbage out. Use appropriate defaults Usage-wise, it makes more sense to just write: 
+
+This expression looks much more complicated than it is. Basically we're summing the "complete" parts (where we have 5 5s in a row), and then dealing with the edge cases. The key is that we have a closed form that's just a function of , , and . And you can see how we can easily extend this out to all the other powers of 5 that I skipped. This solution is \$O(1)\$. There are only 8 powers of 5 worth considering, so we're doing the same number of operations across any range of numbers. It's possible that the above expression can be simplified, but let's see where we're at before we worry about simplifying. I rewrote your code a bit to read from a file instead of for testing purposes, but the main logic is simply: 
+
+There's a lot here, so I'm going to split my review into pieces. I want to start by just focusing on the metafunction section. Metafunctions may be short, but they're very powerful and important to get right - but in terms of correctness and usefulness. To start with: 
+
+You don't provide a copy constructor, so the default just is a simple copy of all your raw pointers. Which will then get d twice! Also, what if you never called ? Now you're leaking memory. I don't know if should be copyable or not - but right now it is and that's broken. So at the very least, we can easily fix it by using a smart pointer: 
+
+You're adding a declaration to namespace which does not fall into any of the "otherwise specified" categories (e.g. you're not specializing a template based with a user-defined type). What you are doing is undefined behavior. 
+
+Using the right functions What you want to do is present the string in some order. For that, there's . Doing sampling is for taking a small number of elements from a large set (think, drawing a poker hand from a deck), and is not well suited for this particular problem. So we can start with: 
+
+Destructor You don't have to check if . If it were trivially destructible, the destructor just wouldn't do anything. So you can just write: 
+
+The Player Loop What we have here is an operation that we want to run once, and then repeat as necessary. That calls for a loop rather than a normal loop. This will avoid you having to retype your prompt: 
+
+inline marking Right now, you're putting on the definitions. I would put it on the declarations, since the user is primarily going to be looking at the interface: 
+
+Though if you reread that statement again, you'll see that there's no need for to be a dictionary. You can just make it a list. Split things up Rather than having one function that does both generate the humble numbers and return the nth one, you can split them up. Have one function that generates the humble numbers: 
+
+If is sufficiently large, this could reduce how much you have to jump around in memory, since you're only ever looking ahead 2, instead of potentially . 
+
+The key is , which joins sorted iterables (which we know ours are). Basically we're on the fly creating the lists: 2*humble numbers, 3*humble numbers, 5*humble numbers, and 7*humble numbers - which are all humble numbers - and then using to drop the duplicates (because, e.g., 14 is both 2x the 7th humble number and 7x the 2nd humble number) This approach is \$O(n)\$. We are only performing constant operations to determine the next humble number. Which, when in doubt, we can always very by timing how long it takes to find the Nth humble number 10 times (after making the modifications I proposed to your solution): 
+
+Variable Names You use , , , , , , and to refer to important things. I started trying to keep track of what each one meant and then gave up. I have no idea. Give things meaningful names. Apparently is the number with the longest sequence, whose length is - which is certainly not obvious from the names! Chaining To find the length of the collatz chain for some number, , involves also finding the length of the collatz chain for every other number in that chain. However, you don't store that information anywhere, so it's lost. Furthermore, you calculate it TWICE: 
+
+So you're recalculating every chain every time twice. That's an enormous amount of extra work. Lastly, you're assuming that the largest starts halfway through. That isn't necessarily true, given that for odd n... Saving State You save some state in , but that ends up with you having to do a linear search through a list... which will fail most of the time, but it'll take a long time to fail. At the very least, you could store things in a , which is , but even then, you're storing the wrong state. You're storing numbers you've seen before, but what you should store is the chain lengths of the numbers you've seen before. That is... Memoize This is a problem that lends itself extremely naturally to memoization, so we can just do that: 
+
+As a possible optimization, the copy assignment can reuse the same buffer if it's already large enough and copy assignment for cannot throw (simply then manually destroy all the leftover elements). Virtual destructor?? There is no reason for the destructor to be virtual. You're adding a vtable to your class for no reason. With the new change to using to allocate the array, we now need to use to delete it (along with manually destroying every element):

@@ -1,0 +1,79 @@
+The results should be identical on Master and Slave. CAVEAT I have never used pt-table-sync. I have been using mk-table-sync (MAATKIT tool from Percona) for years and I know it has always worked for me. I fully trust Percona's pt-table-sync is at the least the same, if not superior, quality. 
+
+If you mainly have MyISAM tables, you should increase the bulk insert buffer. Here is what the MySQL Documentation says on setting bulk_insert_buffer_size: 
+
+It's OK to max out the to 1G. Whenever a MySQL Packet is constructed, it will not jump to 1G from the start. Why? First you need to know what a MySQL Packet. Page 99 of the Book 
+
+You should never encounter deadlocks as long as the Slave is used for reads and backups only. GIVE IT A TRY !!! 
+
+Notice that my PC has 19.019 MB of data and 7.134 MB. mysqldump will only dump the 19.019 MB of data. The indexes are not exported. If phpmyadmin uses mysqldump, then I only have one possible explanation. mysqldump uses the option --opt by default. Here is is what --opt does 
+
+If you installed MySQL 5.6 from the command line, the easiest way to find the temporary password is to go to the Linux command line do the following: 
+
+Even reads in InnoDB tend to shroud rows with MVCC protection to allow repeatable reads and permit transactions to hit the same rows being read. Thus, reads as well as writes produce disk I/O in ibdata1. Using innodb_file_per_table may relieve some of the disk I/O by separating Table Data and Index pages from ibdata1 into files. Yet, I would expect a somwehat noticeable performance improvement only for a limited time in a RAID5 environment. The table interaction is still somewhat the same. Every access to a file is always preceded by reference checks against ibdata1. While the separation can bring significant performance changes, RAID5 would be what they call in the chemistry world, a limiting reagent. Any benefits expected from InnoDB layout changes would be neutralized by outside factors, such as RAID5. The presence of extra tablespace files due to innodb_file_per_table buys you nothing over time but just the presence of extra tablespace files. MyISAM When it comes to MyISAM, RAID5 is OK in a read-heavy, low-write environment provided you map all temp tables (using tmpdir) to another disk, separate from the RAID5. Please remember that table data pages live in files and its corresponding index pages live in files. A write-heavy environment (INSERTs, UPDATEs, DELETEs) will obligate RAID5 to slow things down. Given MyISAM's locking behavior (full table lock with each INSERT, UPDATE, and DELETE) in a write-heavy environment, a steady stream of DML will keep RAID5 rather busy and have DB users enter a brief-but-annoying time warp waiting for DML to complete. Conclusion Under the hood, RAID5 has the following characteristics for writing with parity 
+
+EXPLAIN will get the execution plan for a query ANALYZE TABLE recalculates the index statistics. So just run 
+
+I have an interesting surprise for you. The only Optimizing for FullText Indexing you can do is not something at the my.cnf level. It is all about two things: 
+
+You will have to due it the sneaky way STEP 01 : Restart mysqld without grants and with no one being able to login behind you 
+
+I wrote about something like this on Mar 05, 2012 (Tombstone Table vs Deleted Flag in database syncronization & soft-delete scenarios) Basically, you can do the following: 
+
+Additional consideration: Do you have binary logging enabled in the DB server you are loading ? If you are, please do this on the server you are loading: 
+
+ASPECT #3 Since you are loading a MyISAM table, there may be indexes to account for. You should do this 
+
+So, if you do want it gone, remove innodb_parallel_doublewrite_path if it is there. Although not recommnded, you must add innodb_doublewrite=0 to disable the InnoDB Double Write Buffer altogether. 
+
+See the InnoDB Buffer Pool on the Left ? It has an Insert Section responsible for index changes. InnoDB would automatically flush index changes for you. No such mechanism exists for MyISAM. So, please convert to InnoDB ASAP. UPDATE 2017-08-07 15:25 EDT If you must go on using MyISAM, you should look into using Dedicated MyISAM Key Caches. You can create a key buffer for specific set of MyISAM tables. In your case, you would create a dedicated key cache for the one table with the FULLTEXT indexes. You would have to judge how big or how small to make the cache. Suppose your table with the FULLTEXT indexes is . You could then run this to find the proper size rounded up to the nearest MB 
+
+What could be the benefit ? Defining a column whose default value is will not attempt to increase the size of the row. This is true for . Honestly, I'm not sure this is true for numeric. (INT, TINYINT, etc). You need to test this (I mentioned testing this 2 years ago (Does InnoDB allow adding columns to a table with concurrent READ/WRITE of rows?)). Consequently, there should be no downtime. The downside to this would be changing your software to deal with a numeric column. If you concerned about foreign keys, turn them off in your session beforehand 
+
+That way, only and can do within the localhost. I would definitely have the on hand because there are times when mysqld loses connection to the file and prevents from connecting to issue a shutdown. With the , you can issue this: 
+
+You can store up to 15 characaters. Please do not use VARCHAR(15) because that is 16 bytes (first byte manages string length and thus slower retrieval and storage). Use CHAR(15) always on something like an IP address. 
+
+You can use mysqlbinlog remotely using --read-from-remote-server. Besides, you do not go back to the old Master, ServerA. You are doing these things among the Slaves, making ServerB the new Master. If you are using some manged hosting company, those admins need to be involved in this process. At the very least, they could provide some SSH tunnel access to permit you to access the Linux box and all necessary folders permissions. No MySQL authentication is needed. 
+
+When rpl_semi_sync_master_timeout (Default is 10000 or 10 seconds) is set to 5000, Replication should switch a Master from SemiSync to Async if no acknowledgement is received from the Slave in 5 seconds (5000 milliseconds). You may want to lower this even less than 5000. You may need to check your network performance. As long as you not doing geographic distance replication, you should the following: On a Separate NIC, use a crossover cable over 192.168.xx.xx so as not have faster replication response. Also, check the switch for dropped packets. You should not have to restart the server every time. As a quick-and-dirty band-aid, make up this SQL script: 
+
+It is possible to create a partitioned table without a . Someone years ago posted this in their question: 
+
+If you installed MySQL as a service, you need the following: STEP 01 Open Windows Command Line as Administrator and run 
+
+OK, fine. It works. However, doing this is logically unsafe. Why ? The partitioned table is based on . Since each partition contains a week for multiple years, running would wipe out week 4 from multiple years. OK, let's try dropping and adding the partition 
+
+Here is a quick-and-dirty way to fix . Please pay attention: STEP 01 : On the Slave DB Server, run STEP 02 : Install MySQL 5.5.26 on a Staging DB Server STEP 03 : Copy the following files from that Staging DB Server to the Slave DB Server 
+
+This will remove the specific two DB permissions. As I mentioned in my answer, the three permissions are very dangerous for test databases. Running this DELETE will neutralize those accounts for having full rights to test databases. 
+
+Doing will terminate and then exit the indefinite loop in , terminating . Then, launching will launch a fresh process. Give it a try and let us know. If you cannot edit , then specify the option on the command-line: 
+
+THe user and host values are appended together in the user_host fields. How do you rotate out the general log? Here is an example of how to blank out : 
+
+You are using MySQL 5.1.49. That build probably errors out on seeing a one-character string with a blank. MySQL 5.5 probably removes trailing spaces leaving an empty string. 
+
+These numbers are going by the actual working set in the InnoDB Buffer Pool I hope this little explanation helped you !!! 
+
+By default, XtraDB is used as the InnoDB replacement. If you login to MariaDB and run , look for the . According to the Documentation for : 
+
+Picture this now: You access the table, MySQL would first hit /var/lib/mysql/mydb/mytable.frm and then hit the data and index pages in ibdata1 for mydb.mytable. This would constantly be happening with every access of mydb.mytable. This cascading back-and-forth would somehow make things a little slower and you may not get the performance you were expecting by moving ibdata1 to some other data volume. In fact, the cascading effect would now be a factor of the number of InnoDB tables multiplied by two(2). Imagine having innodb_file_per_table enabled. Now you would have a slightly different setup: 
+
+STEP 02 You would then or all these packages. That still won't nix the files for MySQL. What next ? STEP 03 Move the old datadir aside: 
+
+My guess is the query in your question looks like PostgreSQL information_schema. The current database is assumed when you connect to it. I believe you want the MySQL equilavent Here is my suggestion for the Top 10 tables in the Current Database. 
+
+IF you are going to use MySQL for this application, by all means STAY AWAY FROM MyISAM !!! All INSERTs, UPDATEs, and DELETEs on MyISAM tables will perform a full table lock before executing the update to the table, even if you are updating a single row. This makes using InnoDB a whole lot more conducive since it features row-level locking and InnoDB buffer both data and index pages. If you use a large InnoDB buffer pool and users are consistently hammering updates, the users will be cached already and data will systematically flushed to disk at regular intervals. Once you have data loaded, you can run this formula to estimate (or guesstimate) how big an InnoDB buffer pool you are going to need: 
+
+your auto_increment column was leftmost. You made reference to a second post. Please note that in the answer to that second post, it clearly notes that MyISAM and BDB storage engines support auto_increment ids. When it comes to MyISAM, the auto_increment behavior allows an auto_increment number to be paired with one or more keys in such a way that the number 1 can appear multiple times but be associated uniquely with the columns. I have discussed this a few times over the years: 
+
+The function is called . I don't think it can handle a BIGINT correctly since the 7 bytes after the NULL flag could be anything. Please keep in mind that signal 11 is a Segmentation Fault. In this case, it is due to the process of bytes that are unknown or spurious. 
+
+In the case of an index, fragmentation can vary greatly. Yet, nothing can be worse that entering data into an index already sorted. To illustrate, let's take the worse case BTREE, a balanced binary tree. A balanced binary tree is a binary tree that monitors the height of its child nodes and will only allow for a difference in heights of : 
+
+There are two approaches Approach #1 : DITCH CORRELATED SUBQUERY You should ditch the correlated subquery and replace it with the JOIN of two subqueies 
+
+It may be possible that data was truncated if a number bigger than 99999.99 was in float_one. Perhaps, mysql was converting float_one and float_two to DECIMAL(7,2) individually before performing division. Try using DECIMAL(10,2) or greater to accommodate large values. UPDATE 2011-07-25 15:05 EDT There are definite truncation problem going on here According to MySQL Reference Manual Page 442 Paragraphs 2,3 
+
+If the number of ids in mytomb is greater than 5% of the rowcount of mydata, it is full table scan. Otherwise, an index scan with a lookup for each row. Note any benchmarks in these respects. Lookup the explain plans. Now, do you want to see every person in zipcode 07304? Here are two different ways:

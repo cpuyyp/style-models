@@ -1,0 +1,107 @@
+Thats is not what you should execute. is the procedure, is simply a cursor in it. You do not execute the cursor local to a procedure, you can not even access it. Execute the below: 
+
+Here is false, so the second argument of the is not executed, luckily for us, because it would be a division by zero. With the second part is executed and we receive the expected error: 
+
+The optimizer noticed the index on the relevant column, and because of the NOT NULL constraint it is able to use it avoid sorting the data for producing the unique values, because the data is already sorted in the index. Now add a UNIQUE constraint to this column: 
+
+2 (+1) possible reasons: 0 - does not audit operations. Use 1 - You perform the above as SYS user. Actions performed by SYS are audited into files, under the location of 2 - AUDIT (Traditional Auditing) 
+
+No errors, everything should be OK, still, I can't connect. So much for . Now let's do some real troubleshooting, and check the server side. The address I am connecting to: 
+
+This is where you are wrong. You have 3 instances, you have 3 redo threads, so you have 3 archivelogs containing the change at . Because of this, you need to recover the database until SCN/change, not . 
+
+You want to minimize round trips. You do not need all this hassle for that, you can fetch multiple rows at a time. 
+
+If you set it to 10.2.0.4.0, the downgrade should be still successful to version 10.2.0.4, but not anything lower. 
+
+No, you are abusing the UPDATE statement. With an UPDATE statement, the correlated subquery is executed for each row from final_table. Updating values from an other table should be typically done with MERGE. Example: 
+
+Most likely you will not find in the list, and that is the problem. Ask the TSM administrators to search for in their catalog. If they find it in a different filespace, or registered under a different nodename, you can restore it by collaborating with them and using the correct tdpo configuration. If they can not find it, you are out of luck as that backup simply does not exist on TSM. 
+
+The syntax of default values for columns is similar to your original statement, but that does not accept because PL/SQL is not allowed there: Restrictions on Default Column Values 
+
+You can choose the first two from these. A logon trigger can also issue the , and you don't need to modify the application code for that: 
+
+Double check this, because you get the above error, when you are not a member of the ora_dba group. Check for the following line: 
+
+You will have more than 1 instance serving the same service. The below may connect to any of the instances, but the listener decides which instance it forwards to your request, not you: 
+
+If the user had the privilege without any quota defined, you need to define a quota on the tablespace, so the user can use it again after the above commands: 
+
+Static registration is performed by editing and adding the corresponding entries. That alone does not prevent or from dynamically register services in the listener. Dynamic registration can be disabled by setting the to . With this setting, or will still try to register, but the listener will simply not accept these requests. 
+
+After this, you still have to remove the entry that belongs to the database from /etc/oratab, remove init.ora/spfile, password file from $ORACLE_HOME/dbs, and clean log directories (adump, bdump, cdump, udump). 
+
+But instead of manually searching for reasons why fast refresh is not possible, let the database do the work: Run to create the . Use DBMS_MVIEW.EXPLAIN_MVIEW to explain the mview: 
+
+queries directly from the dictionary table and nothing else. also queries , but joins some other tables and views as well, for example . This view does not contain all the objects from , so this join eliminates some rows from related to the missing objects. For example on my database: 
+
+As I already said, ORA-03113 is a generic error. When that error occurs, the server process serving your session died unexpectedly because of some other error in the background. These errors are displayed in the database alert log. In your case: 
+
+Actually this is really easy to verify, you can do this by enabling 10053 trace. You will see that the optimizer does not even consider skip scan at all. The reason for this, is the "_optimizer_skip_scan_guess" parameter. The default value for this parameter is FALSE, meaning the optimizer will not consider skip scan when all it has is "guessed" selectivity, which is the case with dynamic sampling. If you set "_optimizer_skip_scan_guess" to TRUE, skip scan will be considered, this can be also confirmed with the 10053 trace again. PS: your db_file_multiblock_read_count parameter seems to be lower than the default value. On my 11.2.0.4 sandbox, with the default value of 128, after collecting statistics on the table, index FFS had about one-third of the cost of index SS. Edit: added output 
+
+is an SQL function, not PL/SQL. You can not use it in plain PL/SQL, only as part of SQL statements. There is no nice and easy way for this. There is the method with collections, for example: 
+
+You can create manually a dummy instance. On Windows you need to do this. This is documented in the Database Platform Guide specific to Windows: About Administering an Oracle Database Instance Using ORADIM Example: 
+
+insert parent row with new PK value update child tables to new value delete parent row with old PK value 
+
+This is from behind the Oracle registration wall: Client / Server Interoperability Support Matrix for Different Oracle Versions (Doc ID 207303.1) 
+
+Could not find a list specifically for native encryption, but you can set the algorithms based on the above. After setting the above parameter, if you choose an algorithm that is not compliant, you can not connect to the database and will receive the below error: 
+
+One possible reason: Bug 16311211 : REBUILDING INDEX ALTER SETTING THE MONITORING TO OFF The bug is said to be fixed on version 12.2 and there are one-off patches for 11.2.0.3 and 11.2.0.4 as well. 
+
+The above will resize all ASM disks in the diskgroup up to . This triggers another short rebalance, and when that finished, you should see 92160 for and for both disks. 
+
+Another feature is defining PL/SQL functions for a single SQL call in 12c. Using a PL/SQL Function in the WITH Clause For example: 
+
+Oracle does not support negative audit rules. The only exception is the clause for Unified Audit policies which excludes the given users from auditing, but not statements. 
+
+If you can create a snapshot of everything at the same time, you do not even need backup mode. Backup mode (User Managed Backup) is not deprecated, but RMAN is the preferred tool for making backups. 
+
+HASH JOIN - no NESTED LOOPS JOIN - yes, depends on statistics Oracle can not use index range scan for join predicates when performing a hash join. But it can use indexes for other predicates for the ("second" table), so hash join does not automatically result in a full table scan of the probe table. 
+
+TNS Ping does not care about service or SID, all it checks is the availability of the listener, so this does not mean your connection string is correct. Connecting through SQL*Plus successfully however confirms it. Your tnsnames.ora uses SERVICE_NAME in CONNECT_DATA, but your JDBC URL uses the SID syntax. SID and service name are different concepts, and their value can be different. In your case, you can connect with CMSQA provided as service name, but not as SID. In this syntax, CMSQA means SID: 
+
+Make sure you do not reduce the size of LV below the ASM disk size . Once it is done, increase the other LV: 
+
+First of all, your listener is called RAIDLSNR, it can be clearly seen from your listener.ora. It also listens on port 1528. Still, you started a default listener called LISTENER, that listens on port 1521. So stop this listener, and start the appropriate listener: 
+
+Notice that the increase in free memory (2109440) is almost the same amount that was written in your error message (2110040). But since you are on 11.2.0.3, if you use default memory settings for ASM, I highly recommend setting the memory parameters manually. The default memory allocation for < 11.2.0.4 versions is too low, it is a recurring issue. 11.2.0.4 allocates at least 1 GB memory, but 11.2.0.3 still uses around 300 MB (which causes problems like the above). The recommended setting is: 
+
+The step will fail at the standby site, and the service remains in state, but that is normal. With this, the service is automatically relocated (stopped at old primary and started at new primary) when you perform a role transition with Data Guard broker. And use this service for connecting: 
+
+Archiving the Database Audit Trail Scheduling an Automatic Purge Job for the Audit Trail Manually Purging the Audit Trail Basically you copy the audit trail to another table, e.g: 
+
+As far as I know, Oracle databases in Azure are not provided as DBaaS, you get OS access, so it does not really affect the choice. RMAN is efficient when working with large databases, while Data Pump is trouble-free and is easier to manage for someone not familiar with DBA tasks. A 260 GB database is not big, I would just export-import the database. To restore an RMAN backup, you need the same platform + the same or higher software version. If your software version is higher, you need to immediately upgrade the database after restoring it. With Data Pump you can just import the data directly to a higher version database, even on a different platform. Loading data with Data Pump is usually fast. The slow parts are creating indexes and validating constraints. This is a one-time operation, it should not affect performance in a negative way. In fact, it reorganizes tables and indexes, it may even improve the performance depending on their current state. 
+
+I see no COMMIT up there in your code. By default SQL*Plus autocommit is off. Data changes are not visible to other sessions until they are not commited. 
+
+When an index name starts as SYS_.... and has a seemingly random identifier on the end, then that index was generated automatically, which is quite unlikely for a bitmap join index :) You can confirm the index being a bitmap join index e.g with the use of dbms_metadata.get_ddl, which will show you the actual join condition used: 
+
+Yes. It is a collection of the files (datafile, controlfile, redo log, tempfile, block change tracking file, etc.) on the disk. 
+
+You have lost the redo logs and your remaining datafiles are in an inconsistent state, so you will not be able to open the instance, unless you allow resetlogs corruption: 
+
+The source of the above procedure is not wrapped, so one can browse it and find how the database detects Data Guard usage. 
+
+AUDIT_SYSLOG_LEVEL You can send your audit entries to syslog with the above parameter, and configure syslog for remote logging. 
+
+You can find this information in . Using this view requires the Diagnostic Pack option. For example, sessions in the last 1 day: 
+
+The inner view originally contained DISTINCT, and because of that, it was eligible for Complex View Merging. However, as the DISTINCT was eliminated earlier by another query transformation, this view became a simple SPJ (select-project-join) view, and now is eligible for Simple View Merging. Here are some interesting information about view merging: $URL$ This part is especially important in this case: 
+
+If you want the total execution time of a query, then use the view that contains the total execution time of queries. 
+
+So you told the primary database, that it should put archivelogs in the FRA, but only when it has the standby role. After forcing log switches a few times, your repeated attempt of forcing a log switch hung, because with your settings, you basically prevented the database from archiving logs, and the database can not switch to a new log file group, because it could not archive any other previous log sequences, so it can not reuse the files. Here is an example of the parameters needed in the primary database from the documentation: 
+
+You should go for the solution that fulfills your requirements. Both and are configurable, so first you should to configure them, and after that, you can set . The default value (on Oracle Linux 7) of is 4 TB, which is irrelevant for most systems. The default size of is 50% of the physical memory. If you use the default settings, following for sizing can be a viable option, but it may be suboptimal ("Unused memory is wasted memory"). To make things more complicated, includes PGA, which is not shared memory. Also, my personal opinion/practice: whenever I can, I use ASMM (sga_target/sga_max_size + pga_aggreate_target) instead of AMM (memory_target/memory_max_size). Especially since hugepages works with ASMM, but not with AMM. 
+
+Whenever you connect through a listener, the listener may forward your request to another address that a participant does not understand => . Make sure your client and server can resolve all addresses specified in the connection string, especially the addresses that appear in the output of on the database server. And below is an example. My client: 
+
+Continued from previous post. So now we know that DISTINCT and GROUP BY are handled indeed differently, lets go back to question 1. Knowing the above, going back to the original, slower query, this: 
+
+Much better. Also notice the Cost column in the plans. The cost of the first plan was 226K, but with disabling XML rewrite, the cost of the second plan was 2. I didn't investigate this topic deeper, but it seems this is another kind of query transformation, that is not based on the cost. 
+
+If you create a table after this, without specifying the schema, that table will be created in the USER2 schema regardless of what user you logged on with.

@@ -1,0 +1,59 @@
+What is more interesting is now how such an instruction is implemented. I will not show the whole implementation file but instead a small section of it: ByteCode.cpp 
+
+What you see is the that each instruction if constructed is automatically be stored in the global array you have seen in the header file. This shall insure that every instruction ever instantiated is accessible via this very array just mentioned. This is important later on. An saves 4 kinds of information 
+
+I want present to you my little Virtual Machine. It nothing really sophisticated. It is an stack only virtual machine with the exception for some 'global' variables which i would count as registers but besides that all calculation done by my VM is done on stack. What i planning now is to show the most interesting parts of the project How i implement this VM. Reason why I do not post the complete code directly is you can find it on GitHub where you can clone it and test out locally. I recommend if you really interested download the project, execute and take a look the code and THEN comeback and read the post. It makes it probably easier to understand. It's not that i do have a lot of files but to keep the code readable I think that this is the best choice. Let me know if you think otherwise! Also Unfortunately i am not good writer, not just only because English is my second language... I try my best to correct as much orthographic and grammatical mistakes as possible. 
+
+This header i believe is pretty straight forward to understand. You find three important parts in it. 
+
+What i personally find awesome is I do not have an awfull crazy long switch statement which chooses what code must be executed. In an earlier version i had such an switch statement and it drove me crazy looking at it. So i came up the with global array. The Array you find the Bytecode.h file; where the bytecode corresponds to the index of the array for appropriate instruction need if accessed. 
+
+The function from the class does what you expect. it stores some kind of Measurement(here time). It's not really well coded and if you interested please look up the code at my repository it is in the same project. The Argument given to calls the lambda of our Opcode/Instruction and Measures how long it takes to execute and stores this information for analysis later. I did this because it seems interesting to me to know just how fast is my Virtual Machine. 
+
+This is bad. You almost never want to directly include a source file, only header files. Instead, write a Huffman.h file: 
+
+However, since this function is only one line of code, I personally wouldn't use the function. Code duplication Notice how each block in the if statements look almost identical: 
+
+It tends to improve readability to put a space between , , etc and the opening (like so: ), although it is a matter of style. 
+
+There's also a small problem, where if the field we are sorting by is a pointer, you can have undefined behavior. Comparing pointers with is only allowed if the pointers are from the same array. So it would be better to use : 
+
+That is ... quite the constructor call. If you have six arguments to your constructor, one of the following is probably true: 
+
+Naming is kind of an awkward name. First, the isn't the "program", so it would be better to call it . However, if I'm programming in Swing, I already know what a frame is; just remove the suffix to get . Build the names of GUI components from that. 
+
+This modifies the result. You almost always want your functions to act like mathematical functions rather than procedures. Additionally, Wikipedia lists the CGoL rules as follows: 
+
+You don't need to copy the entire matrix. For an matrix, copying takes extra space. You can get by with space, or copying only a single row. The idea is to modify the matrix in place, using a single-dimensional array to hold the old values of the row you are working on. Then, you simply use that array when you get the old values for computing the new line. You will need another variable as well. Something like this (doesn't completely work and I don't recommend this code style; this is just to get the idea out there): 
+
+This is a big problem. This function is way too big. Break it up. Have different initialize functions (for the different sections of GUI; I didn't read the whole function to determine good sections). Additionally, I have scanned the code several times, and I still don't know why you have on the method. You should almost never have to use this; there are almost always ways to make this unnecessary. This means that you are using some generified type without a type parameter (e.g. instead of ). It is likely that that is unnecessary. 
+
+The really interesting part start now with the static function . is called from the VM at beginning of it's life cycle. It does constructed all instruction just by calling the constructor of the class . The function expects just the pointer of the current instance( a class shown later) which is given to an lambda who implements the behaviour of a certain instruction. The lambda which contains the behaviour of the instruction captures s function argument, which is the pointer to the current instance of the . Through this i enable the lambda to access the VM's representation of the stack where all operation happen. You see two s implemented here. NOP and IADD. NOP simply does nothing so the lambda is empty. IADD on the other hand adds to integer variables which are stored on the stack before this instruction is called. if nothing is there, well that would be a problem then. This scheme just repeats for every instruction defined in the enumeration in the header file. VM.h The header contains the nested struct . represent any values possible in the VM. To make life easier anything which is not an Pointer is stored within an double regardless if less bytes are need. Efficiency was not the purpose here. In essence is a tagged union. Because Every Instruction or Opcode is represented by an Byte, ergo is an Value, it can be expressed as an in the "Code Section" of the VM. 
+
+The member function cpu() is quite interesting and a bit difficult to read. It first checks if the stacktrace is enabled; if so it prints the first line as you can read. Then we enter our interpreting loop; for each instruction contained in our code given to the constructor earlier. this loop runs as long as our instruction pointer is less than the code size, otherwise we would try to access code which does not exist. The first step is to fetch now our first Opcode and increase our IP by one. We than check if the recived opcode is valid and if so proceed. 
+
+VM.cpp The Constructor of the VM is quite simple it expects an vector of Types which stores simply a copy of the code. The second argument is the "line" number or the index from the vector from which the VM shall start executing those sweet little bytes of Opcode/Instruction. You also find the call to the static function from the class earlier explained. 
+
+This is because wouldn't know the width of the frame otherwise, and you'd get an off-center window. Except you appear to be trying to maximize the window, which is better done like so: 
+
+This function is really big. It's 97 lines long. Break it up into smaller functions. Notice how you have comments for several small sections of code? Those are ideal for turning into functions. Yes, you will have many functions, but the readability greatly improves. However, many of your "functions" can be replaced with standard algorithms. 
+
+If you don't want to use templates, that's fine, but keep in mind that they make it more general. One other thing to note is that you never change the vector in this function. That's a sign that it should be taken by rather than . However, the expected semantics of a function called is that it modifies its parameter so that, after the function is called, the parameter is sorted. It's unusual and unexpected to have to call another function to obtain the output. 
+
+Rather than manually writing out the comparator, use . I would use , but you could use if you wanted to. 
+
+C++ doesn't supply a , so I decided to implement one. However, I was viewing this as more of a hash library than extensions to , so I placed it all under the namespace . This was my first time seriously using template meta-progamming. I tried to make my code work no matter the cv-ness of the variable, or whether it was an rvalue or an lvalue. I'm not sure on the efficiency of execution, but I believe the compiler can optimize it down to simple arithmetic on hash values. hash.h 
+
+Finally, I'd probably have implemented this like so, for more terseness in the constructor, and to avoid the use of (which requires more cognitive effort to ensure it was used right): 
+
+You also take and by value. This means that the strings have to be copied in (sometimes they can be moved, but for many cases, copied). All that copying is wasteful when you really don't need a copy. Take them by instead to save the copies. 
+
+This has the added benefit that these variables will be destructed when the threads used finish, although when that happens is mostly unclear. 
+
+To add one more thing to janos's review suggestions, one thing I noticed is that many of your comments are saying essentially the same thing as the code. I'd suggest leaving them out. Developers can read code and trust it more than comments, which often get out of sync with the code. 
+
+Normally there's no need to specify the color to change from. You only need to specify the coordinates and leave it up to the flood fill routine to find out what color is at that location. I would define another method that is public, and make the recursive method a private implementation method. The public method would look up the color at the location and then call the private method. 
+
+It's neatly formatted and follows standard naming-conventions. I found it easy to follow the logic. I'm not sure why you switched from a to a . It doesn't buy you anything, and makes the code more verbose. (If you did it as an optimization, the effort is misplaced. These days, Java compilers turn simple String concatenations into StringBuilder appends behind the scenes. In any case, even if you were doing this trillions of times in a tight loop, the possible savings from StringBuilder would be negligible compared to the time to format dates and whatever I/O you're doing). Rather than using a method, you could create an (e.g. ) and one or more implementations. This would be a bit more object-oriented and more future proof. You wouldn't have to add the flag (or whatever future formatting options might be needed) to the interface, but have that knowledge in a specific implementation. What is the foreign character string when ? If it's not a typo, it might be worth writing a comment to explain, for people who can't read that language. I'm not sure that is the right name, nor whether it is necessary. You don't use a constant for the other date/time formats in the method. 
+
+The public interface of the class is nice and small. The code is laid out well and follows Java coding conventions. The tests have reasonable coverage. There is a lot of unnecessary looping and casting in your code. Here's a more concise version that passes your tests:

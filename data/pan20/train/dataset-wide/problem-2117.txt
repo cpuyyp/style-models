@@ -1,0 +1,81 @@
+The optimizer is choosing the different plan because it thinks the benefit of having the pre-sorted (using ) outweighs the cost once you add the clause. The optimizer cannot be perfect, it might choose a slower path even if statistics are accurate - but it will certainly make poor choices if the statistics are not accurate - are AUTO_CREATE_STATISTICS and AUTO_UPDATE_STATISTICS on? If necessary, you might be able to 'trick' the optimizer like this: 
+
+If you plan on porting integer data back to SQL Server from Oracle from those fields at some point: if integers out of the range -2,147,483,648 to 2,147,483,647 have been inserted on the Oracle side, these values will overflow on the return journey If some part of an application is relying on integers being in the aforementioned range. Values outside this range might therefore cause an error 
+
+for the following data, I'd like to be able to delete some rows and insert others giving the result below. Is this possible with a single statement (eg with the statement)? 
+
+My primary goal (with this question) was to see if Oracle can give me some way to identify this expiration time trigger and initiate an activity rather than Application server initiating one. 
+
+There are many more child table where ORDERS is there parent table. Under heavy load, when ORDER status is changed which causes row movement between partition, following deadlock error is printed in the log ORA-00060: deadlock detected while waiting for resource In the Oracle trace log, I see following SQL causing deadlock 
+
+I am using Postgres 9.5 I have tables with date column. All tables are partitioned based on the date column. Table setup: Example of current partitioned tables are like below 
+
+So for some reason, ORACLE is not taking Index into consideration while running update query on PLAN table. Am I missing something? 
+
+Can some one suggest some approach where Oracle some how notifies application server when lock expiration time is reached? Edit (To answer questions raised by Gil Shabtai) Its probably my bad that I tried leaving some of the points from the discussion which I thought were irrelevant to the question I was asking. Here are the answers to your issues / questions raised 
+
+I vote for option 1. Bear in mind that RAID 0 means "no protection" - do your logs matter? (yes they do). It also has the benefit of simplicity The SQL Server docs say: 
+
+Whether is useful or not depends on what you have chosen to mean in the particular context - with all the confusion and opinion around IMO the sensible approach is for the DBA to 
+
+dbfiddle here I am assuming this is a cut-down example of your real-world problem or I would also suggest changing the way you store the data in the first place, perhaps using date ranges instead of integers. 
+
+This also does the trick but 'not terribly fast' would be a huge understatement this time unfortunately - I'm posting it anyway in case it is of academic interest to anyone: 
+
+and the reason I'd like a single statement solution is to prevent a race condition where another transaction inserts/commits data between the and in the primary transaction. 
+
+Concern:App knows lock expiry time but still checks Answer: A 3rd party CRM application can also add lock in the table. So application is the not the only way to add lock. So application does not always knows what lock expiration times are. Concern:30 seconds locking period Performance issue Answer: This was just an example, the actual locking period is configuration and default is 5 seconds. Concern:Caller needs to go to sleep if entity is locked. Answer: Caller also has a mechanism to request a notification when locks are released. All these requests go to a queue. So it is critical that the caller be notified (in the sequence they requested for a lock) when the lock is expired. So caller going to random sleep may not be an option. 
+
+Failing Edge Case Since partition for inserting data is decided based on submitteddate which is a current date, there will be a situation where an order comes at 2016-11-30 at 11:59PM and data in ORDER table is inserted in NOV2016 partition but data in ORDER_LINE and PLAN table is inserted on DEC2016 partition as by the time inserts are done, date may change in the system. When I try to drop Nov2016 partition from all tables (child first due to FK constraint), ORDER_LINE and PLAN table drop partition might go through but ORDER table partition drop will fail as orderid from Nov2016 partition would be pointing to the DEC2016 partition data in other 2 tables. How do I make sure that the orders inserted on date change still goes to same partition across all tables? Added info (based on @dezso reply) Dezso's transaction suggestions makes sense. But to make question concise, I left some details. With those details, the suggested solution might differ a bit. Application supports 2 databases, Oracle and Postgres. For Oracle, partitioning has been implemented using Reference partitioning with partitioned ORDER table and child tables are referenced partitioned based on foreign keys. For postgres, since there is no reference partitioning option like Oracle, each table was supposed to be individually partitioned using submitteddate. The plan was not to add submitteddate to each table but to use inheritance like below 
+
+You are explicitly setting the role to so you will need to use before your to use the permissions from role (but I'm guessing you probably just want to ) From the docs: 
+
+You could email them with or them to another server with Alternatively, save the complete reports as a in a table and query from any client - this is a little more work as you'll have to rewrite your reporting procedures, but is still easier than starting from scratch on the client. 
+
+updating a value uses syntax like rather than something like which might mirror the syntax better it is almost always a mistake when dealing with to say: "nulls behave like so-and-so here, so they should behave like such-and-such here 
+
+You might try changing the id generation so inserts are not contending with each other, or consider setting , noting the implications for index maintenance (which are probably only relevant if you are also doing updates) 
+
+After 30 seconds a notification needs to be sent out to all clients that a lock has expired and this employee is available again for updates. Now to identify if LOCK_UNTIL duration has reached, application makes a SQL call to database every 2 seconds to see if 10:00:30AM has reached. Performance Issue: This call every 2 seconds is causing lot of overhead on the database and on the application server. I am looking for a better ways where Oracle itself initiates a notification to the server when lock expiration time has reached. Is there any way I can achieve this? Possible solutions: 
+
+But If I break the query into 2 parts and rebuilt indexes with ONLINE option separately, DML queries DOES NOT get blocked while indexes are being rebuilt 
+
+Current Setup: My application uses Java (Spring) and Oracle 11g and has functionality where logical locks are placed on an object before updates are made in the table. For example there are 2 tables EMPLOYEE and EMPLOYEE_LOCK. When any update is made to employee, an entry is inserted into EMPLOYEE_LOCK table to indicate that for next 30 seconds a particular employee is locked. So EMPLOYEE_LOCK table looks like below (as of 10AM) 
+
+Instance Recovery is necessary to get the database back to a consistent state after or some other abnormal shutdown event. Oracle is never going to let you open the database in an inconsistent state, so no, there is no possibility that you can disable it. If Oracle is crashing during Instance Recovery you need to get in touch with Oracle Support or revert to a backup. The concepts guide has essential reading about instances and more particularly what Instance Recovery is and why it is sometimes needed: 
+
+Or, as 'the value of the selected prompt variable is printed literally, except where a percent sign (%) is encountered': 
+
+The DB2 Docs suggest to me that returning a dynamic result set is done via a with a clause rather than a simple statement. 
+
+Certainly, use integer You will have to decide how many decimal places you are assuming and be consistent at the application level. 
+
+They way I read it, the same applies to constraints though the wording is a little ambiguous. You might not like this behaviour, but it is not "a bug" as it is behaving as designed - and there are other ways of ending up with this sort of 'broken' constraint. See this OTN post for more information and an approach that might work better for you using pl/sql and . 
+
+Now this SQL is internally generated by Oracle to perform row migration for child PLAN table. To resolve the issue I tried following changes: 
+
+My requirement is from the example below, can a new table have only partitions Part_2 and Part3. (Dropping partition Part_1 using WHERE clause) 
+
+My ordering application uses Oracle 11g Database. This DB has a primary table ORDERS and multiple child tables like ORDER_DETAILS, PLAN etc. ORDERS table is LIST partitioned on STATUS column and all other tables are referenced partitioned with ORDERID as a foreign key. At peak load, when order status is changed and ORDERS table row is moved from one partition to another, Oracle performs row migration for all the child tables referenced partitioned by ORDERS table. Due to many tables that depend on ORDERS table, large number of row movements happen causing a deadlock in one of the child table. My question is, how to resolve a deadlock caused in the ORACLE's internal row migration step? Here is an example setup: ORDERS table: 
+
+Depending on your real-world data, you will probably want to vary the number of granules and the function used for putting rows into them. The actual distribution of frequencies is key here, as is the expected values for the clause and size of ranges sought. 
+
+The statement above has three identical subqueries and seems to execute them independently. How can I best rewrite the update to perform the subquery only once? (The idea of this query is to only perform the update if doing so would not cause the sum of pool1_count to exceed the maximum allowed pool1_count and the same for pool2, pool3 ....) 
+
+You need to start off with a of detail and payment, because you say "products in any transactions that includes a certain type of payment are considered to be paid with that payment type", so you are effectively asking for parts of a transaction to be counted multiple times if there are multiple payment types used. 
+
+I am using Oracle 11g. I have a requirement to drop a partition and rebuild global indexes. The query below does job well but BLOCKS all DML operations on the table until the indexes are rebuilt. 
+
+The down side of this approach is the time between the execution of drop partition and rebuilding index, those indexes will be unusable that might create performance problems. So my question is, is there any option where I can drop partition and rebuild index "online" in one query? Currently I dont think we have following option. 
+
+I have confirmed that OrderID column (Foreign Key column) in the PLAN table has index on it. Tried increasing PCTFREE parameter on the table. 
+
+But havnt got success yet. How do I handle deadlock for this scenario? ------------------------- UPDATE ------------------------- As per suggestions suggested by Wernfried and Gandolf989, I verified if all my foreign keys have indexes on them by running query given in the Gandolf989 answer. Result was "No Rows Found". So it means, all the indexes seems to be in place. But while analyzing I realized, if I check an explain plan for a simple query like below, I see FULL table scan on the PLAN table even after having an index on ORDERID column. 
+
+dbfiddle here Note though (thanks @Erwin), that performance is going to be very substantially worse than the built-in aggregates. If this matters you will have to consider writing the helper functions in C, which is much more of an undertaking. 
+
+now the rule that "Ford" dealers can only stock "Ford" cars is enforced naturally by the model. Note that in the 'composite keys' example, may or may not be unique, according to preference. It does not need to be unique (ie an alternate key), but very little is lost by making it so (perhaps a little storage space) and it can be very handy so that is the way I usually set it up, eg: 
+
+In the first case there is no need to change the port number, in the second, changing the port number is not enough. 
+
+You may be able to work around the problem with a view, but it seems that in this case at least, adding a dummy is enough to prevent "flattening":

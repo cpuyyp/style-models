@@ -1,0 +1,59 @@
+Disclaimer: I do not code in C#, so you might be disappointed. If anyone is willing to port this to C#, please do, it'll probably help the OP more. Comparing two data-sets for inclusion/exclusion can be done on streams provided that they are sorted. The algorithm is close to the merge pass of a Merge Sort; in pseudo-code 
+
+The use of gives us raw storage of suitable size and alignment: this obviates the need for default constructors of ! The use of allows us to offer the best possible Exception Guarantee with little code. 
+
+Now that we have the helper methods, we will also alter the set of constants: checking a single constant is faster than checking individual ones, and having a pre-calculated "total" length is risky in the face of change. So here we go: 
+
+The two overloads of are unnecessary. You can provide a single one, taking the parameter by value instead: 
+
+Avoid special cases I applaud the effort in not allocating memory in the default constructor. Unfortunately here it comes at the cost of a special case that you have to remember in every single method. It also, quite unfortunately, leaks to the client: may return a null pointer! In this specific case, I advise cheating by using a sentinel value: your empty string should pass itself off as . The default constructor thus becomes: 
+
+There are minor performance improvements possible still, short-circuitings notably, however they do not improve the worst-case complexity so I left them out to avoid mucking the algorithm. 
+
+And then, this class can easily implement safe copy! Last note: may not be as costly as you think it is, if you are avoiding it for performance reason, measure first... A rough example (untested!) of a safer alternative to C-String: 
+
+You do not have to use those exact requirements, of course. In this case, though, I really advise you to use a constant-time method: all standard containers have a constant-time method since was brought back into the fold in C++11. Without this constant-time requirement, there are two valid implementations of , one using and one using a data-member. With this requirement, only the implementation using is valid. 
+
+I personally prefer something like a generic class that allows me the re-usability of a single data structure for handling responses that might fail. The class would look something similar like: 
+
+So, I honestly don't see the need to use a constructor and then having to call the function, it seems very illogical to me. Another thing that was not apparent to me, was that you are in need of jQuery, it is not mentioned anywhere explicitly, but you seem to refer to the inside the code. If I am not mistaking, jQuery prefers an IIFE to set up their plugin system. It has the advantage that you can explicitly require jquery to be available, and it would be apparent through any use of your plugin itself, looking a bit like this: 
+
+This doesn't interact with the request at all, at most, the user will see something on his screen, however the response will still be running, and your code may eventually react on it, so you are pretty much unsure if it really worked. But don't forget that any callback you create should be canceled in the end (through (see PatrickRoberts comment below) or ), so that there is no need for you to check if a response returned ;). I personally still prefer the and methods to do that. Suggested rewrite ES5 
+
+I am really unsure why you have a access modifier for the method. I don't see any reason from the code why you would need it, and I think it should be at most , but preferably . For the and members, I don't see why they should be members, and why you should be able to assign a value from outside your class. I think the should be private fields inside your class, cause nobody except the current would care if they are loaded or not (and if they would, even then, I wouldn't allow it to be set from the outside) To the outside, I would tend to give out only , and keep the implementation of it hidden from the users. WPF will detected the interface, and will update on any changes (as long as you don't reassign) I am also unsure if the of the TreeItemViewModel supports updates to the UI, if it does, it seems a part of the is not yet implemented for it. 
+
+Also, for style points, let's avoid modifying the arguments of the validation function. Since now does not allocate, it comes at no extra cost: 
+
+In this answer, I will concentrate on since this is the only part you have actually presented, so is dead simple: 
+
+Using is preferred. You get some goodies, such as bounds checking, easy extraction of , etc... 9. Pick your types. is a default type, but it is not very sensible. You already have a enum, why is not used for ? I also recommend using a type, or at least using again since there's no reason to have a day greater than . 10. Stateless helper functions. The function does not access , so it need not be a class method. You can either propose it as a free-function as part of your interface, or otherwise only declare it in the file in an anonymous namespace. 11. Never return a value. It's rather pointless, as the client can copy it anyway. You may wish to return a (const-reference). Unfortunately it means that clients get to know that your class contains a , so that if you ever want to change the internals of your class, clients will break. 12. Defaults are hard. If there is no meaningful default value for your type, consider NOT defining a default constructor. This is pretty restrictive, of course, so you may consider instead: 
+
+Exception Safety Your container is not exception safe. The first difficulty of writing a container in C++ is handling the memory when everything goes well. Other answers already address this point so I won't reiterate it. The second difficulty of writing a container in C++ is handling the memory when the user is being adversarial. It is possible, in C++, to throw an exception: 
+
+Algorithmic An insertion sort is generally described simply as: read each element in turn, and insert it in the right position among the previous read (and sorted) elements. The cost of the algorithm is thus: 
+
+They are , meaning that they can be copied implicitly, so there is no usability penalty to having the caller by pass value, They are cheap to copy, so there is no performance penalty either. Actually... it may actually perform better. 
+
+This is really one of the best examples that should be refactored to a method, and that could even be split into several methods. You have to ask yourself, what is variable, and what is fixed in my piece of code. Well, if you look at it closely, both parts of the condition seem to check if a keyword exist in a certain array, and in case it does, it will take the found element of the array, and split the words, and then it will check if these words are specific words, and if they are inside another array already, if not they will be added. As a side note, this part of the code I have the most questions about, simply because I didn't actually step through the program yet, and I cannot seem to match the code with your specifications, yet, so I won't change the functionality here, I will just show how it could be extracted to one or more functions Lets take a single statement to begin with, like this one: 
+
+Here you really have to be consistent with your choice. There is no reason why a statement brings benefit to your code, as you are iterating arrays and not an object. It makes the code less readable if such unexpected twists are added. Subtopic variable scoping The use of the keyword in JavaScript and it's scope has been confusing since the dawn of JavaScript. It is important to know that in JavaScript, defined variables are not block scoped, but they are function scoped variables, as this small snippet demonstrates 
+
+I guess if you just want to validate, you could write something like the following, though i'm not sure if that really answers your question. 
+
+From the demo page, I have to say, it looks very nice. I am very curious why you do not use the constructor to call that seems a bit verbose for any user, neither does it look very good to use as it is not a constructor in the strict sense, you don't even need it. For a detailed description, please find it on MDN, where this explanation is of importance to you. If you return anything else but undefined, you will not receive a new Slider object, but just the returned object. 
+
+Now, only knows of this optimization1. Its methods will always return a valid pointer so all the methods and other clients will be able to use a uniform treatment without NULL-check. 1 And it will have to special-case it in its special methods; should never be called on ! 
+
+Use to manage dynamically allocated memory by default, although here / is necessary because of the doubly-linked aspect1 Always initialize built-ins with a default value Use for constructors that may be called with a single argument Follow the Rule of Zero (no need to define any special member, or if you have to, define them all) Use wherever possible is unnecessary if you define a method inside the class definition 
+
+I recommend @Ludisposed's answer for the Pythonic comments. The algorithm itself can be improved to get logarithmic complexity (ie, a logarithmic number of multiplies and comparisons). The idea is to use: 
+
+will be responsible for handling the resource, this implies allocating it, moving it, assigning it, copying it and freeing it. will be responsible for string operations: catenating two strings, finding a character in the string, finding a pattern in the string, ... and will internally rely on for its resource handling. 
+
+Thus I advise jumping the gun and just switch to iterators since that it what the interfaces of the algorithms we use consume: 
+
+Attempting to shoehorn multiple responsibilities into a single class is a violation of the Single Responsibility Principle and will, in the mid-term to long-term, lead to an unmaintainable mess. Therefore, I advise to use two classes: 
+
+Beware of recursion While recursion is elegant, in languages like C++ it can lead to Stack Overflow. As such, unbounded recursion should be avoided, and therefore your implementation of or or should be converted to an iterative approach (use a loop). Encapsulation It is generally recommended to encapsulate functionality. At the moment, anybody can fiddle with your internals (and point its member to whatever they want without using your functions). Once becomes however, only a specific set of functions will be able to access it: 
+
+The first step is to ditch the , and specifically the call at the end. Calling on the head of a vector means performing a copy of the full buffer; it can, at best, be optimized to a , but because of the header size (14 bytes) it cannot be vectorized, this really adds insult to injury. In general, for parsing, I recommend using a slice: a lightweight container containing just the length of the content and a pointer to this content... owned by another container (maybe , maybe , ... ). Using a slice also allows abstracting the underlying storage, and that's sweet! So, let's redefine to:

@@ -1,0 +1,45 @@
+Yes, you are repeating the SUM expressions, but that is fine, there are only two of them. The DRY principle applicable to many other languages is less relevant in SQL, where duplication of code can be a perfectly normal way to achieve better performance. In this case, however, the duplication can be avoided by using a derived table: 
+
+you will need to group the results with a pivot. One way to do so is to use the native PIVOT syntax: 
+
+Here's a demo for this one too: $URL$ If you ever need to make it one set per , change the call like this: 
+
+It looks like your ACCEPT prompt includes quotation marks. But quotation marks are also used to delimit the prompt string, so if you want to include those characters into the prompt, you need to double them: 
+
+Now use the above as a derived table and join it, using an outer join this time, to , additionally filtering the results on : 
+
+If a hotel can never have overlapping seasonal periods, then it is possible to obtain the result as a list of intervals by direct matching of intervals using the method below. First you need to invert the seasonal period list, which means getting the list of gaps between the items of the list complementing it with two more intervals representing the period before the first item and the period after the last item. In other words, a list like this: 
+
+You can see that the first check is directly integrated into the INSERT statement, because the argument applied to is a name and you need to get an ID from it as one of the values to be inserted. The second check is in the form of an EXISTS predicate. All three initial arguments (, , and ) are thus parameters of this single statement. 
+
+The subquery is not correlated with the outer query. Your subquery needs to have a clause to limit the rows only to those where is the same as the outer query's . In order to be able to reference the outer query's columns, you need to assign a different alias to either instance of . It would probably be best to assign one to each – something like this: 
+
+This is essentially a gaps-and-islands problem. And when I have my SQL Server hat on, I often solve this kind of problem with two calls. Sadly, MySQL, unlike many other major SQL products, does not support , nor any other ranking function. To make up for that, however, you can use variable assignment in SELECTs, which MySQL does support (unlike many other major SQL products). Below is a solution followed by an explanation: 
+
+As you want the results to be returned as rows, you need the input to be in the form of a row set as well. One way is to create such a row set dynamically, right in the query, using a series of SELECTs FROM DUAL combined with UNION ALL: 
+
+You can turn your table into a row set like the table without any temporary tables, using a single query like this: 
+
+The first DELIMITER command tells MySQL to parse the input text until is encountered from that point on. Your CREATE TRIGGER should, therefore, end with the symbol so that MySQL can consume it in its entirety and send the whole statement to the server. Finally, the second DELIMITER command restores the standard delimiter for MySQL to resume normal processing of your commands. There is also a simpler solution, but it works only in cases similar to yours. The trigger body in your case consists of a single statement. That allows you to omit the keywords BEGIN and END from your statement and, as a result, avoid using the DELIMITER command at all: 
+
+You are not explaining why your PIVOT query did not work for you, although it is not too hard to guess if your sample is representative enough of the data in that table in general. You have two sets of responses for User 2 but your query picks up only one. As your expected output shows you want the query to return both sets, you need to teach it to distinguish between various sets of answers by the same user. One way is to use the ROW_NUMBER analytic function: 
+
+Since for user1 each will match the IN predicate, you will get the corresponding email returned twice. To resolve that, instead of this: 
+
+There is a way to implement this declaratively only without changing your current setup much, if you agree to introduce some redundancy to it. What follows can be considered a development on RDFozz's suggestion, although the idea fully formed in my mind before I read his answer (and it is different enough to warrant its own answer post anyway). Implementation Here is what you do, step by step: 
+
+If you need to store just one column value in a variable but return both as a result set, you could also consider using a table variable. First you use it to store the query's results: 
+
+where column in would reference the column in . When reading data from the two tables, you would first read a set of rows from the original table with references to the new table. When necessary, you would look up the details from the new table with a separate query. 
+
+Note the change of to . As the subquery is matching against a set of values, it can produce a set (multiple rows) of its own. Comparing a single value to a set of two or more values would produce an error in Oracle, hence using a different predicate (). 
+
+I would only like to recommend that you do that for the output only rather than in the CASE expression calculating . Keep the CASE results numeric so that you can use them for sorting, and format them at as high a level as possible (preferably in the client, but if you must do it in SQL, let it be the topmost level). 
+
+Use the above as a derived table to join it back to the original table in the UPDATE statement, so that you can populate the missing values from the derived table: 
+
+That way the intent might be clearer. But it will probably be even clearer if you add the interval directly to CURTIME: 
+
+Not exactly an answer to the question as asked, but rather than having a trigger reset the value, I would probably introduce a constraint to prevent the column from having a value: 
+
+That is, you use the source row as a derived table and cross-join it to the target row and then just update necessary columns of the latter with those of the former. The target can also contain more than one row, if needed:

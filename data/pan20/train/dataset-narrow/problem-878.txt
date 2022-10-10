@@ -1,0 +1,31 @@
+The following code fixes these two issues by combining the data for all fips codes in a single call to rbind and by using a vectorized rolling mean function from the RcppRoll package. I did a few other cleanup tasks: passing the data to the function to make it more flexible and using instead of with . 
+
+It seems that your function takes as input a data variable name and rolling mean length and outputs information about the rolling mean with the indicated length, computed for each fips value separately. I see two key issues with the code as currently written: 
+
+Another advantage is that the built-in function is more efficient than your implementation. Let's see on a resampled version of your dataset with 1 million rows: 
+
+We see a speedup approaching 100x for this test data. You could also update your function to take a vector of lengths in a pretty straightforward way using sapply: 
+
+This program prints the countdown until it is 0, then it starts a new line, decreases by one, and repeats. 
+
+Your code is pretty well written, however as always there are things we can change, and other things that are good that I would like to point out. Positives: 
+
+2. You have a lot of unused variables Your variables such as: , , , , , , , , and many, many others are not used. Note: You don't need to make a new for every input. Just declare one privately, and that's all you need. The same goes for , and most other variables. Also, you do not need variables like , , etc., just declare one variable privately and use it for all of your yes/no questions, and you will find much shorter code. 3. Your code indentation is poor It looks like you've indented 2 spaces, however you are supposed to indent 4 spaces after every open brace. Check the JavaDocs 4. Don't use or for varibles Instead, do something like - (while is ), or (while is ) 5. Give variables meaningful names our variables have names that are not very helpful, such as and . Give them memorable names such as for the number to be guessed, and for if they want to play again or quit. is also popular for "play again" variables. 6. Your code is way longer than it needs to be I have made the same program but a lot smaller. This should help you understand how to use methods, indent, write efficiently, and more. Check it out: 
+
+I think the task you are attempting to accomplish (obtain indices to reorder a data frame by several factors, one after another) is already handled well by the built-in function. Let's consider your sample data: 
+
+The number of combinations of size from a set of size can be computed with in R, and if you have multiple values you can just pass in a vector for . Therefore your code can be simplified to: 
+
+In two places you are growing objects element by element. Please see Circle 2 of The R Inferno for why this is an inefficient way to grow objects. A vectorized rolling mean function should be much more efficient than one you code on your own with a loop in R. 
+
+The Rcpp package takes some time to compile the function, so this option is probably only helpful if you are operating on very large vectors or if you are repeating the operation many times. 
+
+Made your main part the , rather than the . This removed the need for an completely. It keeps looping until is 0. Simplified and shortened(a lot). Changed names of method and variables. 
+
+I created a method, so it is easy to adjust the height of the pyramid, and the output it gives is just as you asked. This code is shorter and easier to understand in my opinion(maybe just because I wrote it), but the main difference is that it is easy to change the height of your pyramid. I named my function . Try changing in the main method, and you will see that the pyramids easily adjust. This program makes one line at a time, prints it and repeats but the line changes slightly. can be even or odd, it works the same. Here's the program: 
+
+It seems that you are looping through seeds to find the one that causes a randomized procedure's output to match the output from a previous run. If you had set the random seed immediately before running the randomized procedure and have simply forgotten the seed you used, then this in theory would work; all you need to do is loop through the billion or so possible input seeds until one matches. There's no real way to speed up the process (beyond parallelizing, which would be easy because the problem is embarrassingly parallel). is just a wrapper on a loop, so that would not speed up the process. Unfortunately, more likely than not you did not set the random seed immediately before running the code. Therefore you would really need to test all the internal states of the pseudorandom number generator (PRNG) that you used to find the one that matches the results. Unfortunately there are intractably many internal states; for instance, the most popular implementation of the Mersenne Twister, which you are likely using, has a period of 2^19937 - 1, meaning it has at least that many possible internal states. Clearly it's impractical to test this many states, so it's probably hopeless to try to match an exact PRNG state if you hadn't set the seed immediately prior to running your randomized procedure. 
+
+Welcome to Code Review, and thanks for sharing the code! Your code is alright for a beginner, but there is much work to do. Here are some things that will help in the future: 1. Use methods to avoid repeating code. Here are two examples which should help you: Here's on for when the user wins: 
+
+The only reason I posted the other possibilities here is really just to prove no. there is no "most optimized" way of achieving this output. That's the beauty of programming, really. You can do the same thing 100,000 different ways. You can make this program using recursion, for-loops, and many other ways too, but they will all give the same output. The goal is to shoot for the cleanest, shortest, and most readable code. If you have any questions, please comment below.

@@ -1,0 +1,89 @@
+The in the prompt indicates that you are already inside the tmsh shell. No need to prefix commands with tmsh. You would only do this if you were in the bash shell (to get there from tmos, type ). To get to the imish and zebos shells, you have to use or 
+
+What if you don't use a patch panel, then decide you have to move your switch further down the rack or you need to move the connection to equipment in a different location in the rack? Now your cable is not long enough to reach the new location. You are screwed because now you have to run an entire new cable through the walls. With a patch panel you would just grab a longer patch cable and be done with it. 
+
+For point-to-point links, use a maximum size of /30. Depending on your model of router, it may support a subnet size of /31 which would be even better. Carve these small subnets out of your unused space. You can reserve a /24 network and use it only for p2p links, then take your smaller /30 /31 subnets from this space. 
+
+Look into enabling BFD. BFD is a separate protocol that EIGRP can subscribe to for failure detection. It can provide sub-second failure detection in a LAN environment, but you don't want that over a lossy WAN connection like the internet. You'll tune the timers higher for the WAN, but the advantage with BFD is you can configure BFD dampening. When you are on the border of a cell/sat connection you can get a lot of flapping back and forth when using low timers, if you configure dampening it will detect the flapping and stop the convergence for a time period to stabilize the connection. 
+
+This depends on the model of device. Some of them have dedicated physical management interfaces. Others just use a vlan SVI interface. 
+
+I don't have a Juniper EX to test this on and it is for an SRX, but JunOS is built to be standardized across platforms, so these steps may work on the EX. How to block Telnet and SSH Brute Force log-in attacks 
+
+If you want to avoid pointing your default route to your ISP (maybe you want to point down a tunnel instead), you will need at a minimum to create a host route for the tunnel destination IP address pointing to the ISP. 
+
+You can't determine configured hostname by using IP or MAC. You can do it with CDP or LLDP, if protocol is enabled on interface of the switch. 
+
+There's bug with some line cards on this platform which leads to card crash when reboot occurs after long uptime. If this happens, the card is subject to RMA. Cisco can determine potentially risky cards by serial number. Best solution for you is to contact technical support and ask them. You should use specific version of software based on features you're using. Again, best advisor for you is Cisco. They can verify all potential bugs and recommend good variant for your needs. 
+
+Generally all the devices at the AP communicate through AP. There are technologies as Wi-Di and Wi-Fi Direct, but those are beyond the scope of this question. So devices can't communicate directly in common Wi-Fi network. Regarding traffic interception, you should take into consideration ciphering here. Though there are ways to intercept traffic and read it contents, with WPA2 those attacks are very complicated. 
+
+This is autoconfigured link local address. First 64 bits are always fe80:: according to RFC 4291. Last 64 bits are interface ID. Interface ID is modified MAC address. You can disable autoconfiguration: 
+
+Traffic steering is actually the task that is beyond MPLS TE itself. TE tunnel just provides the path, and it's up to other protocols and techniques to steer actual traffic. The same is true for bandwidth reservation. TE just says "there are 300 mbps reserved", but nothing stops your client from sending more than that. So, your options are policies, static routes and IGPs. If you want granular control you go with static routes and policies. If you just want to get fast restoration you go with announcing tunnels into IGP. Steering technique depends on your task. 
+
+One more notice: packets with DF (don't fragment) bit can be successfully fragmented on underlying level and reassembled at packet core with DF bit preserved. E.g. pinging some host with DF bit set and ICMP payload of 1472 is possible, but packets between base station and mobile packet core are still small. 
+
+Increased MTU in LTE network allows for more efficient exchange between eNodeB and EPC, e.g. MTU value of 1600 in S1-U is sufficient for transmitting 1500 bytes of user data, and mobile network overhead (GTP + UDP + new IP header) without fragmentation. Increased MTU in 2g/3g network brings none or almost none profit. Underlying protocols sitting between base station and packet core, and mobile device and base station still cause small packets to be transmitted. Eventually almost nothing grows up to MTU size. This is caused by scheduling mechanisms of base station. 
+
+I wasn't able to paste this picture in the comments. Usually what you want is your full mesh connections to all be in the backbone area 0. Then you split off other stub areas that are all attached to area 0. So all of your WAN links would be in area 0, then the links on the router towards the local site LAN would be in its own area. 
+
+Now you can create a default route in the global routing table without interfering with the tunnel establishment. 
+
+I think your issue is this command This disables negotiation of all capabilities, one of which is a 4byte AS 
+
+This way you can reach the other end of the tunnel. Then you can point the default route down a tunnel and it won't break your tunnel. 
+
+You can do a search at ARIN to see who the registered owner is for an IP $URL$ As for hijacking, I assume you mean that someone just picks a public IP at random and starts advertising it for their own purposes. If their local ISP is accepting any advertisements and not filtering them, the bad routes could potentially get propagated until they are filtered at some point. 
+
+You can't route based on layer 7 application using only BGP. BGP features will only allow you to tweak the actual prefix advertisements/preference, not anything at layer 7. For active application inspection and policy routing you would need an external service provider to act as a reverse proxy for your public subnet. Then you would build a GRE tunnel from each of your ISP connections to this provider and they forward you the traffic down these tunnels. I haven't heard of anyone offering this type of application load balancing service, but it doesn't seem unrealistic since there are security services that operate in this same manner in order to "scrub" malicious traffic before sending it to your site. 
+
+The router is using proxy ARP. This is a feature enabled by default. Since the router knows how to reach the destination address, it will respond on the host's behalf with its own MAC address and all frames from the source will be sent to the router which can then route to the destination. Cisco Proxy ARP 
+
+Check your feasible successors. The big advantage with EIGRP is the use of feasible successors which is basically a backup route that EIGRP knows is loop-free and it can start using immediately if the primary route is lost. Since you are using default metrics, you need to tune the bandwidth and delay settings of your interfaces to make sure there is a feasible successor available. You can check for them in 
+
+Both IPv4 and IPv4 vrf TEST22 address families have Lo0 as the source. As long as IPv4 adjacency is I assume Lo0 is not in VRF. That makes your BGP source inaccessible. 
+
+Flow is a chain of packets combined by some attribute. For different protocols attributes are different (ports, seq numbers, etc). Load balancing in LAG may differ, but usually per-flow load balancing is being used. When per-flow balancing is used, flow is guaranteed to be transmitted via the same link. On the other hand it is possible to balance based on packet (per-packet balancing). It's not usually the case because of issues, such as out-of-order packets. You should consider using different hash methods based on your traffic profile. If you have big diversity of MAC addresses (e. g. L2 switched domain), use MAC for hash. If you have big diversity of IP addresses (e. g. small L2 domain + routing), use IP for hash. 
+
+Router can't advertise "source address". When you see some prefix in RIB, router talks about destination as opposed to source. In case of S/RTBH packet from specific source should be dropped. uRPF checks whether source of the packet is reachable via some interface except "null" one. S/RTBH technique uses null routes along with uRPF. So if detected source of the DoS attack is reachable via "null" device, and packet from that source comes through interface with uRPF configured, uRPF check will fail and packet will never reach destination. On the other hand all the healthy packets will be permitted by uRPF check. 
+
+Short answer: no, this is not possible from subnetting perspective. You can do /18, /18 and /17. /18 and "all the rest" is not possible. Long answer: depending on your topology and goals it may be possible to use /18 and /16 range at the same time. E. g. you create one space as 10.94.0.0/18, and the second one as 10.94.0.0/16. Make sure that you actually allocate to 10.94.0.0/16 starting from 10.94.64.0. This way if packet comes to 10.94.0.0 - 10.94.63.255, it will be routed to 10.94.0.0/18 because this route is more specific. If packet comes to 10.94.64.0 - 10.94.255.255, it will be routed to 10.94.0.0/16. As long as real allocations (hosts, nested subnets, etc.) don't overlap, this will work just fine. 
+
+I don't know platform that allows IP address with mask of 0. So generally the answer is you simply can't use /0. On the other hand if route is pointing to the interface, hosts with /32 masks can reach each other. Again, not each host allows /32 on the interface configured. EDIT: Linux does allow /0 CIDR notation. Behavior doesn't really change: you still can access hosts on shared segment with ip route via interface. General answer: If host supports particular CIDR notation and routes are pointing to the interface, it can reach other hosts with similar route configuration. Mask doesn't really matter in this case. Note: all of above may be useful for educational purposes but is almost not applicable in practice. Don't do this in production. 
+
+You don't need fabricpath to run a vPC+ from a FEX. Fabricpath is really only useful in large data centers where you have a multiple tier topology (Core, Aggregation, Access). In a smaller setup using a collapsed core type design, vPC is simpler and accomplishes the same goal of getting rid of spanning tree. 
+
+You have to at least create static host routes pointing to the endpoint IPs of your tunnel to make sure they remain established. Front door vrf is handy if your endpoint is using a dynamic IP address, forcing you to have a default route pointing out the internet circuit. Splitting it into different vrfs allows you create a second default route pointing down a tunnel. Edit: When you create a tunnel, you will have a source IP and destination IP for the tunnel. 
+
+If you want to see power consumption of PoE, you can use "show power inline" command which will display power usage per port, plus total power and available power. 
+
+In the case of vPC configurations, both HSRP/VRRP peers will actively route packets when they receive them. It is a special behavior for vPC. Some information on vPC active/active routing 
+
+If you are using 802.1x on a cisco switch, you can configure the interface to fallback to an authorized vlan if the server is dead. 
+
+Cisco routers support a type of dynamic access list called a reflexive access list. It observes outbound traffic and will automatically add an entry to the inbound access-list permitting the return traffic. 
+
+For Net A you are using a /22, but the chart shows each network is a /24. A /22 would actually look like: 
+
+It's because R1 doesn't know how to reach those other interfaces (it doesn't have routes for those networks). You need routes on R1 pointing to R2 for the other two subnets. R1 of course knows how to reach 172.16.2.2 because it has an interface on that network. 
+
+BFD Overview BFD for EIGRP BFD Dampening You'll want to get some spare gear and test this out and tune it before configuring on all your production gear. 
+
+Yes you can, you just have to classify the traffic. Here is an example where we classify iSCSI into its own class. The class-default class will match any other traffic. 
+
+It seems your question is actually about duplicate IP addressing. If your system has the same IP address as a remote system, it will always choose itself because it believes that it owns that IP address and will never consider a remote system as having that IP. 
+
+You're not actually telling BGP to run inside VRF. I would say you're activating address family ipv4 vrf inside BGP process. I. e. BGP process is always bgp 2, but it may contain different address families. Correct. 
+
+End to end VLAN or bridged connection through router L2TPv3 VXLAN OTV Older technologies such as Frame Relay more and more. 
+
+MAC address consists of 48 bits. It is 2**48 or 281 474 976 710 656 addresses, which is more than enough at the moment. Plus there is practice to reuse MAC addresses of obsoleted equipment. MAC address is usually represented in hex, which is n in your formula. But one "element" has 00 to FF - which is 256 - combinations. So 256**6 should be used for calculation. 
+
+Why would you need filters to begin with? It is in Cisco IOS. Copy all the interface config into you favorite editor, and replace with . Then just paste result into console. Make sure it is pasted properly using some technique. For instance you can simply paste not all 100 at once, but 10-20. If you need to change priority for plenty of noncontiguous vlan interfaces, delete unnecessary ones manually or use regexp. 
+
+It's kind of strange to differentiate price for the service based on technology rather than SLA. Nevertheless, the best way to find out certainly is to ask your ISP, because there're plenty of techniques to do so, such as: 
+
+VPNv4 is the "transport". Your VRF route-targets match on both devices. Long story short, RT is extcommunity that is sent over VPNv4 session in BGP update. If one of local import RTs matches received extcommunity, routes are being imported in VRF with this RT configured. Actually VPNv4 is quite complex and complete explanation is beyond the scope of this site. VPNv4 is not required in order to run routing protocol inside VRF. Cisco calls it VRF-lite. Your problem with state here is related to routing. 
+
+All your assumptions are correct. Subnet mask determines subnet length. So in cases you described length of network changes, but host remains inside of the network. The difference is .145 will not need routing entry (except connected 192.168.1 one) in order to reach, say, .200 with /24 and /25 mask, but it will need route in order to reach the same .200 host with /26 mask. And similarly it'll reach .1 without routing entry with /24 mask, but not with /25 and /26.

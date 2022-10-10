@@ -1,0 +1,119 @@
+There are no special settings for SQL Server which only uses physical memory normally Just do what MS say for Windows and that's it Oh, and buy more RAM anyway while we're one the subject... ;-) 
+
+I'd have a restore script And I'd have it restore the latest "real" backup too: this way you test the backup file integrity too (of course it could be corrupt later but it's a nice to have). This new script shouldn't take it's own backup. We have this in our current shop but restore into non-production environment I wouldn't use SSIS or replication: you want the whole database so just restore. 
+
+There is usually no need to add lock hints in day to day code. As to why you (apparently) have a table lock, this can be caused by no index on ID. The table is being locked because all rows have to be looked at. 
+
+Based on your sample data, the data you're actually querying for ID = 1396779 is different No amount of trims, isnulls etc will change into or into . Ergo, data is different. Otherwise, you have some DB or Server confusion going on. A report based on the DataWarehouse can't give correct data if your query against the DataWarehouse is wrong. Note that a cross database Synonyms or View, or a table in a different schema (your query doesn't use for example) could mislead you. Or you have some client alias that means you are pointing at the wrong server from SSMS but the Report is correct. Try this to make sure that you are where you think you are 
+
+Note: GUIDs make poor clustering keys In this case, with the surrogate column, the table has 2 candidate keys: 
+
+Ideas (not sure if applies to MyISAM though, I work with InnoDB) Change the index "parent" so it is on 3 columns: parent, order, name. This matches the WHERE .. ORDER BY Remove . Only take the columns you need. Add any other columns to the index "parent" This will allow the optimiser to use only the index because it is now covering. As it stands, you have to read the whole table because the indexes aren't useful for that query 
+
+Following on from chat in "The Heap"... Visio can reverse engineer a database. However, I assume thus needs to read metadata or system tables to get everything (keys, DRI, datatypes the works). This old MSDN article may help "Migrating Btrieve Applications to MS SQL Server 7.0" too 
+
+Licensing shouldn't stop you adding views to your first database. Every place I've been in has custom objects for reporting etc that extend the functionality of the 3rd party product. Saying that, it is possible to have 3 part object names in views in your own database 
+
+We're talking 100s of millions of rows and/or high volumes. You don't partition for a few million rows. 
+
+No: the log is an essential part of the database and is used during RESTORE process (redo/undo phases) to ensure consistency. Use WITH MOVE to restore to a compressed folder to gain "more" disk space temporarily. Or an external USB drive etc Edit: By compressed, I mean NTFS compression (for XP but still applies). WITH MOVE is part of restore exposed as "Restore the database files as" in SSMS Edit 2: SQL Server can not use network drives unless you enable trace flag 1807. Now, use at your own risk to get running again only 
+
+The 2nd bit will fix your issue with implied schema. This happens if don't qualify schema (eg dbo) because SQL Server 2000 has pretty much no user-schema separation like later versions Note: you can't rename users in SQL Server 2000 IIRC: need to run sp_revokedbaccess then sp_grantdbaccess. If you own objects because of your implied schema then you'll need sp_changeobjectowner. I think SQL EM will prompt you. That is, you should always qualify schema in SQL Server. 
+
+You need to add super-key (unique index/constraint) on both (id,topic_id). This gives you the "target" uniqueness to create your foreign key. This acts like a CHECK constraint in this case. 
+
+BAD PRACTICE ALERT! You need to delimit each string. Not the whole lot. Note where the single quotes are: 
+
+There isn't normally any added value in doing this: you may cache data that isn't needed that requires eviction when your real load occurs. How much time do you think this will save too? Have you done some measurements to see if running a SELECT * on some table improves response after server start up? 
+
+This assumes that each user does not have multiple high scores with the same value. If you do, you need a 2nd derived table with an aggregate to nest the x/h JOIN 
+
+Another approach to remove the OR. You could try this and have 2 indexes on the table to satisfy the WHERE clauses. 
+
+It depends on your setting of SET ANSI_NULL_DFLT_OFF or SET ANSI_NULL_DFLT_ON (read these for other effects too from SET ANSI_DEFAULTS). Personally, I'd have specified this constraint explicitly if I wanted null or non null columns rather than relying on environment settings. 
+
+This allows multiple owners per Dog and Cat. You can of course just have an OwnerID in Dog and Cat to restrict to one owner. You can have different attributes for Cat and Dog here. As you add more types, this becomes unwieldy (no matter how you model owners) Option 2: Do you need to distinguish Cat or Dog as separate entities? Isn't this just a type attribute of Pet? 
+
+Your many-many table is a good idea. In this table, the existence of a row can mean "no access" or "has access" depending on your need. I'd aim to store least data and make "no row" mean the most common state by implication. Looking at your requirement 2, I'd have it so that "row exists = has access". However, the opposite can be be read from item 1. Ditto for 3 and 4. So you need to explain this more I'd also look at grouping users. Do you really permission users individually? Ditto for items: can thes be grouped somehow? 
+
+Edit: for completeness LEFT JOINs often perform worse. See $URL$ This same site notes that in MySQL, NOT EXISTS isn't optimised like other RDBMS and LEFT JOIN is better In SQL Server, I know from experience that LEFT JOIN doesn't run as well as NOT EXISTS. You also often need DISTINCT to get the same results which another processing step. 
+
+Personally, I wouldn't set it globally in the CREATE INDEX statement... Also, the MSDN page for sp_indexoptions states 
+
+Read what the bloke (Paul Randal) who wrote some of the associated SQL Server code says And logged on MS Connect And have you ran DBCC CHECKDB (KB 2015760)? 
+
+SQLPing should do the job I've used it on medium and small networks and it seemed to find all stray SQL Server installs 
+
+Use SET CONTEXT_INFO in the stored procedure and read it in the trigger with CONTEXT_INFO () Have the trigger reset it on exit. 
+
+You should only need to drop and recreate the affected NC index. Saying that, on a test server, you can see the differences in doing this compared to your strategy of dropping all indexes above. I reckon dropping/creating the single index would be quicker overall because the data will be shifted around twice otherwise: once char to varchar, another to build the clustered index. Then you have the NC creation overhead. 
+
+Simultaneous won't happen because of the Write Ahead Log (WAL) The WAL (a.k.a Transaction Log, Bin Log etc depending on RDBMS) forces all data changes to be serializable for later replay or rollback. On a two core server two writes can be simultaneous because there may be no contention until the WAL write where one must happen before the other. Higher up, latches and locks may serialize data changes on the same row/page/table. 
+
+I'd use a date field with the 1st of a month and a CHECK constraint to ensure it stays day 1. This keeps it in the native date/time format (which is your observation about option 3) Option 1 would requires less storage, but complicates comparisons. And 5 million rows isn't much: you use less storage but add code and query complexity 
+
+I'd suggest the lack of explicit constraint name is confusing VS because you have 2 match-team constraints. That is, it is a Visual Studio error not a SQL Server error. You won't get it in SSMS 
+
+Personally, I ignore the warning and leave SET ANSI_WARNINGS ON because of the other consequences to computed columns and indexed views of setting it OFF. Finally, there could be a trigger or computed column or indexed view generating this warning somewhere 
+
+Personally, I'd use integer types for duration Example: 340,000 milliseconds is 340000 in an unsigned int column. To me, datetime, time, date etc are for explicit points in time. 340 seconds is meaningless in that context. Having a start allows the duration to be added of course 
+
+I'm speculating that the SORT is needed because of parallel plan. I base this on some dim and distant blog article: but I found this on MSDN which may or may not justify this So, try with MAXDOP 1 and see what happens... Also hinted at in @sql kiwi's blog post on Simple Talk under "Exchange Operator" I think. And "DOP dependence" here 
+
+I prefer restricting to unrestricted. If some process goes awry, then I don't want the log file to grow and grow and fill the disk up. I'd rather the DB stopped working than the entire Server/SQL Server Instance. However, in this case you have a different issue: most likely "FULL" recovery and no log backups. Change to simple, shrink the log to, say 500MB, allow growth at 250MB, set a maximum of 2GB. 
+
+If the log has never been backed up, then it could have been shrunk or truncated at some point. otherwise, it would have just grown. It's also possible that it has changed to SIMPLE and back to FULL. You have one option: try it... 
+
+Quick answer: You can't. Physical access to the backup file will allow someone to restore it. The password feature isn't secure and will be removed anyway. See "Security Considerations for Backup and Restore" on MSDN To prevent someone running RESTORE and destroying a working database, then ensure that only the correct folk have permissions to do this 
+
+Search code for usage with sys.sql_modules.definition: is it referenced? Then... Check permissions: what client code can call it? Then... Profiler 
+
+Why not just a to represent "minutes"? This is easily translated or formatted (in client code) or SUMmed etc The actual conversion to minutes can be done in client code or as a DATEDIFF between start and end. I wouldn't use personally for this because it won't process well (eg can't have if you want to see the monthly time 
+
+Do not store a CSV in a column: this is bad practice, can't enforce data integrity, can't search it efficiently, has no meaning etc Note: A column called "ID" is very ambiguous so this is one case where you prefix with the table name 
+
+I can't verify this right now, sorry, but IIRC you have to quote special characters because SQL Server assumes and are word delimiters 
+
+I wouldn't get hung up on the output of xp_logininfo. I'd check permissions and mapping end to end and not bother with xp_logininfo personally 
+
+Most settings that can't be done via sp_configure are registry based So, you can use etc to change them. You'll have to find a list of registry keys yourself sorry but most are under One examples , protocols is under 
+
+You can force a ROLLBACK though by switching the DB to RESTRICTED using WITH ROLLBACK IMMEDIATE. See ALTER DATABASE. You can't force COMMIT (as per your SO question) Then... 
+
+For Linked Servers in SQL Server ... Run a or some such in a stored procedure that contains a BEGIN TRY/CATCH block. 
+
+It can be done in one set based operation Using a WHILE risks invoking the "Halloween problem" as you update rows over and over. It's easier with SQL Server 2012 using LAG 
+
+In your Employees table, I'd only have a lookup for "Position" because it a limited set of data that can expand. 
+
+From the same link, one can see that "Create linked reports" does not infer or grant the separate permission "Manage reports" 
+
+No. Your database becomes corrupt and SQL Server stops. Last I checked, it was one file per socket not per core nowadays. Note, unless you've RAIDed each volume (or have separate SAN LUNs attached) having multiple files on the same drive is mostly pointless: you'll cannabalise IO on that drive trying to spread the load. 
+
+The "otherwise stated" is like these examples where you have some dependencies (sorry. bit old, for SQL Server 2000 and SP4). $URL$ and $URL$ 
+
+If you post schema and query etc, that would be useful, in addition to the other 3 answers. Some links anyway, from Simple-Talk. Good stuff. 
+
+Use the "Reporting Services Scripter" which uses the web service API of SSRS to migrate stuff. I'm not sure how up to date it is, last updated 2009 However, I've foundthis useful in previous jobs. Copying at the database level won't be enough: scheduled tasks are SQL Server Agent jobs that also need migrated. For more, see "How to: Migrate a Reporting Services Installation" 
+
+This is how the NETWORK SERVICE account from localMachineName presents itself to SQL Server (and file shares, and web sites, etc). You need to profile "Login Failed" events (or XE Capture or whatever) to identify the program and/or Windows PID 
+
+Generally, SQL is declarative. That is, you say "what you want" not "how to do it". One consequence of this is that you don't control what order things are processed or evaluated in at the same logical processing step (WHERE clause or GROUP BY clause etc are these steps) That is, SQL doesn't generally short circuit because the concept doesn't apply. There are several cases where it does (SQL Server and CASE for example) of course, but in your example you'd need the 2nd option to guarantee it. Note SQL Server has an optimisation for this kind of query but I'd assume Sybase doesn't 
+
+The SQLCat team ideas and articles are sometimes pitched at edge cases that most folk will never see given their load or database size. Saying that, the ideas they give there are common techniques to improve performance (eg change OR to UNION) Temp tables have some issues around stored procedure compilation etc, but don't confuse these with table variables (the SQLCat articles mentions this). Also, temp tables should be local not global to separate processes don't affect each other Personally, I use temp tables quite often to break queries down: but not all the time. If I can do it in one SQL statement that runs well enough (for it's frequency of use) then I'll use that. In your case, I'd identify a few problem queries and see if using temp tables suits these better. If you can't see any problem queries then do nothing. 
+
+Generally, Master-Slave is a disaster recovery setup: when master dies, slave becomes master. Manual intervention is needed or you need some redirection layer, You may also have replication lag built in so that master corruption can be stopped before it hits the slave. Clustering is high availability: failover is automatic. You need both HA and DR, not just one. You can have distributed clusters that mix it a bit, but generally the concepts are different. If the 2 VMs are on the same physical host, this is neither HA nor DR of course. If you do use clustering, then use Percona. MySQL cluster is broken in RDBMS terms 
+
+SQL Server may take some time to work out the change It caches based on the "sid" which is unchanged. No harm done though. I don't know the exact rules, but I've seen it happen. At the extreme, it will clear after a SQL Server restart if it's important Also, check sys.server_principals and the relevant sys.database_principals for any entries. This can happen if the users owns any objects (eg CREATE TABLE without a schema qualifier). 
+
+Scalar UDFS must be qualified with schema. You don't need the database part of the qualified name unless it's in a different database of course. 
+
+Quick answer The "other SET* is probably related to older SQL Server versions. I used to see it more back when I worked with SQL Server 6.5 and 7 I'm sure, but it's been some time. Many quirks have been ironed out + SQL Server follows standards more Longer: Nowadays, the message is controlled by which defaults to . This relates purely to whether 
+
+No version of SQL Server has this. It would be useful (PostreSQL has the same and I like it). In SQL Server, there are table types (), temporary tables () and table variables (), but you can't mimic or inherit a table definition using or 
+
+Note: if you come from MySQL, do not make assumptions about SQL Server. It (like other RDBMS) are more complex and mature then MySQL in many respects 
+
+You can set this per table by setting max_heap_table_size per session. But 12GB or so is a lot of memory for a caching table... 
+
+Personally, I like my backups to be timestamped something like or in the file name. I've never actually read the LSN from a backup file, neither have I read the LSN information from the system tables. You can sort the files and pick out which ones you need quite easily.

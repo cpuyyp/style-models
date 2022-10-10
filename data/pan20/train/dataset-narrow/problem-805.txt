@@ -1,0 +1,97 @@
+Look over the content of . If the emails in that table are to be deleted, you can now do a DELETE JOIN: 
+
+When you used --skip-opt, that is what caused it because --opt includes --create-options and DROP PROCEDURE is considered MySQL-specific. 
+
+YOU ABSOLUTELY, POSITIVELY, CANNOT DO THAT. Why ??? Back on , I wrote the answer to Cannot GRANT privileges as root I carefully explained how the grant columns existed from MySQL 4.x to 5.6. I have explained this many times (See my others). The columns in the table need to be in the exact position they are published along with the exact column names. On , I answered MySQL service stops after trying to grant privileges to a user where I gave an example of how you can hack repairs into to comply with the next version. I highly recommend you remove your custom column today !!! Otherwise, you will NEVER get all your grants back. Please go manage your database user identification in another database. 
+
+QUERY IMPROVEMENT / DATA INTEGRITY You have what seems to be two conflicting parts of the query PART 1 : and PART 2 : This query would need both WHERE clauses only if there exists both an ACTIVE and INACTIVE row for a given . If that is the case, you should create a table with nothing but ACTIVE mobile_num values 
+
+INDEX STATISTICS Running INSERTs, DELETEs, and UPDATEs will skew index stats since index cardinalities will frequently change. You need to run . Running will defrag the tables and run as the last step (See my post from : What is the difference between optimize table and analyze table in mysql) BULK DML The DELETE query you will be doing by the hour is a bulk operation. Many rows will need a ton of housecleaning to keep up with marking rows deleted. 
+
+When it comes to querying, indexing of a table should never be your first concern. The queries you plan to use should dictate the indexes you need. Based on the queries, some columns can be individually indexed. Other queries require compound indexes. The and clauses should provide immediate hints for indexes to make. Not using such hints may result in temp table sorting rather than using the indexes for data in the desired order needed. Low cardinality of column values should eliminate the need for an index. Even with these things taken into consideration, you may find that query may need some adjustment (a.k.a. refactoring) for performance gains. When you reach the point of having the right indexes, not you have to worry about the size of those indexes. For a MyISAM table, this would mean that the .MYI file may grow significantly. The size of the index file as well as the number of indexes should now be weighed against the performance of your queries, especially if the indexes provide the proper ordering of data and fastest retrieval. Explain plans for queries may change over time depending on the number of rows, cardinality of columns, number of DELETEs and UPDATEs. Once a query's explain plan changes from what it looked like months ago, you should explore the need to add or remove indexes. 
+
+As for the disappearing of logs, any time FLUSH LOGS is manually or internally executed, it will delete binary logs older than expire_logs_days*86400 seconds. I remember years ago that expire_logs_days used to trigger every midnight (I am going way back to 5.0.x). Now, expire_logs_days has seconds granularity. 
+
+At first glance, I would say you have some corruption. But, this an import. That scares me. Take your mysqldump and run this: 
+
+If you have three or more Slaves, I have a nice suggestion: Use one of the Slaves as a Volunteer to be cloned. Here is a Topology 
+
+EPILOGUE This SELECT query is meant to hold up to 100 characters for stripping You can replace with any list of characters you wish to strip from a user variable. GIVE IT A TRY !!! 
+
+When you restart mysql, it clears the host cache in a very heavy-handed manner. Therefore, to apply some preventative to this problem, you should be setting max_connect_errors to 1000000000000 (Yes, that's a trillion). Since max_connect_errors is dynamic, a mysql restart is not needed. Just run 
+
+I can see a messy operation in this. The tmpTbl is InnoDB. Loading new data into it will produce some MVCC activity. This will pile changes in the redo logs (housed in ib_logfile0 and ib_logfile1, perhaps some will be in ibdata1 as well). Once you kill the INSERT, all the changes (for each row, a new record in place of no record) to the InnoDB table must be rolled back. You could probably kill mysqld and start mysqld again only to encounter some of this during the crash recovery phase of mysql startup. 
+
+Provide a list to tables that you want to dump row by row Use --skip-extended-insert, which forces each to be one row Use --hex-blob 
+
+If I understand this correctly, if a FK relationship does not have an index that matches every column in some needed index, there may be some indexes that have some of the columns. For example, if a FK relationship has three columns (,,) but there is no index with those same three columns, there may exist an index that has (,) or (,) or (,) and may help with queries but will require some index scans to rows with the missing column. If there are no indexes at all that can support a FK constraint, then the "Partial Matching Indexes Count" will be zero(), or at least will not increment this count. 
+
+In either case, the IO thread keeps collecting binlog events. Instead of triggering a rotation when the relay log reaches 1G or whatever max_binlog_size or max_relay_log_size is, two little relay logs with nothing in them mark the place where a rotation would have occurred. UPDATE 2014-07-21 15:28 EDT Since the both relay logs, there are one of two things you could do: 
+
+Please make sure these timeouts are set high enough to accommodate queries that may run for a very long time, which may include: 
+
+APPROACH #2 Open the QBE (Query-By-Example) Grid and add the table. The graphical representation of the query should draw a line from the in the table to the in the table. Give it a Try !!! UPDATE 2014-03-10 14:43 EDT I just looked at the image again. Perhaps the query should be this instead: 
+
+SUGGESTION #2 By default, table indexes for the MEMORY Storage Engine using HASH indexes. Try changing the statements on all the MEMORY tables to use BTREEs. This may help with any ranged-based queries (such as lines 306,318,425) and INNER JOINs. For example, 
+
+You can lose up to one second's worth of transactions. The default value is 1, which helps keep InnoDB ACID Compliant. According to the MySQL Documentation on innodb_flush_log_at_trx_commit 
+
+The physical manifestation of triggers resides in database folder of the table that own the trigger. Trigger code resides in a file with the extension . For example, for a given MyISAM table mydb.mytable that has triggers, you will have 
+
+You can query the table and retrieve the user and host from mysql.slow_log column user_host. You can crontab some tasks to copy the data from mysql.slow_log where you need it, may a separate database. 
+
+According to the MySQL Documentation on SHOW SLAVE STATUS\G Either SUPER or REPLICATION CLIENT should do it. I would go with the minimum: 
+
+This will create Stored Procedures as well Here is the copy operation, which must take place from the OS level calling the mysql client 
+
+If this index does not exist, it could result in a range index/table scan or full index/table scan (if the 's cardinality is too low). Having an index with will result in a range index scan. If you specify the . Give it a Try !!! 
+
+This makes sense since already exists in the definition. This prevents you from adding (appending) a partition if is present. While you could play games with , the complexity isn't worth it and you won't achieve the result of wedging in a partition. Rather that explanining further partition machinations, just do the following 
+
+The InnoDB plugin came into existence in MySQL 5.1 since version 5.1.38. Many new features in the plugin allow you to 
+
+From the look of the select query in the view SUGGESTION #1 : Don't use VIEWS Views are notorious for acting up with Query Optimization According to MySQL Documentation 
+
+Once you execute this, all databases will be mysqldump'd. For example, the database will be dumped and gzipped to . This and all the other 2499 mysqldumps can be copied over to the new DB server. Place the dumps in /root/mysqldata on the new DB server. Once they are on the new DB server, you can then unzip all files like this: 
+
+This is probably your only recourse. The only other recourse is to simply wait out the . This situation requires some intervention in the application. Within your application, you would have to create a Write DBVIP on the Master and use the Read DBVIP with one of the following three(3) options: OPTION #1 
+
+There are two suggestions I have for you SUGGESTION #1 Your binary logs are being written to , your datadir. If you have a folder on a separate disk, perhaps you should map your binary logs there. That will keep data and logging on separate disks. 
+
+I think a chunk is a set number of rows to be scanned and checksummed. I never did like chunks because if the table order matters, each chunk could be completely different if just one row was written ahead or behind another. Try not setting a chunk size and see if the entire table is checksummed as a whole as a opposed to each chunk checksum. You can also run mk-table-sync using the option and redirect to a text file to see if there is any SQL created that would have been executed to sync the slave had you used the option. If nothing comes out into the text file from , you will have to resort to doing physical copying (for MyISAM) or mysqldump the table and loading it on the slave (for InnoDB). Give it a Try !!! 
+
+If the modification time is not a part of the transaction concept, then can be used to avoid unnecessary inode disk write operations. In English, is faster than since calls twice (one for logs and one for data) and verifies data writes via two write operations. Using calls and . You can think of as doing an asynchronous (not verfying data). Looking at the numbers, does four write ops, two of which are verified, while does four write operations, all being verfied afterwards. CONCLUSION 
+
+Additional consideration: Do you have binary logging enabled in the DB server you are loading ? If you are, please do this on the server you are loading: 
+
+What you may need to do is remove from my.cnf and let assign the value it knows to . Then, restart . UPDATE 2018-02-28 08:24 EST You may need to add header in and put , like this: 
+
+on the client side. A very adventurous approach would be to use a Stored Procedure to do your commands. You could then apply in the Stored Procedure. In effect, that happens on the server side. 
+
+If you get the mysql prompt, CONGRATULATIONS !!! You installed a password for root@localhost Go back to MySQL Workbench and user as the password Give it a Try !!! 
+
+First of all, thank you posting the DELETE query and the table layout With regard to your question, there is nothing you can really do because a rollback is being done via the UNDO tablespace inside ibdata1 (it should have grown immensely). If you kill the mysqld process and restart it will just pickup where it left off as part of the crash recovery cycle. Here is how you can handle large and small deletes in the future: LARGE DELETEs Instead of deleting 70% of the table and create lots of rollback info, try copying the tables you want to keep. 
+
+The most effective way to index for a query like this is to generate an index that covers as many of the fields in the WHERE clause as possible. An index produced with that concept in mind is called a covering index. Look at the WHERE clause 
+
+Even though you are using the Query Optimizer took over as expected. The pass through the table exceeded more than 5% of the total index entries. This is what lead to the Query Optimizer to dismiss using the index. Oracle, MSSQL and PostgreSQL would not have done any different. Here is my sick attempt at refactoring the query 
+
+This may not be all that useful because may be about the same size as since has no value. Notwithstanding, you would run that query to see the temp table size in gigabytes. 
+
+Thus, anyone with SUPER privilege can read and write at will to such a Slave... Make sure all non-privileged users do not have the SUPER Privilege. If you want to revoke all SUPER privileges in one shot, please run this on Master and Slave: 
+
+Even if you defragment the InnoDB with , there is no way of knowing if a single row occupies two or more pages. ALTERNATIVE APPROACH You could probably force the index statistics to give you a round figure. You could just run 
+
+No, you do not want to go there. Why ? The mysqld_safe script is responsible for creating and destroying the PID file You can see it when you grep for it 
+
+Change to Add to the (as mentioned by @ypercube) Add to make it a repeatable event so you don't have to create it again. 
+
+SUGGESTION Run the one of the above scenarios on one PXC node at a time while redirecting reads and writes from the cluster. If the data is huge, remove the PXC node from the cluster, run at will, and add the PXC back into the cluster. 
+
+Give it a Try !!! If you actually want the query to be small without hardcoding every value just write the code with a more straightforward LEFT JOIN setup 
+
+In order to load the routines into your new system, you can filter it using grep EXAMPLE Suppose the script with the ALTER DATABASE is . Just do this 
+
+You also need to look at the host column of mysql.user. If any of the users have a DNS name, replace it with one of the following choices: 
+
+would keep the values for exactly the same. Nothing would change. Therefore, I recommend changing the query to the following

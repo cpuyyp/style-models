@@ -1,0 +1,59 @@
+No threading, please!! First of all, get rid of the threads all-together. That should speed things up: Python threads are (sort-of) fine when things are blocking on IO, but in this case everything is CPU-based, and that means the GIL (global interpreter lock) makes sure that only one thread is running. Also, the following code is a bit curious: 
+
+So now we moved from 9 if-blocks to just 4. But don't let that fool you. There are still 9 paths through there. (In theory it should be , but for decent enough s, you never reach both 'up' and 'down' in the same lookup, giving you paths. Finally. In the end, I got rid of the long list of conditionals by recognising the pattern: Each of the conditionals was looking up a set of valid moves, except they were hard-coded. The resulting pattern is quite understandable: 
+
+The variable does not actually get used. It's a minor nitpick, but convention has it that you should write 
+
+That is: no spaces next to and . A space on each side of the , and a space after the . Furthermore, you should really use string formatting, allowing you to write 
+
+Many queries I took a close look at the line you indicated might be troublesome. You have not profiled (I assume), but it looks suspicious because it performs a query in a loop. So basically the code looks like this: 
+
+While your code will only try 1.25, 1.30, 1.35, ... . Now, maybe there is some high-level mathematical proof that the solution will always involve a ratio which can be expressed as , but I don't think so. I would suggest turning the problem up-side-down. The following is an O(n^2 * log(n)) suggestion (estimated, but I think correct. Maybe even O(n^2)). 
+
+Should work just as well, and returns an actual queryset. (I'm not sure if I got the exact syntax right, please look at $URL$ if it does not work). 
+
+What I notice is that it first checks for hit, before checking if the input is valid (in bounds, and not already guessed). I'd suggest cleaning it up as follows: 
+
+And, will take almost no memory at all, because all the values are evaluated just-in-time. The downside is you can not iterate twice (because it is not stored). Continuing in similar fashion: Here I did the same for a couple of the pieces. 
+
+What is referring to? This will also be executed for question 2 to 10. Maybe and would be better names? Leaving them be for now, but it's something you can ponder about. Next, the creation of the 'puzzle'/question. 
+
+Judging by the above two facts, I think the code you have written can be cleaned up a lot more, but you have not supplied it. If you do (in another question, please!), I'd be happy to take a look at the rest. 
+
+You're checking if a number is integral by doing a lengthy calculation. Why not just if i.is_integer(): return False ? Available since Python 2.6. $URL$ Also, looping is expensive! Suggestion, use a comprehension together with the . 
+
+After thinking about it some more, I see you doing string-appends. Depending on the situation, this can be very expensive, as it must do a full copy. Maybe replace that logic with 
+
+Let's continue our focus on the nested . Now, for symmetry, we replace with . (I'm not showing the and anymore). 
+
+Now we assign it to a value. (Disclaimer: this is where I get hazy on exact Java semantics. Let's hope it works.). 
+
+Now, this is a bit verbose, so my preference would probably to use py.test or nosetests, but the advantage of is that it's built-in, and for simple tests it is sufficient. Now, for another point. Your sorting is both in-place, and returns the list again. For instance: 
+
+My initial question is: What is ? Is it a set? A list? A string? The following is based on being a set/list. Write 
+
+I'd like to do the same for the , but it's used in the clause. But, it's still at that point, so let's cheat a bit and substitute that by hand. 
+
+Adding a new operator would be a simple method of adding another line in the list above. I'll assume the explicit statements are a bit of debugging work, and ignore those. Ideally you'd remove them. Look at how you write the question. 
+
+A regular expression is overkill for this. Also: only matches at the start. If you actually want to match anywhere, use 
+
+or something similar. But this is something you need to decide yourself. Conclusion Great code, but it could use some (very) minor improvements with great benefits: 
+
+Naming and describing Ok, with threading out of the way, I'm having a difficult time finding what the application is supposed to do. It does something with an , and each worker with an and an . What are those? The code could be a lot clearer in this regard. Anyway, let us clean things up a bit first, and maybe I can find a pattern to help you improve the algorithm. Performance Checking for integer-valued lists. Let's start looking at . 
+
+Interesting question. I decided to look only at and . The way I look at it is from a theoretic memory usage perspective. Due to how you have defined it, all pairs need to be in memory at the same time, which could take a bit of memory. I would suggest the following: 
+
+docstrings are no comments. Comments are no docstrings. In the code you have . But you actually want to use a comment: . Know to disambiguate between those. Multi-line comments? Just start every line with . 
+
+Repeatability? The reason for non-repeatability is quite simple. Try running the following program a couple of times: 
+
+First of all, the variable names do not make a lot of sense. is , while is a list of . Better name them as such. 
+
+Besides the great commentary given by WayToDoor (which Zenohm wrote up), I'd just like to remark on your commenting style. The comments are quite superfluous, stating exactly what the code is doing, and as such do not add any value. 
+
+Another thing I notice, is that you never use the value of one of the items itself, but always . Why not just replace with , and remove the part? 
+
+Incorrect algorithm The worst part, I think, is that your code works by trying different ratios, and will miss some geometric sequences. For instance, the sequence 
+
+To remove them, you'd need to refactor your code. And later on I'll give you the ingredients needed in a bit more detail. You might want to leave in some more comments, depending on how comfortable you are, but make sure that the comments add value. Commonly, that's done by explaining why a piece of code is written, not what it does. Let me state the following a bit more clearly. It is the excessive commenting that makes me doubt your experience. Reading your code (and explanation) tells me a different story: You know how to handle a binary search (and from what I can see, correctly), you know something about complexity theory. This is somebody to be reckoned with. Algorithm Storing of elements. You use a tuple to store the elements, leading to code such as

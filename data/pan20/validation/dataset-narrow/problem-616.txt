@@ -1,0 +1,99 @@
+Next, you have each droppable in its own call. That is unnecessary. You only need one call. We will add that in at the end of the code. Since most of your code is actually in the event handler and it is almost entirely the same for each instance, we can DRY out your code. Just pass in a string that contains the one difference between each function and cache some of the variables. 
+
+The first time through, the data element is not set so it will update the chart. Each other time through, it will check that existing value and only update the chart when the value actually changes. Once the code is added for each chart, it becomes obvious that this can be DRY-ed out as well. Maybe with something like this: 
+
+You don't need to specify and . By having all three, you are making the code get evaluated three times per key event. 7) As stated previously, naming your variables a little more descriptively will help you and any other developer later on. when you have to come back to this code in six months or a year, it will be much easier to figure out. Congratulations on learning to code! 
+
+Notice how that is pretty much the same thing repeated over and over? That means it needs to be it's own function: 
+
+You might also want to consider DRYing your code. Since the click functions on both the and are so similar, you can combine them and just pass in the "main" element you want to work on. For example: 
+
+Also, repeated is the actual function on each implementation. So you could create a single function and change to something like this: 
+
+With this function, will always be at least 2 characters long. Now before updating the charts, check to see what are current value is. If it's the same as the new value (which will be typical for minutes, hours, days), then there is no reason to update them (or there text for that matter). Adding a element with jQuery is a great way to keep track of this. 
+
+There a few simple things you could do to help clean up this code. The first thing I always recommend is to create a closure for your script using an IIFE. This allows your code to run in its own scope and keeps everything out of the global scope. You can also pass in to the function expression and safely refer to it as . 
+
+The first thing you should do is encapsulate your code inside of an IIFE. This will create a private scope and help prevent pollution of the global namespace. Since you are using jQuery, you can pass it to the IIFE to make sure your reference to is always . 
+
+Another thing that is adding unneeded complexity is checking to see if the class is on an element before removing it. We can just make the call to remove the class. If it has the class, it's removed. If not, no harm no foul. 
+
+First, I'll get to the fix for your problem. The problem is more in the CSS than in your JavaScript. Because you are updating the graph every second, that area of the page has to be repainted each time. Due to the way browsers handles these things by default, it has to also check the surrounding area to see if it now needs to be changed as well. So the idea is to minimize this. And the simplest way to do this is to add the following lines into your CSS: 
+
+(I've added a little creative whitespace to show parallels between the branches.) The only thing I'd change now is to pick a better name. For example, might be an okay name for this. I'll mention one more thing, which is that this can also be implemented quite beautifully as a list comprehension: 
+
+As usual, the tests. Since the old function was pretty partial, we'll arrange to have inputs it knows how to handle, though our new one tries to give an answer even when you feed it garbage. 
+
+If we're feeling fancy, we can choose to use instead of two separate calls to and ; and we can unroll the definition of ; but I think neither of these is terribly important. Nevertheless, they're idiomatic, so: 
+
+My only complaint now is the name, for two reasons. The first is that isn't capitalized, which is inconsistent with the naming of the remainder of the file. The other one is more of a philosophical one: our input is an integer, not a base-ten integer. If anything, the base-ten-ness is being imposed on the output. So: 
+
+As with waaaay back at the beginning, I find the choice of base case a bit odd. Let's try the trick from before of letting the "loop" run one more iteration (and this time hopefully the refactoring isn't wrong!). 
+
+(By the way, a variant of that I have always felt has the wrong type, , is available from .) Finally, I would be remiss without pointing out that there are several good functions that already exist for doing conversions like this: 
+
+It's common in cases like this where the trailing arguments to the function you're defining are also trailing arguments to a function in the definition to omit the arguments entirely. The technical term for this is , I think. Whether you choose to do this yourself is primarily a stylistic choice. 
+
+This isn't obviously better, since it still fails in all the same situations it used to fail, and it never returns multiple answers. So we should differentiate the two cases that lead us to the branch: 
+
+The report here says that it passed the test, but that QuickCheck didn't run as many tests as it wanted to because most of the random inputs it generated weren't in the desired range. (In fact, perhaps it's questionable to use QuickCheck at all for this, since there's only ten inputs of interest anyway!) By the way, this function (a partial version! boooo) exists also in : 
+
+which we can use to index into our lookup table with the digits of our integer. So let's try to write this directly! Taking a cue from the final implementation of above, we can write 
+
+Actually, using and is also a code smell, for the same reason as the rest of the changes so far: is partial. Instead of protecting ourselves from calling on inputs it can't handle, we should write our code in a way that avoids partial functions. Here's how: 
+
+Now, I wonder whether recomputing the power of ten each time is really the right thing to do. One thing we could do is to use and divide by 10 in each recursion. But division is slow, so let's take another plan: instead of computing the length of the list explicitly, let's do it implicitly by having also compute the appropriate power of ten. 
+
+There's a few things I find more satisfying about this: our base-case input is , a common base for s; our base-case output is , a common base for s; and there's no duplicated code in the two branches of the . Finally, I think I'd choose to replace the -- with a pattern match, noting however that this function has a slightly different behavior for negative numbers. Since we were never really doing the right thing for negative numbers, this doesn't bother me too much. 
+
+You can abstract away all of those class names so that, if you ever have to make a change, you only have to change them in place. 
+
+First we encapsulate the code in an IIFE, then on , we get are selections and add our event. Now, if you can't change the HTML, you can still use this code with some slight modification: 
+
+I am also passing in local references to the global and objects for a ever-so-slight performance boost. You also select your drop downs multiple times. So we can just create a single variable in our private scope to hold this selection. That way we can get the elements once ( on load) and not worry about it further. 
+
+Then when you are ready to show the content, you can just do to show the area when the is clicked. FYI: I changed to a simple class in the examples. Here is the adjusted code: 
+
+With this in place, we just need a to loop over all of your items. So add each input name into an array and loop over it creating the s. 
+
+There are a few simple things you should do first. 1) Move all of your tag to the bottom of your html right before the closing tag. Because of the way browsers parse your page, having them at the top will only slow down the page load. 2) You have two references to the jQuery library. You only need one. 3) Your HTML is not consistent. You have some open tags without closing tags. You also have different markup around some of the form fields than around the others. For instance: 
+
+I prefix all of my jQuery selections with $ so I know they are jQuery objects. You should also start using for defining your events instead of the shorthand of . Behind the scenes, uses so just skip the middle man. 
+
+At the bottom of the IIFE you can add a single object to the global scope and have it contain all of your code: 
+
+First, you should wrap your code up in a closure to prevent collisions with other code. I typically use an IIFE for this. Also, you should add to your code to help prevent certain issues. 
+
+I will leave that code up to you. At this point, you should see a noticeable increase in the performance of the page. Some other things to consider: In your function you have a bunch of Magic Numbers such as 86400. Although this is fairly straight forward when you know what you are looking at, it might be easier to set up some variables to hold those that provide some explanation for them: 
+
+So what do 40 and 20 represent? I'm guessing its some sort of minimum height you want this to be. So create variables for them and comments to explain what they are: 
+
+Also, all of your code is in the area. Does it all need to be in there? You can probably define a lot of what you want to do before the load event and then kick it off when the load event fires. 
+
+Also since we don't care about the order in which this is done, we can use a loop. It is typically the fastest ways to loop in JavaScript. 
+
+Here are a few items that I could think of. I know nothing about Knockout so if these changes do not work in that framework (I don't know why they wouldn't). The first thing I would do is wrap the code with an IIFE to create a private scope. Again, this might not be necessary with Knockout. 
+
+Actually, this whole process at the very end is quite roundabout! If you squint, it looks like what we're really trying to implement here is a little function 
+
+but I think that's a bit short-sighted. Ignoring for the moment the inputs we know we're going to call this thing on, we've observed already that there's times when there's no good answer to return, and there's times when there is a good answer to return, so seems like a good start, but there's also times when there are two good answers -- or more! So let's use a type that reflects this scenario instead: 
+
+Personally, I often prefer to , and the is complicated enough that I feel like it should be named, so I'd write it as follows. But this is an aesthetic choice that you may or may not agree with. 
+
+The test for this one is a bit complicated; since the old implementation is partial, we have to restrict ourselves to those inputs that work. 
+
+This now has the magical special form of recursion that can be turned into a . Let's do so! See if you can spot where each piece of code from the above ends up in the below. 
+
+By the way, there are functions for this available, too; take a look at from (base-10 specific) and from (pick your favorite base). I won't try to write tests here, because the types of these functions are more informative (and more correct in many ways). Final result Barring the reuse of already-written functions, here's the final versions of all the functions. 
+
+First things first: you'll definitely want to learn a bit about precedence! Normally I'm in favor of adding some unnecessary parentheses if it helps disambiguate a strange situation or if the operators involved aren't often mixed, but too many of them can get in the way of readability. Also, take advantage of that sweet syntactic sugar for lists that the language provides! So iteration one of this function is 
+
+Whoa, whoops! Can you figure out which refactoring above was the culprit? =) Now we have to decide whether we like the old behavior better or the new one. I think in this particular case we should like the old behavior better, since the goal is to show a number, and we'd like to show up as rather than as . It's a bit ugly, but we can special-case it. Since we like our future selves, we'll leave ourselves a note about this, too. 
+
+In fact, there's even a function that squashes those two things together. Veteran Haskellers will prefer to spell this function in its infix, polymorphic form as 
+
+There's something a bit funny about this base case to me. It seems like it's not the most basic one you could choose. If we let the "loop" run one more time... 
+
+(If you haven't seen before, I encourage you to try to code it up yourself! Then check the Report and compare answers.) Additionally, we're going to have to change things up a little, since we've changed how works and calls . Before, we had and hence . Now, we have and hence . Since we expect each of the lists in the output of that to be singleton lists, we can smash them all together with : 
+
+Okay, let's check our work. We already know that the final thing works differently for negative numbers, so let's only check non-negative ones.
