@@ -368,7 +368,7 @@ if __name__=='__main__':
         
         if split == 'test':
             # these two files are used in the evaluation
-            test_docid2index = {i: int(doc_id) for i,doc_id in enumerate(sorted(df['doc_id'].unique()))}
+            test_docid2index = {int(doc_id):i for i,doc_id in enumerate(sorted(df['doc_id'].unique()))}
             with open(f'{scratch_dir}/test_docid2index.json', 'w') as f:
                 json.dump(test_docid2index, f, cls=NpEncoder)
             doc_true = df[['doc_id', 'author_id']].value_counts().reset_index().sort_values('doc_id')['author_id'].values
