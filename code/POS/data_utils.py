@@ -55,69 +55,81 @@ class MyDataset(Dataset):
     def process(self):
         idx = 0
         error_count = 0
-        for raw_path in self.raw_paths:
-            # Read data from `raw_path`.
-            with open(raw_path) as f:
-                curr = json.load(f)
+        for raw_path in tqdm(self.raw_paths):
+            try:
+                # Read data from `raw_path`.
+                with open(raw_path) as f:
+                    curr = json.load(f)
+                    
+                data = MyData()      
+                data.y = torch.tensor(curr['author_id'] if 'author_id' in curr else curr['author'])
+                data.doc_id = torch.tensor(curr['doc_id'])  
+
+                # text_ids = bert_tokenizer(curr['text'], max_length=512, padding=True, truncation=True, return_tensors='pt')
+                # for key in text_ids:
+                #     data[f'text_{key}'] = text_ids[key]
+
+                temp_datalist = []
+                for j in range(len(curr['edge_indexs'])):
+                    if len(curr['edge_indexs'][j]) + 2 >= self.max_length:
+                        error_count += 1
+                        curr['edge_indexs'][j] = curr['edge_indexs'][j][:self.max_length-2]
+                        curr['hetoro_edges'][j] = curr['hetoro_edges'][j][:self.max_length-2]
+                        curr['num_syllables'][j] = curr['num_syllables'][j][:self.max_length-2]
+                        curr['num_chars'][j] = curr['num_chars'][j][:self.max_length-2]
+                        curr['word_freqs'][j] = curr['word_freqs'][j][:self.max_length-2]
+                        curr['alignments'][j] = torch.tensor(curr['alignments'][j])
+                        curr['alignments'][j] = curr['alignments'][j][curr['alignments'][j] <= self.max_length-2].tolist()
+                        # continue # if it entire empty, will result in error
+
+                    temp_data = MyData()
+                    temp_data.edge_index = torch.cat([torch.LongTensor([[0],[0]]),  # for self loop of CLS token
+                                                torch.clip(torch.LongTensor(curr['edge_indexs'][j]).T, max=self.max_length-2), # clip to the last meaningful token rather than SEP
+                                                # for batching purpose, if data.x is missing, edge_index is used to inference batch
+                                                # an isolated node (the SEP in this case) will mess all up
+                                                torch.LongTensor([[len(curr['edge_indexs'][j])+1],[len(curr['edge_indexs'][j])+1]])], 
+                                                axis=1)
+                    temp_data.edge_type_ids = torch.LongTensor([36]+[self.relation2id[t.split(':')[0]] for t in curr['hetoro_edges'][j]]+[36])
+
+                    # pos_ids = pos_tokenizer(' '.join(curr['pos_seqs'][j]), max_length=self.max_length, padding=True, truncation=True, return_tensors='pt')
+                    # for key in pos_ids:
+                    #     temp_data[f'pos_{key}'] = pos_ids[key].squeeze(0)
+
+                    # # need to manually create position_ids for pos bert input
+                    # temp_data.pos_position_ids = torch.arange(temp_data.pos_input_ids.shape[0])
+                    
+                    # these two must be strings
+                    temp_data.text = curr['text'][j]
+                    temp_data.pos = ' '.join(curr['pos_seqs'][j])
+
+                    temp_data.num_syllables = torch.LongTensor([17]+curr['num_syllables'][j]+[17]) # 17 for CLS and SEP
+                    temp_data.num_chars = torch.LongTensor([0]+curr['num_chars'][j]+[0]) # 0 for CLS and SEP
+                    temp_data.word_freqs = torch.LongTensor([10]+curr['word_freqs'][j]+[10]) # 10 for CLS and SEP
+                    
+                    temp_data.alignments = torch.LongTensor([-1]+curr['alignments'][j]+[curr['alignments'][j][-1]+1]) + 1 # taking care of the CLS and SEP
+                    temp_data.num_nodes = len(temp_data.edge_type_ids)
+                    temp_datalist.append(temp_data)
+                    
+                temp_batch = Batch.from_data_list(temp_datalist)
+
+                for key in temp_batch.keys:
+                    data[key] = temp_batch[key]
+                data.num_nodes = len(data.edge_type_ids)
+                data.segment_ids = torch.zeros(len(data.text), dtype=torch.long)
                 
-            data = MyData()      
-            data.y = torch.tensor(curr['author_id'] if 'author_id' in curr else curr['author'])
-            data.doc_id = torch.tensor(curr['doc_id'])  
-
-            # text_ids = bert_tokenizer(curr['text'], max_length=512, padding=True, truncation=True, return_tensors='pt')
-            # for key in text_ids:
-            #     data[f'text_{key}'] = text_ids[key]
-
-            temp_datalist = []
-            for j in range(len(curr['edge_indexs'])):
-                temp_data = MyData()
-                temp_data.edge_index = torch.cat([torch.LongTensor([[0],[0]]),  # for self loop of CLS token
-                                             torch.LongTensor(curr['edge_indexs'][j]).T, 
-                                             # for batching purpose, if data.x is missing, edge_index is used to inference batch
-                                             # an isolated node (the SEP in this case) will mess all up
-                                             torch.LongTensor([[len(curr['edge_indexs'][j])+1],[len(curr['edge_indexs'][j])+1]])], 
-                                            axis=1)
-                temp_data.edge_type_ids = torch.LongTensor([36]+[self.relation2id[t.split(':')[0]] for t in curr['hetoro_edges'][j]]+[36])
-                if temp_data.edge_index.shape[1] >= self.max_length-1:
-                    error_count += 1
+                if self.pre_filter is not None and not self.pre_filter(data):
                     continue
 
-                # pos_ids = pos_tokenizer(' '.join(curr['pos_seqs'][j]), max_length=self.max_length, padding=True, truncation=True, return_tensors='pt')
-                # for key in pos_ids:
-                #     temp_data[f'pos_{key}'] = pos_ids[key].squeeze(0)
+                if self.pre_transform is not None:
+                    data = self.pre_transform(data)
 
-                # # need to manually create position_ids for pos bert input
-                # temp_data.pos_position_ids = torch.arange(temp_data.pos_input_ids.shape[0])
-                
-                # these two must be strings
-                temp_data.text = curr['text'][j]
-                temp_data.pos = ' '.join(curr['pos_seqs'][j])
+                torch.save(data, os.path.join(self.processed_dir, f'{idx}.pt'))
+                idx += 1
+            except Exception as e:
+                print(f'file {raw_path} error')
+                raise e
 
-                temp_data.num_syllables = torch.LongTensor([17]+curr['num_syllables'][j]+[17]) # 17 for CLS and SEP
-                temp_data.num_chars = torch.LongTensor([0]+curr['num_chars'][j]+[0]) # 0 for CLS and SEP
-                temp_data.word_freqs = torch.LongTensor([10]+curr['word_freqs'][j]+[10]) # 10 for CLS and SEP
-                
-                temp_data.alignments = torch.LongTensor([-1]+curr['alignments'][j]+[curr['alignments'][j][-1]+1]) + 1 # taking care of the CLS and SEP
-                temp_data.num_nodes = len(temp_data.edge_type_ids)
-                temp_datalist.append(temp_data)
-                
-            temp_batch = Batch.from_data_list(temp_datalist)
-
-            for key in temp_batch.keys:
-                data[key] = temp_batch[key]
-            data.num_nodes = len(data.edge_type_ids)
-            data.segment_ids = torch.zeros(len(data.text), dtype=torch.long)
-            
-            if self.pre_filter is not None and not self.pre_filter(data):
-                continue
-
-            if self.pre_transform is not None:
-                data = self.pre_transform(data)
-
-            torch.save(data, os.path.join(self.processed_dir, f'{idx}.pt'))
-            idx += 1
-
-        print(f'{error_count} sentences dropped because of exceeding max_length {self.max_length}')
+        print(f'{error_count} sentences truncated because of exceeding max_length {self.max_length}')
         
     def len(self):
         return len(self.processed_file_names)
